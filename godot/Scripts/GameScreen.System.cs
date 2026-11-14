@@ -80,14 +80,14 @@ public partial class GameScreen
 
         // ---- sub-tabs
         int ownFleets = S.Game.State.Fleets.Values.Count(f => f.At == name && f.Side == Me);
-        var row = Ui.HBox(4);
+        var row = Ui.HBox(10);
         var group = new ButtonGroup();
         foreach (var (t, label) in new[] { (SysTab.Overview, "Overview"), (SysTab.Build, "Build"), (SysTab.Forces, "Forces"), (SysTab.Fleets, ownFleets > 0 ? $"Fleets here {ownFleets}" : "Fleets here") })
         {
             var tt = t;
             var b = Ui.Chip(label, () => { _sysTab = tt; _panelDirty = true; _panelTimer = 0; }, null, _sysTab == t, group);
-            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            b.CustomMinimumSize = new Vector2(0, 32);
+            b.ThemeTypeVariation = "TabChip";   // drawn like a window's tabs (Paul 2026-11-14)
+            b.FocusMode = FocusModeEnum.None;
             row.AddChild(b);
         }
         Add(Ui.Space(2));

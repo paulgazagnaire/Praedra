@@ -11,8 +11,8 @@ namespace PraedraViewer;
 /// <summary>
 /// Two of the floating pieces of Paul's mockup (2026-10-28). Bottom centre, the selection card: what you clicked in one glance (owner,
 /// support, troops, fleets; for a fleet where it is and where it goes), with its main action and Details, which opens the window.
-/// Bottom right, the message corner: one short card with the latest message, and the kinds (battles, fleets, systems, production,
-/// missions) to switch it to, each lit while it has news you have not looked at; Messages opens the whole log.
+/// Bottom right, the message corner: one short card with the latest message. The kind strip that was over it (BAT FLT SYS PRD MSN) is
+/// gone (Paul 2026-11-14, impeccable critique): the whole log, sorted by kind, is one key away (E, or Log in the menu).
 /// </summary>
 public partial class GameScreen
 {
@@ -149,18 +149,6 @@ public partial class GameScreen
     Label _msgKind, _msgTitle, _msgBody;
     Button _msgOpen;
     Message _msgShown;
-    MsgCat? _msgCat;
-    readonly Dictionary<MsgCat, (Button Chip, Glyph Dot)> _msgChips = new();
-    readonly HashSet<MsgCat> _msgNews = new();
-
-    static readonly (MsgCat Cat, string Short, string Tip)[] MsgKinds =
-    {
-        (MsgCat.Battles, "BAT", "Battles, bombardments, invasions, captures"),
-        (MsgCat.Fleets, "FLT", "Fleet arrivals, retreats, blockades"),
-        (MsgCat.Systems, "SYS", "Your systems: uprisings, losses, the headquarters"),
-        (MsgCat.Build, "PRD", "Production: construction, research, upkeep"),
-        (MsgCat.Leaders, "MSN", "Leaders and missions"),
-    };
 
     void BuildMessageCorner()
     {
@@ -172,32 +160,9 @@ public partial class GameScreen
         _msgCorner.CustomMinimumSize = new Vector2(310, 0);
         _mapHolder.AddChild(_msgCorner);
 
-        var strip = Ui.Hud(4, 4);
-        strip.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        _msgCorner.AddChild(strip);
-        var sr = Ui.HBox(2);
-        strip.AddChild(sr);
-        foreach (var (cat, label, tip) in MsgKinds)
-        {
-            var c = cat;
-            var b = Ui.Button(label, () => PickMsgCat(c), tip + ". Click to show the latest; click again for all kinds.", "Layer");
-            b.ToggleMode = true;
-            b.CustomMinimumSize = new Vector2(42, 34);
-            b.AddThemeFontSizeOverride("font_size", 11);
-            var dot = new Glyph(Glyph.Kind.Dot, Ui.Warn, 6) { Visible = false };
-            dot.SetAnchorsPreset(LayoutPreset.TopRight);
-            dot.OffsetLeft = -12; dot.OffsetRight = -4; dot.OffsetTop = 3; dot.OffsetBottom = 11;
-            b.AddChild(dot);
-            _msgChips[cat] = (b, dot);
-            sr.AddChild(b);
-        }
-        sr.AddChild(new VSeparator());
-        var all = Ui.Button("Messages", () => ShowTab(DrawerTab.Log), "Every message, by kind (E)", "Chip");
-        all.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        sr.AddChild(all);
-
         _msgCard = Ui.Hud(Ui.Pad, 10);
         _msgCard.MouseDefaultCursorShape = CursorShape.PointingHand;
+        _msgCard.TooltipText = "Open this message. Every message, by kind: Log (E).";
         _msgCard.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _msgShown != null) OpenMessage(_msgShown); };
         _msgCorner.AddChild(_msgCard);
         var v = Ui.VBox(Ui.Gap + 2);
@@ -229,38 +194,14 @@ public partial class GameScreen
         MsgCat.Leaders => "MISSION", MsgCat.Intel => "INTEL", _ => "ORDER",
     };
 
-    void PickMsgCat(MsgCat c)
-    {
-        _msgCat = _msgCat == c ? null : c;
-        _msgNews.Remove(c);
-        RefreshMessageCorner();
-    }
-
     /// <summary>The corner's kind for a message: any fight counts as a battle.</summary>
     static MsgCat CornerCat(Message m) => m.Combat || m.Kind == MsgKind.Battle ? MsgCat.Battles : m.Cat;
-
-    /// <summary>A new message lights its kind until the player looks at it.</summary>
-    void NoteMessageKind(Message m)
-    {
-        var c = CornerCat(m);
-        if (_msgChips.ContainsKey(c) && _msgCat != c) _msgNews.Add(c);
-    }
 
     void RefreshMessageCorner()
     {
         if (_msgCorner == null) return;
         _msgCorner.Visible = !_drawer.Visible;
-        foreach (var (cat, (chip, dot)) in _msgChips)
-        {
-            chip.SetPressedNoSignal(_msgCat == cat);
-            dot.Visible = _msgNews.Contains(cat);
-        }
-        Message m = null;
-        for (int i = _allMessages.Count - 1; i >= 0 && m == null; i--)
-        {
-            var x = _allMessages[i];
-            if (_msgCat is not MsgCat want || CornerCat(x) == want) m = x;
-        }
+        var m = _allMessages.Count > 0 ? _allMessages[^1] : null;
         _msgShown = m;
         _msgCard.Visible = m != null;
         if (m == null) return;

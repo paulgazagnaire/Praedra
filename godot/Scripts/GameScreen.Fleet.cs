@@ -129,7 +129,7 @@ public partial class GameScreen
                 }
                 Act($"Invade {at} with {aboard.Count} regiment(s)", () => Invade(f), aboard.Count == 0 ? "No regiments aboard: load some at one of your planets first." : "Lands the regiments aboard to take the planet.",
                     aboard.Count == 0 || attackPending, "Primary");
-                if (attackPending) Note("A fleet can carry out one attack order at a time. Press +1 day (or Play) so this one starts, then give the next.");
+                if (attackPending) Note("A fleet can carry out one attack order at a time. Press Play (or N for one day) so this one starts, then give the next.");
             }
         }
 

@@ -145,7 +145,7 @@ public partial class GameScreen
         Item(Icon(SystemTile.Fleet, Ui.You), "FLEETS");
         Item(Icon(SystemTile.Military, Ui.You), "TROOPS");
         Item(Icon(Me == Side.Hand ? SystemTile.Hand : SystemTile.Braid, Ui.You), "HOLDER");
-        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: bright steps are in use, dark ones free, grey ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Icons are lit when there is something there, in the colour of whose it is, and the holder's emblem is gold on a headquarters; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
+        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: the light steps are in use, the darker ones free, the faintest ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Icons are lit when there is something there, in the colour of whose it is, and the holder's emblem is gold on a headquarters; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
         h.MouseFilter = MouseFilterEnum.Pass;
         return h;
     }
@@ -183,7 +183,7 @@ public partial class GameScreen
         // critique 2026-11-14); never closer than 32 px nor further apart than the columns; when they don't fit, the tiles scroll as before.
         // The head already ends in a WinGap, so the space over the first row takes that off.
         int rows = (n + cols - 1) / cols;
-        float free = h - _secWin.GetMinimumSize().Y - WinPad - rows * TileHeight;
+        float free = h - _secWin.GetMinimumSize().Y + WinGap - rows * TileHeight;   // the head's 24 px counts in the top gap, the grid's 16 px foot in the bottom one
         int vgap = Math.Clamp((int)(free / (rows + 1)), Math.Min(gap, 2 * GridPad), gap);
         _secGrid.AddThemeConstantOverride("v_separation", vgap);
         _secGridPad.AddThemeConstantOverride("margin_top", Math.Max(0, vgap - WinGap));
@@ -235,7 +235,7 @@ public partial class GameScreen
         _secLayer.Visible = true;
         _hoverCard.Visible = false;
         if (opening) _secLeft = SectorOnRight(); // chosen once per opening: stepping sectors or panning never makes the window jump
-        // QA-73: on the left the window covers your stocks and the HQ / Fit buttons; hide them rather than leave their edges peeking out
+        // QA-73: on the left the window covers your stocks and the HQ buttons; hide them rather than leave their edges peeking out
         _bottomLeft.Visible = !_secLeft;
         _view.MarkSector(sector);
         RebuildSectorView();

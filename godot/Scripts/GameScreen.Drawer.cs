@@ -12,7 +12,9 @@ namespace PraedraViewer;
 /// The window on the right (it was a fixed drawer until Paul's mockup of 2026-10-28): closed until you ask for something longer than the
 /// floating pieces show (a system's details, Fleets, Leaders, Missions, the log, Needs you), with tabs to step between those, and closed
 /// again with its cross or Esc. A click on the map only fills the selection card; the window follows the selection while it is open.
-/// The helpers here (Line, Heading, Act, Card) are what every tab builds with, so the tabs look alike.
+/// The helpers here (Line, Heading, Act, Card) are what every tab builds with, so the tabs look alike. It has the windows' look (Paul
+/// 2026-11-14, impeccable critique): their surface and edge, their tabs (words with a 3 px line under the chosen one), × pinned right,
+/// outlined cards and buttons, Space Grotesk and the four greys.
 /// </summary>
 public partial class GameScreen
 {
@@ -33,7 +35,9 @@ public partial class GameScreen
 
     Control BuildDrawer()
     {
+        using var look = Ui.Window();
         var drawer = _drawer = Ui.Hud(0, 0);
+        drawer.Theme = Ui.WindowTheme;
         drawer.Visible = false;
         drawer.SetAnchorsPreset(LayoutPreset.RightWide);
         drawer.GrowHorizontal = GrowDirection.Begin;
@@ -42,12 +46,10 @@ public partial class GameScreen
         var v = Ui.VBox(0);
         drawer.AddChild(v);
 
-        var tabsBox = new PanelContainer();
-        var ts = Ui.Box(new Color(0, 0, 0, 0), 0, null, 0, 8, 2);
-        ts.BorderColor = Ui.Line; ts.BorderWidthBottom = 1;
-        tabsBox.AddThemeStyleboxOverride("panel", ts);
+        // the tab row on the window's 16 px margin, with no line under it: the chosen tab's underline is the line (Paul's "styles" frame)
+        var tabsBox = Pad(WinPad, WinPad, WinPad, 0);
         v.AddChild(tabsBox);
-        var tabs = Ui.HBox(0);
+        var tabs = Ui.HBox(10);
         tabsBox.AddChild(tabs);
         var group = new ButtonGroup();
         foreach (var (tab, name, tip) in new[]
@@ -61,32 +63,25 @@ public partial class GameScreen
         })
         {
             var t = tab;
-            var b = Ui.Button(name, () => ShowTab(t), tip, "Tab");
+            var b = Ui.Button(name, () => ShowTab(t), tip, "TabChip");   // drawn like a window's tabs
             b.ToggleMode = true; b.ButtonGroup = group; b.ButtonPressed = tab == _tab;
-            b.AddThemeStyleboxOverride("normal", TabBox(false)); // a slimmer tab than the theme's, six must fit
-            b.AddThemeStyleboxOverride("hover", TabBox(false, Ui.LineHi));
-            b.AddThemeStyleboxOverride("pressed", TabBox(true));
-            b.AddThemeStyleboxOverride("hover_pressed", TabBox(true));
-            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            b.AddThemeFontSizeOverride("font_size", 12);
             _tabButtons[tab] = b;
             tabs.AddChild(b);
         }
-        var close = Ui.Button("\u2715", CloseDrawer, "Close (Esc)", "Clock");
+        tabs.AddChild(Ui.Grow());
+        var close = Ui.Button("×", CloseDrawer, "Close (Esc)", "Clock");   // a window's ×
         close.SetMeta(UiTest.FullName, "Close window");
-        close.AddThemeFontSizeOverride("font_size", 13);
-        close.CustomMinimumSize = new Vector2(30, 30);
-        close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        close.SizeFlagsVertical = SizeFlags.ShrinkBegin;
         tabs.AddChild(close);
 
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(_scroll);
-        var margin = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        margin.AddThemeConstantOverride("margin_left", Ui.Pad + 4); margin.AddThemeConstantOverride("margin_right", Ui.Pad + 4);
-        margin.AddThemeConstantOverride("margin_top", Ui.Pad + 2); margin.AddThemeConstantOverride("margin_bottom", Ui.Group);
+        var margin = Pad(WinPad, WinPad, WinGap, WinPad);   // 24 px under the tabs, 16 at the sides, as in a window
+        margin.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _scroll.AddChild(margin);
         _pv = Ui.VBox(Ui.Block);
-        _pv.CustomMinimumSize = new Vector2(DrawerWidth - 2 * (Ui.Pad + 4) - 4, 0);
+        _pv.CustomMinimumSize = new Vector2(DrawerWidth - 2 * WinPad - 2 - 4, 0);
         margin.AddChild(_pv);
 
         _logHost = BuildLogTab();
@@ -100,14 +95,6 @@ public partial class GameScreen
         if (_plan != null && !_pickMission) _plan = null;
         _drawer.Visible = false;
         RefreshTop();
-    }
-
-    static StyleBoxFlat TabBox(bool on, Color? hover = null)
-    {
-        var s = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = on ? Ui.Text : hover ?? new Color(0, 0, 0, 0) };
-        s.BorderWidthBottom = 2;
-        s.ContentMarginLeft = 4; s.ContentMarginRight = 4; s.ContentMarginTop = 9; s.ContentMarginBottom = 7;
-        return s;
     }
 
     void ShowTab(DrawerTab t)
@@ -133,9 +120,11 @@ public partial class GameScreen
         var b = _tabButtons[DrawerTab.Needs];
         b.Text = n == 0 ? "Needs you" : $"Needs you {n}";
         bool urgent = _attention.Any(a => a.Level == Level.Danger);
-        b.AddThemeColorOverride("font_color", n == 0 ? Ui.Text3 : urgent ? Ui.Danger : Ui.Warn);
-        b.AddThemeColorOverride("font_hover_color", n == 0 ? Ui.Text : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
-        b.AddThemeColorOverride("font_pressed_color", n == 0 ? Ui.Text : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
+        // the window's tab greys when nothing needs you; red or amber words when something does
+        b.AddThemeColorOverride("font_color", n == 0 ? Ui.WinText : urgent ? Ui.Danger : Ui.Warn);
+        b.AddThemeColorOverride("font_hover_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
+        b.AddThemeColorOverride("font_pressed_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
+        b.AddThemeColorOverride("font_hover_pressed_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
         int f = S.Game.State.Fleets.Values.Count(x => x.Side == Me);
         _tabButtons[DrawerTab.Fleets].Text = $"Fleets {f}";
         _tabButtons[DrawerTab.Log].Text = _unread == 0 ? "Log" : $"Log {_unread}";
@@ -145,6 +134,7 @@ public partial class GameScreen
 
     void RebuildPanel()
     {
+        using var look = Ui.Window();   // the tabs are built in the windows' look
         if (_tab == DrawerTab.Log) { RefreshTabTitles(); RefreshSectorView(); RefreshMgmt(); return; } // the sector window shows orders given in it whatever tab is open
         float scroll = _scroll.ScrollVertical;
         string key = PanelKey();
@@ -223,11 +213,17 @@ public partial class GameScreen
         public void Dispose() => _a();
     }
 
-    /// <summary>The panel title: a big name, a line under it, and tags on the right.</summary>
+    /// <summary>The panel title: the name in the windows' pixel capitals (32 px, #7D8699), a line under it, and tags on the right.</summary>
     void Title(string name, string sub, params (string Text, Color Color)[] tags)
     {
         var h = Ui.HBox(8);
-        var t = Ui.Label(name, "Title");
+        string upper = name.ToUpperInvariant();
+        var t = Ui.Label(upper, null, Ui.WinText, Ui.NameSmall, wrap: false);
+        t.AddThemeFontOverride("font", Ui.NameFont(Ui.NameSmall, upper));
+        t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        t.ClipText = true;
+        t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         h.AddChild(t);
         foreach (var (text, color) in tags) h.AddChild(Ui.Tag(text, color));
         Add(h);

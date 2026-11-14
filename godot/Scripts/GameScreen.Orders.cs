@@ -47,7 +47,7 @@ public partial class GameScreen
         S.Say($"Order cancelled: {what ?? "an order"}.", MsgKind.Info);
         AddLogItem(S.Messages[^1], false);
         Toast($"Cancelled: {what ?? "the order"}.");
-        _panelDirty = true; _panelTimer = 0;
+        OrdersChanged();
         _fleetListDirty = true;
         RefreshMgmt();
         RefreshSectorView();

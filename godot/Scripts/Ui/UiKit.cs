@@ -539,6 +539,10 @@ public static class Ui
         }
         foreach (var cb in new[] { "CheckBox", "CheckButton" })
         {
+            // their own boxes, or they take the window's Button box: every row of a settings list framed (impeccable pass, 2026-11-14)
+            t.SetStylebox("normal", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("pressed", cb, Box(clear, 0, null, 0, 6, 4));
+            t.SetStylebox("hover", cb, Box(clear, 0, WinLine, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinLine, 1, 6, 4));
+            t.SetStylebox("disabled", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("focus", cb, new StyleBoxEmpty());
             t.SetFont("font", cb, Grotesk);
             t.SetColor("font_color", cb, WinActive); t.SetColor("font_hover_color", cb, WinActive); t.SetColor("font_pressed_color", cb, WinActive);
             t.SetColor("font_hover_pressed_color", cb, WinActive); t.SetColor("font_focus_color", cb, WinActive);

@@ -18,10 +18,20 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
-    void BuildTab(string n)
+    void BuildTab(string n, float width)
     {
         var eco = S.Host.Economy;
         bool hand = Me == Side.Hand;
+
+        // two columns (Paul 2026-11-14: two columns, no scrolling): what stands on the planet on the left (what stops it, the yards, the
+        // slots, the buildings), what it can build on the right
+        var cols = Ui.HBox(WinGap);
+        var left = Ui.VBox(Ui.Block); left.CustomMinimumSize = new Vector2(InfraLeft, 0);
+        var right = Ui.VBox(Ui.Block); right.CustomMinimumSize = new Vector2(Math.Max(InfraRight, width - WinGap - InfraLeft), 0);
+        cols.AddChild(left); cols.AddChild(right);
+        Add(cols);
+        var page = _into;
+        _into = left;
 
         // what stops the planet, first
         int mines = eco.OfKindAt(n, FacilityKind.Mine), refs = eco.OfKindAt(n, FacilityKind.Refinery);
@@ -42,59 +52,6 @@ public partial class GameScreen
             Add(yards);
         }
 
-        // what can be built here, as tiles
-        Section("Build");
-        if (_buildSection is "Ships" or "Fighters" && !HasYard(n, YardFamily.Shipyard) || _buildSection == "Troops" && !HasYard(n, YardFamily.Training)) _buildSection = "Facilities";
-        var chips = new HFlowContainer();   // wraps rather than widening the column
-        chips.AddThemeConstantOverride("h_separation", 10); chips.AddThemeConstantOverride("v_separation", 4);
-        Container top = chips;
-        var group = new ButtonGroup();
-        foreach (var section in new[] { "Facilities", "Ships", "Fighters", "Troops" })
-        {
-            var fam = section switch { "Facilities" => YardFamily.Construction, "Troops" => YardFamily.Training, _ => YardFamily.Shipyard };
-            string sec = section;
-            var b = Ui.Chip(section, () => { _buildSection = sec; MgRefreshSoon(); },
-                HasYard(n, fam) ? $"Built by the {FamilyName(fam).ToLowerInvariant()} here" : $"Needs a {FamilyName(fam).ToLowerInvariant()} on this planet", _buildSection == section, group);
-            b.FocusMode = FocusModeEnum.None;
-            b.ThemeTypeVariation = "TabChip";   // drawn exactly like the window's tabs (Paul 2026-11-14)
-            // greyed out with no yard: Ships, Fighters, Troops can't be picked (no hover, no underline; the tooltip says why). Facilities
-            // stays clickable: it is the page shown when there is no yard, and it says so
-            if (!HasYard(n, fam))
-            {
-                if (section == "Facilities") b.AddThemeColorOverride("font_color", Ui.Dimmed);
-                else { b.Disabled = true; b.MouseDefaultCursorShape = CursorShape.Arrow; }
-            }
-            top.AddChild(b);
-        }
-        Add(chips);
-        top = Ui.HBox(4);
-        top.AddChild(Ui.Label("How many", null, Ui.Text3, Ui.Tiny, wrap: false));
-        var less = Ui.Button("−", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }, "One fewer", "Step");
-        less.CustomMinimumSize = new Vector2(24, 24);
-        top.AddChild(less);
-        var ql = Ui.Label(_buildQty.ToString(), null, Ui.Text, Ui.Small, wrap: false);
-        ql.AddThemeFontOverride("font", Ui.Num);
-        ql.CustomMinimumSize = new Vector2(22, 0); ql.HorizontalAlignment = HorizontalAlignment.Center;
-        top.AddChild(ql);
-        var more = Ui.Button("+", () => { _buildQty = Math.Min(20, _buildQty + 1); MgRefreshSoon(); }, "One more (up to 20)", "Step");
-        more.CustomMinimumSize = new Vector2(24, 24);
-        top.AddChild(more);
-        Add(top);
-
-        var famSel = _buildSection switch { "Facilities" => YardFamily.Construction, "Troops" => YardFamily.Training, _ => YardFamily.Shipyard };
-        if (!HasYard(n, famSel))
-            Line($"This planet has no {FamilyName(famSel).ToLowerInvariant()}. {(famSel == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one under Facilities first.")}", Ui.Text2, Ui.Small);
-        else
-        {
-            var rows = BuildRowsFor(n, _buildSection);
-            _shownBuildRows = rows;
-            var grid = new HFlowContainer();
-            grid.AddThemeConstantOverride("h_separation", 6); grid.AddThemeConstantOverride("v_separation", 6);
-            foreach (var b in rows) grid.AddChild(OptionTile(n, b, hand));
-            Add(grid);
-        }
-
-        ResearchLine(_buildSection switch { "Facilities" => ResearchKind.Facility, "Troops" => ResearchKind.Troop, _ => ResearchKind.Ship });
         // the planet: slots, what it gives, its buildings
         Section("Planet");
         // slots and what the planet gives
@@ -119,6 +76,68 @@ public partial class GameScreen
         if (here.Count == 0) flow.AddChild(EmptySlot("None"));
         Add(flow);
         if (Me == Side.Collective && n == S.MyHqSystem) HqSection(n);
+        GroundLink(n);   // under the planet, not under both columns: the build column needs the height
+
+        _into = right;
+        // what can be built here, as tiles; "How many" sits on the caption's line, so four rows of tiles fit under it
+        var head = (BoxContainer)Caption("Build", null);
+        Add(head);
+        if (_buildSection is "Ships" or "Fighters" && !HasYard(n, YardFamily.Shipyard) || _buildSection == "Troops" && !HasYard(n, YardFamily.Training)) _buildSection = "Facilities";
+        var chips = new HFlowContainer();   // wraps rather than widening the column
+        chips.AddThemeConstantOverride("h_separation", 10); chips.AddThemeConstantOverride("v_separation", 4);
+        Container top = chips;
+        var group = new ButtonGroup();
+        foreach (var section in new[] { "Facilities", "Ships", "Fighters", "Troops" })
+        {
+            var fam = section switch { "Facilities" => YardFamily.Construction, "Troops" => YardFamily.Training, _ => YardFamily.Shipyard };
+            string sec = section;
+            var b = Ui.Chip(section, () => { _buildSection = sec; MgRefreshSoon(); },
+                HasYard(n, fam) ? $"Built by the {FamilyName(fam).ToLowerInvariant()} here" : $"Needs a {FamilyName(fam).ToLowerInvariant()} on this planet", _buildSection == section, group);
+            b.FocusMode = FocusModeEnum.None;
+            b.ThemeTypeVariation = "TabChip";   // drawn exactly like the window's tabs (Paul 2026-11-14)
+            // greyed out with no yard: Ships, Fighters, Troops can't be picked (no hover, no underline; the tooltip says why). Facilities
+            // stays clickable: it is the page shown when there is no yard, and it says so
+            if (!HasYard(n, fam))
+            {
+                if (section == "Facilities") b.AddThemeColorOverride("font_color", Ui.Dimmed);
+                else { b.Disabled = true; b.MouseDefaultCursorShape = CursorShape.Arrow; }
+            }
+            top.AddChild(b);
+        }
+        Add(chips);
+        top = head;
+        top.AddChild(Ui.Label("How many", null, Ui.Text3, Ui.Tiny, wrap: false));
+        var less = Ui.Button("−", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }, "One fewer", "Step");
+        less.CustomMinimumSize = new Vector2(24, 24);
+        top.AddChild(less);
+        var ql = Ui.Label(_buildQty.ToString(), null, Ui.Text, Ui.Small, wrap: false);
+        ql.AddThemeFontOverride("font", Ui.Num);
+        ql.CustomMinimumSize = new Vector2(22, 0); ql.HorizontalAlignment = HorizontalAlignment.Center;
+        top.AddChild(ql);
+        var more = Ui.Button("+", () => { _buildQty = Math.Min(20, _buildQty + 1); MgRefreshSoon(); }, "One more (up to 20)", "Step");
+        more.CustomMinimumSize = new Vector2(24, 24);
+        top.AddChild(more);
+
+        var famSel = _buildSection switch { "Facilities" => YardFamily.Construction, "Troops" => YardFamily.Training, _ => YardFamily.Shipyard };
+        if (!HasYard(n, famSel))
+            Line($"This planet has no {FamilyName(famSel).ToLowerInvariant()}. {(famSel == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one under Facilities first.")}", Ui.Text2, Ui.Small);
+        else
+        {
+            var rows = BuildRowsFor(n, _buildSection);
+            _shownBuildRows = rows;
+            var grid = new HFlowContainer();
+            grid.AddThemeConstantOverride("h_separation", 6); grid.AddThemeConstantOverride("v_separation", 6);
+            // QA-89: cost and days are never clipped ("584 ref" read as "84"): on one line when every tile of the tab has room for both,
+            // else a line each, the same in the whole tab
+            var font = Ui.Grotesk ?? ThemeDB.FallbackFont;
+            bool oneLine = rows.All(b => font.GetStringSize(CostDays(b), HorizontalAlignment.Left, -1, Ui.Tiny).X <= TileW - 8 - 2);
+            foreach (var b in rows) grid.AddChild(OptionTile(n, b, hand, oneLine));
+            Add(grid);
+        }
+
+        ResearchLine(_buildSection switch { "Facilities" => ResearchKind.Facility, "Troops" => ResearchKind.Troop, _ => ResearchKind.Ship },
+            HasYard(n, famSel) && _shownBuildRows.Any(b => b.Why == NotResearched));
+        _into = page;
     }
 
     Control SlotStrip(string label, int used, int total, string tip)
@@ -209,7 +228,9 @@ public partial class GameScreen
     }
 
     /// <summary>A thing the yards here can build, as a picture tile with its refined cost and days. Click: order as many as "How many".</summary>
-    Control OptionTile(string n, BuildRow b, bool hand)
+    static string CostDays(BuildRow b) => $"{b.Row.Cost} ref · {b.Days} d";
+
+    Control OptionTile(string n, BuildRow b, bool hand, bool oneLine)
     {
         var r = b.Row;
         string tip =
@@ -225,7 +246,7 @@ public partial class GameScreen
         }
         else btn = Ui.Button("", order, tip, "Flat", !b.Usable);
         btn.SetMeta(UiTest.FullName, $"Build {r.Name}");
-        btn.CustomMinimumSize = new Vector2(TileW, 146);
+        btn.CustomMinimumSize = new Vector2(TileW, TileH);
         btn.FocusMode = FocusModeEnum.None;
         var clear = new Color(0, 0, 0, 0);
         // a choice is a plain card like every other (Paul 2026-11-14): grey edge, lighter on hover; blue stays for the units you own
@@ -237,7 +258,10 @@ public partial class GameScreen
         var v = Ui.VBox(2);
         v.MouseFilter = MouseFilterEnum.Ignore;
         v.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        v.OffsetLeft = 6; v.OffsetRight = -6; v.OffsetTop = 6; v.OffsetBottom = -4;
+        v.OffsetLeft = 4; v.OffsetRight = -4; v.OffsetTop = 6; v.OffsetBottom = -4;
+        // as tall as its words need (a name or a reason may take two lines), not a fixed 146 px, so four rows of tiles fit the window; the
+        // row then takes its tallest tile's height
+        v.MinimumSizeChanged += () => btn.CustomMinimumSize = new Vector2(TileW, Math.Max(TileH, v.GetCombinedMinimumSize().Y + 10));
         // a painted picture of the class (art/units/units.json); what you can't build yet gets its drawn icon in solid grey instead of a
         // see-through painting (Paul 2026-11-14); the hover card still shows the painting
         if (UnitArt.Has(r.Name) && b.Usable)
@@ -247,22 +271,23 @@ public partial class GameScreen
             v.AddChild(pic);
         }
         else v.AddChild(UnitIcon.For(KindOf(r.Category, r.Name), hand, ink, SizeOfClass(r.Name), new Vector2(0, 36)));
-        var t = Ui.Label(r.Name, null, b.Usable ? Ui.Text : Ui.Dimmed, Ui.Small, wrap: true);
+        var t = Ui.Label(KeepNumeral(r.Name), null, b.Usable ? Ui.Text : Ui.Dimmed, Ui.Small, wrap: true);
         t.AddThemeFontOverride("font", Ui.Medium);
+        t.AutowrapMode = TextServer.AutowrapMode.Word;   // breaks between words only: never "Constructio / n"
         t.HorizontalAlignment = HorizontalAlignment.Center;
         t.MaxLinesVisible = 2;
         t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         v.AddChild(t);
-        // QA-89: cost and days on their own lines, so a big number is never clipped ("584 ref" read as "84")
-        foreach (var line in new[] { $"{r.Cost} ref", $"{b.Days} d" })
+        foreach (var line in oneLine ? new[] { CostDays(b) } : new[] { $"{r.Cost} ref", $"{b.Days} d" })
         {
             var c = Ui.Label(line, null, b.Usable ? Ui.Text2 : Ui.Dimmed, Ui.Tiny, wrap: false);
             c.HorizontalAlignment = HorizontalAlignment.Center;
             v.AddChild(c);
         }
-        if (b.Why != null)
+        // grey says "not researched" (the research line under the tiles says so once), so those tiles carry no reason line: four rows fit
+        if (b.Why != null && b.Why != NotResearched)
         {
-            // wraps to two lines so "waits for refined" or "not researched" reads in full (QA round 126)
+            // wraps to two lines so "waits for refined" or "no upkeep room" reads in full (QA round 126)
             var why = Ui.Label(b.Why, null, b.Usable ? Ui.Warn : Ui.Dimmed, Ui.Tiny, wrap: true);
             why.HorizontalAlignment = HorizontalAlignment.Center;
             why.MaxLinesVisible = 2; why.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;

@@ -72,13 +72,10 @@ public partial class GameScreen
 
     void ShowGoal()
     {
+        using var look = Ui.Window();   // the dialogs have the windows' look (Paul 2026-11-14)
         var v = ModalBox(_goalPanel);
         bool hand = Me == Side.Hand;
-        var head = Ui.HBox(10);
-        head.AddChild(Ui.Label("How you win", "Title", Ui.Gold, 28));
-        head.AddChild(Ui.Grow());
-        head.AddChild(Ui.Tag(hand ? "YOU ARE THE HAND" : "YOU ARE THE COLLECTIVE", Ui.You));
-        v.AddChild(head);
+        DialogHead(v, "How you win", GoalWidth, () => HideModal(_goalPanel), Ui.Tag(hand ? "YOU ARE THE HAND" : "YOU ARE THE COLLECTIVE", Ui.You));
 
         // ---- the standard win: the enemy capital AND its key leaders
         var c1 = GoalCard(v, "Win: take their capital and hold their leaders", "All of these at once. Capture a leader in a battle where they stand, or with an Abduction mission.");
@@ -165,9 +162,6 @@ public partial class GameScreen
             Check(c3, caught, S.CharName(id), how, caught ? c.HeldAt : S.MapPlaceOf(c), danger: true);
         }
 
-        var close = Ui.Button("Close (Esc)", () => HideModal(_goalPanel), null, "Primary");
-        close.CustomMinimumSize = new Vector2(0, 40);
-        v.AddChild(close);
         ShowModal(_goalPanel);
     }
 

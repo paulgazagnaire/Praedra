@@ -41,6 +41,7 @@ public partial class GameScreen
         public int Fleet;       // Fleet
         public string Tab;      // the tab shown
         public bool Min;        // folded to its head
+        public bool Wide;       // two columns wide: your planet's Infrastructure (Paul 2026-11-14: two columns, no scrolling)
         public PanelContainer Panel;
         public VBoxContainer Head, Body;
         public ScrollContainer Scroll;
@@ -89,6 +90,16 @@ public partial class GameScreen
     // Four tall columns side by side (Paul 2026-11-03: "I liked this grid. I think 4 windows side by side could fit"; 1440 wide screen)
     const int MgWidth = 344;
     const int SlotGap = 10;
+    // the wide Infrastructure window: the planet column (two yard cards or three tiles a row), the build column (four build tiles a row,
+    // so a whole tab fits without scrolling), the gap between them, and the window's edges, margins and scroll grabber (BodyWidth)
+    const int InfraLeft = 312, InfraRight = 4 * TileW + 3 * 6;
+    const int WideWidth = InfraLeft + WinGap + InfraRight + 34 + 4;
+
+    static float WidthOf(MgWin w) => w.Wide ? WideWidth : MgWidth;
+
+    /// <summary>Your own planet's Infrastructure window is two columns wide: what stands there on the left, what it can build on the right,
+    /// so it needs no scrolling (Paul 2026-11-14, impeccable critique). Someone else's planet shows only its buildings: one column.</summary>
+    bool WantsWide(MgWin w) => w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me;
 
     internal int MgmtCount => _mgWins.Count;
     internal IEnumerable<string> MgmtKeys => _mgWins.Select(w => w.Key);
@@ -116,6 +127,7 @@ public partial class GameScreen
         if (w == null)
         {
             w = new MgWin { Kind = kind, System = system, Fleet = fleet, Tab = tab };
+            w.Wide = WantsWide(w);
             BuildMgWin(w);
             _mgWins.Add(w);
             PlaceNew(w);
@@ -160,7 +172,7 @@ public partial class GameScreen
     void BuildMgWin(MgWin w)
     {
         using var look = Ui.Window();
-        w.Panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(MgWidth, 0), Theme = Ui.WindowTheme };
+        w.Panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(WidthOf(w), 0), Theme = Ui.WindowTheme };
         w.Panel.SetMeta(UiTest.FullName, "Window " + w.Key);
         // square, a thin edge, no shadow (Paul 2026-11-11: "Remove the shadows under the windows entirely")
         w.Panel.AddThemeStyleboxOverride("panel", Ui.WindowBox());
@@ -191,11 +203,14 @@ public partial class GameScreen
         bodyPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         w.Scroll.AddChild(bodyPad);
         w.Body = Ui.VBox(Ui.Block);
-        w.Body.CustomMinimumSize = new Vector2(MgWidth - 34 - 4, 0);   // 4 px spare for the scroll grabber, so a long page never widens the window
+        w.Body.CustomMinimumSize = new Vector2(BodyWidth(w), 0);
         bodyPad.AddChild(w.Body);
         _mgLayer.AddChild(w.Panel);
         _mgLayer.MoveChild(_dragHint, _mgLayer.GetChildCount() - 1);
     }
+
+    /// <summary>The page's width: the window less its edges and margins, and 4 px spare for the scroll grabber, so a long page never widens it.</summary>
+    static float BodyWidth(MgWin w) => WidthOf(w) - 34 - 4;
 
     static MarginContainer Pad(int l, int r, int t, int b)
     {
@@ -214,12 +229,13 @@ public partial class GameScreen
     /// <summary>A window is at most the full free height of its column.</summary>
     float SlotHeight => Math.Max(240, _mgLayer.Size.Y - TopClear - BottomClear);
 
-    /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen).</summary>
-    List<Vector2> Slots(bool leftFirst = true)
+    /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen). A wide window
+    /// starts on any column it fits from.</summary>
+    List<Vector2> Slots(bool leftFirst = true, float width = MgWidth)
     {
         var vp = _mgLayer.Size;
         var cols = new List<Vector2>();
-        for (float x = 16; x + MgWidth <= vp.X - 8; x += MgWidth + SlotGap) cols.Add(new Vector2(x, TopClear));
+        for (float x = 16; x + width <= vp.X - 8; x += MgWidth + SlotGap) cols.Add(new Vector2(x, TopClear));
         if (cols.Count == 0) cols.Add(new Vector2(16, TopClear));
         if (!leftFirst) cols.Reverse();
         return cols;
@@ -227,7 +243,7 @@ public partial class GameScreen
 
     void Snap(MgWin w)
     {
-        var best = Slots().OrderBy(p => p.DistanceTo(w.Panel.Position)).First();
+        var best = Slots(width: WidthOf(w)).OrderBy(p => p.DistanceTo(w.Panel.Position)).First();
         if (best.DistanceTo(w.Panel.Position) < 64) w.Panel.Position = best;
     }
 
@@ -237,17 +253,17 @@ public partial class GameScreen
     /// </summary>
     void PlaceNew(MgWin w)
     {
-        var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(MgWidth, Math.Max(120, x.Panel.Size.Y)))).ToList();
+        var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(WidthOf(x), Math.Max(120, x.Panel.Size.Y)))).ToList();
         var sec = SectorViewOpen ? _secWin.GetGlobalRect() : (Rect2?)null;
         bool Free(Vector2 p)
         {
-            var r = new Rect2(p + new Vector2(4, 4), new Vector2(MgWidth - 8, 112));
+            var r = new Rect2(p + new Vector2(4, 4), new Vector2(WidthOf(w) - 8, 112));
             return !others.Any(o => o.Intersects(r)) && !(sec is Rect2 s && s.Intersects(r));
         }
-        foreach (var p in Slots(leftFirst: !(SectorViewOpen && _secLeft)))
+        foreach (var p in Slots(leftFirst: !(SectorViewOpen && _secLeft), width: WidthOf(w)))
             if (Free(p)) { w.Panel.Position = p; return; }
         var last = others.Count > 0 ? others[^1].Position : new Vector2(16, TopClear);
-        w.Panel.Position = ClampWin(last + new Vector2(28, 36), new Vector2(MgWidth, 200));
+        w.Panel.Position = ClampWin(last + new Vector2(28, 36), new Vector2(WidthOf(w), 200));
     }
 
     void ToggleMin(MgWin w)
@@ -267,7 +283,7 @@ public partial class GameScreen
             if (!IsInstanceValid(w.Panel)) return;
             float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 2; // the edge, top and bottom
             float h = w.Min ? head - WinGap + WinPad : Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - BottomClear);
-            w.Panel.Size = new Vector2(MgWidth, Math.Max(w.Min ? 0 : 160, h));
+            w.Panel.Size = new Vector2(WidthOf(w), Math.Max(w.Min ? 0 : 160, h));
             if (keepScroll >= 0) w.Scroll.ScrollVertical = (int)keepScroll;
         }
         // twice: flowing rows of tiles only know their height once the column width has been laid out
@@ -315,6 +331,13 @@ public partial class GameScreen
         NewDay();
         if (w.Kind == MgKind.Fleet && (!S.Game.State.Fleets.TryGetValue(w.Fleet, out var gone) || gone.Side != Me)) { CloseMgmt(w); return; } // merged away or lost
         float keep = w.Scroll.ScrollVertical;
+        if (WantsWide(w) != w.Wide)   // the planet changed hands while its window was open
+        {
+            w.Wide = !w.Wide;
+            w.Panel.CustomMinimumSize = new Vector2(WidthOf(w), 0);
+            w.Body.CustomMinimumSize = new Vector2(BodyWidth(w), 0);
+            w.Panel.Position = ClampWin(w.Panel.Position, new Vector2(WidthOf(w), 200));
+        }
         _zones.RemoveAll(z => w.Panel.IsAncestorOf(z.Box));
         Ui.Clear(w.Head);
         Ui.Clear(w.Body);
@@ -420,7 +443,7 @@ public partial class GameScreen
 
         // the name: BitPotion 48 px, or 32 px when it does not fit beside the buttons (Paul 2026-11-14)
         string upper = title.ToUpperInvariant();
-        float room = MgWidth - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 4;
+        float room = WidthOf(w) - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 4;
         int size = Ui.NameSize(upper, room);
         var t = Ui.Label(upper, null, titleColor, size, wrap: false);
         t.AddThemeFontOverride("font", Ui.NameFont(size, upper));

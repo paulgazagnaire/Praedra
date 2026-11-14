@@ -10,7 +10,9 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Everything that sits over the screen and stops the clock: the battle and invasion reports, the "are you sure" question, How to play, the
-/// goal, saving and loading (six slots and the autosave), the settings, the end screen; and the Menu's drop-down list.
+/// goal, saving and loading (six slots and the autosave), the settings, the end screen; and the Menu's drop-down list. The dialogs have the
+/// windows' look (Paul 2026-11-14, impeccable critique: one look in the whole game): the window's surface and edge, the name in pixel
+/// capitals with × pinned right, outlined buttons, no fills.
 /// </summary>
 public partial class GameScreen
 {
@@ -77,40 +79,35 @@ public partial class GameScreen
             mv.AddChild(b);
         }
 
-        // the dialogs, over a dark veil
+        // the dialogs, over a dark veil, in the window look
+        using var look = Ui.Window();
         _modalLayer = new Control { Visible = false, MouseFilter = MouseFilterEnum.Stop };
         _modalLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(_modalLayer);
         var veil = new ColorRect { Color = new Color(0.01f, 0.015f, 0.03f, 0.66f), MouseFilter = MouseFilterEnum.Stop };
         veil.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _modalLayer.AddChild(veil);
-        _modalCenter = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        _modalCenter = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore, Theme = Ui.WindowTheme };
         _modalCenter.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _modalLayer.AddChild(_modalCenter);
 
         // report
-        _reportPanel = NewModal(600, Ui.LineHi);
+        _reportPanel = NewModal(600);
         var rv = ModalBox(_reportPanel);
-        _reportTitle = Ui.Label("", "Title");
-        rv.AddChild(_reportTitle);
+        _reportTitle = DialogHead(rv, "Report", 600, () => HideModal(_reportPanel));
         var rs = new ScrollContainer { CustomMinimumSize = new Vector2(560, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         _reportBody = Ui.Label("", null, Ui.Text2);
         _reportBody.CustomMinimumSize = new Vector2(550, 0);
         rs.AddChild(_reportBody);
         rv.AddChild(rs);
-        var rb = Ui.HBox(8);
-        rb.AddChild(Ui.Button("Go there", () => { if (_reportMessage?.System is string sys) { HideModal(_reportPanel); GoTo(sys, true); } }));
-        rb.AddChild(Ui.Grow());
-        var close = Ui.Button("Close (Esc)", () => HideModal(_reportPanel), null, "Primary");
-        close.CustomMinimumSize = new Vector2(140, 36);
-        rb.AddChild(close);
-        rv.AddChild(rb);
+        var go = Ui.Button("Go there", () => { if (_reportMessage?.System is string sys) { HideModal(_reportPanel); GoTo(sys, true); } }, "Centre the map on the place");
+        go.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        rv.AddChild(go);
 
-        // confirm
-        _confirmPanel = NewModal(480, Ui.Warn);
+        // confirm: no ×, Cancel says it (and Esc)
+        _confirmPanel = NewModal(480);
         var cv = ModalBox(_confirmPanel);
-        _confirmTitle = Ui.Label("", "Title");
-        cv.AddChild(_confirmTitle);
+        _confirmTitle = DialogHead(cv, "", 480, null);
         _confirmBody = Ui.Label("", null, Ui.Text2);
         _confirmBody.CustomMinimumSize = new Vector2(440, 0);
         cv.AddChild(_confirmBody);
@@ -124,19 +121,20 @@ public partial class GameScreen
         crow.AddChild(_confirmOk);
 
         BuildHowTo();
-        _goalPanel = NewModal(640, Ui.Gold);
-        _savePanel = NewModal(560, Ui.LineHi);
-        _settingsPanel = NewModal(520, Ui.LineHi);
-        _victoryPanel = NewModal(560, Ui.Gold);
+        _goalPanel = NewModal(GoalWidth);
+        _savePanel = NewModal(SaveWidth);
+        _settingsPanel = NewModal(SettingsWidth);
+        _victoryPanel = NewModal(560);
     }
 
-    PanelContainer NewModal(int width, Color accent)
+    const int GoalWidth = 640, SaveWidth = 560, SettingsWidth = 520;
+    const int DialogGap = 12;   // between the parts of a dialog; 24 under its head, as in a window
+
+    /// <summary>A dialog: the window's surface and edge, square, 16 px inside (Paul's "styles" frame).</summary>
+    PanelContainer NewModal(int width)
     {
-        var p = Ui.Card(Ui.Chrome, accent, 22, 10);
-        p.Visible = false;
-        p.CustomMinimumSize = new Vector2(width, 0);
-        p.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-        p.MouseFilter = MouseFilterEnum.Stop;
+        var p = new PanelContainer { Visible = false, CustomMinimumSize = new Vector2(width, 0), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Stop };
+        p.AddThemeStyleboxOverride("panel", Ui.WindowBox(WinPad, WinPad));
         _modalCenter.AddChild(p);
         return p;
     }
@@ -144,9 +142,50 @@ public partial class GameScreen
     static VBoxContainer ModalBox(PanelContainer p)
     {
         Ui.Clear(p);
-        var v = Ui.VBox(12);
+        var v = Ui.VBox(DialogGap);
         p.AddChild(v);
         return v;
+    }
+
+    /// <summary>
+    /// A dialog's head, like a window's: the name in BitPotion capitals (48 px, 32 when long), #7D8699, an optional piece beside it, and ×
+    /// pinned right when the dialog can be closed (it does what Esc does). Returns the name, for dialogs that change it each time.
+    /// </summary>
+    Label DialogHead(VBoxContainer v, string name, int width, Action close, Control beside = null)
+    {
+        var row = Ui.HBox(NameGap);
+        var t = Ui.Label("", null, Ui.WinText, 0, wrap: false);
+        t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        t.ClipText = true;
+        t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        float room = width - 2 - 2 * WinPad - (close != null ? NameGap + WinButton : 0) - (beside != null ? NameGap + beside.GetCombinedMinimumSize().X : 0);
+        t.SetMeta("room", room);
+        SetDialogName(t, name);
+        row.AddChild(t);
+        if (beside != null) { beside.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(beside); }
+        if (close != null)
+        {
+            var x = Ui.Button("×", close, "Close (Esc)", "Clock");
+            x.SetMeta(UiTest.FullName, "Close");
+            x.CustomMinimumSize = new Vector2(WinButton, WinButton);
+            x.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            row.AddChild(x);
+        }
+        v.AddChild(row);
+        v.AddChild(Ui.Space(WinGap - 2 * DialogGap));   // with the two gaps round it: 24 px under the head
+        return t;
+    }
+
+    static void SetDialogName(Label t, string name)
+    {
+        string upper = (name ?? "").ToUpperInvariant();
+        int size = Ui.NameSize(upper, (float)t.GetMeta("room", 400f));
+        t.Text = upper;
+        t.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        t.AddThemeFontSizeOverride("font_size", size);
+        t.TooltipText = name ?? "";
+        t.MouseFilter = MouseFilterEnum.Pass;   // the full name on hover, when a long one is cut
     }
 
     void ShowModal(Control p)
@@ -199,7 +238,7 @@ public partial class GameScreen
 
     void Confirm(string title, string body, string okText, Action ok, bool danger = false)
     {
-        _confirmTitle.Text = title; _confirmBody.Text = body; _confirmOk.Text = okText; _confirmAction = ok;
+        SetDialogName(_confirmTitle, title); _confirmBody.Text = body; _confirmOk.Text = okText; _confirmAction = ok;
         _confirmOk.ThemeTypeVariation = danger ? "DangerButton" : "Primary";
         ShowModal(_confirmPanel);
     }
@@ -209,7 +248,7 @@ public partial class GameScreen
     void ShowReport(Message m)
     {
         _reportMessage = m;
-        _reportTitle.Text = m.Title ?? "Report";
+        SetDialogName(_reportTitle, m.Title ?? "Report");
         _reportBody.Text = m.Detail != null && m.Kind == MsgKind.Battle ? "Battle rules: " + GameBoot.RulesName(S.Rules) + "\n\n" + m.Detail : m.Detail ?? m.Text;
         _reportBody.GetParent<ScrollContainer>().CustomMinimumSize = new Vector2(560, Math.Min(420, 26 + 20 * _reportBody.Text.Count(c => c == '\n') + _reportBody.Text.Length / 3));
         ShowModal(_reportPanel);
@@ -246,18 +285,14 @@ public partial class GameScreen
             "Missions: Leaders (C), then pick a team, a kind and a target.",
             "Money: mines dig Raw, refineries make Refined, which you spend. Stay under the Upkeep limit.",
         }),
-        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Log · S sector · V layer · L routes · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
+        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Log · S sector · V layer · L routes · Home whole map · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
     };
 
     void BuildHowTo()
     {
-        _howPanel = NewModal(800, Ui.Gold);
+        _howPanel = NewModal(800);
         var v = ModalBox(_howPanel);
-        var head = Ui.HBox(10);
-        head.AddChild(Ui.Label("How to play", "Title", Ui.Gold, 28));
-        head.AddChild(Ui.Grow());
-        head.AddChild(Ui.Label("Battle rules: " + GameBoot.RulesName(S.Rules), "Hint", wrap: false));
-        v.AddChild(head);
+        DialogHead(v, "How to play", 800, null, Ui.Label("Battle rules: " + GameBoot.RulesName(S.Rules), "Hint", wrap: false));   // Got it closes it
         _howScroll = new ScrollContainer { CustomMinimumSize = new Vector2(760, 470), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         v.AddChild(_howScroll);
         var lines = Ui.VBox(6);
@@ -271,7 +306,8 @@ public partial class GameScreen
             foreach (var l in ls) lines.AddChild(Ui.Label(l, null, Ui.Text2));
         }
         var ok = Ui.Button("Got it", CloseHowTo, "Close (F1 opens it again)", "Primary");
-        ok.CustomMinimumSize = new Vector2(0, 42);
+        ok.CustomMinimumSize = new Vector2(160, 36);
+        ok.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         v.AddChild(ok);
     }
 
@@ -298,8 +334,9 @@ public partial class GameScreen
 
     void ShowSaves(bool save)
     {
+        using var look = Ui.Window();
         var v = ModalBox(_savePanel);
-        v.AddChild(Ui.Label(save ? "Save the game" : "Load a game", "Title"));
+        DialogHead(v, save ? "Save the game" : "Load a game", SaveWidth, () => HideModal(_savePanel));
         v.AddChild(Ui.Label(save ? "Pick a slot. A used slot is overwritten (it asks first)." : $"Your current game (day {S.Game.Day}) is replaced by the one you load. It asks first.", "Hint"));
         void Row(string label, string path, bool isAuto)
         {
@@ -332,9 +369,6 @@ public partial class GameScreen
         }
         for (int i = 1; i <= GameBoot.Slots; i++) Row($"Slot {i}", GameBoot.SlotPath(i), false);
         if (!save) Row("Autosave", GameBoot.AutoSaveSlot, true);
-        var close = Ui.Button("Close (Esc)", () => HideModal(_savePanel));
-        close.CustomMinimumSize = new Vector2(0, 36);
-        v.AddChild(close);
         ShowModal(_savePanel);
     }
 
@@ -357,8 +391,9 @@ public partial class GameScreen
 
     void ShowSettings()
     {
+        using var look = Ui.Window();
         var v = ModalBox(_settingsPanel);
-        v.AddChild(Ui.Label("Settings", "Title"));
+        DialogHead(v, "Settings", SettingsWidth, () => HideModal(_settingsPanel));
         v.AddChild(Ui.Section("Size of text and panels"));
         var row = Ui.HBox(6);
         var group = new ButtonGroup();
@@ -385,9 +420,6 @@ public partial class GameScreen
         Check("a Sensor Station sees an enemy fleet coming", UiSettings.PauseSensors, on => UiSettings.PauseSensors = on);
         Check("a ship, troop or building is finished", UiSettings.PauseCompleted, on => UiSettings.PauseCompleted = on);
         Check("a mission succeeds or fails", UiSettings.PauseMission, on => UiSettings.PauseMission = on);
-        var close = Ui.Button("Done (Esc)", () => HideModal(_settingsPanel), null, "Primary");
-        close.CustomMinimumSize = new Vector2(0, 38);
-        v.AddChild(close);
         ShowModal(_settingsPanel);
     }
 
@@ -395,9 +427,12 @@ public partial class GameScreen
 
     void ShowVictory(Side winner)
     {
+        using var scope = Ui.Window();
         var v = ModalBox(_victoryPanel);
         bool won = winner == S.Player;
-        var t = Ui.Label(won ? "VICTORY" : "DEFEAT", "Title", won ? Ui.Gold : Ui.Danger, 54);
+        // the one name in green or red: good, or danger (Paul's meaning colours), in the windows' pixel capitals at twice their size
+        var t = Ui.Label(won ? "VICTORY" : "DEFEAT", null, won ? Ui.Good : Ui.Danger, 96, wrap: false);
+        t.AddThemeFontOverride("font", Ui.NameFont(96));
         t.HorizontalAlignment = HorizontalAlignment.Center;
         v.AddChild(t);
         var why = Ui.Label($"The {S.NameOf(winner)} has won the war, on day {S.Game.Day}. ({GameBoot.WinReason(S.Host)})", null, Ui.Text);

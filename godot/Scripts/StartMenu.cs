@@ -5,7 +5,8 @@ using Side = Praedra.Core.Clock.Side;
 
 namespace PraedraViewer;
 
-/// <summary>The start screen: choose a side and a difficulty, start a new game, continue from the autosave, load a save slot, quit.</summary>
+/// <summary>The start screen: choose a side and a difficulty, start a new game, continue from the autosave, load a save slot, quit. In the
+/// windows' look (Paul 2026-11-14, impeccable critique): the window's surface and edge, the name in pixel capitals, outlined buttons.</summary>
 public partial class StartMenu : Control
 {
     public event Action<Side, Preset, Praedra.Core.Battle.BattleRuleset> NewGameRequested;
@@ -35,16 +36,20 @@ public partial class StartMenu : Control
         var center = new CenterContainer();
         center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(center);
-        var card = Ui.Card(Ui.Chrome, Ui.Line, 28, 12);
+        using var look = Ui.Window();
+        var card = new PanelContainer { Theme = Ui.WindowTheme };
+        card.AddThemeStyleboxOverride("panel", Ui.WindowBox(24, 24));
         center.AddChild(card);
         var box = Ui.VBox(10);
         box.CustomMinimumSize = new Vector2(480, 0);
         card.AddChild(box);
 
-        var title = Ui.Label("PRAEDRA", "Title", Ui.Gold, 60);
+        // the game's name in the windows' pixel face, twice their name size (crisp: six screen pixels to a font pixel), their brightest grey
+        var title = Ui.Label("PRAEDRA", null, Ui.WinActive, 96, wrap: false);
+        title.AddThemeFontOverride("font", Ui.NameFont(96));
         title.HorizontalAlignment = HorizontalAlignment.Center;
         box.AddChild(title);
-        box.AddChild(Ui.Space(8));   // no tagline: the old one was a Star Wars phrase (impeccable critique 2026-11-14); the fiction is Paul's to write
+        box.AddChild(Ui.Space(14));   // no tagline: the old one was a Star Wars phrase (impeccable critique 2026-11-14); the fiction is Paul's to write
 
         box.AddChild(Ui.Section("Your side"));
         var sideRow = Ui.HBox(8);

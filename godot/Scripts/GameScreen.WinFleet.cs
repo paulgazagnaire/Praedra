@@ -6,6 +6,8 @@ using Praedra.Core.Characters;
 using Praedra.Core.Missions;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
+using Praedra.Core.Battle;
+using Praedra.Core.Defenses;
 using RejectReason = Praedra.Core.Clock.RejectReason;
 using UnloadRegimentsOrder = Praedra.Core.Clock.UnloadRegimentsOrder;
 using LoadRegimentsOrder = Praedra.Core.Clock.LoadRegimentsOrder;
@@ -74,14 +76,14 @@ public partial class GameScreen
             ("Command", posts + riders.Count, () => CommandTab(f, riders)),
             ("Ships", f.Ships.Count, () => ShipsTab(f, still)),
             ("Fighters", aboardF.Count + f.Squadrons.Count, () => FightersAboardTab(f, aboardF)),
-            ("Troops", aboardR.Count, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
+            ("Troops", aboardR.Count, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())),
+            ("Orders", null, () => OrdersTab(f, still, aboardR.Count)));
 
         foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
         int fid = f.Id;
         var links = new List<(string, Action, string)>();
         if (still) links.Add(($"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));
         if (still) links.Add(("Move...", () => { var ff = S.Game.State.Fleets[fid]; CloseSectorView(); StartMove(ff); }, "Pick a destination on the map"));
-        links.Add(("Orders and attack...", () => { CloseSectorView(); SelectFleet(fid, true); ShowTab(DrawerTab.Selected); }, "Bombard, invade, retreat, scrap: the fleet's full page"));
         MgLinks(links.ToArray());
     }
 
@@ -92,6 +94,89 @@ public partial class GameScreen
         if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet && x.Fleet == fid) is { } other) { Front(other); return; }
         w.Fleet = fid;
         RebuildMg(w);
+    }
+
+    /// <summary>
+    /// The fleet's orders that are not a drag (Paul 2026-11-14: an Orders tab in the Fleet window, rather than only in the right-hand panel):
+    /// bombard and invade the system it is at, the harvester's strike, fight or retreat when an enemy arrives, scrap the fleet. The same
+    /// orders as the panel's (GameScreen.Fleet.cs); the core judges them when the clock moves. rule: m4-bombardment, m4-invasion,
+    /// m5-harvester §2, m2-maintenance §Scrapping and refunds.
+    /// </summary>
+    void OrdersTab(Fleet f, bool still, int regiments)
+    {
+        LinkButton Order(string text, Action act, string tip, bool off = false, Color? ink = null)
+        {
+            var l = Ui.Link(text, act, tip);
+            l.Disabled = off;
+            if (ink is Color c) { l.AddThemeColorOverride("font_color", c); l.AddThemeColorOverride("font_hover_color", c); l.AddThemeColorOverride("font_pressed_color", c); }
+            l.AddThemeColorOverride("font_disabled_color", Ui.Dimmed);
+            l.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+            return Add(l);
+        }
+        string at = f.At;
+
+        // attack the system it is at
+        Section(still && S.OwnerOf(at) != Me ? $"Attack {at}" : "Attack", null, "Bombard weakens the defences from orbit. Invade lands the regiments aboard to take the planet: land more than the defenders have.");
+        if (!still) Line($"Travelling: give these orders when it reaches {f.Transit?.Path[^1] ?? "its destination"}.", Ui.Text3, Ui.Small);
+        else if (S.OwnerOf(at) == Me) Line($"{at} is yours. Move to a system you don't hold to bombard or invade it.", Ui.Text3, Ui.Small);
+        else
+        {
+            bool pending = S.PendingOf(f.Id).Any(p => p.StartsWith("Bombard", StringComparison.Ordinal) || p.StartsWith("Invade", StringComparison.Ordinal));
+            foreach (var (cat, label, tip) in new[]
+            {
+                (BombardCategory.Military, "Bombard military targets", "Shoots at regiments and defence buildings."),
+                (BombardCategory.Civilian, "Bombard civilian targets", "Hurts the planet's support for its owner."),
+                (BombardCategory.General, "Bombard everything", "Shoots at everything."),
+            })
+            {
+                var c = cat;
+                Order(label, () => Bombard(f, c), tip, pending);
+            }
+            Order($"Invade with {Ui.Count(regiments, "regiment", "regiments")}", () => Invade(f),
+                regiments == 0 ? "No regiments aboard: load some at one of your planets first (Troops tab)." : "Lands the regiments aboard to take the planet.", regiments == 0 || pending);
+            if (pending) Line("One attack at a time: press Play (or N for one day) so this one starts, then give the next.", Pending, Ui.Small);
+            else if (regiments == 0) Line("Invading needs regiments aboard: load them at one of your planets.", Ui.Text3, Ui.Small);
+        }
+
+        // the harvester's strike
+        if (still && S.HoldsHarvester(f))
+        {
+            bool gone = S.IsDestroyed(at), struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
+            int? readyDay = S.HarvesterRechargingUntil(f);   // the core's cooldown (m5-harvester §2 legality 3a)
+            Section("Harvester", null, "Destroy System wipes out the system the harvester is at. It asks first.");
+            Order("Destroy System...", () => AskDestroySystem(f.Id), readyDay is int rd0 ? S.HarvestWaitText(rd0) : "Asks first. The strike happens as soon as the clock moves.",
+                gone || struck || readyDay != null, Ui.Danger);
+            if (gone) Line($"{at} is already destroyed.", Ui.Text3, Ui.Small);
+            else if (struck) Line("The strike is ordered: it happens as soon as the clock moves.", Pending, Ui.Small);
+            else if (readyDay is int rd) Line(S.HarvestWaitText(rd), Ui.Text3, Ui.Small);
+        }
+
+        // fight or retreat: one setting for every fleet of yours
+        Section("When an enemy fleet arrives", null, "One setting for all your fleets.");
+        bool retreat = _retreatPending ?? S.Host.Battles.OnContactOf(Me) == OnContactMode.Retreat;
+        var choice = Ui.HBox(16);
+        var group = new ButtonGroup();
+        foreach (var (word, on, tip) in new[] { ("Fight", false, "Your fleets fight an enemy fleet that arrives."), ("Retreat", true, "Your fleets pull back to a neighbouring system when an enemy arrives, instead of fighting.") })
+        {
+            bool r = on;
+            var b = Ui.Chip(word, () => { if (r != (_retreatPending ?? S.Host.Battles.OnContactOf(Me) == OnContactMode.Retreat)) { SetRetreat(r); MgRefreshSoon(); } }, tip, retreat == on, group);
+            b.SetMeta(UiTest.FullName, $"On contact {word}");
+            b.ThemeTypeVariation = "TabChip";   // a choice of two, drawn like the tabs
+            b.FocusMode = FocusModeEnum.None;
+            choice.AddChild(b);
+        }
+        Add(choice);
+        Line("All your fleets do the same.", Ui.Text3, Ui.Small);
+
+        // scrap
+        if (still)
+        {
+            Section("Scrap", null, "Half the refined cost comes back and the upkeep is freed (rule: m2-maintenance §Scrapping and refunds).");
+            var eco = S.Host.Economy;
+            Order($"Scrap the whole fleet ({Ui.Count(f.Ships.Count, "ship", "ships")})...", () => AskScrap(f.Ships.Select(eco.Find).Where(o => o != null).ToList(), $"all {f.Ships.Count} ships of {f.Name}", f.At),
+                "Asks first. Fighters and regiments aboard stay at this system.", f.Ships.Count == 0, Ui.Danger);
+            Line("To scrap one ship, right-click it under Ships.", Ui.Text3, Ui.Small);
+        }
     }
 
     void CommandTab(Fleet f, List<CharacterRecord> riders)

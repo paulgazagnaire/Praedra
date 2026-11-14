@@ -21,7 +21,7 @@ public partial class GameScreen
     // ---- top right: goal, day, clock
     Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel, _upkeepCaption;
     Control _upkeepBar;
-    Button _playButton, _pauseButton, _goalButton, _menuButton;
+    Button _playButton, _goalButton, _menuButton;
     readonly List<Button> _speedChips = new();
 
     // ---- map and overlays
@@ -96,7 +96,6 @@ public partial class GameScreen
         sr.AddChild(new VSeparator());
         _layersButton = Ui.Button("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", "Chip");
         _layersButton.ToggleMode = true;
-        _layersButton.ButtonPressed = true;
         _layersButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         sr.AddChild(_layersButton);
         BuildSearchResults(_topCentre);
@@ -121,7 +120,7 @@ public partial class GameScreen
         var ordersCard = Ui.Hud(12, 5);
         ordersCard.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         ordersCard.MouseFilter = MouseFilterEnum.Stop;
-        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play or +1 day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in Messages.");
+        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play, or N for one day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in the Log.");
         _ordersLabel = Ui.Label("", null, Ui.Warn, Ui.Small, wrap: false);
         ordersCard.AddChild(_ordersLabel);
         ordersCard.Visible = false;
@@ -164,18 +163,11 @@ public partial class GameScreen
         dm.AddThemeConstantOverride("margin_left", 8); dm.AddThemeConstantOverride("margin_right", 8);
         dm.AddChild(dayBox);
         cr.AddChild(dm);
-        _pauseButton = Ui.Button("||", () => { if (_playing) TogglePlay(); }, "Pause (Space)", "Clock");
-        _pauseButton.SetMeta(UiTest.FullName, "Pause");
-        _pauseButton.CustomMinimumSize = new Vector2(44, 44);
-        cr.AddChild(_pauseButton);
-        _playButton = Ui.Button("\u25b6", () => { if (!_playing) TogglePlay(); }, "Play (Space). The clock stops by itself after a battle, a capture or an invasion.", "Clock");
-        _playButton.SetMeta(UiTest.FullName, "Play");
+        // one button that plays and pauses (Paul 2026-11-14, impeccable critique): it shows what a click does, and is lit while the clock runs;
+        // one day at a time is the N key
+        _playButton = Ui.Button("\u25b6", TogglePlay, "Play or pause (Space); N moves one day. The clock stops by itself after a battle, a capture or an invasion.", "Clock");
         _playButton.CustomMinimumSize = new Vector2(44, 44);
         cr.AddChild(_playButton);
-        var step = Ui.Button("+1", StepOne, "Advance exactly one day (N).", "Chip");
-        step.SetMeta(UiTest.FullName, "+1 day");
-        step.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        cr.AddChild(step);
         var sg = new ButtonGroup();
         for (int i = 0; i < Speeds.Length; i++)
         {
@@ -224,8 +216,7 @@ public partial class GameScreen
         navRow.AddChild(new VSeparator());
         _enemyHqButton = Ui.Button("\u2192 Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
         navRow.AddChild(_enemyHqButton);
-        navRow.AddChild(new VSeparator());
-        navRow.AddChild(Ui.Button("Fit", () => _view.ResetView(), "Show the whole galaxy (Home)", "Chip"));
+        // no Fit button: the Home key shows the whole galaxy (Paul 2026-11-14)
 
         // ---- bottom centre: what you clicked, or the order bar of a move
         BuildSelectionCard();
@@ -314,7 +305,8 @@ public partial class GameScreen
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
         _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
         _playButton.ThemeTypeVariation = _playing ? "ClockOn" : "Clock";
-        _pauseButton.ThemeTypeVariation = _playing ? "Clock" : "ClockOn";
+        _playButton.Text = _playing ? "||" : "\u25b6";
+        _playButton.SetMeta(UiTest.FullName, _playing ? "Pause" : "Play");
         RefreshGoalButton();
         RefreshHq();
         RefreshOrderBar();
@@ -355,7 +347,6 @@ public partial class GameScreen
     {
         _layersCard.Visible = !_layersCard.Visible;
         _layersButton.SetPressedNoSignal(_layersCard.Visible);
-        _layerKeyCard.Visible = _layersCard.Visible && _layer != MapLayer.Owners;
         _view.QueueRedraw();
     }
 

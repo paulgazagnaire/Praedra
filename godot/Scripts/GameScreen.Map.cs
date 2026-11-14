@@ -35,7 +35,8 @@ public partial class GameScreen
     PanelContainer _layersCard;
     readonly List<Button> _layerButtons = new();
 
-    /// <summary>The map layers as a short list under the menu (Paul's mockup), then Routes and Legend; the Layers switch hides it all.</summary>
+    /// <summary>The map layers as a short list under the menu (Paul's mockup), then Routes and Legend. The list starts closed and the Layers
+    /// switch opens it; the key of a layer other than Owners shows either way, so V never changes the map without saying how.</summary>
     void BuildMapTools()
     {
         var col = Ui.VBox(Ui.Block);
@@ -44,6 +45,7 @@ public partial class GameScreen
         _topLeft.AddChild(col);
         _layersCard = Ui.Hud(4, 4);
         _layersCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _layersCard.Visible = false;   // closed at the start: the Layers switch opens it (Paul 2026-11-14, impeccable critique)
         col.AddChild(_layersCard);
         var v = Ui.VBox(2);
         _layersCard.AddChild(v);
@@ -87,13 +89,13 @@ public partial class GameScreen
         _layerKey.Text = l switch
         {
             MapLayer.Support => "Support for you:\norange low · grey half · blue high",
-            MapLayer.Trouble => "Red: uprising or enemy fleet\nYellow: too few troops or blockade",
-            MapLayer.Yards => "Yellow: yard idle\nBlue: building",
-            MapLayer.Intel => "Bright: seen now\nFaded: seen long ago",
-            MapLayer.Slots => "Bigger halo: more energy and raw slots",
+            MapLayer.Trouble => "Trouble:\nred uprising or enemy fleet\nyellow too few troops or blockade",
+            MapLayer.Yards => "Yards:\nyellow idle · blue building",
+            MapLayer.Intel => "Intel age:\nbright seen now · faded long ago",
+            MapLayer.Slots => "Slots:\nbigger halo, more energy and raw slots",
             _ => "",
         };
-        _layerKeyCard.Visible = l != MapLayer.Owners && _layersCard.Visible;
+        _layerKeyCard.Visible = l != MapLayer.Owners;
         _view.QueueRedraw();
     }
 
@@ -101,12 +103,12 @@ public partial class GameScreen
 
     // The halos depend only on the day and the layer: worked out once, not on every frame the map is drawn.
     GalaxyView.MapMark?[] _marks;
-    (int Day, MapLayer Layer, int Orders) _marksKey = (-1, MapLayer.Owners, -1);
+    (int Day, MapLayer Layer, int Orders, long Next) _marksKey = (-1, MapLayer.Owners, -1, -1);
 
     GalaxyView.MapMark? LayerMarkOf(int i)
     {
         if (_layer == MapLayer.Owners) return null;
-        var key = (S.Game.Day, _layer, S.QueuedOrders);
+        var key = (S.Game.Day, _layer, S.QueuedOrders, S.Game.NextSequence);   // a Cancel then a new order keeps the count, not the next number
         if (_marks == null || _marksKey != key)
         {
             _marksKey = key;
