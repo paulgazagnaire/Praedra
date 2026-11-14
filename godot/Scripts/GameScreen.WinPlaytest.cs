@@ -68,6 +68,9 @@ public partial class GameScreen
         return w.Pages.TryGetValue(page, out var p) ? PageLabels(p.Page) : "";
     }
 
+    /// <summary>Close every management window; their buttons leave the tree now, not at the end of the frame, so a later click can't reach them.</summary>
+    internal void MgCloseAll() { foreach (var w in _mgWins.ToList()) { CloseMgmt(w); w.Panel.GetParent()?.RemoveChild(w.Panel); } }
+
     internal string MgTab(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Tab;
     internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();
 

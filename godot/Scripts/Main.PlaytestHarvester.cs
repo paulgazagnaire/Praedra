@@ -46,7 +46,8 @@ public partial class Main
         {
             // ---- Fleet panel: the button, the confirm dialog, the order
             SelectFleetByList(gs, fleet);
-            Expect(gs.Has("Destroy System"), "the fleet panel of a harvester fleet shows Destroy System");
+            Expect(gs.Click("Fleet orders") && gs.MgTab($"Fleet {dsFleet}") == "Orders", "the fleet card opens the Fleet window on Orders");
+            Expect(gs.Has("Destroy System"), "the Orders tab of a harvester fleet shows Destroy System");
             Expect(gs.Enabled("Destroy System"), "Destroy System is enabled at a system");
             Expect(gs.Click("Destroy System"), "click Destroy System");
             Expect(gs.ConfirmVisible, "a confirm dialog opens first");
@@ -56,7 +57,8 @@ public partial class Main
             Expect(gs.Click("Yes, destroy it"), "confirm");
             gs.PlayRefresh();
             Expect(s.PendingOf(dsFleet).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal)) && s.QueuedOrders >= 1, "the Destroy System order is queued");
-            Expect(!gs.Enabled("Destroy System") && gs.PanelText().Contains("The strike is ordered"), "the button is greyed while the order waits");
+            Expect(gs.MgText($"Fleet {dsFleet}").Contains("The strike is ordered") && !gs.Enabled("Destroy System"), "the button is greyed while the order waits");
+            gs.MgCloseAll();
         }
         // an Infrastructure window left open over the target must not keep drawing its slots after the strike (Ponytail on #241)
         if (me == Side.Hand) { gs.TileClick(target, "infra"); gs.PlayRefresh(); Expect(gs.MgmtKeys.Contains($"Infra {target}"), $"the Infrastructure window of {target} is open before the strike"); }
@@ -145,11 +147,15 @@ public partial class Main
         if (me == Side.Hand)
         {
             SelectFleetByList(gs, fleet);
-            Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && gs.PanelText().Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
+            gs.Click("Fleet orders");
+            string orders = gs.MgText($"Fleet {dsFleet}");
+            Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && orders.Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
+            Expect(!gs.Has("Bombard") && !gs.Has("Invade") && orders.Contains("nothing left to attack"), "a destroyed system offers nothing to attack");
             // the cooldown (m5-harvester §2 legality 3a): one harvest a year per side (DEFAULT) and the panel says until when
             int readyOn = s.Game.State.Harvester.DestroyedDay(target).GetValueOrDefault() + ds.Params.CooldownDays;
-            Expect(s.HarvesterRechargingUntil(fleet) == readyOn && gs.PanelText().Contains($"your next harvest can land on day {readyOn}"),
-                $"the panel says the harvester recharges until day {readyOn}: " + gs.PanelText().Replace("\n", " / "));
+            Expect(s.HarvesterRechargingUntil(fleet) == readyOn && orders.Contains($"your next harvest can land on day {readyOn}"),
+                $"the Orders tab says the harvester recharges until day {readyOn}: " + orders.Replace("\n", " / "));
+            gs.MgCloseAll();
             // a second order: the core refuses it and the plain reason shows in the messages
             int b2 = s.Messages.Count;
             s.SubmitDestroySystem(fleet);
