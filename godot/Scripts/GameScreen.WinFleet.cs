@@ -48,7 +48,7 @@ public partial class GameScreen
         var mates = still ? S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == f.At && x.Transit == null).OrderBy(x => x.Id).ToList() : new List<Fleet> { f };
         var top = Ui.VBox(Ui.Block);
         split.AddChild(top);
-        top.AddChild(Caption(still ? "Fleets here" : "Travelling", mates.Count.ToString()));
+        top.AddChild(Caption(still ? "Fleets here" : "Travelling", null));   // the rows below are the count
         var list = new HFlowContainer();
         list.AddThemeConstantOverride("h_separation", 6); list.AddThemeConstantOverride("v_separation", 6);
         foreach (var m in mates)
@@ -79,7 +79,7 @@ public partial class GameScreen
         foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
         int fid = f.Id;
         var links = new List<(string, Action, string)>();
-        if (still) links.Add(($"{f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));
+        if (still) links.Add(($"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));
         if (still) links.Add(("Move...", () => { var ff = S.Game.State.Fleets[fid]; CloseSectorView(); StartMove(ff); }, "Pick a destination on the map"));
         links.Add(("Orders and attack...", () => { CloseSectorView(); SelectFleet(fid, true); ShowTab(DrawerTab.Selected); }, "Bombard, invade, retreat, scrap: the fleet's full page"));
         MgLinks(links.ToArray());
@@ -112,7 +112,7 @@ public partial class GameScreen
             var z = DropZone($"Fleet {f.Id} {post}", $"make {GameSession.PostWords(post)}", d => RefuseFleetPost(d, f, p), d => DropFleetPost(d, f, p));
             z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(LeaderChip(holder, null));
-            else z.Flow.AddChild(EmptySlot("Empty", slot: true));
+            else z.Flow.AddChild(EmptySlot(DropLeader, slot: true));
             col.AddChild(z.Box);
             row.AddChild(col);
         }
@@ -136,10 +136,11 @@ public partial class GameScreen
         {
             var nz = DropZone($"Fleet {f.Id} NewFleet", "split off", d => RefuseSplit(d, f), d => DropSplit(d, f), dashed: true);
             nz.Box.CustomMinimumSize = new Vector2(TileW, TileH);
-            var l = EmptySlot("+ New fleet");
+            var l = EmptySlot("Drop ships here to split");   // says what to do, like the other drop slots; a "+" read as a button
             l.AddThemeStyleboxOverride("normal", new StyleBoxEmpty()); // the zone itself is the dashed slot
             l.HorizontalAlignment = HorizontalAlignment.Center;
             l.CustomMinimumSize = new Vector2(TileW - 12, TileH - 12);
+            l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             nz.Flow.AddChild(l);
             nz.Box.TooltipText = Ui.Wrap("Drop ships here to split them off into a new fleet.");
             sz.Flow.AddChild(nz.Box);

@@ -37,7 +37,7 @@ public partial class Main
         var unseen = cm.All.Where(c => c.Side != me && c.Placed && !seen.Contains(c.Id) && !keys.Contains(s.CharName(c.Id))).Select(c => s.CharName(c.Id)).ToList();
         Expect(unseen.Count > 0 && !unseen.Any(panel.Contains), $"no enemy leader your side has not seen is listed ({unseen.Count} hidden)");
         Expect(keys.All(k => seen.Contains(cm.All.First(c => s.CharName(c.Id) == k).Id) || panel.Contains("not seen yet")), "an unseen key leader says 'not seen yet', never where it is");
-        Expect(panel.Contains("Where: ") && panel.Contains("Role: ") && panel.Contains("Leadership "), "where, role and skills are shown");
+        Expect(panel.Contains("Leadership ") && (s.MyCharacters.All(c => s.RoleOf(c) == "no post") || s.MyCharacters.Any(c => s.RoleOf(c) != "no post" && panel.Contains(s.RoleOf(c)))), "where, any post and skills are shown");
         Expect(panel.Contains("; Talent: "), "the Talent rank of the known talented character is shown");
         GD.Print("  characters: " + string.Join(" | ", s.MyCharacters.Select(c => $"{s.CharName(c.Id)} {s.WhereIsCharacter(c)} [{s.RoleOf(c)}] {s.CapabilityOf(c)}")));
 

@@ -30,7 +30,7 @@ public partial class Main
         Expect(gs.PillText.Contains("Play"), "the pill under the search says to press Play: " + gs.PillText);
         Expect(gs.MessageCornerText.Length > 0, "the message corner shows the latest message: " + gs.MessageCornerText.Replace("\n", " / "));
         Expect(gs.Click("Menu") && gs.MenuVisible, "the menu button opens the menu");
-        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Messages", "Sector", "Save game...", "Settings..." })
+        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Log", "Sector", "Save game...", "Settings..." })
             Expect(gs.Has(item), $"the menu offers {item}");
         gs.PressKey(Key.Escape);
         Expect(!gs.MenuVisible, "Esc closes the menu");
@@ -186,7 +186,7 @@ public partial class Main
         Expect(!gs.SectorViewOpen, "S closes it again");
 
         // ---------------------------------------------------------------- the goal
-        Expect(gs.GoalButtonText.StartsWith("Goal: 0/2 leaders held", StringComparison.Ordinal), "the Goal button counts the leaders you hold: " + gs.GoalButtonText);
+        Expect(gs.GoalButtonText.StartsWith("Goal: 0/3 terms met", StringComparison.Ordinal), "the Goal button counts the capital and the leaders you hold: " + gs.GoalButtonText);
         Expect(gs.Click("Goal") && gs.GoalVisible, "the Goal button opens the goal");
         string goal = gs.GoalText;
         Expect(goal.Contains("Take the Hearth") && goal.Contains("Hold Nobody prisoner") && goal.Contains("Hold Mae Abara prisoner"), "the Hand's win terms are listed: " + goal.Replace("\n", " / "));

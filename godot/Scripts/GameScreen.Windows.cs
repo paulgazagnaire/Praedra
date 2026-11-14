@@ -353,7 +353,7 @@ public partial class GameScreen
             if (z.Flow.GetChildren().OfType<Control>().Any(c => c.Visible && !c.IsQueuedForDeletion())) continue;
             bool post = z.Key.EndsWith(" General", StringComparison.Ordinal) || z.Key.EndsWith(" Admiral", StringComparison.Ordinal)
                 || z.Key.EndsWith(" Commander", StringComparison.Ordinal);
-            z.Flow.AddChild(EmptySlot("Empty", slot: post));
+            z.Flow.AddChild(EmptySlot(post ? DropLeader : "Empty", slot: post));
         }
         Fit(w, keep);
     }

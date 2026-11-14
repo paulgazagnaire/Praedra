@@ -88,9 +88,10 @@ public partial class GameScreen : Control
         // Start with the map centred on the player's headquarters.
         string home = S.MyHqSystem ?? (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.HandCapital);
         if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
-        S.Say($"You lead the {S.NameOf(S.Player)}. Your headquarters is {home}. Press Play (or Space) to start the clock; How to play (F1) explains the rest.", MsgKind.Good, home);
+        // "Press Play" lives in the pill only (impeccable critique 2026-11-14: it was said twice, and the card cut it off)
+        S.Say($"You lead the {S.NameOf(S.Player)} from {home}. F1 explains how to play.", MsgKind.Good, home);
         foreach (var m in S.Messages) AddLogItem(m, false);
-        if (S.Game.Day == 0) _pauseNote = "Press Play (or Space) to start the clock";
+        if (S.Game.Day == 0) _pauseNote = StartNote;
         RefreshTop();
         if (_showHowToOnStart && GameBoot.HowToUnseen()) ShowHowTo();
     }

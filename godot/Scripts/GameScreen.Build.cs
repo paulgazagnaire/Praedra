@@ -94,6 +94,17 @@ public partial class GameScreen
         foreach (var fam in fams.Except(idle))
         {
             var p = S.Host.Construction.ProjectAt(name, fam);
+            var queued = QueuedBuilds(name, fam);
+            if (p is not { Units.Count: > 0 })
+            {
+                // nothing under way yet: only orders that wait for the clock, each with Cancel
+                using (Card())
+                {
+                    Add(Ui.Label(FamilyName(fam), "Strong", wrap: false));
+                    foreach (var o in queued) OrderLine(o.Sequence, $"Ordered: {o.Count} x {o.Class}", Ui.Small);
+                }
+                continue;
+            }
             var cur = eco.Find(p.Units[0]);
             string curName = cur?.Class ?? "?";
             int cost = CostOf(curName);
@@ -115,6 +126,7 @@ public partial class GameScreen
                 Stat($"{curName}: {p.Progress} of {cost}", left <= 0 ? "done next cycle" : $"about {left} {Plural(left, "day", "days")} left", null,
                     "Each yard adds one point per cycle while it has refined material; the numbers assume it does. Yards wait in line for refined.");
                 if (all.Count > 1) Note($"The whole queue: about {totalLeft} days. New orders join the end of the queue.");
+                foreach (var o in queued) OrderLine(o.Sequence, $"Ordered: {o.Count} x {o.Class}", Ui.Small);
             }
         }
     }

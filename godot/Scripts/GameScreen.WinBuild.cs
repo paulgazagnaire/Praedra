@@ -18,8 +18,6 @@ namespace PraedraViewer;
 /// </summary>
 public partial class GameScreen
 {
-    static string SectionOf(YardFamily f) => f switch { YardFamily.Shipyard => "Ships", YardFamily.Training => "Troops", _ => "Facilities" };
-
     void BuildTab(string n)
     {
         var eco = S.Host.Economy;
@@ -34,7 +32,7 @@ public partial class GameScreen
 
         // the yards, a card each
         var fams = YardFamiliesAt(n).ToList();
-        Section("Yards", fams.Count == 0 ? null : fams.Count.ToString());
+        Section("Yards");   // the cards below are the count
         if (fams.Count == 0) Line("No yard here. A Construction yard builds facilities, a Shipyard ships and fighters, a Training facility troops.", Ui.Text3, Ui.Small);
         else
         {
@@ -133,18 +131,17 @@ public partial class GameScreen
         return v;
     }
 
-    /// <summary>A yard as a card: its picture, what it is building with a progress bar and the days left, or "idle" and a button to choose.</summary>
+    /// <summary>A yard as a card: its picture, what it is building with a progress bar and the days left, or "Idle". The build orders
+    /// still waiting for the clock are listed under it, each with Cancel (impeccable critique 2026-11-14: a build click showed nothing here).</summary>
     Control YardCard(string n, YardFamily fam)
     {
         var eco = S.Host.Economy;
         var p = S.Host.Construction.ProjectAt(n, fam);
-        bool idle = p is not { Units.Count: > 0 };
+        var queued = QueuedBuilds(n, fam);
+        bool building = p is { Units.Count: > 0 }, idle = !building && queued.Count == 0;
         var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(148, 0) };   // two to a row in 306 px
         card.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, idle ? new Color(Ui.Warn, 0.5f) : new Color(Ui.You, 0.3f), 1, 8, 8));
         card.SetMeta(UiTest.FullName, $"Yard {n} {fam}");
-        card.MouseDefaultCursorShape = CursorShape.PointingHand;
-        string sec = SectionOf(fam);
-        card.GuiInput += e => { if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) { _buildSection = sec; MgRefreshSoon(); } };
         var v = Ui.VBox(3);
         v.MouseFilter = MouseFilterEnum.Ignore;
         card.AddChild(v);
@@ -161,8 +158,14 @@ public partial class GameScreen
         h.AddChild(name);
         if (idle)
         {
-            v.AddChild(Ui.Label("Idle: click to choose", null, Ui.Warn, Ui.Tiny, wrap: false));
-            card.TooltipText = Ui.Wrap($"The {FamilyName(fam).ToLowerInvariant()} builds nothing. Click to show what it can build.");
+            v.AddChild(Ui.Label("Idle", null, Ui.Warn, Ui.Tiny, wrap: false));
+            card.TooltipText = Ui.Wrap($"The {FamilyName(fam).ToLowerInvariant()} builds nothing. Pick what it should build under Build.");
+            return card;
+        }
+        if (!building)
+        {
+            foreach (var o in queued) v.AddChild(QueuedLine(o));
+            card.TooltipText = Ui.Wrap($"The {FamilyName(fam).ToLowerInvariant()} starts on {(queued.Count == 1 ? "this order" : "these orders")} as soon as the clock moves. Until then Cancel takes an order back.");
             return card;
         }
         var cur = eco.Find(p.Units[0]);
@@ -183,9 +186,26 @@ public partial class GameScreen
         stop.AddThemeFontSizeOverride("font_size", Ui.Tiny);
         foot.AddChild(stop);
         v.AddChild(foot);
+        foreach (var o in queued) v.AddChild(QueuedLine(o));
         card.TooltipText = Ui.Wrap($"{FamilyName(fam)} is building {Counts(all)}. {curName}: {p.Progress} of {cost} points." + (all.Count > 1 ? $" The whole queue: about {totalLeft} days." : "")
-            + " Each yard adds one point per cycle while it has refined material. Click to show what it can build.");
+            + " Each yard adds one point per cycle while it has refined material." + (queued.Count > 0 ? " Orders waiting for the clock join the end of the queue; until then Cancel takes one back." : ""));
         return card;
+    }
+
+    /// <summary>A build order waiting for the clock, inside its yard card: "Ordered: 2 x Bond", then Cancel on its own line (the card is narrow).</summary>
+    Control QueuedLine(Praedra.Core.Clock.BuildOrder o)
+    {
+        var box = Ui.VBox(0);
+        var l = Ui.Label($"Ordered: {o.Count} x {o.Class}", null, Pending, Ui.Tiny, wrap: false);
+        l.ClipText = true; l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        box.AddChild(l);
+        string what = S.WhatOf(o.Sequence) ?? $"Build {o.Count} x {o.Class} at {o.System}";
+        var c = Ui.Link("Cancel", () => CancelOrder(o.Sequence), $"Take back: {what}. Possible until the clock moves.");
+        c.AddThemeFontSizeOverride("font_size", Ui.Tiny);
+        c.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        c.SetMeta(UiTest.FullName, $"Cancel: {what}");
+        box.AddChild(c);
+        return box;
     }
 
     /// <summary>A thing the yards here can build, as a picture tile with its refined cost and days. Click: order as many as "How many".</summary>

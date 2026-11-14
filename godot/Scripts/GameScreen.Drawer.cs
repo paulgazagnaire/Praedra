@@ -39,7 +39,6 @@ public partial class GameScreen
         drawer.GrowHorizontal = GrowDirection.Begin;
         drawer.OffsetRight = -Edge; drawer.OffsetLeft = -Edge - DrawerWidth;
         drawer.OffsetTop = Edge + 64; drawer.OffsetBottom = -Edge;
-        drawer.AddThemeStyleboxOverride("panel", Ui.Box(new Color(Ui.HudBg, 0.97f), 10, new Color(1, 1, 1, 0.06f), 1, 0, 0));
         var v = Ui.VBox(0);
         drawer.AddChild(v);
 

@@ -24,7 +24,7 @@ public partial class GameScreen
     /// red when the planet is short of its garrison, the buildings icon amber when a yard stands idle, the fleets icon orange when an
     /// enemy fleet is seen there. Colours are the game's (Paul 2026-11-11): blue for you, orange for the enemy, whichever side you play. An uprising or a harvester circles the planet in red. A system you never looked at shows its planet and
     /// name only. The numbers are in the tooltip. Clicks: the buildings icon and the gauges open the Infrastructure window, the fleets
-    /// icon your fleets there, anywhere else the Ground window; a double-click shows it on the map.
+    /// icon your fleets there, anywhere else the Ground window.
     /// </summary>
     PanelContainer SystemCardTile(string n)
     {
@@ -38,7 +38,8 @@ public partial class GameScreen
 
         var tile = new PanelContainer { CustomMinimumSize = new Vector2(TileWidth, TileHeight), MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
         tile.SetMeta(UiTest.FullName, "Sector card " + n);
-        StyleBoxFlat Style(bool hover) => Ui.Box(hover ? new Color("17181c") : SystemTile.Ground, 0, hover ? new Color(1, 1, 1, 0.22f) : new Color(1, 1, 1, 0f), 1, 0, 0);
+        // hover: a thin grey outline, no fill (the window look has no fills; impeccable critique 2026-11-14)
+        StyleBoxFlat Style(bool hover) => Ui.Box(SystemTile.Ground, 0, hover ? Ui.WinText : new Color(0, 0, 0, 0), 1, 0, 0);
         tile.AddThemeStyleboxOverride("panel", Style(false));
         // a tile rebuilt under a still mouse (a new day) keeps its hover look
         Callable.From(() => { if (IsInstanceValid(tile) && tile.IsVisibleInTree() && tile.GetGlobalRect().HasPoint(tile.GetGlobalMousePosition())) tile.AddThemeStyleboxOverride("panel", Style(true)); }).CallDeferred();
@@ -95,7 +96,8 @@ public partial class GameScreen
             }
             Color side = mine ? Ui.You : Ui.Enemy;
             // ---- the corner icons: lit when something is there, in the side's colour; trouble in its own colour
-            if (buildings > 0) d.Buildings = mine && IdleYardFamilies(n).Count > 0 ? Ui.Warn : side;
+            // in the holder's colour: grey on a world nobody holds (impeccable critique 2026-11-14: it was drawn enemy orange)
+            if (buildings > 0) d.Buildings = mine && IdleYardFamilies(n).Count > 0 ? Ui.Warn : Ui.OwnerColor(holder, Me);
             if (troops < need) d.Troops = Ui.Danger;
             else if (troops > 0) d.Troops = side;
             int own = S.Game.State.Fleets.Values.Count(f => f.Side == Me && f.At == n);
@@ -128,7 +130,6 @@ public partial class GameScreen
             }
             if (e is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb) return;
             // the tile may be rebuilt by what the click does: do it after this input event is over
-            if (mb.DoubleClick) { Later(() => ShowOnMap(n)); return; }
             string hot = HotAt(mb.GlobalPosition);
             Later(() => OpenFromTile(n, hot));
         };
@@ -183,7 +184,7 @@ public partial class GameScreen
             if (pic.Facilities is { } f) lines.Add($"Buildings seen: {f.Value.Values.Sum()}.");
             if (pic.Ground is { } g) lines.Add($"Troops seen: {g.Value.Where(x => x.Side != Me).Sum(x => x.Total)}.");
         }
-        lines.Add("Click: the ground window (leaders, troops, fleets in orbit). Click the gauges or the buildings icon: infrastructure. Click the fleet icon: your fleets. Double-click: show it on the map.");
+        lines.Add("Click: the ground window (leaders, troops, fleets in orbit). Click the gauges or the buildings icon: infrastructure. Click the fleet icon: your fleets.");
         return string.Join("\n", lines);
     }
 
@@ -209,7 +210,9 @@ public partial class GameScreen
         var idleFams = IdleYardFamilies(n);
         bool idle = idleFams.Count > 0;
         foreach (var fam in YardFamiliesAt(n).Where(f => !idleFams.Contains(f)))
-            parts.Add($"{eco.Find(S.Host.Construction.ProjectAt(n, fam).Units[0])?.Class ?? "?"} {DaysLeftOf(n, fam)}d");
+            parts.Add(S.Host.Construction.ProjectAt(n, fam) is { Units.Count: > 0 } p
+                ? $"{eco.Find(p.Units[0])?.Class ?? "?"} {DaysLeftOf(n, fam)}d"
+                : $"{string.Join(", ", QueuedBuilds(n, fam).Select(o => o.Class))} ordered");   // only orders waiting for the clock
         if (parts.Count == 0) return idle ? ("idle", Ui.Warn) : ("none", Ui.Text3);
         return (string.Join(", ", parts) + (idle ? " +idle" : ""), idle ? Ui.Warn : Ui.Text);
     }
@@ -237,12 +240,4 @@ public partial class GameScreen
         return (int)Math.Round(sum);
     }
 
-    void ShowOnMap(string n)
-    {
-        CloseSectorView();
-        if (!G.TryFindSystem(n, out int idx)) return;
-        _view.Centre(idx);
-        _view.Select(idx);
-        OnViewChanged();
-    }
 }

@@ -27,6 +27,16 @@ public partial class GameScreen
     bool KeyDead(int id) => Cm.Get(id) is { Status: CharacterStatus.Dead };
     bool KeyMet(int id) => InMyPrison(id) || (KeyDead(id) && Vm.Rules.KeyDeathFallback == Praedra.Core.Victory.KeyDeathFallback.WaiveCondition);
 
+    /// <summary>Whether the capital term of the standard win is met, as far as the player's side knows: the Hand needs the Hearth gone
+    /// (HqDestroyed is told to both sides, rule: m5-fog-and-hq §F7); the Collective needs Charter held or destroyed
+    /// (rule: m5-setup-and-victory §Victory, Charter held by the Collective OR destroyed).</summary>
+    bool CapitalTermMet() => Me == Side.Hand
+        ? S.Game.State.Scenario.Hq.Status == Praedra.Core.Fog.HqStatus.Destroyed
+        : S.KnownOwnerOf(GameBoot.HandCapital) is (true, var o) && o == Me || S.IsDestroyed(GameBoot.HandCapital);
+
+    /// <summary>Whether this game's rules make the enemy capital a win term for the player (rule switches HandWinsOnHqLost, CollectiveWinsOnCharter).</summary>
+    bool CapitalTermOn => Me == Side.Hand ? Vm.Rules.HandWinsOnHqLost : Vm.Rules.CollectiveWinsOnCharter;
+
     /// <summary>Where the player last saw an enemy leader: (system, day), or null.</summary>
     (string System, int Day)? LastSeen(int id) =>
         S.Fog.CharactersSeen(Me).Where(x => x.Character.Id == id).OrderByDescending(x => x.Stamp).ThenBy(x => x.System, StringComparer.Ordinal)
@@ -44,9 +54,12 @@ public partial class GameScreen
         }
         else
         {
-            var terms = MyTerms.ToList();
-            int met = terms.Count(KeyMet);
-            text = Vm.Rules.StandardVictory && terms.Count > 0 ? $"Goal: {met}/{terms.Count} leaders held" : "Goal";
+            // every term of the standard win: the enemy capital and each key leader (impeccable critique 2026-11-14: counting only the
+            // leaders could read 2/2 while the capital still stood)
+            var terms = Vm.Rules.StandardVictory ? MyTerms.ToList() : new List<int>();
+            int total = terms.Count + (CapitalTermOn ? 1 : 0);
+            int met = terms.Count(KeyMet) + (CapitalTermOn && CapitalTermMet() ? 1 : 0);
+            text = total > 0 ? $"Goal: {met}/{total} terms met" : "Goal";
             tip = text + ". How you win, and how close each side is (G).";
         }
         // the clock card keeps it short (GOAL 0/2, WIN IN 12D); the full words are the tooltip's and the playtest's
@@ -68,13 +81,13 @@ public partial class GameScreen
         v.AddChild(head);
 
         // ---- the standard win: the enemy capital AND its key leaders
-        var c1 = GoalCard(v, "Win: take their capital and hold their leaders", "All of these at once.");
+        var c1 = GoalCard(v, "Win: take their capital and hold their leaders", "All of these at once. Capture a leader in a battle where they stand, or with an Abduction mission.");
         if (hand)
         {
             var hq = S.Fog.KnownHq(Me);
             // HqDestroyed is told to both sides (rule: m5-fog-and-hq §F7), so the Hand may know the Hearth is gone
             var truth = S.Game.State.Scenario.Hq;
-            bool gone = truth.Status == Praedra.Core.Fog.HqStatus.Destroyed;
+            bool gone = CapitalTermMet();
             Check(c1, gone, "Take the Hearth, the Collective headquarters",
                 gone ? $"Done: it fell at {truth.System}."
                 : hq == null ? "Where it is: unknown. Explore Collective systems and send spies to find it."
@@ -82,18 +95,17 @@ public partial class GameScreen
         }
         else
         {
-            var (known, owner) = S.KnownOwnerOf(GameBoot.HandCapital);
-            bool held = known && owner == Me;
+            bool held = CapitalTermMet();
             Check(c1, held, "Take Charter, the Hand capital",
-                held ? "You hold it." : "Charter is heavily defended: bring a large fleet and many regiments.", GameBoot.HandCapital);
+                held ? (S.IsDestroyed(GameBoot.HandCapital) ? "Destroyed." : "You hold it.") : "Charter is heavily defended: bring a large fleet and many regiments.", GameBoot.HandCapital);
         }
         foreach (int id in MyTerms)
         {
             string name = S.CharName(id);
             string how = InMyPrison(id) ? $"In your prison{(Cm.Get(id)?.HeldAt is string at ? $" at {at}" : "")}. Keep them there."
                 : KeyDead(id) ? "Dead: no longer needed."
-                : LastSeen(id) is { } ls ? $"Free. Last seen at {ls.System}, day {ls.Day}. Capture them in a battle where they stand, or with an Abduction mission."
-                : "Free, whereabouts unknown. Capture them in a battle where they stand, or with an Abduction mission.";
+                : LastSeen(id) is { } ls ? $"Free. Last seen at {ls.System}, day {ls.Day}."
+                : "Free, whereabouts unknown.";
             Check(c1, KeyMet(id), $"Hold {name} prisoner", how, LastSeen(id)?.System);
         }
 
@@ -112,8 +124,12 @@ public partial class GameScreen
         {
             // the run counts only once the enemy capital is gone (rule: m5-setup-and-victory §Victory, capital and control)
             bool capitalGone = hand ? S.Game.State.Scenario.Hq.Status == Praedra.Core.Fog.HqStatus.Destroyed : S.KnownOwnerOf(GameBoot.HandCapital) is (true, var co) && co != S.Enemy;
-            c2.AddChild(Ui.Row("Systems you hold", $"{mine} of {G.Systems.Count}"));
-            c2.AddChild(Ui.Row("Enemy systems you know of", theirs.ToString(), null, $"Only what your side has seen: {unknown} systems you have never explored or whose owner you do not know."));
+            if (capitalGone || Vm.DominanceDueDay != null)
+            {
+                // counted only once they can matter: before that "108 of 555" invites a sum the rule does not make
+                c2.AddChild(Ui.Row("Systems you hold", $"{mine} of {G.Systems.Count}"));
+                c2.AddChild(Ui.Row("Enemy systems you know of", theirs.ToString(), null, $"Only what your side has seen: {unknown} systems you have never explored or whose owner you do not know."));
+            }
             if (Vm.DominanceDueDay is int due && Vm.DominanceLeader is Side lead)
                 c2.AddChild(Ui.Label(lead == Me ? $"Running: you win on day {due} ({Ui.InDays(due - S.Game.Day)}) if you keep it."
                     : $"DANGER: the {S.NameOf(lead)} wins on day {due} ({Ui.InDays(due - S.Game.Day)}). Take systems back to break its hold.", "Strong", lead == Me ? Ui.Good : Ui.Danger));
@@ -130,7 +146,7 @@ public partial class GameScreen
         c2.AddChild(Ui.Label("Either side also wins at once when the other holds no system.", "Hint"));
 
         // ---- what the enemy needs from you
-        var c3 = GoalCard(v, "What the enemy needs", hand ? "The Collective wins by taking Charter and holding these two prisoner." : "The Hand wins by taking the Hearth and holding these two prisoner.");
+        var c3 = GoalCard(v, "What the enemy needs", hand ? "The Collective wins by taking Charter and holding these leaders prisoner." : "The Hand wins by taking the Hearth and holding these leaders prisoner.");
         if (hand)
         {
             var (known, owner) = S.KnownOwnerOf(GameBoot.HandCapital);

@@ -77,6 +77,9 @@ public partial class SystemTile : Control
         if (d.Ring) DrawArc(PlanetBox.GetCenter(), 44, 0, Mathf.Tau, 64, UiKitDanger, 1f, false);
         DrawName(d);
         if (!d.Gauges) return;
+        // the gauges sit on bare tile ground, as in the frame: mask the planet under them so its dither doesn't show through and between
+        // the steps (impeccable critique 2026-11-14); the 60% panels then come out the frame's #040405
+        DrawRect(new Rect2(RawGauge.Position, new Vector2(EnergyGauge.End.X - RawGauge.Position.X, RawGauge.Size.Y)), Ground);
         Gauge(RawGauge, d.RawSlots, d.Mines, RawUsed, RawFree, outer: true);
         Gauge(EnergyGauge, d.EnergySlots, d.EnergyUsed, EnergyUsed, EnergyFree, outer: false);
         Loyalty(d);

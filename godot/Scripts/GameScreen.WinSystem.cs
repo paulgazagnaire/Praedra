@@ -140,7 +140,7 @@ public partial class GameScreen
         var gz = DropZone($"Ground {n} General", "make General", d => RefuseSystemGeneral(d, n), d => DropSystemGeneral(d, n));
         gz.Box.CustomMinimumSize = new Vector2(TileW + 14, 0);
         if (gen != null) gz.Flow.AddChild(LeaderChip(gen, "General of " + n));
-        else gz.Flow.AddChild(EmptySlot("Empty", slot: true));
+        else gz.Flow.AddChild(EmptySlot(DropLeader, slot: true));
         gcol.AddChild(gz.Box);
         row.AddChild(gcol);
         // leaders standing here (not on a fleet, not the General)
@@ -159,14 +159,13 @@ public partial class GameScreen
 
     void TroopsTab(string n, List<EconObject> regs, List<EconObject> sf)
     {
-        int need = S.Host.Support.RequiredGarrison(n);
-        Section("Regiments", need > 0 ? $"{regs.Count} / {need} needed" : regs.Count.ToString(), "Below 60% loyalty a planet needs regiments to stay calm: one for every 10 points under 60. Too few and it rises up.");
+        Section("Regiments", null, "Below 60% loyalty a planet needs regiments to stay calm: one for every 10 points under 60. Too few and it rises up.");
         var rz = DropZone($"Ground {n} Regiments", "land", d => RefuseToGround(d, n, 'R'), d => DropToGround(d, n));
         UnitTiles(rz.Flow, regs.Select(o => ((Drag?)new Drag('R', o.Id), o, (string)null)), n);
         if (regs.Count == 0) rz.Flow.AddChild(EmptySlot("No regiments"));
         Add(rz.Box);
         // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's window they go there (a Move mission)
-        Section("Special forces", sf.Count == 0 ? null : sf.Count.ToString(), "Agents never ride fleets. Drag one onto another system's Troops tab to send it there.");
+        Section("Special forces", null, "Agents never ride fleets. Drag one onto another system's Troops tab to send it there.");
         var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
         foreach (var o in sf)
         {
@@ -183,7 +182,7 @@ public partial class GameScreen
 
     void FightersTab(string n, List<EconObject> based)
     {
-        Section("Fighters based here", based.Count == 0 ? null : based.Count.ToString(), "Squadrons based on the planet defend it. Drag them onto a fleet's Fighters tab to load them on a carrier.");
+        Section("Fighters based here", null, "Squadrons based on the planet defend it. Drag them onto a fleet's Fighters tab to load them on a carrier.");
         var fz = DropZone($"Ground {n} Fighters", "base here", d => RefuseToGround(d, n, 'Q'), d => DropToGround(d, n));
         UnitTiles(fz.Flow, based.Select(o => ((Drag?)new Drag('Q', o.Id), o, HullWords(o))), n);
         if (based.Count == 0) fz.Flow.AddChild(EmptySlot("No squadrons"));
@@ -194,7 +193,7 @@ public partial class GameScreen
     void OrbitList(string n, List<Fleet> own)
     {
         if (own.Count == 0) { Add(EmptySlot("No fleets of yours here")); return; }
-        Section("Your fleets in orbit", own.Count.ToString());
+        Section("Your fleets in orbit");   // the Fleets tab counts them
         foreach (var f in own) Add(FleetRow(f, false, null));
     }
 

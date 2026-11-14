@@ -112,7 +112,8 @@ public sealed partial class GameSession
                     : $"{FleetName(j.Fleet)} reached {j.System}, but {FleetName(j.Into)} {(j.Reason == "moving" ? "is moving" : "had left")}: no merge.", j.System, MsgKind.Warn);
                 break;
             case FleetArrived f when OwnerOf(f.System) == Player:
-                yield return new Message(d, $"Enemy fleet arrived at {f.System}.", f.System, MsgKind.Warn); // no enemy fleet names (§N8)
+                // red, as Needs you and the Trouble layer show an enemy fleet at your system (impeccable critique 2026-11-14)
+                yield return new Message(d, $"Enemy fleet arrived at {f.System}.", f.System, MsgKind.Bad); // no enemy fleet names (§N8)
                 break;
             case FleetSighted x when OwnerOf(x.System) != Player: // at your own systems FleetArrived already says it
                 yield return new Message(d, $"Enemy fleet sighted at {x.System}: {x.Detail}.", x.System, MsgKind.Warn);
@@ -144,7 +145,8 @@ public sealed partial class GameSession
                 yield return new Message(d, $"{FleetName(x.Fleet)} was stopped at {x.System} by an enemy fleet.", x.System, MsgKind.Warn);
                 break;
             case BlockadeStarted b when OwnerOf(b.System) == Player && b.Blockader != Player:
-                yield return new Message(d, $"{b.System} is blockaded by the enemy: mines and yards there stop.", b.System, MsgKind.Bad);
+                // amber, as Needs you ("to watch"), the dashed map ring and the Trouble layer show a blockade (impeccable critique 2026-11-14)
+                yield return new Message(d, $"{b.System} is blockaded by the enemy: mines and yards there stop.", b.System, MsgKind.Warn);
                 break;
             case BlockadeLifted b when OwnerOf(b.System) == Player && b.Blockader != Player:
                 yield return new Message(d, $"The blockade of {b.System} is over.", b.System, MsgKind.Good);

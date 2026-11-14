@@ -20,7 +20,7 @@ public partial class StartMenu : Control
 
     static readonly string[] SideBlurb =
     {
-        "The Hand: strong fleets, and a galaxy to keep in line. Find the Hearth and crush the Collective.",
+        "The Hand: strong fleets, and a galaxy to keep in line. Find the Hearth, the Collective's hidden headquarters, and take it.",
         "The Collective: few ships, many friends. Win the people over and take down the Hand.",
     };
 
@@ -44,10 +44,7 @@ public partial class StartMenu : Control
         var title = Ui.Label("PRAEDRA", "Title", Ui.Gold, 60);
         title.HorizontalAlignment = HorizontalAlignment.Center;
         box.AddChild(title);
-        var sub = Ui.Label("a galactic civil war", "Hint");
-        sub.HorizontalAlignment = HorizontalAlignment.Center;
-        box.AddChild(sub);
-        box.AddChild(Ui.Space(8));
+        box.AddChild(Ui.Space(8));   // no tagline: the old one was a Star Wars phrase (impeccable critique 2026-11-14); the fiction is Paul's to write
 
         box.AddChild(Ui.Section("Your side"));
         var sideRow = Ui.HBox(8);

@@ -145,7 +145,7 @@ public partial class GameScreen
         Item(Icon(SystemTile.Fleet, Ui.You), "FLEETS");
         Item(Icon(SystemTile.Military, Ui.You), "TROOPS");
         Item(Icon(Me == Side.Hand ? SystemTile.Hand : SystemTile.Braid, Ui.You), "HOLDER");
-        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: bright steps are in use, dark ones free, grey ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Blue is you, orange the enemy. Icons are lit when there is something there, in the colour of whose it is; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
+        h.TooltipText = Ui.Wrap("Gauges fill from the bottom: bright steps are in use, dark ones free, grey ones slots the system lacks. Resources are the raw slots and the mines on them; energy the building slots. Loyalty: yours from the bottom, the enemy's faded on top. Icons are lit when there is something there, in the colour of whose it is, and the holder's emblem is gold on a headquarters; red troops = short of the garrison, amber buildings = a yard stands idle. A red ring = uprising or harvester. Point at a tile for its numbers.");
         h.MouseFilter = MouseFilterEnum.Pass;
         return h;
     }
@@ -176,10 +176,17 @@ public partial class GameScreen
         // the same space between the tiles as on either side of them (the 4 is the scroll bar's room)
         int gap = Math.Max(CardGap, (int)((w - 4 - cols * TileWidth) / (cols + 1)));
         _secGrid.AddThemeConstantOverride("h_separation", gap);
-        _secGrid.AddThemeConstantOverride("v_separation", Math.Min(gap, 2 * GridPad));
         _secGridPad.AddThemeConstantOverride("margin_left", gap); _secGridPad.AddThemeConstantOverride("margin_right", gap);
         // below the top bar (the clock and the goal stay in sight), down to the foot of the screen
         float h = vp.Y - TopClear - BottomClear;
+        // the rows share the height evenly, above, between and below them, instead of hugging the top over an empty band (impeccable
+        // critique 2026-11-14); never closer than 32 px nor further apart than the columns; when they don't fit, the tiles scroll as before.
+        // The head already ends in a WinGap, so the space over the first row takes that off.
+        int rows = (n + cols - 1) / cols;
+        float free = h - _secWin.GetMinimumSize().Y - WinPad - rows * TileHeight;
+        int vgap = Math.Clamp((int)(free / (rows + 1)), Math.Min(gap, 2 * GridPad), gap);
+        _secGrid.AddThemeConstantOverride("v_separation", vgap);
+        _secGridPad.AddThemeConstantOverride("margin_top", Math.Max(0, vgap - WinGap));
         w = Math.Max(w, _secWin.GetCombinedMinimumSize().X); // never wider on screen than placed: the right edge stays on screen
         // on the left, the first two window columns; on the right, the last two, so the other windows line up beside it
         var slots = _mgLayer != null ? Slots() : new List<Vector2>();

@@ -323,6 +323,13 @@ public partial class GameScreen
         RefreshMessageCorner();
     }
 
+    /// <summary>The pill's note before the first day. While a yard at your headquarters stands idle it says that first: giving the yards
+    /// work is the game's first job, and pressing Play with them idle wastes days (impeccable critique 2026-11-14).</summary>
+    const string StartNote = "Press Play (or Space) to start the clock";
+
+    string StartNoteText() =>
+        S.MyHqSystem is string home && IdleYardFamilies(home).Count > 0 ? $"Yards idle at {home}: build, then Play (Space)" : StartNote;
+
     /// <summary>The pill under the search: why the clock stopped, or what needs you; nothing when all is quiet.</summary>
     void RefreshPill()
     {
@@ -330,7 +337,7 @@ public partial class GameScreen
         string text = null; Color dot = Ui.Warn;
         if (InMoveMode) text = null;
         else if (_playing && _runUntilNeeded) { text = "Running until something needs you"; dot = Ui.Good; }
-        else if (!_playing && _pauseNote != null) text = _pauseNote;
+        else if (!_playing && _pauseNote != null) text = _pauseNote == StartNote ? StartNoteText() : _pauseNote;
         else
         {
             int urgent = _attention.Count(a => a.Level == Level.Danger), watch = _attention.Count(a => a.Level == Level.Warn);
@@ -397,21 +404,14 @@ public partial class GameScreen
     /// <summary>A short note under the search that goes by itself (order sent, saved, something happened).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)
     {
-        var dot = kind switch
-        {
-            MsgKind.Bad => Ui.Danger,
-            MsgKind.Warn => Ui.Warn,
-            MsgKind.Good => Ui.Good,
-            MsgKind.Battle => Ui.You,
-            _ => Ui.Text3,
-        };
+        var dot = Ui.KindColor(kind, Ui.Text3);
         var card = Ui.Hud(12, 7);
         card.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         var h = Ui.HBox(Ui.Block);
         h.MouseFilter = MouseFilterEnum.Ignore;
         h.AddChild(new Glyph(Glyph.Kind.Dot, dot, 8) { CustomMinimumSize = new Vector2(10, 0) });
         var l = Ui.Label(text, null, Ui.Text, Ui.Small);
-        l.CustomMinimumSize = new Vector2(Math.Min(380, 8 * text.Length + 10), 0);
+        l.CustomMinimumSize = new Vector2(380, 0);   // every note the same width, so stacked notes line up (impeccable critique 2026-11-14)
         h.AddChild(l);
         card.AddChild(h);
         if (system != null)
@@ -524,7 +524,7 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.Dot, Ui.Neutral, 8), "Nobody's system");
         Item(new Glyph(Glyph.Kind.Ring, new Color(Ui.Neutral, 0.6f), 9), "Never explored");
         Item(new Glyph(Glyph.Kind.Cross, Ui.Danger, 11), "Destroyed by a harvester");
-        Item(new Glyph(Glyph.Kind.DoubleRing, Ui.Gold, 14, Ui.You), "Headquarters (tagged with its name)");
+        Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the dot");   // as the map draws it
         Item(new Glyph(Glyph.Kind.Ring, Ui.Danger, 14), "Uprising: yards and mines stop");
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
         Item(new Glyph(Glyph.Kind.Triangle, Colors.White, 11, Ui.You), "Your fleet (a number = several here)");

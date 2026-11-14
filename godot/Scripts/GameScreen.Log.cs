@@ -63,15 +63,6 @@ public partial class GameScreen
         return host;
     }
 
-    static Color KindColor(MsgKind k) => k switch
-    {
-        MsgKind.Good => new Color("8fe0b0"),
-        MsgKind.Bad => new Color("ff9a9a"),
-        MsgKind.Warn => new Color("f5d27a"),
-        MsgKind.Battle => new Color("9cc9f5"),
-        _ => Ui.Text2,
-    };
-
     bool PassesFilter(Message m) => _logFilter switch
     {
         "All" => true,
@@ -115,7 +106,7 @@ public partial class GameScreen
         _logMessages.Add(m);
         _log.AddItem($"Day {m.Day}   {m.Text}");
         int idx = _log.ItemCount - 1;
-        _log.SetItemCustomFgColor(idx, KindColor(m.Kind));
+        _log.SetItemCustomFgColor(idx, Ui.KindColor(m.Kind, Ui.Text2));
         _log.SetItemTooltip(idx, m.System != null ? Ui.Wrap(m.Text + (m.Detail != null ? "\nClick for the report." : "\nClick to go there.")) : Ui.Wrap(m.Text));
         if (_log.ItemCount > MaxLogItems) { _log.RemoveItem(0); _logMessages.RemoveAt(0); }
     }

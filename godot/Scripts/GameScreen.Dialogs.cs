@@ -33,8 +33,7 @@ public partial class GameScreen
         _menuCatcher.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _menuCatcher.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true }) ToggleMenu(); };
         AddChild(_menuCatcher);
-        _menuPopup = Ui.Hud(6, 6);
-        _menuPopup.AddThemeStyleboxOverride("panel", Ui.Box(Ui.HudBg, 8, Ui.LineHi, 1, 6, 6)); // opaque: nothing of the map or the layers shows through
+        _menuPopup = Ui.Hud(6, 6);   // the HUD's window surface, opaque: nothing of the map or the layers shows through
         _menuPopup.Visible = false;
         _menuPopup.CustomMinimumSize = new Vector2(260, 0);
         AddChild(_menuPopup);
@@ -47,7 +46,7 @@ public partial class GameScreen
             ("Fleets", "F", () => ShowTab(DrawerTab.Fleets), "All your fleets: where they are and where they go"),
             ("Leaders", "C", () => ShowTab(DrawerTab.Leaders), "Your leaders, and the enemy leaders you have seen"),
             ("Missions", "M", () => ShowTab(DrawerTab.Missions), "Your agents' missions"),
-            ("Messages", "E", () => ShowTab(DrawerTab.Log), "Every message, by kind"),
+            ("Log", "E", () => ShowTab(DrawerTab.Log), "Every message, by kind"),   // the tab's own name
             ("Sector", "S", ToggleSectorView, "Every system of a sector at a glance, with its planet, buildings, fleets and forces (or click a sector on the map)"),
         })
         {
@@ -222,55 +221,32 @@ public partial class GameScreen
 
     // ================================================================== how to play
 
-    // The rules as the player meets them, in plain words. The win conditions are the core's (rule: m5-setup-and-victory §Victory).
+    // The rules as the player meets them, in plain words, short enough to read in one go without scrolling (impeccable critique
+    // 2026-11-14: the old 818 words were cut off on the first screen). The win conditions are the core's (rule: m5-setup-and-victory
+    // §Victory); the numbers live in the Goal window (G), which reads them from the rules.
     static readonly (string Head, string[] Lines)[] HowTo =
     {
         ("How you win", new[]
         {
-            "THE HAND wins by taking the Collective headquarters, the Hearth, AND holding its two leaders, Nobody and Mae Abara, prisoner. First you must find the Hearth: explore Collective systems and send spies.",
-            "THE COLLECTIVE wins by taking Charter, the Hand's capital, AND holding Cassia Ravilla and The Chair prisoner.",
-            "A key leader who dies no longer counts. Either side also wins when the other holds no system, or by holding 70% of the systems the two sides hold for 180 days after the enemy capital fell. The Goal button (G) shows where you stand.",
+            "Take the enemy capital and hold its two key leaders prisoner, at the same time. The Hand must first find the Hearth, the Collective's hidden headquarters. Goal (G) shows who, where, and how close each side is.",
         }),
         ("Time", new[]
         {
-            "Press Play (Space) to run the clock, again to stop it. Keys 1-4 set the speed; N or +1 day moves one day. The clock stops by itself after a battle, a capture or an invasion (Settings can add more).",
-            "An order takes effect as soon as the clock moves (Play or +1 day): a fleet leaves at once and arrives on the day shown. Until then you can cancel it. A note under the search counts your orders.",
-            "The pill under the search says why the clock stopped or how many things need you; click it for Needs you (Q), the list worst first, each with its button. Run until something needs me plays until a new problem appears.",
+            "Space runs and stops the clock; 1-4 set the speed, N moves one day. Orders wait for the clock; until then each one has Cancel. The clock stops by itself when something happens, and the pill under the search says why.",
         }),
-        ("The screen", new[]
+        ("The map", new[]
         {
-            "The map fills the screen; blue is always you, orange the enemy, grey nobody, a hollow ring a place you never explored. A click shows a small card at the bottom; Details opens the window on the right. The menu (top left) opens your lists: Fleets (F), Leaders (C), Missions (M), Messages (E). Esc closes the window.",
-            "Map layers (top left, V) colour the map for one question: support, trouble, idle yards, how old your picture is, slots. Point at a sector to name its systems; click it for its window: every system with its planet, buildings, fleets and forces (S). Search (/) finds systems, fleets and leaders. Legend explains the marks.",
-            "Fog of war: you see live only the systems you hold or have a fleet at. Everything else shows what you saw last, with the day.",
+            "Blue is you, orange the enemy, grey nobody; a hollow ring is a place you never explored. Away from your systems and fleets you see what you saw last. Click a sector for its window (S); Legend explains the marks.",
         }),
-        ("Fleets", new[]
+        ("Doing things", new[]
         {
-            "Click one of your fleets (blue triangle) or pick it in Fleets, press Move..., then click a destination. The bar at the bottom shows the days and the arrival day; a clean path is sent with the click.",
-            "Ships fly anywhere, but routes are faster: thick lines are major routes (3x), thin ones minor (1.5x). If the path crosses a place where you saw an enemy interdictor, the bar turns red and offers Go anyway, Go around, or Cancel. Shift-click adds a waypoint, Backspace drops it.",
-            "Battles happen by themselves when fleets of both sides meet. Your fleets fight, or retreat if you tick Retreat instead of fighting.",
+            "Move: click your fleet, Move..., then a system.",
+            "Build: click your planet, then Infra.",
+            "Invade: Load troops, move, beat any fleet there, then Invade.",
+            "Missions: Leaders (C), then pick a team, a kind and a target.",
+            "Money: mines dig Raw, refineries make Refined, which you spend. Stay under the Upkeep limit.",
         }),
-        ("Taking a planet", new[]
-        {
-            "1) Select a fleet with troop room at one of your planets that has regiments, and press Load troops.",
-            "2) Move it to the target. Any enemy fleet there must be beaten first. 3) Bombard to weaken the defenders if you like. 4) Press Invade: land more regiments than the defenders have.",
-        }),
-        ("Your planets", new[]
-        {
-            "Click one of your planets: Overview shows what its yards build and how long it takes; Build has Facilities, Ships, Fighters and Troops. Ships need a Shipyard, troops a Training facility, buildings a Construction yard and a free slot.",
-            "MONEY: mines dig Raw, refineries turn it into Refined, which you spend. Upkeep is the running cost of everything you own; its limit grows with mines and refineries, and over it, units are scrapped.",
-            "ORDER: a planet with low support needs regiments to stay calm. Too few and it revolts (red ring): its yards and mines stop. Needs you offers to train the missing ones.",
-        }),
-        ("Leaders and missions", new[]
-        {
-            "Leaders (C) lists your leaders with their skills. A fleet's Admiral boosts its bombardment, a fleet General its regiments in an invasion, a system's General the defenders there.",
-            "Send a leader on a mission from Leaders or from the planet where they stand: tick the team, pick the kind and the target; the route and arrival day show first. Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system over). Sabotage is very hard.",
-        }),
-        ("Side-only", new[]
-        {
-            "THE COLLECTIVE can move the Hearth: click your HQ system, Move HQ..., then one of your systems. It cannot be attacked on the way; a big enemy blockade pins it.",
-            "THE HAND can build a harvester at a shipyard (one per system). Its fleet's Destroy System wipes out the system it is at for good, and turns the sector against the Hand. The Collective stops it in battle or with a Spike the Harvester mission.",
-        }),
-        ("Saving", new[] { "Menu has six save slots and Load. Ctrl/Cmd+S saves to the last slot you used. The game also saves itself every 30 days; Continue on the start screen loads that." }),
+        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Log · S sector · V layer · L routes · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
     };
 
     void BuildHowTo()
@@ -282,23 +258,33 @@ public partial class GameScreen
         head.AddChild(Ui.Grow());
         head.AddChild(Ui.Label("Battle rules: " + GameBoot.RulesName(S.Rules), "Hint", wrap: false));
         v.AddChild(head);
-        var sc = new ScrollContainer { CustomMinimumSize = new Vector2(760, 470), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        v.AddChild(sc);
+        _howScroll = new ScrollContainer { CustomMinimumSize = new Vector2(760, 470), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        v.AddChild(_howScroll);
         var lines = Ui.VBox(6);
         lines.CustomMinimumSize = new Vector2(740, 0);
-        sc.AddChild(lines);
+        _howScroll.AddChild(lines);
+        lines.MinimumSizeChanged += FitHowTo;   // the wrapped text knows its height only once it has its width
         foreach (var (h, ls) in HowTo)
         {
             lines.AddChild(Ui.Space(4));
             lines.AddChild(Ui.Section(h));
             foreach (var l in ls) lines.AddChild(Ui.Label(l, null, Ui.Text2));
         }
-        var ok = Ui.Button("Got it - let's play", CloseHowTo, null, "Primary");
+        var ok = Ui.Button("Got it", CloseHowTo, "Close (F1 opens it again)", "Primary");
         ok.CustomMinimumSize = new Vector2(0, 42);
         v.AddChild(ok);
     }
 
-    void ShowHowTo() => ShowModal(_howPanel);
+    ScrollContainer _howScroll;
+
+    void ShowHowTo() { FitHowTo(); ShowModal(_howPanel); }
+
+    /// <summary>The text at its full height, so nothing is cut off; it scrolls only when the screen is too short for it (a large text size).</summary>
+    void FitHowTo()
+    {
+        float full = _howScroll.GetChild<Control>(0).GetCombinedMinimumSize().Y;
+        _howScroll.CustomMinimumSize = new Vector2(760, Math.Clamp(full, 120, Math.Max(120, GetViewportRect().Size.Y - 240)));
+    }
 
     void CloseHowTo()
     {

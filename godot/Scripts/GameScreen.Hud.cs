@@ -98,7 +98,7 @@ public partial class GameScreen
         bool mine = S.OwnerOf(name) == Me;
         if (S.IsDestroyed(name)) Tag("DESTROYED", Ui.Danger);
         else if (name == S.MyHqSystem) Tag(Me == Side.Hand ? "YOUR CAPITAL" : "YOUR HQ", Ui.Gold);
-        else if (name == S.EnemyHqSystem) Tag("ENEMY HQ", Ui.Enemy);
+        else if (name == S.EnemyHqSystem) Tag(Me == Side.Hand ? "COLLECTIVE HQ" : "ENEMY CAPITAL", Ui.Enemy);   // the drawer's words
         else if (mine) Tag("YOURS", Ui.You);
         else if (S.Picture(name) == null) Tag("UNEXPLORED", Ui.Text3);
         else if (S.Sees(name)) Tag("SEEN NOW", Ui.Text2);
@@ -265,7 +265,7 @@ public partial class GameScreen
         _msgCard.Visible = m != null;
         if (m == null) return;
         _msgKind.Text = $"{KindWord(CornerCat(m))} · D{m.Day}";
-        _msgKind.AddThemeColorOverride("font_color", m.Kind switch { MsgKind.Bad => Ui.Danger, MsgKind.Warn or MsgKind.Battle => Ui.Warn, MsgKind.Good => Ui.Good, _ => Ui.Text3 });
+        _msgKind.AddThemeColorOverride("font_color", Ui.KindColor(m.Kind, Ui.Text3));
         _msgOpen.Visible = m.System != null;
         // a message with a report has a short title and a longer text; a plain one is shown as one line
         bool titled = !string.IsNullOrEmpty(m.Title);
