@@ -68,14 +68,46 @@ public partial class GameScreen
         return w.Pages.TryGetValue(page, out var p) ? PageLabels(p.Page) : "";
     }
 
-    /// <summary>User story W9: a short note (an order sent, the interdictor warning after a drop) is drawn over open windows, never hidden under them.</summary>
-    internal bool ToastSeenOverWindows(string text)
+    /// <summary>
+    /// User story W9 and QA-104: a short note (an order sent, the interdictor warning after a drop) is drawn over the open windows, and a
+    /// note that names a system takes the click there. Godot draws and picks the control under the mouse in tree order, the last one on
+    /// top; ZIndex changes only the drawing, which is how QA-104 got through. A headless run gets no mouse at all (the window is minimised
+    /// and every event comes back handled), so this checks the order the mouse follows: the note's layer comes after the open windows and
+    /// the sector window and before the dialogs, it lets the mouse through where it has no note, and nothing on the way has a ZIndex.
+    /// Then the two times the layer steps aside: a drag lets the drop through to the window under a note, and a dialog has the notes
+    /// drawn over it but takes their clicks. Null when all holds, else what is wrong.
+    /// </summary>
+    internal string NoteOverWindowsProblem(string text, string system)
     {
-        Toast(text, MsgKind.Warn);
+        Toast(text, MsgKind.Warn, system);
         HideCoveredNotes();
-        bool ok = _mgWins.Count > 0 && _toastBox.Modulate.A >= 1 && _toastBox.ZIndex > 0 && ToastText.Contains(text);
-        var last = _toasts[^1]; last.Card.QueueFree(); _toasts.RemoveAt(_toasts.Count - 1);
-        return ok;
+        var card = _toasts[^1].Card;
+        // where a control sits among the screen's own layers (-1 when it is not on the screen), and whether a ZIndex on its way there
+        // would draw it in another order than the mouse picks it
+        int Layer(Node n) { while (n != null && n.GetParent() != this) n = n.GetParent(); return n?.GetIndex() ?? -1; }
+        bool Lifted(Node n) { for (; n != null && n != this; n = n.GetParent()) if (n is CanvasItem ci && ci.ZIndex != 0) return true; return false; }
+        int note = Layer(card);
+        var wins = _mgWins.Where(w => IsInstanceValid(w.Panel) && w.Panel.IsVisibleInTree()).Select(w => w.Panel).ToList();
+        string why =
+            wins.Count == 0 ? "no window is open" :
+            note < 0 ? "the note is not on the screen" :
+            wins.Any(p => Layer(p) >= note) ? "a window comes after the note, so the window takes its click" :
+            _secWin != null && Layer(_secWin) >= note ? "the sector window comes after the note" :
+            Layer(_modalLayer) <= note || Layer(_menuPopup) <= note ? "the note comes after the dialogs or the menu" :
+            _noteLayer.MouseFilter != MouseFilterEnum.Ignore || _toastBox.MouseFilter != MouseFilterEnum.Ignore ? "the notes' layer catches the mouse where it has no note" :
+            card.MouseFilter != MouseFilterEnum.Stop ? "a note that names a system does not take the click" :
+            Lifted(card) ? "a ZIndex on the note's way draws it in another order than the mouse picks it" :
+            !card.IsVisibleInTree() || _toastBox.Modulate.A < 1 || _noteLayer.Modulate.A < 1 ? "the note is hidden" :
+            !ToastText.Contains(text) ? "the note's words are missing" : null;
+        var through = MouseBehaviorRecursiveEnum.Disabled;
+        SyncNoteLayer(true);
+        why ??= _noteLayer.MouseBehaviorRecursive != through ? "while a chip is dragged the note still catches the drop" : null;
+        ShowModal(_howPanel); SyncNoteLayer(false);
+        why ??= _noteLayer.ZIndex <= 0 || _noteLayer.MouseBehaviorRecursive != through ? "with a dialog open the note is not drawn over it, or takes clicks" : null;
+        HideModal(_howPanel); SyncNoteLayer(false);
+        why ??= _noteLayer.ZIndex != 0 || _noteLayer.MouseBehaviorRecursive == through ? "after the dialog or the drag the note does not take its click again" : null;
+        card.QueueFree(); _toasts.RemoveAt(_toasts.Count - 1);
+        return why;
     }
 
     /// <summary>Close every management window; their buttons leave the tree now, not at the end of the frame, so a later click can't reach them.</summary>
