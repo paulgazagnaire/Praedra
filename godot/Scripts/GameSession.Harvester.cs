@@ -142,7 +142,7 @@ public sealed partial class GameSession
                 break;
             case SectorStruck x:
                 if (x.Strike <= 1)
-                    yield return new Message(d, $"The {x.Sector} turns against the Hand: {x.Systems.Items.Count()} system(s) there lose support for it. A second strike in this sector would turn it all to the Collective.",
+                    yield return new Message(d, $"The {x.Sector} turns against the Hand: {(x.Systems.Items.Count() == 1 ? "1 system there loses" : $"{x.Systems.Items.Count()} systems there lose")} support for it. A second strike in this sector would turn it all to the Collective.",
                         null, Player == Side.Hand ? MsgKind.Bad : MsgKind.Good);
                 else
                     yield return new Message(d, $"Revolt in the {x.Sector}! Every system left there now backs the Collective, and the Hand ones rise up.",

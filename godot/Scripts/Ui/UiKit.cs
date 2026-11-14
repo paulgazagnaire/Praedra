@@ -505,8 +505,8 @@ public static class Ui
         // the window buttons (⋮⋮ – × ‹ ›): glyphs only, 24 x 24, #909EBD
         t.SetTypeVariation("Clock", "Button");
         Plain("Clock", WinActive, 24, GlyphFont);
-        t.SetStylebox("hover", "Clock", Box(clear, 0, WinLine, 1, 0, 0));   // under the mouse: a thin square round the glyph
-        t.SetStylebox("hover_pressed", "Clock", Box(clear, 0, WinLine, 1, 0, 0));
+        t.SetStylebox("hover", "Clock", Box(clear, 0, WinText, 1, 0, 0));   // under the mouse: a thin #7D8699 square round the glyph, as on every button
+        t.SetStylebox("hover_pressed", "Clock", Box(clear, 0, WinText, 1, 0, 0));
         // a tab (the frame's tab row): words only, a 3 px #909EBD line under the chosen one; the others #7D8699 (Paul chose them readable)
         t.SetTypeVariation("TabChip", "Button");
         StyleBoxFlat Under(Color c) { var s = new StyleBoxFlat { BgColor = clear, BorderColor = c, BorderWidthBottom = 3 }; s.ContentMarginLeft = s.ContentMarginRight = 0; s.ContentMarginTop = 0; s.ContentMarginBottom = 8; return s; }
@@ -541,7 +541,7 @@ public static class Ui
         {
             // their own boxes, or they take the window's Button box: every row of a settings list framed (impeccable pass, 2026-11-14)
             t.SetStylebox("normal", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("pressed", cb, Box(clear, 0, null, 0, 6, 4));
-            t.SetStylebox("hover", cb, Box(clear, 0, WinLine, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinLine, 1, 6, 4));
+            t.SetStylebox("hover", cb, Box(clear, 0, WinText, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinText, 1, 6, 4));
             t.SetStylebox("disabled", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("focus", cb, new StyleBoxEmpty());
             t.SetFont("font", cb, Grotesk);
             t.SetColor("font_color", cb, WinActive); t.SetColor("font_hover_color", cb, WinActive); t.SetColor("font_pressed_color", cb, WinActive);

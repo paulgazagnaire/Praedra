@@ -91,7 +91,7 @@ public partial class GameScreen : Control
         string home = S.MyHqSystem ?? (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.HandCapital);
         if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
         // "Press Play" lives in the pill only (impeccable critique 2026-11-14: it was said twice, and the card cut it off)
-        S.Say($"You lead the {S.NameOf(S.Player)} from {home}. F1 explains how to play.", MsgKind.Good, home);
+        S.Say($"You lead the {S.NameOf(S.Player)} from {home}. F1 explains how to play.", MsgKind.Info, home);   // not news: grey, so green keeps meaning good news (ui-inspo review 2026-11-14)
         foreach (var m in S.Messages) AddLogItem(m, false);
         if (S.Game.Day == 0) _pauseNote = StartNote;
         RefreshTop();

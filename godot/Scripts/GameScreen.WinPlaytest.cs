@@ -68,6 +68,16 @@ public partial class GameScreen
         return w.Pages.TryGetValue(page, out var p) ? PageLabels(p.Page) : "";
     }
 
+    /// <summary>User story W9: a short note (an order sent, the interdictor warning after a drop) is drawn over open windows, never hidden under them.</summary>
+    internal bool ToastSeenOverWindows(string text)
+    {
+        Toast(text, MsgKind.Warn);
+        HideCoveredNotes();
+        bool ok = _mgWins.Count > 0 && _toastBox.Modulate.A >= 1 && _toastBox.ZIndex > 0 && ToastText.Contains(text);
+        var last = _toasts[^1]; last.Card.QueueFree(); _toasts.RemoveAt(_toasts.Count - 1);
+        return ok;
+    }
+
     /// <summary>Close every management window; their buttons leave the tree now, not at the end of the frame, so a later click can't reach them.</summary>
     internal void MgCloseAll() { foreach (var w in _mgWins.ToList()) { CloseMgmt(w); w.Panel.GetParent()?.RemoveChild(w.Panel); } }
 

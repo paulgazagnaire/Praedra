@@ -319,7 +319,13 @@ public partial class GameScreen
         stats.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
         stats.OffsetLeft = -120; stats.OffsetRight = -12; stats.OffsetTop = 9;
         b.AddChild(stats);
-        if (_view.SelectedFleet == f.Id) b.AddThemeStyleboxOverride("normal", Ui.Box(Ui.YouDeep, 6, Ui.You, 1, 12, 8));
+        // the selected fleet: the window look's "chosen" line (#909EBD), kept under the mouse; no fill, the row's own padding
+        // (ui-inspo review 2026-11-14: one ladder everywhere, rest line, #7D8699 under the mouse, #909EBD chosen)
+        if (_view.SelectedFleet == f.Id)
+        {
+            var sel = Ui.Box(new Color(0, 0, 0, 0), 0, Ui.WinActive, 1, 8, 3);
+            b.AddThemeStyleboxOverride("normal", sel); b.AddThemeStyleboxOverride("hover", sel);
+        }
         Add(b);
     }
 

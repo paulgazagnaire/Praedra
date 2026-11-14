@@ -392,7 +392,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// The notes under the search (the pill, the orders card, the toasts) sit under the window columns. A note a window covers even in part
+    /// The notes under the search (the pill, the orders card) sit under the window columns. A note a window covers even in part
     /// is hidden whole, so no half note or doubled edge shows between the columns; it comes back when the windows move or close. Alpha and
     /// no mouse for the note and everything in it, not Visible: the game switches these on and off itself. Runs each frame and right after
     /// the notes are laid out (so a note the game shows again is never drawn for a frame before it is checked).
@@ -405,7 +405,9 @@ public partial class GameScreen
         if (_secWin != null && IsInstanceValid(_secWin) && _secWin.IsVisibleInTree()) wins.Add(_secWin.GetGlobalRect());
         foreach (var c in _topCentre.GetChildren().OfType<Control>())
         {
-            if (c == _searchResults || c.GetIndex() == 0 || !c.Visible) continue;   // the search bar sits above the windows; its results stay
+            // the search bar sits above the windows; its results stay; the short notes are drawn over the windows (user story W9: the
+            // warning for a regiment sent across a known interdictor was lost under the window it was dropped from)
+            if (c == _searchResults || c == _toastBox || c.GetIndex() == 0 || !c.Visible) continue;
             bool covered = wins.Any(r => r.Intersects(c.GetGlobalRect()));
             var want = covered ? new Color(1, 1, 1, 0) : Colors.White;
             if (c.Modulate == want) continue;

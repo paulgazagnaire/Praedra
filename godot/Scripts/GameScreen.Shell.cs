@@ -134,6 +134,7 @@ public partial class GameScreen
         _toastBox = Ui.VBox(6);
         _toastBox.MouseFilter = MouseFilterEnum.Ignore;
         _toastBox.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        _toastBox.ZIndex = 20;   // drawn over the windows: an order's note or a red warning goes by in seconds and must be seen while you work in them
         _topCentre.AddChild(_toastBox);
 
         // ---- top right: the goal, the day, the clock
