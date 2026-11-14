@@ -84,6 +84,7 @@ public partial class GameScreen
         _topCentre.OffsetTop = Edge;
         _topCentre.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         _mapHolder.AddChild(_topCentre);
+        _topCentre.SortChildren += HideCoveredNotes;   // checked once the notes are placed, before they are drawn
         var searchBar = Ui.Hud(10, 4);
         searchBar.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         _topCentre.AddChild(searchBar);
@@ -356,12 +357,20 @@ public partial class GameScreen
     {
         foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _orderBar, _topCentre, _topLeft, _clockCard, _bottomLeft, _selCard, _msgCorner, _drawer })
+        foreach (var box in new Control[] { _orderBar, _topLeft, _clockCard, _bottomLeft, _selCard, _msgCorner, _drawer })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
             yield return new Rect2(g.Position - origin, g.Size);
         }
+        // the search and its notes one by one: a note a window hides (HideCoveredNotes) leaves the names under it free
+        if (_topCentre != null && _topCentre.IsVisibleInTree())
+            foreach (var c in _topCentre.GetChildren().OfType<Control>())
+            {
+                if (!c.IsVisibleInTree() || c.Modulate.A <= 0) continue;
+                var g = c.GetGlobalRect();
+                yield return new Rect2(g.Position - origin, g.Size);
+            }
     }
 
     // ================================================================== the hover card

@@ -44,9 +44,14 @@ public partial class UnitIcon : Control
         return Kind.Building;
     }
 
-    Color Fill => new(Ink, 0.22f);
-    Color Edge => new(Ink, 0.95f);
-    Color Glow => new(Ink.Lightened(0.35f), 0.9f);
+    /// <summary>A grey icon in a window (greyed out, or yours but not movable now): lines only, all in its one solid grey, no tinted fill
+    /// or lighter highlight (Paul 2026-11-14: four greys, no fills). Meaning colours keep their fill and highlight.</summary>
+    bool Flat => Ink == Ui.WinDim || Ink == Ui.WinText;
+    Color Fill => Flat ? new Color(0, 0, 0, 0) : new(Ink, 0.22f);
+    Color Edge => Flat ? Ink : new(Ink, 0.95f);
+    Color Glow => Flat ? Ink : new(Ink.Lightened(0.35f), 0.9f);
+    /// <summary>A detail line's colour: the ink at <paramref name="a"/>, or solid when greyed out.</summary>
+    Color Faint(float a) => Flat ? Ink : new Color(Ink, a);
 
     public override void _Draw()
     {
@@ -65,7 +70,7 @@ public partial class UnitIcon : Control
 
     void Poly(params Vector2[] pts)
     {
-        DrawColoredPolygon(pts, Fill);
+        if (!Flat) DrawColoredPolygon(pts, Fill);
         var loop = new Vector2[pts.Length + 1];
         Array.Copy(pts, loop, pts.Length); loop[^1] = pts[0];
         DrawPolyline(loop, Edge, 1.2f, true);
@@ -91,7 +96,7 @@ public partial class UnitIcon : Control
         pts.Add(new(x0 + w - nose, y0 + h)); pts.Add(new(x0, y0 + h * 0.92f));
         Poly(pts.ToArray());
         // the side trenches
-        var trench = new Color(Ink, 0.55f);
+        var trench = Faint(0.55f);
         DrawLine(new Vector2(x0 + w * 0.06f, y0 + h * 0.24f), new Vector2(x0 + w - nose * 0.9f, y0 + h * 0.24f), trench, 1f);
         DrawLine(new Vector2(x0 + w * 0.06f, y0 + h * 0.76f), new Vector2(x0 + w - nose * 0.9f, y0 + h * 0.76f), trench, 1f);
         // the tower, three quarters back: nested blocks, the top one lit
@@ -124,7 +129,7 @@ public partial class UnitIcon : Control
         for (int i = 1; i < 4; i++)
         {
             float x = x0 + body * 0.9f * i / 4;
-            DrawLine(new Vector2(x, y0 + h * 0.14f), new Vector2(x, y0 + h * 0.44f), new Color(Ink, 0.4f), 1f);
+            DrawLine(new Vector2(x, y0 + h * 0.14f), new Vector2(x, y0 + h * 0.44f), Faint(0.4f), 1f);
         }
         // the cab, blunt and forward
         Poly(new(x0 + body, y0 + h * 0.22f), new(x0 + w * 0.92f, y0 + h * 0.3f), new(x0 + w, cy), new(x0 + w * 0.92f, y0 + h * 0.7f), new(x0 + body, y0 + h * 0.78f));
@@ -191,7 +196,7 @@ public partial class UnitIcon : Control
     void Building(Rect2 r)
     {
         float gy = r.Position.Y + r.Size.Y * 0.86f, x0 = r.Position.X + r.Size.X * 0.14f, x1 = r.End.X - r.Size.X * 0.14f, w = x1 - x0, h = r.Size.Y * 0.7f;
-        DrawLine(new Vector2(r.Position.X + 2, gy), new Vector2(r.End.X - 2, gy), new Color(Ink, 0.5f), 1f);
+        DrawLine(new Vector2(r.Position.X + 2, gy), new Vector2(r.End.X - 2, gy), Faint(0.5f), 1f);
         switch (What)
         {
             case Kind.Mine: // a derrick over a shaft
@@ -223,7 +228,7 @@ public partial class UnitIcon : Control
                 break;
             case Kind.Shield: // a dome
                 DrawArc(new Vector2(x0 + w / 2, gy), w * 0.42f, Mathf.Pi, Mathf.Tau, 24, Edge, 1.4f, true);
-                DrawArc(new Vector2(x0 + w / 2, gy), w * 0.3f, Mathf.Pi, Mathf.Tau, 20, new Color(Ink, 0.45f), 1f, true);
+                DrawArc(new Vector2(x0 + w / 2, gy), w * 0.3f, Mathf.Pi, Mathf.Tau, 20, Faint(0.45f), 1f, true);
                 break;
             case Kind.Battery: // a gun on a block
                 Box(x0 + w * 0.15f, gy - h * 0.35f, w * 0.45f, h * 0.35f);

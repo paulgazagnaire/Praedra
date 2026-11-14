@@ -28,7 +28,7 @@ public partial class GameScreen
     {
         if (w.Tab == null || !tabs.Any(t => t.Name == w.Tab)) w.Tab = tabs[0].Name;
         var bar = new HFlowContainer();   // wraps rather than widening a narrow column
-        bar.AddThemeConstantOverride("h_separation", 0); bar.AddThemeConstantOverride("v_separation", 4);
+        bar.AddThemeConstantOverride("h_separation", 10); bar.AddThemeConstantOverride("v_separation", 4); // Paul's "styles" frame: 10 px apart
         var group = new ButtonGroup();
         var prev = _into;
         foreach (var (name, count, build) in tabs)
@@ -96,7 +96,9 @@ public partial class GameScreen
         bool art = kind != null && avatar == null && UnitArt.Has(name); // a painted picture of the class (art/units/units.json)
         var p = art ? new ArtTile { Cls = name, TooltipText = name } : new PanelContainer();
         p.MouseFilter = MouseFilterEnum.Pass; p.CustomMinimumSize = new Vector2(TileW, TileH);
-        p.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Panel2, 8, new Color(accent, ghost ? 0.22f : 0.3f), 1, 6, 6));
+        // no fill, a thin line: faint blue round what is yours and can move, #3A3A3A round the rest (Paul 2026-11-14)
+        var edge = accent == Ui.You ? new Color(Ui.You, ghost ? 0.22f : 0.3f) : Ui.WinLine;
+        p.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, edge, 1, 6, 6));
         var v = Ui.VBox(2);
         v.MouseFilter = MouseFilterEnum.Ignore;
         p.AddChild(v);
@@ -104,7 +106,8 @@ public partial class GameScreen
         if (avatar != null)
         {
             var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(36, 36) };
-            ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(accent, 0.16f), 18, new Color(accent, 0.7f), 1, 0, 0));
+            // a plain round line in the tile's colour, no fill (Paul 2026-11-14: no fills; portraits stay round)
+            ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 18, accent, 1, 0, 0));
             var bl = Ui.Label(avatar, null, accent, 12, wrap: false);
             bl.AddThemeFontOverride("font", Ui.SemiBold);
             bl.HorizontalAlignment = HorizontalAlignment.Center; bl.VerticalAlignment = VerticalAlignment.Center;
@@ -114,14 +117,15 @@ public partial class GameScreen
             center.AddChild(ring);
             holder.AddChild(center);
         }
-        else if (art)
+        else if (art && accent == Ui.You)
         {
             var pic = UnitArt.Rect(UnitArt.Thumb(name));
             pic.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             pic.OffsetLeft = 2; pic.OffsetRight = -2; pic.OffsetTop = 0; pic.OffsetBottom = 0;
-            if (accent != Ui.You) pic.Modulate = new Color(1, 1, 1, 0.55f); // a unit that can't move reads dim, as its drawn icon would
             holder.AddChild(pic);
         }
+        // a unit that can't move: its drawn icon in the tile's solid colour, not a see-through painting (Paul 2026-11-14); the hover card
+        // still shows the painting
         else if (kind is UnitIcon.Kind k)
         {
             var icon = UnitIcon.For(k, hand, accent, size4, Vector2.Zero);
@@ -131,8 +135,9 @@ public partial class GameScreen
         }
         if (count > 1)
         {
+            // the count: plain #909EBD words, no chip (Paul 2026-11-14)
             var badge = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-            badge.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Chrome, 6, new Color(accent, 0.6f), 1, 4, 0));
+            badge.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
             var bl = Ui.Label($"×{count}", null, Ui.Text, Ui.Tiny, wrap: false);
             bl.AddThemeFontOverride("font", Ui.NumBold);
             badge.AddChild(bl);
@@ -193,7 +198,7 @@ public partial class GameScreen
             var drags = g.Where(u => u.D != null).Select(u => u.D.Value).ToList();
             string cls = g.Key.Class;
             int n = objs.Count;
-            var tile = Tile(KindOf(objs[0].Category, cls), Me == Side.Hand, SizeOfClass(cls), cls, g.Key.Sub, n, g.Key.Can ? Ui.You : Ui.Text3);
+            var tile = Tile(KindOf(objs[0].Category, cls), Me == Side.Hand, SizeOfClass(cls), cls, g.Key.Sub, n, g.Key.Can ? Ui.You : Ui.Text3);   // yours but not movable now: the readable grey, not the greyed-out one
             string tip = (ClassTip(cls) is string ct ? ct + "\n" : "") + (n > 1 ? $"{n} {cls}. " : "");
             if (drags.Count > 0)
             {

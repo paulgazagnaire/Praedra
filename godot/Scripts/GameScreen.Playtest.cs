@@ -22,15 +22,15 @@ public static class UiTest
     /// <summary>Meta key for a short button's full words ("Move..." on a leader's card is "Move Nobody..."); the finder matches either.</summary>
     public const string FullName = "full_name";
 
-    static string TextOf(BaseButton b) => b.HasMeta(FullName) ? b.GetMeta(FullName).AsString() : b switch { Button x => x.Text ?? "", _ => "" };
+    static string TextOf(BaseButton b) => b.HasMeta(FullName) ? b.GetMeta(FullName).AsString() : b switch { Button x => x.Text ?? "", LinkButton l => l.Text ?? "", _ => "" };
 
-    public static bool Has(Node root, string prefix) => Find<Button>(root, prefix) != null;
+    public static bool Has(Node root, string prefix) => Find<BaseButton>(root, prefix) != null;
 
     /// <summary>Click the first visible button starting with <paramref name="prefix"/>: sets the toggle state like a click would, then raises Pressed.
     /// Returns false if there is none or it is disabled (a real click would do nothing).</summary>
     public static bool Click(Node root, string prefix)
     {
-        var b = Find<Button>(root, prefix);
+        var b = Find<BaseButton>(root, prefix);   // a button or a link (the windows' links, 2026-11-14)
         if (b == null || b.Disabled) return false;
         if (b.ToggleMode && !b.ButtonPressed) b.SetPressedNoSignal(true);
         b.EmitSignal(BaseButton.SignalName.Pressed);
@@ -41,7 +41,7 @@ public static class UiTest
     {
         foreach (var c in root.GetChildren())
         {
-            if (c is Button b && b.IsVisibleInTree()) yield return TextOf(b);
+            if (c is BaseButton b && (b is Button or LinkButton) && b.IsVisibleInTree()) yield return TextOf(b);
             foreach (var t in Texts(c)) yield return t;
         }
     }
@@ -53,7 +53,7 @@ public partial class GameScreen
     /// <summary>Where a mouse can click now: only the dialog on top while one is open (the veil blocks the rest), else the whole screen.</summary>
     Node ClickRoot => _modalStack.Count > 0 ? _modalStack[^1] : this;
     internal bool Has(string prefix) => UiTest.Has(ClickRoot, prefix) || (_menuPopup.Visible && UiTest.Has(_menuPopup, prefix));
-    internal bool Enabled(string prefix) => (UiTest.Find<Button>(MenuFirst, prefix) ?? UiTest.Find<Button>(ClickRoot, prefix)) is { Disabled: false };
+    internal bool Enabled(string prefix) => (UiTest.Find<BaseButton>(MenuFirst, prefix) ?? UiTest.Find<BaseButton>(ClickRoot, prefix)) is { Disabled: false };
     internal bool Click(string prefix) => (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix);
 
     /// <summary>What a player does for a window that is not open: open the menu and click it there (the menu closes itself).

@@ -39,7 +39,7 @@ public partial class GameScreen
             if (have < need) badge = Ui.Tag("UNDER-GARRISONED", Ui.Warn);
             if (S.Host.Support.IsUprising(n)) badge = Ui.Tag("UPRISING", Ui.Danger, true);
         }
-        MgHead(w, $"Ground · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2, sub, badge);
+        MgHead(w, $"Ground · {RegionOf(n)}", n, NameInk(n, mine), sub, badge);
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
         if (!mine)
         {
@@ -111,6 +111,9 @@ public partial class GameScreen
         LoreTab(n, harvested: true);
     }
 
+    /// <summary>A window's name: #7D8699 whoever holds the place, the darkest grey when your side never looked at it (Paul 2026-11-14).</summary>
+    Color NameInk(string n, bool mine) => !mine && !Scouted(n) ? Ui.Dimmed : Ui.Text2;
+
     void InfraLink(string n) => MgLinks(($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Yards, what the planet builds, slots and buildings"));
 
     // ---- a system's Infrastructure window (Paul 2026-11-03 chose to keep it a window of its own): yards, build tiles, slots, buildings
@@ -121,7 +124,7 @@ public partial class GameScreen
         if (S.IsDestroyed(n)) { HarvestedWin(w, n); return; } // already open when the harvester struck: no dead slots (Ponytail on #241)
         bool mine = S.OwnerOf(n) == Me;
         var eco = S.Host.Economy;
-        MgHead(w, $"Infrastructure · {RegionOf(n)}", n, mine ? Ui.Text : Ui.Text2,
+        MgHead(w, $"Infrastructure · {RegionOf(n)}", n, NameInk(n, mine),
             mine ? $"{eco.EnergyUsed(n)} of {eco.SlotsOf(n).Energy} energy slots used · {Ui.Count(eco.OfKindAt(n, FacilityKind.Mine), "mine", "mines")} · {Ui.Count(eco.OfKindAt(n, FacilityKind.Refinery), "refinery", "refineries")}" : null);
         if (mine) BuildTab(n); else PaneBuildings(n);
         MgLinks(($"Ground at {n}", () => OpenMgmt(MgKind.Ground, n), "Leaders, troops and fighters on the planet, and the fleets in orbit"));
@@ -131,17 +134,17 @@ public partial class GameScreen
     {
         var row = Ui.HBox(Ui.Block);
         // the system's General: one post, held by a leader standing here
-        var gcol = Ui.VBox(4);
+        var gcol = Ui.VBox(Ui.Block);
         gcol.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         gcol.AddChild(Caption("General", null, "The system's General adds their leadership to the defenders when the planet is invaded."));
         var gz = DropZone($"Ground {n} General", "make General", d => RefuseSystemGeneral(d, n), d => DropSystemGeneral(d, n));
         gz.Box.CustomMinimumSize = new Vector2(TileW + 14, 0);
         if (gen != null) gz.Flow.AddChild(LeaderChip(gen, "General of " + n));
-        else gz.Flow.AddChild(EmptySlot("Empty"));
+        else gz.Flow.AddChild(EmptySlot("Empty", slot: true));
         gcol.AddChild(gz.Box);
         row.AddChild(gcol);
         // leaders standing here (not on a fleet, not the General)
-        var lcol = Ui.VBox(4);
+        var lcol = Ui.VBox(Ui.Block);
         lcol.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         lcol.AddChild(Caption("Leaders on the planet", null));
         var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
@@ -190,7 +193,7 @@ public partial class GameScreen
     /// <summary>Your fleets in orbit: a row each (drop ships, troops, fighters or leaders on it), with a button to open its window.</summary>
     void OrbitList(string n, List<Fleet> own)
     {
-        if (own.Count == 0) { Add(EmptySlot("No fleets of yours here. Fleets you send here show up in this list.")); return; }
+        if (own.Count == 0) { Add(EmptySlot("No fleets of yours here")); return; }
         Section("Your fleets in orbit", own.Count.ToString());
         foreach (var f in own) Add(FleetRow(f, false, null));
     }
@@ -213,7 +216,9 @@ public partial class GameScreen
             else if (d.Kind is 'R' or 'Q') DropOnto(d, f);
             else if (d.Kind == 'L') DropFleetPost(d, f, CharacterPost.None);
         });
-        if (selected) z.Box.AddThemeStyleboxOverride("panel", Ui.Box(new Color(Ui.You, 0.12f), 8, new Color(Ui.You, 0.6f), 1, 6, 6));
+        // a row with a thin line; the one shown in a fleet window is outlined #909EBD (Paul 2026-11-14: blue only means "yours")
+        z.Box.SetMeta("look", selected ? "selected" : "row");
+        z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(null, selected ? "selected" : "row"));
         z.Box.SetMeta("selected", selected);
         var h = Ui.HBox(8);
         h.MouseFilter = MouseFilterEnum.Ignore;
