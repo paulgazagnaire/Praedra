@@ -22,6 +22,7 @@ public partial class GameScreen
 
     DrawerTab _tab = DrawerTab.Needs;
     readonly Dictionary<DrawerTab, Button> _tabButtons = new();
+    HBoxContainer _tabRow;
     ScrollContainer _scroll;
     VBoxContainer _pv;          // the content of the current tab (the Log tab has its own)
     VBoxContainer _into;        // where Line/Act/Heading add: _pv, or the card being filled
@@ -50,6 +51,7 @@ public partial class GameScreen
         var tabsBox = Pad(WinPad, WinPad, WinPad, 0);
         v.AddChild(tabsBox);
         var tabs = Ui.HBox(10);
+        _tabRow = tabs;
         tabsBox.AddChild(tabs);
         var group = new ButtonGroup();
         foreach (var (tab, name, tip) in new[]
@@ -68,11 +70,11 @@ public partial class GameScreen
             _tabButtons[tab] = b;
             tabs.AddChild(b);
         }
-        tabs.AddChild(Ui.Grow());
-        var close = Ui.Button("×", CloseDrawer, "Close (Esc)", "Clock");   // a window's ×
+        var close = Ui.Button("×", CloseDrawer, "Close (Esc)", "Clock");   // a window's ×, pushed to the right edge
         close.SetMeta(UiTest.FullName, "Close window");
         close.CustomMinimumSize = new Vector2(WinButton, WinButton);
         close.SizeFlagsVertical = SizeFlags.ShrinkBegin;
+        close.SizeFlagsHorizontal = SizeFlags.Expand | SizeFlags.ShrinkEnd;
         tabs.AddChild(close);
 
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -127,7 +129,13 @@ public partial class GameScreen
         b.AddThemeColorOverride("font_hover_pressed_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
         int f = S.Game.State.Fleets.Values.Count(x => x.Side == Me);
         _tabButtons[DrawerTab.Fleets].Text = $"Fleets {f}";
-        _tabButtons[DrawerTab.Log].Text = _unread == 0 ? "Log" : $"Log {_unread}";
+        _tabButtons[DrawerTab.Log].Text = _unread == 0 ? "Log" : _unread > 99 ? "Log 99+" : $"Log {_unread}";
+        // tabs 10 px apart as in Paul's "styles" frame, closer when the counts make the row long: the row never widens the panel
+        // (review 2026-11-14: "Needs you 3 ... Fleets 6 ... Log 12" needed 421 px of the 408)
+        var font = Ui.Grotesk ?? ThemeDB.FallbackFont;
+        float words = _tabButtons.Values.Sum(t => font.GetStringSize(t.Text, HorizontalAlignment.Left, -1, 13).X + 1);
+        int sep = Math.Clamp((int)((DrawerWidth - 2 * WinPad - WinButton - words) / _tabButtons.Count), 4, 10);
+        _tabRow.AddThemeConstantOverride("separation", sep);
     }
 
     // ================================================================== the panel switch

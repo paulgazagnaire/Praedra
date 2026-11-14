@@ -260,8 +260,18 @@ public partial class GameScreen
             var r = new Rect2(p + new Vector2(4, 4), new Vector2(WidthOf(w) - 8, 112));
             return !others.Any(o => o.Intersects(r)) && !(sec is Rect2 s && s.Intersects(r));
         }
-        foreach (var p in Slots(leftFirst: !(SectorViewOpen && _secLeft), width: WidthOf(w)))
+        var slots = Slots(leftFirst: !(SectorViewOpen && _secLeft), width: WidthOf(w));
+        foreach (var p in slots)
             if (Free(p)) { w.Panel.Position = p; return; }
+        // no free column, and only the sector window is in the way (the wide Infrastructure window beside it): the place on the map's side
+        // that covers the least of it, the right edge of the screen included (review 2026-11-14: it landed on the tiles just clicked)
+        if (sec is Rect2 sr && others.Count == 0)
+        {
+            var size = new Vector2(WidthOf(w), SlotHeight);
+            var edge = new Vector2(Math.Max(8, _mgLayer.Size.X - WidthOf(w) - 8), TopClear);
+            w.Panel.Position = slots.Append(edge).Append(new Vector2(8, TopClear)).OrderBy(p => sr.Intersection(new Rect2(p, size)).Area).ThenBy(p => p.X).First();
+            return;
+        }
         var last = others.Count > 0 ? others[^1].Position : new Vector2(16, TopClear);
         w.Panel.Position = ClampWin(last + new Vector2(28, 36), new Vector2(WidthOf(w), 200));
     }
