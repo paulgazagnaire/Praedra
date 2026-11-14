@@ -51,7 +51,9 @@ public partial class Main
         Expect(gs.Click($"Open {fleet.Name}"), $"the Fleets tab's Open button opens {fleet.Name}");
         gs.PlayRefresh();
         Expect(gs.MgmtCount == 2 && gs.MgHasZone($"Fleet {fid} Admiral") && gs.MgHasZone($"Fleet {fid} Passengers"), "the fleet window opens beside it, with its posts and passengers");
-        Expect(gs.ToastSeenOverWindows("Test note"), "a short note is drawn over the open windows, not hidden under them (story W9)");
+        string noteWhy = gs.NoteOverWindowsProblem("Test note", sys);
+        Expect(noteWhy == null, "a short note is drawn over the open windows, and one that names a system takes the click there, not the window under it"
+            + $" (story W9, QA-104){(noteWhy == null ? "" : ": " + noteWhy)}");
 
         // ---------------------------------------------------------------- a leader onto a post, then back onto the planet
         var cls = cm.ClassOf(lead);

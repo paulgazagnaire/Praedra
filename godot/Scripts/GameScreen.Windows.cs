@@ -325,6 +325,7 @@ public partial class GameScreen
         if (_shotDrag is { } sd) _dragging = sd;
         if (dragging != _wasDragging) { _wasDragging = dragging; LightZones(dragging ? _dragging : null); }
         if (dragging) DragHint(); else _dragHint.Visible = false;
+        SyncNoteLayer(dragging);
         _mgTimer -= delta;
         if (_mgDirty && _mgTimer <= 0 && !dragging && !Input.IsMouseButtonPressed(MouseButton.Left))
         {
@@ -405,15 +406,29 @@ public partial class GameScreen
         if (_secWin != null && IsInstanceValid(_secWin) && _secWin.IsVisibleInTree()) wins.Add(_secWin.GetGlobalRect());
         foreach (var c in _topCentre.GetChildren().OfType<Control>())
         {
-            // the search bar sits above the windows; its results stay; the short notes are drawn over the windows (user story W9: the
-            // warning for a regiment sent across a known interdictor was lost under the window it was dropped from)
-            if (c == _searchResults || c == _toastBox || c.GetIndex() == 0 || !c.Visible) continue;
+            // the search bar sits above the windows; its results stay. The short notes are not in this stack: they have their own layer
+            // over the windows (user story W9: the warning for a regiment sent across a known interdictor was lost under its window)
+            if (c == _searchResults || c.GetIndex() == 0 || !c.Visible) continue;
             bool covered = wins.Any(r => r.Intersects(c.GetGlobalRect()));
             var want = covered ? new Color(1, 1, 1, 0) : Colors.White;
             if (c.Modulate == want) continue;
             c.Modulate = want;
             c.MouseBehaviorRecursive = covered ? MouseBehaviorRecursiveEnum.Disabled : MouseBehaviorRecursiveEnum.Inherited;
         }
+    }
+
+    /// <summary>
+    /// The short notes' layer sits over the windows, for the eye and the mouse (story W9, QA-104). While a chip is dragged it lets the
+    /// mouse through, so a drop lands on the window zone under a note, as the drag hint says it will. While a dialog is open the notes are
+    /// drawn over it, so a save made from inside a dialog still says so, and take no clicks: the dialog has them.
+    /// </summary>
+    void SyncNoteLayer(bool dragging)
+    {
+        bool dialog = OverlayOpen;
+        int z = dialog ? 1 : 0;
+        var mouse = dialog || dragging ? MouseBehaviorRecursiveEnum.Disabled : MouseBehaviorRecursiveEnum.Inherited;
+        if (_noteLayer.ZIndex != z) _noteLayer.ZIndex = z;
+        if (_noteLayer.MouseBehaviorRecursive != mouse) _noteLayer.MouseBehaviorRecursive = mouse;
     }
 
     static bool Travels(string words) => words.StartsWith("on the way", StringComparison.Ordinal) || words.StartsWith("flies", StringComparison.Ordinal);

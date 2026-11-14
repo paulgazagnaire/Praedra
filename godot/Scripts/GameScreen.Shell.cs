@@ -31,6 +31,7 @@ public partial class GameScreen
     Label _orderTitle, _orderBody;
     HBoxContainer _orderActions;
     VBoxContainer _toastBox, _topCentre, _topLeft;
+    Control _noteLayer;
     Button _myHqButton, _enemyHqButton, _legendButton, _layersButton;
     Control _bottomLeft;
     PanelContainer _clockCard;
@@ -54,6 +55,7 @@ public partial class GameScreen
         _mapHolder.AddChild(BuildDrawer());
         AddChild(BuildSectorView()); // over the map and the window, under the dialogs
         AddChild(BuildMgmtLayer());  // the fleet, ground and infrastructure windows float over the sector window
+        AddChild(_noteLayer);        // the short notes under the search, over the windows and under the dialogs (story W9)
         BuildModals();
     }
 
@@ -131,11 +133,17 @@ public partial class GameScreen
         _hqStatusLabel = Ui.Label("", null, Ui.Gold, Ui.Small, wrap: false);
         hqPill.AddChild(_hqStatusLabel);
         _topCentre.AddChild(hqPill);
+        // the short notes come next, under the search and the pills, but in a layer of their own that the tree puts over the windows: an
+        // order's note or a red warning goes by in seconds and must be seen, and clicked, while you work in them (story W9). Tree order,
+        // not ZIndex: ZIndex only drew a note over a window, and its click still went to the window (QA-104).
         _toastBox = Ui.VBox(6);
         _toastBox.MouseFilter = MouseFilterEnum.Ignore;
-        _toastBox.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-        _toastBox.ZIndex = 20;   // drawn over the windows: an order's note or a red warning goes by in seconds and must be seen while you work in them
-        _topCentre.AddChild(_toastBox);
+        _toastBox.SetAnchorsPreset(LayoutPreset.CenterTop);
+        _toastBox.GrowHorizontal = GrowDirection.Both;
+        _noteLayer = new Control { MouseFilter = MouseFilterEnum.Ignore, Name = "Notes" };
+        _noteLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        _noteLayer.AddChild(_toastBox);
+        _topCentre.SortChildren += PlaceNotes;
 
         // ---- top right: the goal, the day, the clock
         var clock = _clockCard = Ui.Hud(4, 4);
@@ -370,6 +378,12 @@ public partial class GameScreen
                 var g = c.GetGlobalRect();
                 yield return new Rect2(g.Position - origin, g.Size);
             }
+        // the short notes under them, in their own layer
+        if (_toastBox != null && _toastBox.GetChildCount() > 0 && _toastBox.IsVisibleInTree())
+        {
+            var g = _toastBox.GetGlobalRect();
+            yield return new Rect2(g.Position - origin, g.Size);
+        }
     }
 
     // ================================================================== the hover card
@@ -392,6 +406,16 @@ public partial class GameScreen
 
     readonly List<(PanelContainer Card, double Left)> _toasts = new();
     const int MaxToasts = 3;
+
+    /// <summary>The short notes sit under the search and the pills, a block apart, where they sat when they were part of that stack; they
+    /// follow it each time it is laid out (a pill shown or hidden, search results opening).</summary>
+    void PlaceNotes()
+    {
+        float bottom = 0;
+        foreach (var c in _topCentre.GetChildren().OfType<Control>())
+            if (c.Visible) bottom = Math.Max(bottom, c.Position.Y + c.Size.Y);
+        _toastBox.OffsetTop = _topCentre.GlobalPosition.Y - _noteLayer.GlobalPosition.Y + bottom + Ui.Block;
+    }
 
     /// <summary>A short note under the search that goes by itself (order sent, saved, something happened).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)
