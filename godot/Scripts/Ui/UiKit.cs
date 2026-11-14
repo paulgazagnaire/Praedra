@@ -56,6 +56,10 @@ public static class Ui
     /// <summary>The colour of a holder as the player sees it: blue = you, orange = the enemy, grey = nobody.</summary>
     public static Color OwnerColor(Side? owner, Side player) => owner == null ? Neutral : owner == player ? You : Enemy;
 
+    /// <summary>A message's colour, the same in the note under the search, the message card and the log: red bad, amber a warning or a
+    /// battle, green good, <paramref name="plain"/> otherwise. Never blue: blue only means yours (impeccable critique 2026-11-14).</summary>
+    public static Color KindColor(MsgKind k, Color plain) => k switch { MsgKind.Bad => Danger, MsgKind.Warn or MsgKind.Battle => Warn, MsgKind.Good => Good, _ => plain };
+
     // ---------------------------------------------------------------- the window look
     // Paul's Paper frame "styles" (2026-11-11) and his answers of 2026-11-14 ("All A", "Apply the KISS principle. Make the ui as simple and
     // as clean/clear as possible"): inside a window, one text face (Space Grotesk), four greys and the meaning colours above. No fills, no
@@ -535,6 +539,10 @@ public static class Ui
         }
         foreach (var cb in new[] { "CheckBox", "CheckButton" })
         {
+            // their own boxes, or they take the window's Button box: every row of a settings list framed (impeccable pass, 2026-11-14)
+            t.SetStylebox("normal", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("pressed", cb, Box(clear, 0, null, 0, 6, 4));
+            t.SetStylebox("hover", cb, Box(clear, 0, WinLine, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinLine, 1, 6, 4));
+            t.SetStylebox("disabled", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("focus", cb, new StyleBoxEmpty());
             t.SetFont("font", cb, Grotesk);
             t.SetColor("font_color", cb, WinActive); t.SetColor("font_hover_color", cb, WinActive); t.SetColor("font_pressed_color", cb, WinActive);
             t.SetColor("font_hover_pressed_color", cb, WinActive); t.SetColor("font_focus_color", cb, WinActive);

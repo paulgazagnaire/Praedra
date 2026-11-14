@@ -58,6 +58,13 @@ public partial class GameScreen
         foreach (var (name, (page, _)) in w.Pages) page.Visible = name == w.Tab;
     }
 
+    /// <summary>A name with its closing numeral glued on ("Lode Escrow\u00a0I"), so a tile wraps it "Lode / Escrow I", never "Lode Escrow / I".</summary>
+    static string KeepNumeral(string name)
+    {
+        int sp = name.LastIndexOf(' ');
+        return sp > 0 && name[(sp + 1)..] is "I" or "II" or "III" or "IV" or "V" ? name[..sp] + "\u00a0" + name[(sp + 1)..] : name;
+    }
+
     /// <summary>A small caption in capitals, with an optional count on the right.</summary>
     static Control Caption(string word, string right, string tip = null)
     {
@@ -98,11 +105,11 @@ public partial class GameScreen
         p.MouseFilter = MouseFilterEnum.Pass; p.CustomMinimumSize = new Vector2(TileW, TileH);
         // no fill, a thin line: faint blue round what is yours and can move, #3A3A3A round the rest (Paul 2026-11-14)
         var edge = accent == Ui.You ? new Color(Ui.You, ghost ? 0.22f : 0.3f) : Ui.WinLine;
-        p.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, edge, 1, 6, 6));
+        p.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, edge, 1, 4, 6));   // 84 px for the name: "Construction" fits
         var v = Ui.VBox(2);
         v.MouseFilter = MouseFilterEnum.Ignore;
         p.AddChild(v);
-        var holder = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(TileW - 12, 40) };
+        var holder = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(TileW - 8, 40) };
         if (avatar != null)
         {
             var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(36, 36) };
@@ -147,11 +154,12 @@ public partial class GameScreen
             holder.AddChild(badge);
         }
         v.AddChild(holder);
-        var t = Ui.Label(name, null, Ui.Text, Ui.Small, wrap: true);
+        var t = Ui.Label(KeepNumeral(name), null, Ui.Text, Ui.Small, wrap: true);
         t.AddThemeFontOverride("font", Ui.Medium);
         t.HorizontalAlignment = HorizontalAlignment.Center;
+        t.AutowrapMode = TextServer.AutowrapMode.Word;   // breaks between words only: never "Constructio / n"
         t.MaxLinesVisible = 2;
-        t.CustomMinimumSize = new Vector2(TileW - 12, 0);
+        t.CustomMinimumSize = new Vector2(TileW - 8, 0);
         t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         v.AddChild(t);
         if (sub != null)
@@ -159,7 +167,7 @@ public partial class GameScreen
             var s = Ui.Label(sub, null, ghost ? Pending : Ui.Text3, Ui.Tiny, wrap: false);
             s.HorizontalAlignment = HorizontalAlignment.Center;
             s.ClipText = true; s.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            s.CustomMinimumSize = new Vector2(TileW - 12, 0);
+            s.CustomMinimumSize = new Vector2(TileW - 8, 0);
             v.AddChild(s);
         }
         if (ghost) p.Modulate = new Color(1, 1, 1, 0.62f);

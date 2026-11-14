@@ -304,6 +304,7 @@ public partial class GameScreen
             return;
         }
         // ground (Leaders), infra or build, troops, fighters, fleets: a system's window on that tab
+        if (what == "HQ") what = S.MyHqSystem ?? what;   // your own headquarters, wherever it stands
         if (kind.ToLowerInvariant() is "infra" or "build") { OpenMgmt(MgKind.Infra, what.Replace('_', ' ')); return; }
         string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", _ => "Leaders" };
         OpenMgmt(MgKind.Ground, what.Replace('_', ' '), tab: tab);

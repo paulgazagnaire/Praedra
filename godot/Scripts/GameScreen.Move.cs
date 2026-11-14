@@ -212,7 +212,8 @@ public partial class GameScreen
         _orderBody.Text = nl < 0 ? "" : text[(nl + 1)..];
         _orderBody.Visible = _orderBody.Text.Length > 0;
         bool red = _moveFleet >= 0 && _moveWarn;
-        _orderBar.AddThemeStyleboxOverride("panel", Ui.Box(new Color(red ? Ui.DangerDeep : Ui.HudBg, 0.97f), 8, red ? Ui.Danger : new Color(1, 1, 1, 0.08f), red ? 2 : 1, 14, 10));
+        // the HUD's window surface like every floating box (Paul 2026-11-14); a path through a known trap keeps its red frame
+        _orderBar.AddThemeStyleboxOverride("panel", red ? Ui.Box(new Color(Ui.DangerDeep, 0.97f), 0, Ui.Danger, 2, 14, 10) : Ui.WindowBox(14, 10));
         _orderTitle.AddThemeColorOverride("font_color", red ? new Color("ffb4b4") : Ui.Text);
         Ui.Clear(_orderActions);
         if (_moveFleet >= 0 && _lockedTo != null && red)

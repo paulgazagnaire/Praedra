@@ -6,8 +6,8 @@ namespace PraedraViewer;
 /// <summary>
 /// One system in the sector window, drawn pixel for pixel from Paul's Paper frame "system-info" (2026-11-11, file "Praedra", page
 /// "UIs---V2--human"; reference copy in the shared folder praedra/specs/ui/paper/system-info/): 96 x 133, the name in a pixel font on top, the planet (96 dots) in the
-/// middle, two 15-step gauges on its left (resources outside, energy inside: bright = in use, dark = free, grey = slots the system
-/// lacks, an arrow at the level), a loyalty bar on its right (yours from the bottom, the enemy's faded on top), and four 16-pixel icons
+/// middle, two 15-step gauges on its left (resources outside in light grey, energy inside in grey-blue: bright = in use, dark = free,
+/// faint = slots the system lacks, an arrow at the level), a loyalty bar on its right (yours from the bottom, the enemy's faded on top), and four 16-pixel icons
 /// in the corners: buildings, fleets, troops, and the holder's emblem. Drawn, not built from controls, so every pixel lands where the
 /// frame puts it. Screens only: the caller fills <see cref="Data"/> from the game.
 /// </summary>
@@ -41,8 +41,10 @@ public partial class SystemTile : Control
     public static readonly Color Empty = new(0x55 / 255f, 0x55 / 255f, 0x55 / 255f, 0.6f);
     public static readonly Color BracketTop = new(0x55 / 255f, 0x55 / 255f, 0x55 / 255f, 0.7f);
     public static readonly Color BracketBottom = new("474747");
-    public static readonly Color RawUsed = new("ffa942"), RawFree = new("874300");
-    public static readonly Color EnergyUsed = new("a1b1ff"), EnergyFree = new("325697");
+    // the gauges in greys, not the frame's orange and blue: those are the sides' colours everywhere else (Paul 2026-11-14, impeccable
+    // critique). Resources light grey, energy the windows' grey-blue (#909EBD); the free steps darker, still a step above the grey "lacking" ones
+    public static readonly Color RawUsed = new("c8c8c8"), RawFree = new("6a6a6a");
+    public static readonly Color EnergyUsed = new("909ebd"), EnergyFree = new("4a5878");
     // the sides' colours are the game's own, set by the caller (Paul 2026-11-11: "blue for you and orange for the enemy", whichever side
     // you play; Ui.You and Ui.Enemy, as on the map)
 
@@ -77,6 +79,9 @@ public partial class SystemTile : Control
         if (d.Ring) DrawArc(PlanetBox.GetCenter(), 44, 0, Mathf.Tau, 64, UiKitDanger, 1f, false);
         DrawName(d);
         if (!d.Gauges) return;
+        // the gauges sit on bare tile ground, as in the frame: mask the planet under them so its dither doesn't show through and between
+        // the steps (impeccable critique 2026-11-14); the 60% panels then come out the frame's #040405
+        DrawRect(new Rect2(RawGauge.Position, new Vector2(EnergyGauge.End.X - RawGauge.Position.X, RawGauge.Size.Y)), Ground);
         Gauge(RawGauge, d.RawSlots, d.Mines, RawUsed, RawFree, outer: true);
         Gauge(EnergyGauge, d.EnergySlots, d.EnergyUsed, EnergyUsed, EnergyFree, outer: false);
         Loyalty(d);

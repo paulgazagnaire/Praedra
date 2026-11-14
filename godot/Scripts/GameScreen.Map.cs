@@ -35,7 +35,8 @@ public partial class GameScreen
     PanelContainer _layersCard;
     readonly List<Button> _layerButtons = new();
 
-    /// <summary>The map layers as a short list under the menu (Paul's mockup), then Routes and Legend; the Layers switch hides it all.</summary>
+    /// <summary>The map layers as a short list under the menu (Paul's mockup), then Routes and Legend. The list starts closed and the Layers
+    /// switch opens it; the key of a layer other than Owners shows either way, so V never changes the map without saying how.</summary>
     void BuildMapTools()
     {
         var col = Ui.VBox(Ui.Block);
@@ -44,6 +45,7 @@ public partial class GameScreen
         _topLeft.AddChild(col);
         _layersCard = Ui.Hud(4, 4);
         _layersCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _layersCard.Visible = false;   // closed at the start: the Layers switch opens it (Paul 2026-11-14, impeccable critique)
         col.AddChild(_layersCard);
         var v = Ui.VBox(2);
         _layersCard.AddChild(v);
@@ -87,13 +89,13 @@ public partial class GameScreen
         _layerKey.Text = l switch
         {
             MapLayer.Support => "Support for you:\norange low · grey half · blue high",
-            MapLayer.Trouble => "Red: uprising or enemy fleet\nYellow: too few troops or blockade",
-            MapLayer.Yards => "Yellow: yard idle\nBlue: building",
-            MapLayer.Intel => "Bright: seen now\nFaded: seen long ago",
-            MapLayer.Slots => "Bigger halo: more energy and raw slots",
+            MapLayer.Trouble => "Trouble:\nred uprising or enemy fleet\nyellow too few troops or blockade",
+            MapLayer.Yards => "Yards:\nyellow idle · blue building",
+            MapLayer.Intel => "Intel age:\nbright seen now · faded long ago",
+            MapLayer.Slots => "Slots:\nbigger halo, more energy and raw slots",
             _ => "",
         };
-        _layerKeyCard.Visible = l != MapLayer.Owners && _layersCard.Visible;
+        _layerKeyCard.Visible = l != MapLayer.Owners;
         _view.QueueRedraw();
     }
 
@@ -101,12 +103,12 @@ public partial class GameScreen
 
     // The halos depend only on the day and the layer: worked out once, not on every frame the map is drawn.
     GalaxyView.MapMark?[] _marks;
-    (int Day, MapLayer Layer, int Orders) _marksKey = (-1, MapLayer.Owners, -1);
+    (int Day, MapLayer Layer, int Orders, long Next) _marksKey = (-1, MapLayer.Owners, -1, -1);
 
     GalaxyView.MapMark? LayerMarkOf(int i)
     {
         if (_layer == MapLayer.Owners) return null;
-        var key = (S.Game.Day, _layer, S.QueuedOrders);
+        var key = (S.Game.Day, _layer, S.QueuedOrders, S.Game.NextSequence);   // a Cancel then a new order keeps the count, not the next number
         if (_marks == null || _marksKey != key)
         {
             _marksKey = key;
@@ -172,7 +174,7 @@ public partial class GameScreen
         foreach (var fam in new[] { Praedra.Core.Construction.YardFamily.Construction, Praedra.Core.Construction.YardFamily.Shipyard, Praedra.Core.Construction.YardFamily.Training })
         {
             if (!HasYard(system, fam)) continue;
-            if (S.Host.Construction.ProjectAt(system, fam) is { } p && p.Units.Count > 0) busy++; else idle++;
+            if (S.Host.Construction.ProjectAt(system, fam) is { } p && p.Units.Count > 0 || QueuedBuilds(system, fam).Count > 0) busy++; else idle++;
         }
         return (idle, busy);
     }
@@ -187,9 +189,14 @@ public partial class GameScreen
     /// <summary>The yard families a system has (shipyard, construction, training, in that order).</summary>
     IEnumerable<Praedra.Core.Construction.YardFamily> YardFamiliesAt(string system) => YardFamilies.Where(f => HasYard(system, f));
 
-    /// <summary>The yard families here with nothing to build: an idle yard.</summary>
+    /// <summary>The yard families here with nothing to build and no build order waiting for the clock: an idle yard.</summary>
     List<Praedra.Core.Construction.YardFamily> IdleYardFamilies(string system) =>
-        YardFamiliesAt(system).Where(f => S.Host.Construction.ProjectAt(system, f) is not { Units.Count: > 0 }).ToList();
+        YardFamiliesAt(system).Where(f => S.Host.Construction.ProjectAt(system, f) is not { Units.Count: > 0 } && QueuedBuilds(system, f).Count == 0).ToList();
+
+    /// <summary>Your build orders for a yard that wait for the clock (each can still be cancelled), oldest first. They are read from the
+    /// core's own order queue, so they survive a save and load. rule: m1-clock-and-orders §Orders in (withdrawing a queued order).</summary>
+    List<Praedra.Core.Clock.BuildOrder> QueuedBuilds(string system, Praedra.Core.Construction.YardFamily fam) =>
+        S.Game.Queue.OfType<Praedra.Core.Clock.BuildOrder>().Where(o => o.Side == Me && o.System == system && o.Family == fam).OrderBy(o => o.Sequence).ToList();
 
     bool HasYard(string system, Praedra.Core.Construction.YardFamily fam)
     {
@@ -239,7 +246,11 @@ public partial class GameScreen
             {
                 if (!HasYard(n, fam)) continue;
                 var p = S.Host.Construction.ProjectAt(n, fam);
-                if (p == null || p.Units.Count == 0) { acts.Add($"{FamilyShort(fam)} idle"); row.ActivityColor = Ui.Warn; }
+                if (p == null || p.Units.Count == 0)
+                {
+                    if (QueuedBuilds(n, fam).Count > 0) acts.Add($"{FamilyShort(fam)} ordered");
+                    else { acts.Add($"{FamilyShort(fam)} idle"); row.ActivityColor = Ui.Warn; }
+                }
                 else acts.Add($"{eco.Find(p.Units[0])?.Class ?? "?"} {DaysLeftOf(n, fam)}d");
             }
             int fleets = S.Game.State.Fleets.Values.Count(f => f.Side == Me && f.At == n);
@@ -274,7 +285,7 @@ public partial class GameScreen
         string fresh = live ? "live" : S.LastSeenDay(n) is int d ? $"day {d}" : "old";
         row.Info = known ? fresh : $"owner ?, {fresh}";
         row.InfoColor = live ? Ui.Text2 : Ui.Text3;
-        if (n == S.EnemyHqSystem) row.Info = "ENEMY HQ, " + row.Info;
+        if (n == S.EnemyHqSystem) row.Info = (Me == Side.Hand ? "COLLECTIVE HQ, " : "ENEMY CAPITAL, ") + row.Info;
         return row;
     }
 

@@ -57,11 +57,15 @@ public partial class GameScreen
 
     string HullWords(EconObject o) => Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull ? $"hull {o.Hull * 100 / Math.Max(1, sc.Hull)}%" : null;
 
+    /// <summary>An empty post says what to do with it (impeccable critique 2026-11-14: "Empty" taught nothing).</summary>
+    const string DropLeader = "Drop a leader here";
+
     /// <summary>A place nobody fills yet: its words in the darkest grey in a dashed frame (Paul 2026-11-14). <paramref name="slot"/>: one
     /// post (the General, an Admiral), drawn the size of a tile.</summary>
     Label EmptySlot(string text, bool slot = false)
     {
         var l = Ui.Label(text, null, Ui.Dimmed, Ui.Tiny, wrap: false);
+        if (slot) l.AutowrapMode = TextServer.AutowrapMode.WordSmart;   // a post is one tile wide: its words take two lines
         l.AddThemeStyleboxOverride("normal", Ui.Dashed(8, 6));
         l.CustomMinimumSize = slot ? new Vector2(TileW, TileH) : new Vector2(0, 34);
         if (slot) l.HorizontalAlignment = HorizontalAlignment.Center;

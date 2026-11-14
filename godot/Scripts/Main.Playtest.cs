@@ -117,8 +117,9 @@ public partial class Main
         Expect(gs.Click("Play"), "press Play");
         for (int i = 0; i < 8; i++) gs.Frame(1.0);
         Expect(s.Game.Day == 5, $"eight seconds at 5x = 5 days, a day lasts 8 seconds at 1x (day {s.Game.Day})");
+        Expect(!gs.Has("Play"), "while the clock runs, the one clock button is Pause");
         Expect(gs.Click("Pause"), "press Pause");
-        Expect(!gs.Playing, "paused");
+        Expect(!gs.Playing && gs.Has("Play") && !gs.Has("Pause"), "paused, and the same button says Play again");
         Expect(gs.Click("10x") && gs.SpeedValue == 10 && gs.Click("1x") && gs.SpeedValue == 1 && gs.Click("2x") && gs.SpeedValue == 2 && gs.Click("5x") && gs.SpeedValue == 5,
             "the speed chips set 10x, 1x, 2x and 5x");
 

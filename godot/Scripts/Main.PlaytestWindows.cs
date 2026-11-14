@@ -118,6 +118,25 @@ public partial class Main
         else if (reg != null && fm.FreeTroopSlots(fleet) == 0)
             Expect(gs.MgDrop($"R:{reg.Id}", $"Fleet {fid} Troops")?.Contains("no troop room") == true, "a fleet with no troop room refuses regiments");
 
+        // ---------------------------------------------------------------- the Orders tab (Paul 2026-11-14): attack, fight or retreat, scrap
+        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Command,Ships,Fighters,Troops,Orders", $"the fleet window's tabs end with Orders: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
+        string orders = gs.MgPageText($"Fleet {fid}", "Orders");
+        Expect(orders.Contains("WHEN AN ENEMY FLEET ARRIVES") && orders.Contains("All your fleets do the same"), "Orders: fight or retreat, one setting for every fleet");
+        if (fleet.At != null && fleet.Transit == null) Expect(orders.Contains("SCRAP") && orders.Contains("right-click"), "Orders: scrap the fleet, and how to scrap one ship");
+        {
+            int q0 = s.QueuedOrders;
+            bool wasRetreat = s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat;
+            string flip = wasRetreat ? "Fight" : "Retreat", back = wasRetreat ? "Retreat" : "Fight";
+            if (gs.ReportVisible) gs.Click("Close");   // the night's report, if one popped up, is closed first, as a player would
+            Expect(gs.Click($"Tab Fleet {fid} Orders") && gs.MgTab($"Fleet {fid}") == "Orders", "a click on the Orders tab shows it");
+            Expect(gs.Click($"On contact {flip}") && s.QueuedOrders == q0 + 1, $"Orders: {flip} sends the order (orders waiting {q0} -> {s.QueuedOrders})");
+            gs.PlayRefresh();
+            Expect(gs.Click($"On contact {back}") && s.QueuedOrders == q0 + 2, $"Orders: {back} sends it back (orders waiting {s.QueuedOrders})");
+            gs.PlayDay();
+            Expect((s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat) == wasRetreat, "the last choice holds after the day");
+            gs.Click($"Tab Fleet {fid} Command");
+        }
+
         // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back by the grip
         if (fleet.Ships.Count > 1)
         {

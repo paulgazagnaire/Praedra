@@ -94,6 +94,17 @@ public partial class GameScreen
         foreach (var fam in fams.Except(idle))
         {
             var p = S.Host.Construction.ProjectAt(name, fam);
+            var queued = QueuedBuilds(name, fam);
+            if (p is not { Units.Count: > 0 })
+            {
+                // nothing under way yet: only orders that wait for the clock, each with Cancel
+                using (Card())
+                {
+                    Add(Ui.Label(FamilyName(fam), "Strong", wrap: false));
+                    foreach (var o in queued) OrderLine(o.Sequence, $"Ordered: {o.Count} x {o.Class}", Ui.Small);
+                }
+                continue;
+            }
             var cur = eco.Find(p.Units[0]);
             string curName = cur?.Class ?? "?";
             int cost = CostOf(curName);
@@ -115,6 +126,7 @@ public partial class GameScreen
                 Stat($"{curName}: {p.Progress} of {cost}", left <= 0 ? "done next cycle" : $"about {left} {Plural(left, "day", "days")} left", null,
                     "Each yard adds one point per cycle while it has refined material; the numbers assume it does. Yards wait in line for refined.");
                 if (all.Count > 1) Note($"The whole queue: about {totalLeft} days. New orders join the end of the queue.");
+                foreach (var o in queued) OrderLine(o.Sequence, $"Ordered: {o.Count} x {o.Class}", Ui.Small);
             }
         }
     }
@@ -141,6 +153,7 @@ public partial class GameScreen
     // ================================================================== the build table (E1)
 
     sealed record BuildRow(CostRow Row, YardFamily Family, bool Usable, string Why, int Days);
+    const string NotResearched = "not researched";
 
     List<BuildRow> BuildRowsFor(string system, string section)
     {
@@ -153,7 +166,7 @@ public partial class GameScreen
         {
             var fam = Yards.BuiltBy(r.Category);
             string why = null;
-            if (!cons.IsResearched(Me, r.Name)) why = "not researched";
+            if (!cons.IsResearched(Me, r.Name)) why = NotResearched;
             else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) is { } place)
                 why = place == "OnePerPlanet" ? "one per planet: there is one" : place == "NotOnRoute" ? "only on a route system" : "no free slot";
             else if (r.Name == Praedra.Core.Harvester.HarvesterModule.ShipClass && S.HasOwnHarvesterAt(system)) why = "one per system: there is one";
@@ -282,13 +295,15 @@ public partial class GameScreen
 
     /// <summary>Where research stands in the track this build list draws on: the level, and the next thing it unlocks.
     /// rule: m5-research §Facility income, §Mission income, §The level check (points come from finished yards of that kind and from Research missions).</summary>
-    void ResearchLine(ResearchKind kind)
+    /// <summary>The research level and what it unlocks next; <paramref name="greyNote"/>: the build tiles above include grey ones, which carry
+    /// no "not researched" line of their own (so four rows fit the Infrastructure window), so this line says what grey means.</summary>
+    void ResearchLine(ResearchKind kind, bool greyNote = false)
     {
         var r = S.Host.Research;
         string track = kind switch { ResearchKind.Ship => "ship design", ResearchKind.Troop => "troop training", _ => "facility design" };
-        string text = r.NextRung(Me, kind) is { } next
+        string text = (greyNote ? "A grey tile with no note is not researched yet. " : "") + (r.NextRung(Me, kind) is { } next
             ? $"Research ({track}): level {r.Level(Me, kind)}. Next: {next.Class}, {r.Points(Me, kind)} of {next.Cost} points."
-            : $"Research ({track}): level {r.Level(Me, kind)}, everything researched.";
+            : $"Research ({track}): level {r.Level(Me, kind)}, everything researched.");
         var l = Add(Ui.Label(text, "Hint"));
         l.TooltipText = Ui.Wrap("Every finished yard of this kind adds a point now and then; a Research mission by a skilled leader adds far more. Each level unlocks the next item in the list.");
         l.MouseFilter = MouseFilterEnum.Stop;
@@ -304,7 +319,16 @@ public partial class GameScreen
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);
         Toast($"Order given: {what}.");
-        _panelDirty = true; _panelTimer = 0;
+        OrdersChanged();
         RefreshTop();
+    }
+
+    /// <summary>A queued build order makes its yard busy (impeccable critique 2026-11-14), so an order or a Cancel changes what Needs you
+    /// lists and the Yards layer's halos at once, not only when the day moves.</summary>
+    void OrdersChanged()
+    {
+        _panelDirty = true; _panelTimer = 0;
+        _attentionDirty = true;
+        _view.QueueRedraw();
     }
 }

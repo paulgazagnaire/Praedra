@@ -11,8 +11,8 @@ namespace PraedraViewer;
 /// <summary>
 /// Two of the floating pieces of Paul's mockup (2026-10-28). Bottom centre, the selection card: what you clicked in one glance (owner,
 /// support, troops, fleets; for a fleet where it is and where it goes), with its main action and Details, which opens the window.
-/// Bottom right, the message corner: one short card with the latest message, and the kinds (battles, fleets, systems, production,
-/// missions) to switch it to, each lit while it has news you have not looked at; Messages opens the whole log.
+/// Bottom right, the message corner: one short card with the latest message. The kind strip that was over it (BAT FLT SYS PRD MSN) is
+/// gone (Paul 2026-11-14, impeccable critique): the whole log, sorted by kind, is one key away (E, or Log in the menu).
 /// </summary>
 public partial class GameScreen
 {
@@ -98,7 +98,7 @@ public partial class GameScreen
         bool mine = S.OwnerOf(name) == Me;
         if (S.IsDestroyed(name)) Tag("DESTROYED", Ui.Danger);
         else if (name == S.MyHqSystem) Tag(Me == Side.Hand ? "YOUR CAPITAL" : "YOUR HQ", Ui.Gold);
-        else if (name == S.EnemyHqSystem) Tag("ENEMY HQ", Ui.Enemy);
+        else if (name == S.EnemyHqSystem) Tag(Me == Side.Hand ? "COLLECTIVE HQ" : "ENEMY CAPITAL", Ui.Enemy);   // the drawer's words
         else if (mine) Tag("YOURS", Ui.You);
         else if (S.Picture(name) == null) Tag("UNEXPLORED", Ui.Text3);
         else if (S.Sees(name)) Tag("SEEN NOW", Ui.Text2);
@@ -149,18 +149,6 @@ public partial class GameScreen
     Label _msgKind, _msgTitle, _msgBody;
     Button _msgOpen;
     Message _msgShown;
-    MsgCat? _msgCat;
-    readonly Dictionary<MsgCat, (Button Chip, Glyph Dot)> _msgChips = new();
-    readonly HashSet<MsgCat> _msgNews = new();
-
-    static readonly (MsgCat Cat, string Short, string Tip)[] MsgKinds =
-    {
-        (MsgCat.Battles, "BAT", "Battles, bombardments, invasions, captures"),
-        (MsgCat.Fleets, "FLT", "Fleet arrivals, retreats, blockades"),
-        (MsgCat.Systems, "SYS", "Your systems: uprisings, losses, the headquarters"),
-        (MsgCat.Build, "PRD", "Production: construction, research, upkeep"),
-        (MsgCat.Leaders, "MSN", "Leaders and missions"),
-    };
 
     void BuildMessageCorner()
     {
@@ -172,32 +160,9 @@ public partial class GameScreen
         _msgCorner.CustomMinimumSize = new Vector2(310, 0);
         _mapHolder.AddChild(_msgCorner);
 
-        var strip = Ui.Hud(4, 4);
-        strip.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        _msgCorner.AddChild(strip);
-        var sr = Ui.HBox(2);
-        strip.AddChild(sr);
-        foreach (var (cat, label, tip) in MsgKinds)
-        {
-            var c = cat;
-            var b = Ui.Button(label, () => PickMsgCat(c), tip + ". Click to show the latest; click again for all kinds.", "Layer");
-            b.ToggleMode = true;
-            b.CustomMinimumSize = new Vector2(42, 34);
-            b.AddThemeFontSizeOverride("font_size", 11);
-            var dot = new Glyph(Glyph.Kind.Dot, Ui.Warn, 6) { Visible = false };
-            dot.SetAnchorsPreset(LayoutPreset.TopRight);
-            dot.OffsetLeft = -12; dot.OffsetRight = -4; dot.OffsetTop = 3; dot.OffsetBottom = 11;
-            b.AddChild(dot);
-            _msgChips[cat] = (b, dot);
-            sr.AddChild(b);
-        }
-        sr.AddChild(new VSeparator());
-        var all = Ui.Button("Messages", () => ShowTab(DrawerTab.Log), "Every message, by kind (E)", "Chip");
-        all.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        sr.AddChild(all);
-
         _msgCard = Ui.Hud(Ui.Pad, 10);
         _msgCard.MouseDefaultCursorShape = CursorShape.PointingHand;
+        _msgCard.TooltipText = "Every message, by kind: Log (E).";   // RefreshMessageCorner says more when a click does something
         _msgCard.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _msgShown != null) OpenMessage(_msgShown); };
         _msgCorner.AddChild(_msgCard);
         var v = Ui.VBox(Ui.Gap + 2);
@@ -229,44 +194,24 @@ public partial class GameScreen
         MsgCat.Leaders => "MISSION", MsgCat.Intel => "INTEL", _ => "ORDER",
     };
 
-    void PickMsgCat(MsgCat c)
-    {
-        _msgCat = _msgCat == c ? null : c;
-        _msgNews.Remove(c);
-        RefreshMessageCorner();
-    }
-
     /// <summary>The corner's kind for a message: any fight counts as a battle.</summary>
     static MsgCat CornerCat(Message m) => m.Combat || m.Kind == MsgKind.Battle ? MsgCat.Battles : m.Cat;
-
-    /// <summary>A new message lights its kind until the player looks at it.</summary>
-    void NoteMessageKind(Message m)
-    {
-        var c = CornerCat(m);
-        if (_msgChips.ContainsKey(c) && _msgCat != c) _msgNews.Add(c);
-    }
 
     void RefreshMessageCorner()
     {
         if (_msgCorner == null) return;
         _msgCorner.Visible = !_drawer.Visible;
-        foreach (var (cat, (chip, dot)) in _msgChips)
-        {
-            chip.SetPressedNoSignal(_msgCat == cat);
-            dot.Visible = _msgNews.Contains(cat);
-        }
-        Message m = null;
-        for (int i = _allMessages.Count - 1; i >= 0 && m == null; i--)
-        {
-            var x = _allMessages[i];
-            if (_msgCat is not MsgCat want || CornerCat(x) == want) m = x;
-        }
+        var m = _allMessages.Count > 0 ? _allMessages[^1] : null;
         _msgShown = m;
         _msgCard.Visible = m != null;
         if (m == null) return;
         _msgKind.Text = $"{KindWord(CornerCat(m))} · D{m.Day}";
-        _msgKind.AddThemeColorOverride("font_color", m.Kind switch { MsgKind.Bad => Ui.Danger, MsgKind.Warn or MsgKind.Battle => Ui.Warn, MsgKind.Good => Ui.Good, _ => Ui.Text3 });
+        _msgKind.AddThemeColorOverride("font_color", Ui.KindColor(m.Kind, Ui.Text3));
         _msgOpen.Visible = m.System != null;
+        // a click goes to the place or opens the report; a message with neither has nothing to open (review 2026-11-14)
+        bool opens = m.System != null || m.Detail != null;
+        _msgCard.MouseDefaultCursorShape = opens ? CursorShape.PointingHand : CursorShape.Arrow;
+        _msgCard.TooltipText = opens ? "Open this message. Every message, by kind: Log (E)." : "Every message, by kind: Log (E).";
         // a message with a report has a short title and a longer text; a plain one is shown as one line
         bool titled = !string.IsNullOrEmpty(m.Title);
         _msgTitle.Text = titled ? m.Title : m.Text;

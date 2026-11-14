@@ -251,7 +251,7 @@ public partial class GameScreen
     {
         foreach (var m in news)
         {
-            if (UiSettings.PauseEnemyAtMine && m.Tag == "FleetArrived" && m.Kind == MsgKind.Warn) return "Paused: " + m.Text.TrimEnd('.');
+            if (UiSettings.PauseEnemyAtMine && m.Tag == "FleetArrived" && m.Kind == MsgKind.Bad) return "Paused: " + m.Text.TrimEnd('.');
             if (UiSettings.PauseUprising && m.Tag == "UprisingStarted" && m.Kind == MsgKind.Bad) return $"Paused: uprising on {m.System}";
             if (UiSettings.PauseSensors && m.Tag == "SensorReport") return "Paused: " + m.Text.TrimEnd('.');
             if (UiSettings.PauseCompleted && m.Tag == "UnitCompleted") return "Paused: " + m.Text.TrimEnd('.');

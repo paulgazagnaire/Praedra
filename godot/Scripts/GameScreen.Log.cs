@@ -36,13 +36,14 @@ public partial class GameScreen
     {
         var host = Ui.VBox(8);
         host.SizeFlagsVertical = SizeFlags.ExpandFill;
-        var margin = new MarginContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
-        margin.AddThemeConstantOverride("margin_left", 14); margin.AddThemeConstantOverride("margin_right", 10);
-        margin.AddThemeConstantOverride("margin_top", 12); margin.AddThemeConstantOverride("margin_bottom", 12);
+        var margin = Pad(WinPad, WinPad, WinGap, WinPad);   // as the other tabs: 24 px under the tabs, 16 at the sides
+        margin.SizeFlagsVertical = SizeFlags.ExpandFill;
         var v = Ui.VBox(8);
         v.SizeFlagsVertical = SizeFlags.ExpandFill;
         margin.AddChild(v);
-        v.AddChild(Ui.Label("Messages", "Title"));
+        var title = Ui.Label("LOG", null, Ui.WinText, Ui.NameSmall, wrap: false);   // the tab's own name, in the windows' pixel capitals
+        title.AddThemeFontOverride("font", Ui.NameFont(Ui.NameSmall));
+        v.AddChild(title);
         v.AddChild(Ui.Label("Click a message to go there; a battle or invasion opens its report.", "Hint"));
         var flow = new HFlowContainer();
         flow.AddThemeConstantOverride("h_separation", 4); flow.AddThemeConstantOverride("v_separation", 4);
@@ -57,20 +58,23 @@ public partial class GameScreen
         v.AddChild(flow);
         _log = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, AutoHeight = false, FocusMode = FocusModeEnum.None, SameColumnWidth = true };
         _log.AddThemeFontSizeOverride("font_size", 14);
+        // the window look: no box round the list, a thin line round the row under the mouse
+        var clear = new Color(0, 0, 0, 0);
+        _log.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        _log.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        _log.AddThemeStyleboxOverride("hovered", Ui.Box(clear, 0, Ui.WinLine, 1, 0, 0));
+        _log.AddThemeStyleboxOverride("hovered_selected", Ui.Box(clear, 0, Ui.WinText, 1, 0, 0));
+        _log.AddThemeStyleboxOverride("selected", Ui.Box(clear, 0, Ui.WinText, 1, 0, 0));
+        _log.AddThemeStyleboxOverride("selected_focus", Ui.Box(clear, 0, Ui.WinText, 1, 0, 0));
+        _log.AddThemeStyleboxOverride("cursor", new StyleBoxEmpty());
+        _log.AddThemeStyleboxOverride("cursor_unfocused", new StyleBoxEmpty());
+        _log.AddThemeColorOverride("guide_color", clear);
+        _log.AddThemeFontOverride("font", Ui.Grotesk);
         _log.ItemClicked += OnLogClicked;
         v.AddChild(_log);
         host.AddChild(margin);
         return host;
     }
-
-    static Color KindColor(MsgKind k) => k switch
-    {
-        MsgKind.Good => new Color("8fe0b0"),
-        MsgKind.Bad => new Color("ff9a9a"),
-        MsgKind.Warn => new Color("f5d27a"),
-        MsgKind.Battle => new Color("9cc9f5"),
-        _ => Ui.Text2,
-    };
 
     bool PassesFilter(Message m) => _logFilter switch
     {
@@ -98,7 +102,6 @@ public partial class GameScreen
         if (PassesFilter(m)) { AppendLogRow(m); if (_logHost.Visible) ScrollLogToEnd(); }
         if (fresh && ToastWorthy(m)) Toast(m.Text, m.Kind, m.System);
         if (fresh && !(_drawer.Visible && _tab == DrawerTab.Log)) _unread++;
-        if (fresh) NoteMessageKind(m);
     }
 
     static readonly HashSet<string> GoodNews = new(StringComparer.Ordinal)
@@ -115,7 +118,7 @@ public partial class GameScreen
         _logMessages.Add(m);
         _log.AddItem($"Day {m.Day}   {m.Text}");
         int idx = _log.ItemCount - 1;
-        _log.SetItemCustomFgColor(idx, KindColor(m.Kind));
+        _log.SetItemCustomFgColor(idx, Ui.KindColor(m.Kind, Ui.WinText));   // the drawer has the window look
         _log.SetItemTooltip(idx, m.System != null ? Ui.Wrap(m.Text + (m.Detail != null ? "\nClick for the report." : "\nClick to go there.")) : Ui.Wrap(m.Text));
         if (_log.ItemCount > MaxLogItems) { _log.RemoveItem(0); _logMessages.RemoveAt(0); }
     }

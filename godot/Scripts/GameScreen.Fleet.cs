@@ -129,7 +129,7 @@ public partial class GameScreen
                 }
                 Act($"Invade {at} with {aboard.Count} regiment(s)", () => Invade(f), aboard.Count == 0 ? "No regiments aboard: load some at one of your planets first." : "Lands the regiments aboard to take the planet.",
                     aboard.Count == 0 || attackPending, "Primary");
-                if (attackPending) Note("A fleet can carry out one attack order at a time. Press +1 day (or Play) so this one starts, then give the next.");
+                if (attackPending) Note("A fleet can carry out one attack order at a time. Press Play (or N for one day) so this one starts, then give the next.");
             }
         }
 
@@ -288,6 +288,9 @@ public partial class GameScreen
         S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
+        // the setting shows in two places (the panel's box, the Fleet window's Orders tab): both redraw now
+        _panelDirty = true; _panelTimer = 0;
+        MgRefreshSoon();
     }
 
     List<int> Ticked(Fleet f) => _splitSel.Where(f.Ships.Contains).OrderBy(x => x).ToList();

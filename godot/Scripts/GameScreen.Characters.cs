@@ -35,7 +35,7 @@ public partial class GameScreen
     {
         var list = S.MyCharacters;
         var alive = list.Where(c => c.Status != CharacterStatus.Dead).ToList();
-        Title("Your leaders", $"{Ui.Count(alive.Count, "leader", "leaders")}. Hover their skills for what each post does.");
+        Title("Your leaders", null);   // the count is in the heading below; the skills line shows a help cursor for what each post does
 
         // the race for the key leaders, both ways (rule: m5-setup-and-victory §Victory)
         var mineNeeded = EnemyTerms.ToList();
@@ -129,10 +129,13 @@ public partial class GameScreen
             if (status != CharacterStatus.Free) h.AddChild(Ui.Tag(GameSession.StatusWords(c).ToUpperInvariant(), Bad)); // free is the normal case: no tag
             h.AddChild(Ui.Button("Show", () => GoToCharacter(id), "Centre the map where this leader is", "Link"));
             Add(h);
-            Line($"Where: {S.WhereIsCharacter(c)}   ·   Role: {S.RoleOf(c)}", status == CharacterStatus.Free ? Ui.Text2 : Bad, Ui.Small);
+            // where they are, and their post only when they hold one (impeccable critique 2026-11-14: "Where: ... · Role: no post" on every card)
+            string role = S.RoleOf(c);
+            Line(S.WhereIsCharacter(c) + (role != "no post" ? $"   ·   {role}" : ""), status == CharacterStatus.Free ? Ui.Text2 : Bad, Ui.Small);
             var skills = Line(S.SkillsOf(c), Dim, Ui.Small);
             skills.TooltipText = Ui.Wrap(S.CapabilityOf(c) + "\n" + LeaderHelp);
             skills.MouseFilter = MouseFilterEnum.Stop;
+            skills.MouseDefaultCursorShape = CursorShape.Help;
             foreach (var (seq, p) in S.PendingOrdersOfCharacter(id)) OrderLine(seq, $"Ordered: {p}", Ui.Small);
             // two small buttons on one line; the card already names the leader (the full words stay on the button for the playtest)
             var acts = Ui.HBox(Ui.Block);

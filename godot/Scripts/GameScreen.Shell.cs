@@ -21,7 +21,7 @@ public partial class GameScreen
     // ---- top right: goal, day, clock
     Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel, _upkeepCaption;
     Control _upkeepBar;
-    Button _playButton, _pauseButton, _goalButton, _menuButton;
+    Button _playButton, _goalButton, _menuButton;
     readonly List<Button> _speedChips = new();
 
     // ---- map and overlays
@@ -96,7 +96,6 @@ public partial class GameScreen
         sr.AddChild(new VSeparator());
         _layersButton = Ui.Button("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", "Chip");
         _layersButton.ToggleMode = true;
-        _layersButton.ButtonPressed = true;
         _layersButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         sr.AddChild(_layersButton);
         BuildSearchResults(_topCentre);
@@ -121,7 +120,7 @@ public partial class GameScreen
         var ordersCard = Ui.Hud(12, 5);
         ordersCard.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         ordersCard.MouseFilter = MouseFilterEnum.Stop;
-        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play or +1 day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in Messages.");
+        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play, or N for one day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in the Log.");
         _ordersLabel = Ui.Label("", null, Ui.Warn, Ui.Small, wrap: false);
         ordersCard.AddChild(_ordersLabel);
         ordersCard.Visible = false;
@@ -164,18 +163,11 @@ public partial class GameScreen
         dm.AddThemeConstantOverride("margin_left", 8); dm.AddThemeConstantOverride("margin_right", 8);
         dm.AddChild(dayBox);
         cr.AddChild(dm);
-        _pauseButton = Ui.Button("||", () => { if (_playing) TogglePlay(); }, "Pause (Space)", "Clock");
-        _pauseButton.SetMeta(UiTest.FullName, "Pause");
-        _pauseButton.CustomMinimumSize = new Vector2(44, 44);
-        cr.AddChild(_pauseButton);
-        _playButton = Ui.Button("\u25b6", () => { if (!_playing) TogglePlay(); }, "Play (Space). The clock stops by itself after a battle, a capture or an invasion.", "Clock");
-        _playButton.SetMeta(UiTest.FullName, "Play");
+        // one button that plays and pauses (Paul 2026-11-14, impeccable critique): it shows what a click does, and is lit while the clock runs;
+        // one day at a time is the N key
+        _playButton = Ui.Button("\u25b6", TogglePlay, "Play or pause (Space); N moves one day. The clock stops by itself after a battle, a capture or an invasion.", "Clock");
         _playButton.CustomMinimumSize = new Vector2(44, 44);
         cr.AddChild(_playButton);
-        var step = Ui.Button("+1", StepOne, "Advance exactly one day (N).", "Chip");
-        step.SetMeta(UiTest.FullName, "+1 day");
-        step.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        cr.AddChild(step);
         var sg = new ButtonGroup();
         for (int i = 0; i < Speeds.Length; i++)
         {
@@ -224,8 +216,7 @@ public partial class GameScreen
         navRow.AddChild(new VSeparator());
         _enemyHqButton = Ui.Button("\u2192 Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
         navRow.AddChild(_enemyHqButton);
-        navRow.AddChild(new VSeparator());
-        navRow.AddChild(Ui.Button("Fit", () => _view.ResetView(), "Show the whole galaxy (Home)", "Chip"));
+        // no Fit button: the Home key shows the whole galaxy (Paul 2026-11-14)
 
         // ---- bottom centre: what you clicked, or the order bar of a move
         BuildSelectionCard();
@@ -314,7 +305,8 @@ public partial class GameScreen
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
         _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
         _playButton.ThemeTypeVariation = _playing ? "ClockOn" : "Clock";
-        _pauseButton.ThemeTypeVariation = _playing ? "Clock" : "ClockOn";
+        _playButton.Text = _playing ? "||" : "\u25b6";
+        _playButton.SetMeta(UiTest.FullName, _playing ? "Pause" : "Play");
         RefreshGoalButton();
         RefreshHq();
         RefreshOrderBar();
@@ -323,6 +315,13 @@ public partial class GameScreen
         RefreshMessageCorner();
     }
 
+    /// <summary>The pill's note before the first day. While a yard at your headquarters stands idle it says that first: giving the yards
+    /// work is the game's first job, and pressing Play with them idle wastes days (impeccable critique 2026-11-14).</summary>
+    const string StartNote = "Press Play (or Space) to start the clock";
+
+    string StartNoteText() =>
+        S.MyHqSystem is string home && IdleYardFamilies(home).Count > 0 ? $"Yards idle at {home}: build, then Play (Space)" : StartNote;
+
     /// <summary>The pill under the search: why the clock stopped, or what needs you; nothing when all is quiet.</summary>
     void RefreshPill()
     {
@@ -330,7 +329,7 @@ public partial class GameScreen
         string text = null; Color dot = Ui.Warn;
         if (InMoveMode) text = null;
         else if (_playing && _runUntilNeeded) { text = "Running until something needs you"; dot = Ui.Good; }
-        else if (!_playing && _pauseNote != null) text = _pauseNote;
+        else if (!_playing && _pauseNote != null) text = _pauseNote == StartNote ? StartNoteText() : _pauseNote;
         else
         {
             int urgent = _attention.Count(a => a.Level == Level.Danger), watch = _attention.Count(a => a.Level == Level.Warn);
@@ -348,7 +347,6 @@ public partial class GameScreen
     {
         _layersCard.Visible = !_layersCard.Visible;
         _layersButton.SetPressedNoSignal(_layersCard.Visible);
-        _layerKeyCard.Visible = _layersCard.Visible && _layer != MapLayer.Owners;
         _view.QueueRedraw();
     }
 
@@ -397,21 +395,14 @@ public partial class GameScreen
     /// <summary>A short note under the search that goes by itself (order sent, saved, something happened).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)
     {
-        var dot = kind switch
-        {
-            MsgKind.Bad => Ui.Danger,
-            MsgKind.Warn => Ui.Warn,
-            MsgKind.Good => Ui.Good,
-            MsgKind.Battle => Ui.You,
-            _ => Ui.Text3,
-        };
+        var dot = Ui.KindColor(kind, Ui.Text3);
         var card = Ui.Hud(12, 7);
         card.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         var h = Ui.HBox(Ui.Block);
         h.MouseFilter = MouseFilterEnum.Ignore;
         h.AddChild(new Glyph(Glyph.Kind.Dot, dot, 8) { CustomMinimumSize = new Vector2(10, 0) });
         var l = Ui.Label(text, null, Ui.Text, Ui.Small);
-        l.CustomMinimumSize = new Vector2(Math.Min(380, 8 * text.Length + 10), 0);
+        l.CustomMinimumSize = new Vector2(380, 0);   // every note the same width, so stacked notes line up (impeccable critique 2026-11-14)
         h.AddChild(l);
         card.AddChild(h);
         if (system != null)
@@ -524,7 +515,7 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.Dot, Ui.Neutral, 8), "Nobody's system");
         Item(new Glyph(Glyph.Kind.Ring, new Color(Ui.Neutral, 0.6f), 9), "Never explored");
         Item(new Glyph(Glyph.Kind.Cross, Ui.Danger, 11), "Destroyed by a harvester");
-        Item(new Glyph(Glyph.Kind.DoubleRing, Ui.Gold, 14, Ui.You), "Headquarters (tagged with its name)");
+        Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the dot");   // as the map draws it
         Item(new Glyph(Glyph.Kind.Ring, Ui.Danger, 14), "Uprising: yards and mines stop");
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
         Item(new Glyph(Glyph.Kind.Triangle, Colors.White, 11, Ui.You), "Your fleet (a number = several here)");

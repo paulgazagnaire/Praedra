@@ -65,8 +65,7 @@ public partial class GameScreen
             OrderLine(p.Sequence, $"Leaves {p.Home} as soon as the clock moves, arrives day {p.ArrivalDay}.", 13);
         }
         foreach (var m in list) MissionBlock(m);
-        Add(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        Act("Close the Missions list", ToggleMissions, "Back to the map panel (M)");
+        // no Close button of its own: the window's ×, M and Esc close it (impeccable critique 2026-11-14: one exit, not two)
     }
 
     void MissionBlock(MissionGroup m)
@@ -259,7 +258,7 @@ public partial class GameScreen
                      (rec.Foilable ? " Enemy units at the target may catch the team." : ""), Dim, 13);
             }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
-            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Messages.", chk.Reason != null);
+            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in the Log (E).", chk.Reason != null);
         }
         CloseRow();
     }
