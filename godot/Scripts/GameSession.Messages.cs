@@ -86,7 +86,7 @@ public sealed partial class GameSession
             }
             case OrderAccepted a when _pending.TryGetValue(a.Sequence, out var what) && IsHqOrder(what) && a.Path != null:
                 _pending.Remove(a.Sequence);
-                yield return new Message(d, $"HQ moving to {a.Path.Items[^1]}, arrives day {a.ArrivalDay} ({a.TotalTicks} days on the lanes).", a.Path.Items[^1], MsgKind.Good);
+                yield return new Message(d, $"HQ moving to {a.Path.Items[^1]}, arrives day {a.ArrivalDay} ({a.TotalTicks} days on the lanes).", a.Path.Items[^1], MsgKind.Info);
                 break;
             case OrderAccepted a when _pending.TryGetValue(a.Sequence, out var what):
                 _pending.Remove(a.Sequence);
@@ -100,7 +100,7 @@ public sealed partial class GameSession
             case FleetJoined j when Mine(j.Side):
             {
                 string who = j.Ships.Items.Count() == 1 && Host.Economy.Find(j.Ships.Items.First()) is { } ship ? (ship.Name ?? ship.Class) : FleetName(j.Fleet);
-                yield return new Message(d, $"{who} joined {FleetName(j.Into)} at {j.System}.", j.System, MsgKind.Good);
+                yield return new Message(d, $"{who} joined {FleetName(j.Into)} at {j.System}.", j.System, MsgKind.Info);
                 break;
             }
             case FleetArrived f when Mine(FleetSide(f.Fleet)):
@@ -217,7 +217,7 @@ public sealed partial class GameSession
                 yield return new Message(d, c.Cause == CharacterCause.Merged
                     ? $"{CharName(c.Character)} moved to {FleetName(c.Fleet)} (the fleets merged){(c.Post == CharacterPost.None ? "" : $" as {PostWords(c.Post)}")}."
                     : c.Post == CharacterPost.None ? $"{CharName(c.Character)} boarded {FleetName(c.Fleet)} as a passenger."
-                    : $"{CharName(c.Character)} joined {FleetName(c.Fleet)} as {PostWords(c.Post)}.", FleetSystem(c.Fleet), MsgKind.Good);
+                    : $"{CharName(c.Character)} joined {FleetName(c.Fleet)} as {PostWords(c.Post)}.", FleetSystem(c.Fleet), MsgKind.Info);
                 break;
             case CharacterDetached c when Mine(c.Side) && c.Cause is not (CharacterCause.Injured or CharacterCause.Captured or CharacterCause.Killed):
                 yield return new Message(d, $"{CharName(c.Character)} left {FleetName(c.Fleet)}{At(c.System)}{CauseWords(c.Cause)}.", c.System, c.Cause == CharacterCause.Order ? MsgKind.Info : MsgKind.Warn);
@@ -227,7 +227,7 @@ public sealed partial class GameSession
                 yield return new Message(d, $"{CharName(p.Character)} is no longer {PostKindWords(p.Post)}{CauseWords(p.Cause)}.", null, p.Cause == CharacterCause.Order ? MsgKind.Info : MsgKind.Warn);
                 break;
             case SystemGeneralAssigned g when Mine(g.Side):
-                yield return new Message(d, $"{CharName(g.Character)} is now the General of {g.System}: the defenders there fight better in an invasion.", g.System, MsgKind.Good);
+                yield return new Message(d, $"{CharName(g.Character)} is now the General of {g.System}: the defenders there fight better in an invasion.", g.System, MsgKind.Info);
                 break;
             case CharacterInjured c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was injured{At(c.System)}{CauseWords(c.Cause)}." : $"Enemy leader {CharName(c.Character)} was injured{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);

@@ -380,7 +380,7 @@ public partial class GameScreen
             GameBoot.WriteSave(path, S.SaveText(), S.Player, S.Level, S.Game.Day);
             _lastSlot = slot;
             HideModal(_savePanel);
-            Toast($"Game saved in slot {slot} (day {S.Game.Day}).", MsgKind.Good);
+            Toast($"Game saved in slot {slot} (day {S.Game.Day}).", MsgKind.Info);
         }
         catch (Exception e) { Toast("Save failed: " + e.Message, MsgKind.Bad); }
     }

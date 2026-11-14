@@ -306,9 +306,19 @@ public partial class GameScreen
         // ground (Leaders), infra or build, troops, fighters, fleets: a system's window on that tab
         if (what == "HQ") what = S.MyHqSystem ?? what;   // your own headquarters, wherever it stands
         if (kind.ToLowerInvariant() is "infra" or "build") { OpenMgmt(MgKind.Infra, what.Replace('_', ' ')); return; }
-        string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", _ => "Leaders" };
+        string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", "lore" => "Lore", _ => "Leaders" };
         OpenMgmt(MgKind.Ground, what.Replace('_', ' '), tab: tab);
     }
     public void ShotGoal() => ShowGoal();
+
+    /// <summary>--strike SYSTEM (screenshots only): a harvester fleet of yours appears there and destroys it, then one day runs, to show a harvested system.</summary>
+    public void ShotStrike(string system)
+    {
+        system = system.Replace('_', ' ');
+        int id = S.Host.Fleets.AddFleet(S.Player, "Strike", new[] { Praedra.Core.Harvester.HarvesterModule.ShipClass }, system);
+        S.SubmitDestroySystem(S.Game.State.Fleets[id]);
+        StepOne();
+        HideModal(_reportPanel);   // the shot shows the window, not the harvest report the strike opens
+    }
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 }

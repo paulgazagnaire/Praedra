@@ -59,11 +59,21 @@ public partial class GameScreen
         var strip = Ui.VBox(8);
         strip.AddChild(SlotStrip("Energy slots", eco.EnergyUsed(n), slots.Energy, "Every building takes one energy slot."));
         strip.AddChild(SlotStrip("Raw material slots", eco.RawUsed(n), eco.EffectiveRaw(n), "A mine also needs a raw material slot. A planet never has more usable raw slots than energy slots."));
-        Add(strip);
-        var gives = Line($"{Ui.Count(mines, "mine", "mines")}: about +{RawPerMonth(n)} raw · {Ui.Count(refs, "refinery", "refineries")}: about +{RefinedPerMonth(n)} refined, every 30 days", Ui.Text2, Ui.Small);
-        gives.TooltipText = Ui.Wrap("Each mine digs one raw material every cycle; each refinery turns one raw into one refined. The cycle is longer when support is low. "
+        // one line each, in the drawer's words, at the slot lines' size (ui-inspo review 2026-11-14: the one sentence wrapped mid-phrase)
+        string givesTip = Ui.Wrap("Each mine digs one raw material every cycle; each refinery turns one raw into one refined. The cycle is longer when support is low. "
             + $"Every mine and refinery also adds {eco.Params.CapacityPerFacility} to your upkeep room (with as many of the other kind).");
-        gives.MouseFilter = MouseFilterEnum.Stop;
+        var gives = Ui.VBox(3);
+        foreach (var words in new[] {
+            "Mines  " + (mines == 0 ? "none" : $"{mines} · about +{RawPerMonth(n)} raw / 30 days"),
+            "Refineries  " + (refs == 0 ? "none" : $"{refs} · about +{RefinedPerMonth(n)} refined / 30 days") })
+        {
+            var l = Ui.Label(words, null, Ui.Text2, Ui.Tiny, wrap: false);
+            l.TooltipText = givesTip;
+            l.MouseFilter = MouseFilterEnum.Stop;
+            gives.AddChild(l);
+        }
+        strip.AddChild(gives);
+        Add(strip);
         // the buildings, stacked by kind
         var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == n).ToList();
         Section("Buildings", here.Count(o => o.Completed).ToString());

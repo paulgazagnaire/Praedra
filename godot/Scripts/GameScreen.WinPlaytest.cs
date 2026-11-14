@@ -68,8 +68,28 @@ public partial class GameScreen
         return w.Pages.TryGetValue(page, out var p) ? PageLabels(p.Page) : "";
     }
 
+    /// <summary>User story W9: a short note (an order sent, the interdictor warning after a drop) is drawn over open windows, never hidden under them.</summary>
+    internal bool ToastSeenOverWindows(string text)
+    {
+        Toast(text, MsgKind.Warn);
+        HideCoveredNotes();
+        bool ok = _mgWins.Count > 0 && _toastBox.Modulate.A >= 1 && _toastBox.ZIndex > 0 && ToastText.Contains(text);
+        var last = _toasts[^1]; last.Card.QueueFree(); _toasts.RemoveAt(_toasts.Count - 1);
+        return ok;
+    }
+
     /// <summary>Close every management window; their buttons leave the tree now, not at the end of the frame, so a later click can't reach them.</summary>
     internal void MgCloseAll() { foreach (var w in _mgWins.ToList()) { CloseMgmt(w); w.Panel.GetParent()?.RemoveChild(w.Panel); } }
+
+    /// <summary>For --dump-ui: the windows on screen by name (each management window by its key, the sector window, the right-hand panel, the whole screen).</summary>
+    internal List<(string, Control)> ShotPanels()
+    {
+        var l = new List<(string, Control)> { ("Screen", this) };
+        foreach (var w in _mgWins) l.Add((w.Key, w.Panel));
+        if (SectorViewOpen && _secWin != null) l.Add(("Sector", _secWin));
+        if (_drawer.Visible) l.Add(("Panel", _drawer));
+        return l;
+    }
 
     internal string MgTab(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Tab;
     internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();

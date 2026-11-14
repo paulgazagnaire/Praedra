@@ -20,6 +20,8 @@ using Side = Praedra.Core.Clock.Side;
 
 namespace PraedraViewer;
 
+/// <summary>What a message means to you, which sets its colour (Ui.KindColor). Good is news in your favour, not a confirmation of your own
+/// order: an order taken, a fleet joined, a leader posted or a save is Info (ui-inspo review 2026-11-14: green only where it means something).</summary>
 public enum MsgKind { Info, Good, Bad, Warn, Battle }
 
 /// <summary>One line of the message log. <see cref="System"/> is the place the click centres the map on; <see cref="Detail"/> is a longer report.</summary>

@@ -440,6 +440,7 @@ public partial class GalaxyView : Control
 
         // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
         // Bigger double ring = headquarters, red ring = uprising, yellow ring = blockade.
+        float focusOut = 0, hoverOut = 0;   // the outermost state ring of the selected and the hovered system, so their marks go outside it
         for (int i = 0; i < _pos.Length; i++)
         {
             var p = SystemScreen(i);
@@ -477,11 +478,19 @@ public partial class GalaxyView : Control
                 DrawArc(p, radius + 8f, 0, Mathf.Tau, 32, fill, 2f, true);
             }
             if (IsUprising?.Invoke(i) == true) DrawArc(p, radius + 11f, 0, Mathf.Tau, 32, Ui.Danger, 2.5f, true);
-            if (IsBlockaded?.Invoke(i) == true) // dashed, so it differs from the uprising ring by shape too, not only by colour
+            bool blockaded = IsBlockaded?.Invoke(i) == true;
+            if (blockaded) // dashed, so it differs from the uprising ring by shape too, not only by colour
                 for (int k = 0; k < 12; k++) DrawArc(p, radius + 14f, k * Mathf.Tau / 12f, k * Mathf.Tau / 12f + Mathf.Tau / 24f, 4, Ui.Warn, 2f, true);
+            if (i == focus || i == Hovered)
+            {
+                float o = blockaded ? 14f : IsUprising?.Invoke(i) == true ? 11f : IsHq?.Invoke(i) == true ? 8f : 0f;
+                if (i == focus) focusOut = o; else hoverOut = o;
+            }
         }
-        if (focus >= 0) DrawArc(SystemScreen(focus), radius + 4f, 0, Mathf.Tau, 32, Colors.White, 2f, true);
-        if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + 3f, 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
+        // the selection ring sits just outside the system's own rings: on your HQ it used to fall between the HQ's two rings and hardly showed
+        // (ui-inspo review 2026-11-14)
+        if (focus >= 0) DrawArc(SystemScreen(focus), radius + (focusOut > 0 ? focusOut + 4f : 4f), 0, Mathf.Tau, 32, Colors.White, 2f, true);
+        if (Hovered >= 0 && Hovered != focus) DrawArc(SystemScreen(Hovered), radius + (hoverOut > 0 ? hoverOut + 3.5f : 3f), 0, Mathf.Tau, 32, new Color(1, 1, 1, 0.6f), 1.5f, true);
 
         // no capital or HQ tags on the map, for either side (Paul 2026-11-11 "Remove this as well" for your own; 2026-11-14 "Remove it" for
         // the enemy's): the capital ring, the system card and the HQ buttons still show them

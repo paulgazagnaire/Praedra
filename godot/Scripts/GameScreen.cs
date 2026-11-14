@@ -48,6 +48,8 @@ public partial class GameScreen : Control
     // Screenshot options (set by Main from the command line).
     public string ShotPath;
     public int ShotFrames = 30;
+    public string DumpPath;   // --dump-ui: also write what each control draws, for the Paper file
+    int _mapShotIn;           // frames until the map-only picture of --dump-ui
     int _frame;
 
     /// <param name="newGame">true for a fresh game from the start screen (the very first one shows the How to play overlay).</param>
@@ -89,7 +91,7 @@ public partial class GameScreen : Control
         string home = S.MyHqSystem ?? (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } th ? th.Path[^1] : GameBoot.HandCapital);
         if (G.TryFindSystem(home, out int homeIdx)) { _view.FocusOn(homeIdx, 2.4f); }
         // "Press Play" lives in the pill only (impeccable critique 2026-11-14: it was said twice, and the card cut it off)
-        S.Say($"You lead the {S.NameOf(S.Player)} from {home}. F1 explains how to play.", MsgKind.Good, home);
+        S.Say($"You lead the {S.NameOf(S.Player)} from {home}. F1 explains how to play.", MsgKind.Info, home);   // not news: grey, so green keeps meaning good news (ui-inspo review 2026-11-14)
         foreach (var m in S.Messages) AddLogItem(m, false);
         if (S.Game.Day == 0) _pauseNote = StartNote;
         RefreshTop();
@@ -214,6 +216,19 @@ public partial class GameScreen : Control
             GetViewport().GetTexture().GetImage().SavePng(ShotPath);
             GD.Print("Saved screenshot " + ShotPath);
             ShotPath = null;
+            if (DumpPath != null)
+            {
+                // --dump-ui (tools/paper-sync/): what each control draws, then the map alone (every panel hidden) two frames later
+                UiDump.Write(GetTree().Root, DumpPath, ShotPanels());
+                UiDump.HideAllBut(_view);
+                _mapShotIn = 3;
+                return;
+            }
+            GetTree().Quit();
+        }
+        if (_mapShotIn > 0 && --_mapShotIn == 0)
+        {
+            GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.ChangeExtension(DumpPath, ".map.png"));
             GetTree().Quit();
         }
     }
