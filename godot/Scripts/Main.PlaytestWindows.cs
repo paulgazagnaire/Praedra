@@ -127,9 +127,11 @@ public partial class Main
             int q0 = s.QueuedOrders;
             bool wasRetreat = s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat;
             string flip = wasRetreat ? "Fight" : "Retreat", back = wasRetreat ? "Retreat" : "Fight";
-            Expect(gs.Click($"Tab Fleet {fid} Orders") && gs.Click($"On contact {flip}") && s.QueuedOrders == q0 + 1, $"Orders: {flip} sends the order");
+            if (gs.ReportVisible) gs.Click("Close");   // the night's report, if one popped up, is closed first, as a player would
+            Expect(gs.Click($"Tab Fleet {fid} Orders") && gs.MgTab($"Fleet {fid}") == "Orders", "a click on the Orders tab shows it");
+            Expect(gs.Click($"On contact {flip}") && s.QueuedOrders == q0 + 1, $"Orders: {flip} sends the order (orders waiting {q0} -> {s.QueuedOrders})");
             gs.PlayRefresh();
-            Expect(gs.Click($"On contact {back}") && s.QueuedOrders == q0 + 2, $"Orders: {back} sends it back");
+            Expect(gs.Click($"On contact {back}") && s.QueuedOrders == q0 + 2, $"Orders: {back} sends it back (orders waiting {s.QueuedOrders})");
             gs.PlayDay();
             Expect((s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat) == wasRetreat, "the last choice holds after the day");
             gs.Click($"Tab Fleet {fid} Command");

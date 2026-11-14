@@ -181,7 +181,8 @@ public partial class GameScreen
     {
         string upper = (name ?? "").ToUpperInvariant();
         int size = Ui.NameSize(upper, (float)t.GetMeta("room", 400f));
-        t.Text = upper;
+        t.Text = name ?? "";
+        t.Uppercase = true;   // drawn in capitals; the text keeps its case (what the playtest and a screen reader read)
         t.AddThemeFontOverride("font", Ui.NameFont(size, upper));
         t.AddThemeFontSizeOverride("font_size", size);
         t.TooltipText = name ?? "";
@@ -275,7 +276,7 @@ public partial class GameScreen
         }),
         ("The map", new[]
         {
-            "Blue is you, orange the enemy, grey nobody; a hollow ring is a place you never explored. Away from your systems and fleets you see what you saw last. Click a sector for its window (S); Legend explains the marks.",
+            "Blue is you, orange the enemy, grey nobody; a hollow ring is a place you never explored. Away from your systems and fleets you see what you saw last. Click a sector for its window (S); Layers (top) opens the map layers and the Legend of the marks.",
         }),
         ("Doing things", new[]
         {

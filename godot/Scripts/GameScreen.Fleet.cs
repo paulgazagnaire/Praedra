@@ -288,6 +288,9 @@ public partial class GameScreen
         S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
+        // the setting shows in two places (the panel's box, the Fleet window's Orders tab): both redraw now
+        _panelDirty = true; _panelTimer = 0;
+        MgRefreshSoon();
     }
 
     List<int> Ticked(Fleet f) => _splitSel.Where(f.Ships.Contains).OrderBy(x => x).ToList();

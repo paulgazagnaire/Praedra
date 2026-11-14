@@ -301,7 +301,7 @@ public partial class GameScreen
     {
         var r = S.Host.Research;
         string track = kind switch { ResearchKind.Ship => "ship design", ResearchKind.Troop => "troop training", _ => "facility design" };
-        string text = (greyNote ? "Grey tiles are not researched yet. " : "") + (r.NextRung(Me, kind) is { } next
+        string text = (greyNote ? "A grey tile with no note is not researched yet. " : "") + (r.NextRung(Me, kind) is { } next
             ? $"Research ({track}): level {r.Level(Me, kind)}. Next: {next.Class}, {r.Points(Me, kind)} of {next.Cost} points."
             : $"Research ({track}): level {r.Level(Me, kind)}, everything researched.");
         var l = Add(Ui.Label(text, "Hint"));

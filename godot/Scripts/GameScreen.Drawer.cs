@@ -218,7 +218,8 @@ public partial class GameScreen
     {
         var h = Ui.HBox(8);
         string upper = name.ToUpperInvariant();
-        var t = Ui.Label(upper, null, Ui.WinText, Ui.NameSmall, wrap: false);
+        var t = Ui.Label(name, null, Ui.WinText, Ui.NameSmall, wrap: false);
+        t.Uppercase = true;   // drawn in capitals; the text keeps its case
         t.AddThemeFontOverride("font", Ui.NameFont(Ui.NameSmall, upper));
         t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
@@ -262,7 +263,7 @@ public partial class GameScreen
         {
             ("Space", "play / pause"), ("N", "one day"), ("1 - 4", "speed"), ("Q  F  C  M  E", "Needs you, Fleets, Leaders, Missions, Log"),
             ("S", "sector window"), ("V", "next map layer"), ("L", "routes on / off"), ("/", "search"), ("G", "goal"), ("Ctrl/Cmd + S", "quick save"),
-            ("Wheel, + -", "zoom"), ("Drag, arrows", "pan"), ("Esc", "cancel / deselect"),
+            ("Wheel, + -", "zoom"), ("Drag, arrows", "pan"), ("Home", "whole map"), ("Esc", "cancel / deselect"),
         })
             Stat(k, what);
     }

@@ -49,7 +49,7 @@ public partial class StartMenu : Control
         title.AddThemeFontOverride("font", Ui.NameFont(96));
         title.HorizontalAlignment = HorizontalAlignment.Center;
         box.AddChild(title);
-        box.AddChild(Ui.Space(14));   // no tagline: the old one was a Star Wars phrase (impeccable critique 2026-11-14); the fiction is Paul's to write
+        box.AddChild(Ui.Space(14));   // no tagline (impeccable critique 2026-11-14): the fiction is Paul's to write
 
         box.AddChild(Ui.Section("Your side"));
         var sideRow = Ui.HBox(8);

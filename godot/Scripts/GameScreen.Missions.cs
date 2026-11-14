@@ -258,7 +258,7 @@ public partial class GameScreen
                      (rec.Foilable ? " Enemy units at the target may catch the team." : ""), Dim, 13);
             }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
-            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Messages.", chk.Reason != null);
+            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in the Log (E).", chk.Reason != null);
         }
         CloseRow();
     }

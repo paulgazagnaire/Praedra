@@ -162,7 +162,7 @@ public partial class GameScreen
 
         _msgCard = Ui.Hud(Ui.Pad, 10);
         _msgCard.MouseDefaultCursorShape = CursorShape.PointingHand;
-        _msgCard.TooltipText = "Open this message. Every message, by kind: Log (E).";
+        _msgCard.TooltipText = "Every message, by kind: Log (E).";   // RefreshMessageCorner says more when a click does something
         _msgCard.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _msgShown != null) OpenMessage(_msgShown); };
         _msgCorner.AddChild(_msgCard);
         var v = Ui.VBox(Ui.Gap + 2);
@@ -208,6 +208,10 @@ public partial class GameScreen
         _msgKind.Text = $"{KindWord(CornerCat(m))} · D{m.Day}";
         _msgKind.AddThemeColorOverride("font_color", Ui.KindColor(m.Kind, Ui.Text3));
         _msgOpen.Visible = m.System != null;
+        // a click goes to the place or opens the report; a message with neither has nothing to open (review 2026-11-14)
+        bool opens = m.System != null || m.Detail != null;
+        _msgCard.MouseDefaultCursorShape = opens ? CursorShape.PointingHand : CursorShape.Arrow;
+        _msgCard.TooltipText = opens ? "Open this message. Every message, by kind: Log (E)." : "Every message, by kind: Log (E).";
         // a message with a report has a short title and a longer text; a plain one is shown as one line
         bool titled = !string.IsNullOrEmpty(m.Title);
         _msgTitle.Text = titled ? m.Title : m.Text;
