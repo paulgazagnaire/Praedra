@@ -68,7 +68,6 @@ public partial class GameScreen : Control
         _view.IsUnknown = i => { string n = G.Systems[i].Name; return !S.Explored(n) && S.OwnerOf(n) != S.Player; };
         _view.IsDestroyed = i => S.IsDestroyed(G.Systems[i].Name); // rule: m5-harvester §2 effect 6 (the side's own picture knows)
         _view.IsHq = i => HqSideAt(i) != null;
-        _view.CapitalTag = CapitalTagOf;
         _view.IsUprising = i => { string n = G.Systems[i].Name; return S.Sees(n) && S.Host.Support.IsUprising(n); };
         _view.IsBlockaded = i => { string n = G.Systems[i].Name; return S.Sees(n) && S.Game.State.Blockades.ContainsKey(n); };
         _view.Mark = LayerMarkOf;
@@ -105,13 +104,6 @@ public partial class GameScreen : Control
         return null;
     }
 
-    (string Text, Color Color)? CapitalTagOf(int i)
-    {
-        // your own capital or HQ has no label on the map (Paul 2026-11-11: "Remove this as well"); its ring, its system card and the
-        // HQ button still show it. Only the enemy's, once known, is labelled.
-        if (HqSideAt(i) is not Side side || side == S.Player) return null;
-        return (side == Side.Hand ? "ENEMY CAPITAL" : "COLLECTIVE HQ (TARGET)", Ui.Enemy);
-    }
 
     // ================================================================== clock, loop
 
