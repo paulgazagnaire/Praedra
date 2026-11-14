@@ -13,7 +13,8 @@ namespace PraedraViewer;
 
 /// <summary>
 /// The fleet panel (user stories C1, C2, C6, C7): where the fleet is and where it goes, its strength and speed, what it is made of (each ship
-/// class explained on hover), its orders (move, troops, fighters, attack), its officers, and split, transfer and merge with the fleets at the
+/// class explained on hover), its orders (move, troops, fighters; attack, the harvester, fight or retreat and scrap are in the Fleet window's Orders tab, one
+/// click away), its officers, and split, transfer and merge with the fleets at the
 /// same system. Only the player's own fleets can be selected.
 /// </summary>
 public partial class GameScreen
@@ -80,7 +81,7 @@ public partial class GameScreen
         move.Alignment = HorizontalAlignment.Center;
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
         // attack, the harvester's strike, fight or retreat and scrap live in the Fleet window's Orders tab only (Paul 2026-11-14, pick 5)
-        Act("Attack, retreat, scrap...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Orders"),
+        Act(S.HoldsHarvester(f) ? "Destroy System, attack, retreat..." : "Attack, retreat, scrap...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Orders"),
             "Opens the fleet's window on its Orders tab: bombard, invade, the harvester's strike, fight or retreat when an enemy arrives, and scrap the fleet.")
             .SetMeta(UiTest.FullName, "Fleet orders");
 
@@ -105,7 +106,9 @@ public partial class GameScreen
             }
             if (aboard.Count > 0)
                 Act($"Unload all troops at {at}", () => UnloadTroops(f, aboard.Select(a => a.Regiment.Id).ToList()),
-                    owner == Me ? "Lands the regiments on the planet: they join its garrison." : "Lands the regiments only on a system you hold. To land them here, invade (Attack, retreat, scrap...).", owner != Me);
+                    owner == Me ? "Lands the regiments on the planet: they join its garrison."
+                    : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
+                    : "Lands the regiments only on a system you hold. To land them here, invade it: Attack, retreat, scrap...", owner != Me);
 
             // fighters (C7)
             var based = FightersBasedAt(at);
@@ -243,7 +246,7 @@ public partial class GameScreen
         S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
-        // the setting shows in two places (the panel's box, the Fleet window's Orders tab): both redraw now
+        // the setting shows in the Fleet window's Orders tab; the panel redraws too, so nothing shows the old setting
         _panelDirty = true; _panelTimer = 0;
         MgRefreshSoon();
     }

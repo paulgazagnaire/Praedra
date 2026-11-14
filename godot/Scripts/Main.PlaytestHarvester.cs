@@ -44,7 +44,7 @@ public partial class Main
 
         if (me == Side.Hand)
         {
-            // ---- Fleet panel: the button, the confirm dialog, the order
+            // ---- the Fleet window's Orders tab (opened from the fleet card): the button, the confirm dialog, the order
             SelectFleetByList(gs, fleet);
             Expect(gs.Click("Fleet orders") && gs.MgTab($"Fleet {dsFleet}") == "Orders", "the fleet card opens the Fleet window on Orders");
             Expect(gs.Has("Destroy System"), "the Orders tab of a harvester fleet shows Destroy System");
@@ -151,7 +151,7 @@ public partial class Main
             string orders = gs.MgText($"Fleet {dsFleet}");
             Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && orders.Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
             Expect(!gs.Has("Bombard") && !gs.Has("Invade") && orders.Contains("nothing left to attack"), "a destroyed system offers nothing to attack");
-            // the cooldown (m5-harvester §2 legality 3a): one harvest a year per side (DEFAULT) and the panel says until when
+            // the cooldown (m5-harvester §2 legality 3a): one harvest a year per side (DEFAULT) and the Orders tab says until when
             int readyOn = s.Game.State.Harvester.DestroyedDay(target).GetValueOrDefault() + ds.Params.CooldownDays;
             Expect(s.HarvesterRechargingUntil(fleet) == readyOn && orders.Contains($"your next harvest can land on day {readyOn}"),
                 $"the Orders tab says the harvester recharges until day {readyOn}: " + orders.Replace("\n", " / "));

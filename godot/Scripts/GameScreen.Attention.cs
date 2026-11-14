@@ -128,10 +128,11 @@ public partial class GameScreen
             if (S.OwnerOf(at) == Me || S.IsDestroyed(at)) continue;
             var fl = f;
             if (S.Host.Troops.RegimentsAboard(f).Count > 0 && S.VisibleEnemyFleetsAt(at).Count == 0 && !S.PendingOf(f.Id).Any())
-                list.Add(new Item($"invade-{f.Id}-{at}", Level.Info, $"{f.Name} is at {at} with troops", "No enemy fleet there. Invade now, or bombard first.", at,
-                    new() { ("Invade now", () => Invade(fl), "Primary"), ("Select the fleet", () => SelectFleet(fl.Id, true), null) }));
+                list.Add(new Item($"invade-{f.Id}-{at}", Level.Info, $"{f.Name} is at {at} with troops", "No enemy fleet there. Invade now, or bombard first (the fleet's Orders).", at,
+                    new() { ("Invade now", () => Invade(fl), "Primary"), ("Orders...", () => OpenMgmt(MgKind.Fleet, fleet: fl.Id, tab: "Orders"), null) }));
             if (S.HoldsHarvester(f) && !S.PendingOf(f.Id).Any())
-                list.Add(new Item($"harvest-{f.Id}-{at}", Level.Info, $"Your harvester is at {at}", "It can destroy the system (asks first).", at, new() { ("Select the fleet", () => SelectFleet(fl.Id, true), null) }));
+                list.Add(new Item($"harvest-{f.Id}-{at}", Level.Info, $"Your harvester is at {at}", "It can destroy the system (asks first).", at,
+                    new() { ("Destroy System...", () => AskDestroySystem(fl.Id), "DangerButton"), ("Orders...", () => OpenMgmt(MgKind.Fleet, fleet: fl.Id, tab: "Orders"), null) }));
         }
         var infos = new List<Item>();
         // idle yards: one item for all of them, a row per system (a long list of the same card buries what matters)
