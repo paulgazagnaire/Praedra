@@ -34,6 +34,8 @@ public partial class GameScreen
     const int SearchWide = 320, SearchNarrow = 150;
     const int BarMinGap = 16;     // the least room left between the left and the right boxes
     const int SearchResultsWidth = 360;
+    const int DropRowH = 32;      // a row of the search results or the layers list: the bar's words, 32 px apart
+    const int DropPad = 5;        // a drop-down's box round its black cells: the 1 px edge and 4 px, as round the bar's cells
     // the frame's widths of the stock and day boxes, made for 9999 and 9999/9999: the bar keeps them, so it does not shift as numbers grow
     const int RawBoxW = 120, RefinedBoxW = 144, UpkeepBoxW = 179, DayBoxW = 97;
 
@@ -156,9 +158,9 @@ public partial class GameScreen
 
         // ---- what the boxes open: the search results and the layers list hang under their boxes, over the windows
         BuildSearchResults(_barLayer);
-        _searchResults.AddThemeStyleboxOverride("panel", BarDropBox(6, 8));
+        _searchResults.AddThemeStyleboxOverride("panel", BarDropBox(DropPad, DropPad));
         BuildMapTools();
-        _layersCard.AddThemeStyleboxOverride("panel", BarDropBox(4, 4));
+        _layersCard.AddThemeStyleboxOverride("panel", BarDropBox(DropPad, DropPad));
         _barLayer.AddChild(_layersCard);
 
         // placed again when the screen changes size, and when the words change width (a number grows, the goal turns into a countdown);
@@ -204,6 +206,51 @@ public partial class GameScreen
         s.SetBorderWidthAll(1);
         s.ContentMarginLeft = padX; s.ContentMarginRight = padX; s.ContentMarginTop = padY; s.ContentMarginBottom = padY;
         return s;
+    }
+
+    /// <summary>A black cell inside a drop-down, as the bar's boxes hold black cells: the rows sit on it.</summary>
+    static PanelContainer DropCell(Control rows)
+    {
+        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        p.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = BarCellBg });
+        p.AddChild(rows);
+        return p;
+    }
+
+    /// <summary>A row of the layers list (Paul 2026-11-15, "Yes A": the bar's pixel font): grey words, lighter under the mouse, light while it is on.</summary>
+    Button DropRow(string text, Action onPressed, string tip)
+    {
+        var b = BarButton(text, onPressed, tip, BarFontFor(text), BarTextSize, BarLabel, BarPad);
+        b.CustomMinimumSize = new Vector2(0, DropRowH);
+        b.Alignment = HorizontalAlignment.Left;
+        return b;
+    }
+
+    /// <summary>BitPotion, or for words with a letter it lacks (Ciénaga, Vesna Ilić) <see cref="BarFontWide"/>.</summary>
+    static Font BarFontFor(string text) =>
+        Ui.Pixel is FontFile px && text.All(c => char.IsWhiteSpace(c) || px.HasChar(c)) ? BarFont : BarFontWide;
+
+    static Font _barFontWide;
+    /// <summary>
+    /// BitPotion with Space Grotesk for the letters it lacks (é, ć). Space Grotesk's line is trimmed to BitPotion's at the bar's size, so a
+    /// word with é is set on the same line as its neighbours; the accent may rise a little above it. A label in this face is still as tall as
+    /// Space Grotesk's line (32 px, a search row) with BitPotion's line centred in it: the search rows give both their words this face, so
+    /// the name and the description stand on one line whichever has the é.
+    /// </summary>
+    static Font BarFontWide
+    {
+        get
+        {
+            if (_barFontWide != null) return _barFontWide;
+            var g = Ui.GroteskMedium;
+            var trimmed = new FontVariation
+            {
+                BaseFont = g,
+                SpacingTop = Mathf.RoundToInt(BarFont.GetAscent(BarTextSize) - g.GetAscent(BarTextSize)),
+                SpacingBottom = Mathf.RoundToInt(BarFont.GetDescent(BarTextSize) - g.GetDescent(BarTextSize)),
+            };
+            return _barFontWide = new FontVariation { BaseFont = BarFont, Fallbacks = new Godot.Collections.Array<Font> { trimmed } };
+        }
     }
 
     static StyleBoxFlat BarCellBox(int padX)
