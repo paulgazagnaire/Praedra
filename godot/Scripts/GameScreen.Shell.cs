@@ -9,18 +9,18 @@ namespace PraedraViewer;
 
 /// <summary>
 /// The frame of the game screen, after Paul's mockup (2026-10-28): the map fills the window and a few small dark pieces float at its edges.
-/// Top left the menu and the map layers; top centre the search and one pill for whatever needs you; top right the goal, the day and the
-/// clock; bottom left your stocks and the way home; bottom centre the thing you clicked; bottom right the latest message. Everything longer
-/// (a system's details, Build, Fleets, Leaders, Missions, the log, a sector) opens as a window on demand and closes with Esc.
+/// Across the top the bar (Paul's "ui-update-nov-15" frame, GameScreen.TopBar.cs): menu, goal, search, layers, your stocks, the day and the
+/// clock. Under it, centred, one pill for whatever needs you; bottom left the way home; bottom centre the thing you clicked; bottom right
+/// the latest message. Everything longer (a system's details, Build, Fleets, Leaders, Missions, the log, a sector) opens as a window on
+/// demand and closes with Esc.
 /// </summary>
 public partial class GameScreen
 {
     /// <summary>The margin between the map's edge and the floating pieces.</summary>
     const int Edge = 20;
 
-    // ---- top right: goal, day, clock
+    // ---- the top bar: goal, stocks, day, clock (GameScreen.TopBar.cs)
     Label _dayLabel, _sideLabel, _rawLabel, _refinedLabel, _upkeepLabel, _upkeepCaption;
-    Control _upkeepBar;
     Button _playButton, _goalButton, _menuButton;
     readonly List<Button> _speedChips = new();
 
@@ -34,7 +34,6 @@ public partial class GameScreen
     Control _noteLayer;
     Button _myHqButton, _enemyHqButton, _legendButton, _layersButton;
     Control _bottomLeft;
-    PanelContainer _clockCard;
 
     void BuildUi()
     {
@@ -55,7 +54,8 @@ public partial class GameScreen
         _mapHolder.AddChild(BuildDrawer());
         AddChild(BuildSectorView()); // over the map and the window, under the dialogs
         AddChild(BuildMgmtLayer());  // the fleet, ground and infrastructure windows float over the sector window
-        AddChild(_noteLayer);        // the short notes under the search, over the windows and under the dialogs (story W9)
+        AddChild(BuildTopBar());     // the top bar over the windows (they start under it), with what it opens: search results, the layers
+        AddChild(_noteLayer);        // the short notes under the top bar, over the windows and under the dialogs (story W9)
         BuildModals();
     }
 
@@ -63,45 +63,23 @@ public partial class GameScreen
 
     void BuildMapOverlays()
     {
-        // ---- top left: the menu, then the map layers
-        _topLeft = Ui.VBox(Ui.Group);
+        // ---- top left, under the bar: the key of the map layer shown (the layers list itself hangs from the bar's Layers box)
+        _topLeft = Ui.VBox(Ui.Block);
         _topLeft.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _topLeft.MouseFilter = MouseFilterEnum.Ignore;
         _topLeft.SetAnchorsPreset(LayoutPreset.TopLeft);
-        _topLeft.Position = new Vector2(Edge, Edge);
+        _topLeft.Position = new Vector2(BarSide, TopClear);
         _mapHolder.AddChild(_topLeft);
-        _menuButton = Ui.Button("\u2261", ToggleMenu, "Menu: fleets, leaders, missions, goal, sectors, save, load, settings (Esc closes)", "Hud");
-        _menuButton.SetMeta(UiTest.FullName, "Menu");
-        _menuButton.CustomMinimumSize = new Vector2(46, 46);
-        _menuButton.AddThemeFontSizeOverride("font_size", 22);
-        _menuButton.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        _topLeft.AddChild(_menuButton);
-        BuildMapTools();
 
-        // ---- top centre: the search with the Layers switch, the pill for what needs you, then short notes
+        // ---- top centre, under the bar: the pill for what needs you, then short notes
         _topCentre = Ui.VBox(Ui.Block);
         _topCentre.MouseFilter = MouseFilterEnum.Ignore;
         _topCentre.SetAnchorsPreset(LayoutPreset.CenterTop);
         _topCentre.GrowHorizontal = GrowDirection.Both;
-        _topCentre.OffsetTop = Edge;
+        _topCentre.OffsetTop = TopClear;
         _topCentre.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         _mapHolder.AddChild(_topCentre);
         _topCentre.SortChildren += HideCoveredNotes;   // checked once the notes are placed, before they are drawn
-        var searchBar = Ui.Hud(10, 4);
-        searchBar.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-        _topCentre.AddChild(searchBar);
-        var sr = Ui.HBox(0);
-        searchBar.AddChild(sr);
-        var lens = new Glyph(Glyph.Kind.Ring, Ui.Text3, 13) { CustomMinimumSize = new Vector2(20, 0) };
-        sr.AddChild(lens);
-        BuildSearch(sr);
-        sr.AddChild(new VSeparator());
-        _layersButton = Ui.Button("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", "Chip");
-        _layersButton.ToggleMode = true;
-        _layersButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        sr.AddChild(_layersButton);
-        BuildSearchResults(_topCentre);
-        ((Control)_searchResults).SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
 
         // the pill: why the clock stopped, or how many things need you; a click opens Needs you
         _pill = Ui.Hud(14, 7);
@@ -133,7 +111,7 @@ public partial class GameScreen
         _hqStatusLabel = Ui.Label("", null, Ui.Gold, Ui.Small, wrap: false);
         hqPill.AddChild(_hqStatusLabel);
         _topCentre.AddChild(hqPill);
-        // the short notes come next, under the search and the pills, but in a layer of their own that the tree puts over the windows: an
+        // the short notes come next, under the pills, but in a layer of their own that the tree puts over the windows: an
         // order's note or a red warning goes by in seconds and must be seen, and clicked, while you work in them (story W9). Tree order,
         // not ZIndex: ZIndex only drew a note over a window, and its click still went to the window (QA-104).
         _toastBox = Ui.VBox(6);
@@ -145,50 +123,7 @@ public partial class GameScreen
         _noteLayer.AddChild(_toastBox);
         _topCentre.SortChildren += PlaceNotes;
 
-        // ---- top right: the goal, the day, the clock
-        var clock = _clockCard = Ui.Hud(4, 4);
-        clock.SetAnchorsPreset(LayoutPreset.TopRight);
-        clock.GrowHorizontal = GrowDirection.Begin;
-        clock.OffsetRight = -Edge; clock.OffsetLeft = -Edge; clock.OffsetTop = Edge;
-        _mapHolder.AddChild(clock);
-        var cr = Ui.HBox(Ui.Gap);
-        clock.AddChild(cr);
-        _goalButton = Ui.Button("Goal", ShowGoal, "How you win, and how close each side is (G).", "Chip");
-        _goalButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        cr.AddChild(_goalButton);
-        cr.AddChild(new VSeparator());
-        var dayBox = Ui.VBox(-3);
-        dayBox.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        dayBox.CustomMinimumSize = new Vector2(52, 0);
-        dayBox.MouseFilter = MouseFilterEnum.Stop;
-        _sideLabel = Ui.Label("DAY", "StatLabel", wrap: false);
-        _sideLabel.MouseFilter = MouseFilterEnum.Stop;
-        dayBox.AddChild(_sideLabel);
-        _dayLabel = Ui.Label("0", "Number", Ui.Text, 18, wrap: false);
-        _dayLabel.MouseFilter = MouseFilterEnum.Stop;
-        _dayLabel.TooltipText = Ui.Wrap("The game day. Each day every order you gave is carried out, fleets fly, yards build. Press Play to let the days run.");
-        dayBox.AddChild(_dayLabel);
-        var dm = new MarginContainer();
-        dm.AddThemeConstantOverride("margin_left", 8); dm.AddThemeConstantOverride("margin_right", 8);
-        dm.AddChild(dayBox);
-        cr.AddChild(dm);
-        // one button that plays and pauses (Paul 2026-11-14, impeccable critique): it shows what a click does, and is lit while the clock runs;
-        // one day at a time is the N key
-        _playButton = Ui.Button("\u25b6", TogglePlay, "Play or pause (Space); N moves one day. The clock stops by itself after a battle, a capture or an invasion.", "Clock");
-        _playButton.CustomMinimumSize = new Vector2(44, 44);
-        cr.AddChild(_playButton);
-        var sg = new ButtonGroup();
-        for (int i = 0; i < Speeds.Length; i++)
-        {
-            int k = i;
-            var c = Ui.Chip($"{Speeds[i]}x", () => SetSpeed(k), $"A day every {SecondsPerDay / Speeds[i]:0.#} seconds (key {i + 1})", i == _speedIndex, sg);
-            c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            _speedChips.Add(c);
-            cr.AddChild(c);
-        }
-        cr.AddChild(Ui.Space(2));
-
-        // ---- bottom left: your stocks, then the way to the headquarters
+        // ---- bottom left: the way to the headquarters (your stocks are in the top bar since Paul's "ui-update-nov-15" frame)
         var bl = Ui.VBox(Ui.Block);
         bl.SetAnchorsPreset(LayoutPreset.BottomLeft);
         bl.GrowVertical = GrowDirection.Begin;
@@ -201,19 +136,6 @@ public partial class GameScreen
         _legendCard.Visible = false;
         _legendCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         bl.AddChild(_legendCard);
-        var stocks = Ui.Hud(14, 9);
-        stocks.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        bl.AddChild(stocks);
-        var row = Ui.HBox(0);
-        stocks.AddChild(row);
-        _rawLabel = StatBlock(row, "RAW", "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined.", 76);
-        row.AddChild(new VSeparator());
-        _refinedLabel = StatBlock(row, "REFINED", "Refined: the material you spend on ships, troops and buildings. Each yard takes it as it builds.", 84);
-        row.AddChild(new VSeparator());
-        _upkeepLabel = StatBlock(row, "UPKEEP", "", 104);
-        _upkeepCaption = _upkeepLabel.GetParent().GetChild<Label>(0);
-        _upkeepBar = Ui.Bar(0, Ui.You, 2);
-        _upkeepLabel.GetParent().AddChild(_upkeepBar);
         var nav = Ui.Hud(4, 4);
         nav.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         bl.AddChild(nav);
@@ -262,24 +184,6 @@ public partial class GameScreen
         _mapHolder.AddChild(_hoverCard);
     }
 
-    /// <summary>A small capital caption over a number: how the stocks show Raw, Refined and Upkeep.</summary>
-    static Label StatBlock(HBoxContainer row, string caption, string tip, int width)
-    {
-        var box = Ui.VBox(1);
-        box.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        box.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        box.CustomMinimumSize = new Vector2(width, 0);
-        box.MouseFilter = MouseFilterEnum.Stop;
-        box.TooltipText = Ui.Wrap(tip);
-        box.AddChild(Ui.Label(caption, "StatLabel", wrap: false));
-        var v = Ui.Label("0", "Number", wrap: false);
-        v.MouseFilter = MouseFilterEnum.Stop; // the tooltip is the number's too
-        v.TooltipText = box.TooltipText;
-        box.AddChild(v);
-        row.AddChild(box);
-        return v;
-    }
-
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
@@ -293,28 +197,22 @@ public partial class GameScreen
         int raw = eco.Raw(S.Player), refined = eco.Refined(S.Player);
         _rawLabel.Text = Short(raw);
         _refinedLabel.Text = Short(refined);
-        _upkeepLabel.Text = $"{load} / {cap}";
+        _upkeepLabel.Text = $"{load}/{cap}";
         bool over = load > cap, near = !over && cap > 0 && load * 10 >= cap * 9;
-        var upColor = over ? Ui.Danger : near ? Ui.Warn : Ui.Text;
-        _upkeepLabel.AddThemeColorOverride("font_color", upColor);
-        _upkeepCaption.AddThemeColorOverride("font_color", over || near ? upColor : Ui.Text3);
-        if (_upkeepBar is ProgressBar pb)
-        {
-            pb.Value = cap <= 0 ? 1000 : Math.Clamp(load * 1000 / Math.Max(1, cap), 0, 1000);
-            pb.AddThemeStyleboxOverride("fill", Ui.Box(over ? Ui.Danger : near ? Ui.Warn : Ui.Text3, 1, null, 0, 0, 0));
-        }
+        // near or over the limit, the number and its name turn amber or red; the frame has no bar under it, so the colour is the warning
+        _upkeepLabel.AddThemeColorOverride("font_color", over ? Ui.Danger : near ? Ui.Warn : BarValue);
+        _upkeepCaption.AddThemeColorOverride("font_color", over ? Ui.Danger : near ? Ui.Warn : BarLabel);
         string upTip = $"Upkeep: {load} used of a limit of {cap}. Everything you own costs upkeep every day. The limit comes from your mines and refineries (50 for each mine-and-refinery pair). "
             + (over ? "You are OVER the limit: units get scrapped until you are back under it. Build mines and refineries, or scrap ships." : near ? "You are close to the limit: a build order that would pass it is refused." : "");
-        _upkeepLabel.TooltipText = Ui.Wrap(upTip);
-        ((Control)_upkeepLabel.GetParent()).TooltipText = _upkeepLabel.TooltipText;
-        _rawLabel.TooltipText = ((Control)_rawLabel.GetParent()).TooltipText + (raw >= 10_000 ? $" ({raw})" : "");
-        _refinedLabel.TooltipText = ((Control)_refinedLabel.GetParent()).TooltipText + (refined >= 10_000 ? $" ({refined})" : "");
+        SetStockTip(_upkeepCell, _upkeepLabel, upTip);
+        SetStockTip(_rawCell, _rawLabel, RawTip + (raw >= 10_000 ? $" ({raw})" : ""));
+        SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : ""));
 
         int q = S.QueuedOrders;
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
         _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
-        _playButton.ThemeTypeVariation = _playing ? "ClockOn" : "Clock";
         _playButton.Text = _playing ? "||" : "\u25b6";
+        SetBarButtonColour(_playButton, _playing ? BarValue : BarLabel);   // lit while the clock runs
         _playButton.SetMeta(UiTest.FullName, _playing ? "Pause" : "Play");
         RefreshGoalButton();
         RefreshHq();
@@ -331,7 +229,7 @@ public partial class GameScreen
     string StartNoteText() =>
         S.MyHqSystem is string home && IdleYardFamilies(home).Count > 0 ? $"Yards idle at {home}: build, then Play (Space)" : StartNote;
 
-    /// <summary>The pill under the search: why the clock stopped, or what needs you; nothing when all is quiet.</summary>
+    /// <summary>The pill under the top bar: why the clock stopped, or what needs you; nothing when all is quiet.</summary>
     void RefreshPill()
     {
         if (_pill == null) return;
@@ -354,8 +252,12 @@ public partial class GameScreen
 
     void ToggleLayers()
     {
+        // one drop-down at a time: the layers list hangs next to the search, and the search results are wider than the search box,
+        // so the list would cover the end of each result and take its click
+        if (!_layersCard.Visible && _searchResults.Visible) CloseSearch();
         _layersCard.Visible = !_layersCard.Visible;
         _layersButton.SetPressedNoSignal(_layersCard.Visible);
+        PlaceDrops();
         _view.QueueRedraw();
     }
 
@@ -364,13 +266,13 @@ public partial class GameScreen
     {
         foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _orderBar, _topLeft, _clockCard, _bottomLeft, _selCard, _msgCorner, _drawer })
+        foreach (var box in new Control[] { _orderBar, _topLeft, _barStrip, _barLeft, _barRight, _searchResults, _layersCard, _bottomLeft, _selCard, _msgCorner, _drawer })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
             yield return new Rect2(g.Position - origin, g.Size);
         }
-        // the search and its notes one by one: a note a window hides (HideCoveredNotes) leaves the names under it free
+        // the pills under the bar one by one: a pill a window hides (HideCoveredNotes) leaves the names under it free
         if (_topCentre != null && _topCentre.IsVisibleInTree())
             foreach (var c in _topCentre.GetChildren().OfType<Control>())
             {
@@ -407,17 +309,23 @@ public partial class GameScreen
     readonly List<(PanelContainer Card, double Left)> _toasts = new();
     const int MaxToasts = 3;
 
-    /// <summary>The short notes sit under the search and the pills, a block apart, where they sat when they were part of that stack; they
-    /// follow it each time it is laid out (a pill shown or hidden, search results opening).</summary>
+    /// <summary>The short notes sit under the pills, a block apart, where they sat when they were part of that stack; they follow it each
+    /// time it is laid out (a pill shown or hidden). With no pill they start right under the bar. An open search result list or layers
+    /// list pushes them below it too: the notes' layer is over the bar's, and a note that names a system takes clicks, so a note over a
+    /// drop-down would hide its rows and take the click meant for one.</summary>
     void PlaceNotes()
     {
-        float bottom = 0;
+        if (_toastBox == null || _noteLayer == null || !_noteLayer.IsInsideTree()) return;   // placed again once the layer is in
+        float top = _topCentre.GlobalPosition.Y - _noteLayer.GlobalPosition.Y, bottom = top - Ui.Block;
         foreach (var c in _topCentre.GetChildren().OfType<Control>())
-            if (c.Visible) bottom = Math.Max(bottom, c.Position.Y + c.Size.Y);
-        _toastBox.OffsetTop = _topCentre.GlobalPosition.Y - _noteLayer.GlobalPosition.Y + bottom + Ui.Block;
+            if (c.Visible) bottom = Math.Max(bottom, top + c.Position.Y + c.Size.Y);
+        foreach (var d in new Control[] { _searchResults, _layersCard })
+            if (d != null && d.Visible)
+                bottom = Math.Max(bottom, d.GlobalPosition.Y - _noteLayer.GlobalPosition.Y + Math.Max(d.Size.Y, d.GetCombinedMinimumSize().Y));
+        _toastBox.OffsetTop = bottom + Ui.Block;
     }
 
-    /// <summary>A short note under the search that goes by itself (order sent, saved, something happened).</summary>
+    /// <summary>A short note under the top bar that goes by itself (order sent, saved, something happened).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)
     {
         var dot = Ui.KindColor(kind, Ui.Text3);

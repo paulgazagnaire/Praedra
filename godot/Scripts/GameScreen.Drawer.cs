@@ -43,7 +43,7 @@ public partial class GameScreen
         drawer.SetAnchorsPreset(LayoutPreset.RightWide);
         drawer.GrowHorizontal = GrowDirection.Begin;
         drawer.OffsetRight = -Edge; drawer.OffsetLeft = -Edge - DrawerWidth;
-        drawer.OffsetTop = Edge + 64; drawer.OffsetBottom = -Edge;
+        drawer.OffsetTop = TopClear; drawer.OffsetBottom = -Edge;
         var v = Ui.VBox(0);
         drawer.AddChild(v);
 

@@ -54,9 +54,12 @@ public static class UiSettings
         if (err != Error.Ok) GD.PrintErr($"Could not save the settings: {err}");
     }
 
+    /// <summary>A size given on the command line (--uiscale, for screenshots): it wins over the saved one and is never saved.</summary>
+    public static float? ScaleOverride;
+
     public static void ApplyScale(Window root)
     {
-        if (root != null) root.ContentScaleFactor = Scale;
+        if (root != null) root.ContentScaleFactor = ScaleOverride ?? Scale;
     }
 
     /// <summary>Does the clock stop for one of the core's pause reasons (StepOutcome.PauseReason)?</summary>

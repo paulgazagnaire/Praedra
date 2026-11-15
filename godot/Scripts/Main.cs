@@ -28,6 +28,8 @@ public partial class Main : Control
         Theme = Ui.Theme;
         UiSettings.Load();
         if (!_args.Contains("--playtest") && DisplayServer.GetName() != "headless") UiSettings.ApplyScale(GetTree().Root);
+        // --uiscale 1.4 (screenshots): the interface size of Settings, without saving it
+        if (float.TryParse(Arg("--uiscale"), NumberStyles.Float, CultureInfo.InvariantCulture, out float uiScale)) { UiSettings.ScaleOverride = uiScale; UiSettings.ApplyScale(GetTree().Root); }
         bool smoke = _args.Contains("--smoke") || (DisplayServer.GetName() == "headless" && !_args.Contains("--playtest"));
         GameBoot.LoadData();
         if (_args.Contains("--playtest")) { Playtest(); return; }
@@ -140,6 +142,7 @@ public partial class Main : Control
                 case "--characters": gs.ShotCharacters(); break;
                 case "--click" when i + 1 < _args.Length: gs.ShotClick(_args[i + 1]); break;
                 case "--pick" when i + 1 < _args.Length: gs.PickSystem(_args[i + 1]); break;
+                case "--search" when i + 1 < _args.Length: gs.SetSearch(_args[i + 1]); break;
                 case "--hover" when i + 1 < _args.Length: gs.HoverTextFor(_args[i + 1]); break;
                 case "--missions": gs.ShotMissions(); break;
                 case "--layer" when i + 1 < _args.Length: gs.ShotLayer(_args[i + 1]); break;

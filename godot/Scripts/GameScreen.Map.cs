@@ -39,14 +39,9 @@ public partial class GameScreen
     /// switch opens it; the key of a layer other than Owners shows either way, so V never changes the map without saying how.</summary>
     void BuildMapTools()
     {
-        var col = Ui.VBox(Ui.Block);
-        col.MouseFilter = MouseFilterEnum.Ignore;
-        col.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        _topLeft.AddChild(col);
+        // the layers list: the top bar hangs it under its Layers box (BuildTopBar)
         _layersCard = Ui.Hud(4, 4);
-        _layersCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _layersCard.Visible = false;   // closed at the start: the Layers switch opens it (Paul 2026-11-14, impeccable critique)
-        col.AddChild(_layersCard);
         var v = Ui.VBox(2);
         _layersCard.AddChild(v);
         var group = new ButtonGroup();
@@ -71,7 +66,7 @@ public partial class GameScreen
         _legendButton.Alignment = HorizontalAlignment.Left;
         _legendButton.CustomMinimumSize = new Vector2(132, 30);
         v.AddChild(_legendButton);
-        // the key of the current layer, on its own small card so the map's names do not run through it
+        // the key of the current layer, on its own small card at the top left so the map's names do not run through it
         _layerKey = Ui.Label("", "Hint", wrap: true);
         _layerKey.CustomMinimumSize = new Vector2(150, 0);
         _layerKeyCard = Ui.Hud(10, 7);
@@ -79,7 +74,7 @@ public partial class GameScreen
         _layerKeyCard.MouseFilter = MouseFilterEnum.Ignore;
         _layerKeyCard.Visible = false;
         _layerKeyCard.AddChild(_layerKey);
-        col.AddChild(_layerKeyCard);
+        _topLeft.AddChild(_layerKeyCard);
     }
 
     void SetLayer(MapLayer l)

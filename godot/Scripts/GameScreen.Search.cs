@@ -39,7 +39,7 @@ public partial class GameScreen
         into.AddChild(_search);
     }
 
-    void BuildSearchResults(Container into)
+    void BuildSearchResults(Control into)
     {
         _searchResults = Ui.Card(new Color(Ui.Chrome, 0.98f), Ui.LineHi, 6, 8);
         _searchResults.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
@@ -76,7 +76,7 @@ public partial class GameScreen
         if (_hits.Count == 0)
         {
             _searchList.AddChild(Ui.Label($"Nothing called \"{q}\".", "Hint"));
-            _searchResults.Visible = true;
+            ShowSearchResults();
             return;
         }
         for (int i = 0; i < _hits.Count; i++)
@@ -89,6 +89,13 @@ public partial class GameScreen
             b.ClipText = true;
             _searchList.AddChild(b);
         }
+        ShowSearchResults();
+    }
+
+    /// <summary>The results hang under the search box. One drop-down at a time: an open layers list closes, it would cover them.</summary>
+    void ShowSearchResults()
+    {
+        if (_layersCard != null && _layersCard.Visible) ToggleLayers();
         _searchResults.Visible = true;
     }
 

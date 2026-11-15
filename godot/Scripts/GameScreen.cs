@@ -21,8 +21,8 @@ public partial class GameScreen : Control
     public event Action BackToMenu;
     public event Action<string> LoadRequested;
 
-    static readonly int[] Speeds = { 1, 2, 5, 10 };       // the speed chips: 1x, 2x, 5x, 10x
-    const double SecondsPerDay = 8.0;                      // a day lasts 8 seconds at 1x (Paul 2026-10-29), 0.8 s at 10x
+    static readonly int[] Speeds = { 1, 2, 5 };           // the speed buttons: 1x, 2x, 5x (Paul's top bar 2026-11-15 dropped 10x)
+    const double SecondsPerDay = 8.0;                      // a day lasts 8 seconds at 1x (Paul 2026-10-29), 1.6 s at 5x
     const double RunUntilDaysPerSecond = 10.0;             // "Run until something needs me" skips quiet days at its own speed (QA-63)
     const int DefaultSpeedIndex = 2;                       // 5x when the player presses Play
     const int MaxStepsPerFrame = 30;
@@ -266,7 +266,6 @@ public partial class GameScreen : Control
             case Key.Key1: SetSpeed(0); break;
             case Key.Key2: SetSpeed(1); break;
             case Key.Key3: SetSpeed(2); break;
-            case Key.Key4: SetSpeed(3); break;
             default: return;
         }
         GetViewport().SetInputAsHandled();
@@ -280,6 +279,7 @@ public partial class GameScreen : Control
         if (_menuPopup.Visible) { ToggleMenu(); return; }
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
+        if (_layersCard.Visible) { ToggleLayers(); return; }
         if (CloseTopMgmt()) return;
         if (SectorViewOpen) { CloseSectorView(); return; }
         if (InMoveMode) { CancelMove(); return; }

@@ -393,7 +393,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// The notes under the search (the pill, the orders card) sit under the window columns. A note a window covers even in part
+    /// The notes under the top bar (the pill, the orders card) sit under the window columns. A note a window covers even in part
     /// is hidden whole, so no half note or doubled edge shows between the columns; it comes back when the windows move or close. Alpha and
     /// no mouse for the note and everything in it, not Visible: the game switches these on and off itself. Runs each frame and right after
     /// the notes are laid out (so a note the game shows again is never drawn for a frame before it is checked).
@@ -406,9 +406,9 @@ public partial class GameScreen
         if (_secWin != null && IsInstanceValid(_secWin) && _secWin.IsVisibleInTree()) wins.Add(_secWin.GetGlobalRect());
         foreach (var c in _topCentre.GetChildren().OfType<Control>())
         {
-            // the search bar sits above the windows; its results stay. The short notes are not in this stack: they have their own layer
-            // over the windows (user story W9: the warning for a regiment sent across a known interdictor was lost under its window)
-            if (c == _searchResults || c.GetIndex() == 0 || !c.Visible) continue;
+            // only the pills are in this stack: the search is in the top bar, and the short notes have their own layer over the windows
+            // (user story W9: the warning for a regiment sent across a known interdictor was lost under its window)
+            if (!c.Visible) continue;
             bool covered = wins.Any(r => r.Intersects(c.GetGlobalRect()));
             var want = covered ? new Color(1, 1, 1, 0) : Colors.White;
             if (c.Modulate == want) continue;
@@ -429,6 +429,11 @@ public partial class GameScreen
         var mouse = dialog || dragging ? MouseBehaviorRecursiveEnum.Disabled : MouseBehaviorRecursiveEnum.Inherited;
         if (_noteLayer.ZIndex != z) _noteLayer.ZIndex = z;
         if (_noteLayer.MouseBehaviorRecursive != mouse) _noteLayer.MouseBehaviorRecursive = mouse;
+        // the top bar's drop-downs (search results, the layers list) hang over the windows: while a chip is dragged they let the mouse
+        // through too, so a drop lands on the window zone under them, as the drag hint says
+        var drops = dragging ? MouseBehaviorRecursiveEnum.Disabled : MouseBehaviorRecursiveEnum.Inherited;
+        foreach (var d in new Control[] { _searchResults, _layersCard })
+            if (d != null && d.MouseBehaviorRecursive != drops) d.MouseBehaviorRecursive = drops;
     }
 
     static bool Travels(string words) => words.StartsWith("on the way", StringComparison.Ordinal) || words.StartsWith("flies", StringComparison.Ordinal);

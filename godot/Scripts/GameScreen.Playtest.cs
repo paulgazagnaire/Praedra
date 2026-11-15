@@ -132,6 +132,64 @@ public partial class GameScreen
     internal float SectorWindowWidth => _secWin?.Size.X ?? 0;
     internal string MarkedSectorName => _view.SectorName(_view.MarkedSector);
     internal bool BottomLeftShown => _bottomLeft.Visible;
+
+    /// <summary>
+    /// Paul's top bar (ui-update-nov-15): the stocks, the day and the clock are in it; it and what it opens (search results, the layers
+    /// list) are over the windows and under the notes and dialogs; the windows start under it. At the widths the interface sizes leave
+    /// (1440 px at 100%, then 110%, 125%, 140%) its two sides fit without meeting: at full width as drawn, narrower by shrinking the
+    /// search, then dropping the stocks' names. Null, or what is wrong.
+    /// </summary>
+    internal string TopBarProblem()
+    {
+        int Layer(Node n) { while (n != null && n.GetParent() != this) n = n.GetParent(); return n?.GetIndex() ?? -1; }
+        bool InBar(Control c) => c != null && c.FindParent("TopBar") == _barLayer;
+        if (!InBar(_rawLabel) || !InBar(_refinedLabel) || !InBar(_upkeepLabel) || !InBar(_dayLabel) || !InBar(_playButton) || !InBar(_goalButton) || !InBar(_search))
+            return "the stocks, day, clock, goal and search are not all in the top bar";
+        if (_speedChips.Count != 3) return $"{_speedChips.Count} speed buttons, not 1x 2x 5x";
+        if (!(Layer(_mgLayer) < Layer(_barLayer) && Layer(_barLayer) < Layer(_noteLayer) && Layer(_noteLayer) < Layer(_modalLayer)))
+            return "the top bar is not between the windows and the notes";
+        if (_searchResults.GetParent() != _barLayer || _layersCard.GetParent() != _barLayer) return "the search results or the layers list do not hang from the top bar";
+        if (ClampWin(new Vector2(100, 0), new Vector2(400, 300)).Y <= _searchBox.GetCombinedMinimumSize().Y)
+            return "a window dragged to the top would cover the bar's boxes";
+        foreach (var l in new[] { _goalCaption, _rawCaption, _refinedCaption, _upkeepCaption, _sideLabel, _dayLabel })
+            if (l.GetCombinedMinimumSize().X <= 0) return $"the bar's word \"{l.Text}\" has no width";
+        // an open drop-down pushes the short notes below it, and lets a dragged chip through to the window under it
+        bool wasOpen = _layersCard.Visible;
+        if (!wasOpen) ToggleLayers();
+        PlaceNotes();
+        float listBottom = _layersCard.GlobalPosition.Y - _noteLayer.GlobalPosition.Y + _layersCard.GetCombinedMinimumSize().Y;
+        bool below = _toastBox.OffsetTop >= listBottom;
+        SyncNoteLayer(true);
+        bool through = _layersCard.MouseBehaviorRecursive == MouseBehaviorRecursiveEnum.Disabled && _searchResults.MouseBehaviorRecursive == MouseBehaviorRecursiveEnum.Disabled;
+        SyncNoteLayer(false);
+        bool back = _layersCard.MouseBehaviorRecursive != MouseBehaviorRecursiveEnum.Disabled;
+        if (!wasOpen) ToggleLayers();
+        PlaceNotes();
+        if (!below) return $"with the layers list open the notes start at {_toastBox.OffsetTop:0}, over the list (to {listBottom:0})";
+        if (!through || !back) return "the drop-downs do not let a dragged chip through (or keep blocking it after)";
+        // one drop-down at a time: they hang side by side and the results are wider than the search box
+        if (_layersCard.Visible) ToggleLayers();
+        ToggleLayers();
+        SetSearch("a");
+        bool searchClosedLayers = _searchResults.Visible && !_layersCard.Visible;
+        ToggleLayers();
+        bool layersClosedSearch = _layersCard.Visible && !_searchResults.Visible;
+        ToggleLayers();
+        CloseSearch();
+        if (wasOpen) ToggleLayers();
+        PlaceNotes();
+        if (!searchClosedLayers || !layersClosedSearch) return "the search results and the layers list can be open together, one over the other";
+        string why = null;
+        foreach (float w in new[] { 1440f, 1440f / 1.1f, 1440f / 1.25f, 1440f / 1.4f })
+        {
+            PlaceBarIn(w);
+            float left = _barLeft.GetCombinedMinimumSize().X, right = _barRight.GetCombinedMinimumSize().X;
+            if (BarSide + left + BarMinGap + right + BarSide > w + 0.5f) { why = $"at {w:0} px the bar's sides meet ({left:0} + {right:0})"; break; }
+            if (w == 1440f && (_barLevel != 0 || _searchBox.CustomMinimumSize.X != SearchWide)) { why = "at 1440 px the bar is not as Paul drew it"; break; }
+        }
+        PlaceBar();
+        return why;
+    }
     internal float ScreenWidth => _secLayer?.Size.X ?? 0;
     internal string LayerName => _layer.ToString();
     internal Praedra.Core.Clock.Side Player => S.Player;
