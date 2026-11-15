@@ -50,7 +50,7 @@ public sealed class EconomyModule
     public Func<string, bool> IsInUprising { get; set; } = _ => false;
     /// <summary>Both incident timers run. DEFAULT on. Off: neither is armed, no draws. rule: m2-slots-and-resources §Do incidents run on pinned values.</summary>
     public bool IncidentsEnabled { get; set; } = true;
-    public AutoscrapMode AutoscrapMode { get; set; } = AutoscrapMode.Classic;
+    public AutoscrapMode AutoscrapMode { get; set; } = AutoscrapMode.InfrastructureFirst;   // rule: m2-maintenance §Rule (New) (Paul 2026-11-15)
     public SlotSource SlotSource { get; set; } = SlotSource.Pinned;
     /// <summary>
     /// Is the system in a harvester sector (Hand regiments count double for smuggling)? The flag belongs to the support
@@ -756,6 +756,14 @@ public sealed class EconomyModule
         {
             pick = eligible[ctx.Rng.NextInt(0, eligible.Count - 1)]; // one uniform pick, one object per firing
         }
+        else if (AutoscrapMode == AutoscrapMode.InfrastructureFirst)
+        {
+            // rule: m2-maintenance §Rule (New) InfrastructureFirst (Decided, Paul 2026-11-15; order DEFAULT, Dev lead): buildings first (the eligible list
+            // already leaves out mines and refineries, whose loss lowers capacity), then units; no draw. Groups: defences and sensor stations,
+            // training facilities, shipyards, construction yards (last: they build the mines and refineries that end an overdraft), then
+            // regiments and special forces, fighters, capital ships. Inside a group: lowest refined cost, then lowest id.
+            pick = eligible.OrderBy(InfrastructureFirstGroup).ThenBy(o => Costs.Get(o.Class).Cost).ThenBy(o => o.Id).First();
+        }
         else
         {
             // Smart (Proposal, no draw): not yards; if nothing else, the yards after a warning. Groups: regiments and special
@@ -769,6 +777,20 @@ public sealed class EconomyModule
         // rule: B5b §6: destroyed at once only if usable; a victim in transit is marked and scrapped on arrival (with the FreeRunning rule: at once, as before)
         if (AutoscrapTimer == AutoscrapTimer.Armed && InTransit(pick)) { pick.ScrapPending = true; return; }
         Scrap(ctx, t, pick, side, "Autoscrap");
+    }
+
+    /// <summary>The InfrastructureFirst order. rule: m2-maintenance §Rule (New) InfrastructureFirst.</summary>
+    private static int InfrastructureFirstGroup(EconObject o)
+    {
+        if (o.Category != ObjectCategory.Facility) return 4 + SmartGroup(o);   // units after every building: 4 troops, 5 fighters, 6 capital ships
+        if (!FacilityKinds.TryParse(o.Class, out var k)) return 0;
+        return k switch
+        {
+            FacilityKind.TrainingFacility or FacilityKind.AdvancedTrainingFacility => 1,
+            FacilityKind.OrbitalShipyard or FacilityKind.AdvancedShipyard => 2,
+            FacilityKind.ConstructionYard or FacilityKind.AdvancedConstructionYard => 3,
+            _ => 0,   // defences, sensor stations
+        };
     }
 
     private static int SmartGroup(EconObject o) => o.Category switch

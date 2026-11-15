@@ -22,6 +22,10 @@ public class SimpleAiBlindHuntTests
     private static int EndDay(int seed, bool blind, int days)
     {
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { ControlRule = ControlRule.AssaultOnly,
+            // autoscrap pinned to Classic (Dev lead 2026-11-15, m2-maintenance §Rule (New)): with the InfrastructureFirst default the last
+            // Collective system, far over upkeep, loses its cheapest units first and keeps its big ships, so every hunt ends 30-120 days later
+            // with or without BlindHunt (on 481, 406, 424, 448; off 481, 406, 457, 448) and the floors no longer measure the switch
+            AutoscrapMode = Praedra.Core.Economy.AutoscrapMode.Classic,
             // capital and control pinned off (Dev lead 2026-10-26): the Hearth falls on day 1, so it would end every game on day 181; this test measures the hunt for X
             Victory = new Praedra.Core.Victory.VictoryRules { DominanceSharePercent = 0 } } });
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { BlindHunt = blind }, AiLevels.For(AiLevel.Medium), passive: Side.Collective);

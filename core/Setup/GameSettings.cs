@@ -56,7 +56,7 @@ public sealed record GameSettings
     /// <summary>Armed (DEFAULT, Classic) or FreeRunning autoscrap timer (B5b §6). rule: m2-maintenance §Overdraft and autoscrap.</summary>
     public AutoscrapTimer AutoscrapTimer { get; init; } = AutoscrapTimer.Armed;
     /// <summary>rule: m2-maintenance §Rule (New) AutoscrapMode.</summary>
-    public AutoscrapMode AutoscrapMode { get; init; } = AutoscrapMode.Classic;
+    public AutoscrapMode AutoscrapMode { get; init; } = AutoscrapMode.InfrastructureFirst;
     /// <summary>rule: m2-slots-and-resources §Rule (New) SlotSource.</summary>
     public SlotSource SlotSource { get; init; } = SlotSource.Pinned;
     public EconomyParams? Economy { get; init; }
