@@ -761,8 +761,9 @@ public sealed class EconomyModule
             // rule: m2-maintenance §Rule (New) InfrastructureFirst (Decided, Paul 2026-11-15; order DEFAULT, Dev lead): buildings first (the eligible list
             // already leaves out mines and refineries, whose loss lowers capacity), then units; no draw. Groups: defences and sensor stations,
             // training facilities, shipyards, construction yards (last: they build the mines and refineries that end an overdraft), then
-            // regiments and special forces, fighters, capital ships. Inside a group: lowest refined cost, then lowest id.
-            pick = eligible.OrderBy(InfrastructureFirstGroup).ThenBy(o => Costs.Get(o.Class).Cost).ThenBy(o => o.Id).First();
+            // regiments and special forces, fighters, capital ships. Inside a building group: highest upkeep first, so the fewest buildings
+            // go to end the overdraft; inside a unit group: lowest refined cost first, so the biggest ship goes last. Then lowest id.
+            pick = eligible.OrderBy(InfrastructureFirstGroup).ThenBy(InfrastructureFirstRank).ThenBy(o => o.Id).First();
         }
         else
         {
@@ -792,6 +793,10 @@ public sealed class EconomyModule
             _ => 0,   // defences, sensor stations
         };
     }
+
+    /// <summary>Inside an InfrastructureFirst group: buildings by highest upkeep, units by lowest refined cost. rule: m2-maintenance §Rule (New) InfrastructureFirst.</summary>
+    private int InfrastructureFirstRank(EconObject o) =>
+        o.Category == ObjectCategory.Facility ? -Costs.Get(o.Class).Maintenance : Costs.Get(o.Class).Cost;
 
     private static int SmartGroup(EconObject o) => o.Category switch
     {

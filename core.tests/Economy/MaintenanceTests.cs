@@ -3,7 +3,7 @@ using Praedra.Core.Economy;
 
 namespace Praedra.Core.Tests.Economy;
 
-// Tests of m2-maintenance (ids M1 to M24) on the real costs file. Hook time T = K + 1; events carry Day = T.
+// Tests of m2-maintenance (ids M1 to M25) on the real costs file. Hook time T = K + 1; events carry Day = T.
 // Hand fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 Mandate ids 101 to 104;
 // 10 Pacifier Regiments ids 105 to 114; all completed. Load = 13 + 4 x 71 + 10 x 6 = 357.
 public class MaintenanceTests
@@ -229,14 +229,30 @@ public class MaintenanceTests
         w.Eco.AddFacility(Home, FacilityKind.ConstructionYard, id: 10);     // 10
         w.Eco.AddFacility(Home, FacilityKind.OrbitalShipyard, id: 11);      // 13
         w.Eco.AddFacility(Home, FacilityKind.TrainingFacility, id: 12);     // 10
-        w.Eco.AddFacility(Home, FacilityKind.CovenantI, id: 13);            // 7, cost 7
-        w.Eco.AddFacility(Home, FacilityKind.Lien150, id: 14);              // 4, cost 4
+        w.Eco.AddFacility(Home, FacilityKind.Lien150, id: 13);              // 4
+        w.Eco.AddFacility(Home, FacilityKind.CovenantI, id: 14);            // 7: highest upkeep first inside the defences
         w.Eco.AddObject(Side.Hand, "Pacifiers", id: 20);                    // 6
         w.Eco.AddObject(Side.Hand, "Mandate", id: 21);                      // 71: load 121, far over 50
         w.Run(11 + 10 * 6);                                                 // seven firings: Steps 10, 20, ... 70
         Assert.Equal(new[] { 14, 13, 12, 11, 10, 20, 21 }, Scraps(w).Select(x => x.Object).ToArray());
         Assert.NotNull(w.Eco.Find(1)); Assert.NotNull(w.Eco.Find(2));      // the mine and the refinery stay
         Assert.Equal(0, w.Eco.Load(Side.Hand));
+    }
+
+    // m2-maintenance M25
+    [Fact]
+    public void M25_InfrastructureFirstScrapsTheBuildingWithTheMostUpkeepSoOneFiringEndsTheOverdraft()
+    {
+        // Ponytail on #303: cheapest first would take three Lien-150 batteries (upkeep 4 each) to end 9 over; the Escrow (12) ends it at once.
+        var w = new EcoWorld();
+        w.Hold(Home, Side.Hand);
+        w.Mine(Home, id: 1); w.Refinery(Home, id: 2);                       // capacity 50
+        for (int i = 10; i < 20; i++) w.Eco.AddFacility(Home, FacilityKind.Lien150, id: i); // 40
+        w.Eco.AddFacility(Home, FacilityKind.CovenantI, id: 20);            // 7
+        w.Eco.AddFacility(Home, FacilityKind.EscrowI, id: 21);              // 12: load 59
+        w.Run(11 + 10 * 3);
+        Assert.Equal(21, Assert.Single(Scraps(w)).Object);
+        Assert.Equal(47, w.Eco.Load(Side.Hand));
     }
 
     // m2-maintenance M16
