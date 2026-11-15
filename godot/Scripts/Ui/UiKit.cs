@@ -56,7 +56,7 @@ public static class Ui
     /// <summary>The colour of a holder as the player sees it: blue = you, orange = the enemy, grey = nobody.</summary>
     public static Color OwnerColor(Side? owner, Side player) => owner == null ? Neutral : owner == player ? You : Enemy;
 
-    /// <summary>A message's colour, the same in the note under the search, the message card and the log: red bad, amber a warning or a
+    /// <summary>A message's colour, the same in the note under the top bar, the message card and the log: red bad, amber a warning or a
     /// battle, green good, <paramref name="plain"/> otherwise. Never blue: blue only means yours (impeccable critique 2026-11-14).</summary>
     public static Color KindColor(MsgKind k, Color plain) => k switch { MsgKind.Bad => Danger, MsgKind.Warn or MsgKind.Battle => Warn, MsgKind.Good => Good, _ => plain };
 
@@ -96,6 +96,8 @@ public static class Ui
     /// <summary>BitPotion (Joeb Rogers, CC BY 4.0), the pixel face of the names. The file is shared with the sector tiles, so it gets no
     /// fallback of its own: a fallback's taller line would make every line that uses the face taller.</summary>
     static FontFile PixelFace => _pixel ??= LoadFont("res://fonts/BitPotion.ttf");
+    /// <summary>BitPotion as it is, with its own line: the top bar's words (Paul's "ui-update-nov-15" frame, 2026-11-15).</summary>
+    public static Font Pixel => PixelFace;
 
     /// <summary>A window's name size: 48 (three screen pixels to a font pixel, so it stays crisp), 32 when the name is too long for that.</summary>
     public const int NameBig = 48, NameSmall = 32;

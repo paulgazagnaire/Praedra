@@ -228,9 +228,9 @@ public partial class GameScreen
         bool show = !_menuPopup.Visible;
         _menuPopup.Visible = show; _menuCatcher.Visible = show;
         if (!show) return;
-        var r = _menuButton.GetGlobalRect();
+        var r = _menuButton.GetParent<Control>().GetGlobalRect();   // the menu's box in the top bar
         _menuPopup.ResetSize();
-        _menuPopup.Position = new Vector2(r.Position.X, r.End.Y + 6); // under the menu button, at the top left
+        _menuPopup.Position = new Vector2(r.Position.X, r.End.Y + Ui.Block); // under the menu's box, at the top left, where the windows start
         MoveChild(_menuCatcher, GetChildCount() - 1);
         MoveChild(_menuPopup, GetChildCount() - 1);
     }
@@ -272,7 +272,7 @@ public partial class GameScreen
         }),
         ("Time", new[]
         {
-            "Space runs and stops the clock; 1-4 set the speed, N moves one day. Orders wait for the clock; until then each one has Cancel. The clock stops by itself when something happens, and the pill under the search says why.",
+            "Space runs and stops the clock; 1-3 set the speed, N moves one day. Orders wait for the clock; until then each one has Cancel. The clock stops by itself when something happens, and the pill under the top bar says why.",
         }),
         ("The map", new[]
         {

@@ -27,7 +27,7 @@ public partial class Main
 
         // ---------------------------------------------------------------- the frame
         Expect(!gs.WindowOpen, "the map starts with no window open");
-        Expect(gs.PillText.Contains("Play"), "the pill under the search says to press Play: " + gs.PillText);
+        Expect(gs.PillText.Contains("Play"), "the pill under the top bar says to press Play: " + gs.PillText);
         Expect(gs.MessageCornerText.Length > 0, "the message corner shows the latest message: " + gs.MessageCornerText.Replace("\n", " / "));
         Expect(gs.Click("Menu") && gs.MenuVisible, "the menu button opens the menu");
         foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Log", "Sector", "Save game...", "Settings..." })
@@ -36,6 +36,8 @@ public partial class Main
         Expect(!gs.MenuVisible, "Esc closes the menu");
         Expect(gs.View.SideColor(me) == Ui.You && gs.View.SideColor(s.Enemy) == Ui.Enemy, "the map draws you blue and the enemy orange");
         Expect(gs.TopText.StartsWith("Day 0"), "the clock shows the day: " + gs.TopText);
+        string barWhy = gs.TopBarProblem();
+        Expect(barWhy == null, "the top bar as Paul drew it (ui-update-nov-15): stocks, day and clock in it, over the windows, and it fits at every interface size" + (barWhy != null ? ": " + barWhy : ""));
 
         // ---------------------------------------------------------------- a click on the map: the card, then the window on demand
         string cardSys = s.MyHqSystem ?? GameBoot.HandCapital;
@@ -149,7 +151,7 @@ public partial class Main
         Expect(cards.Count > 0 && cards[0] == home, "the headquarters comes first: " + string.Join(", ", cards));
         Expect(gs.SectorWindowWidth <= gs.ScreenWidth / 2 + 1, $"the sector window takes half the screen at most ({gs.SectorWindowWidth} of {gs.ScreenWidth})");
         Expect(gs.MarkedSectorName == homeSec, $"the map marks the open sector (QA-74): {gs.MarkedSectorName}");
-        Expect(gs.BottomLeftShown != gs.SectorOnLeft, "the bottom-left stocks and HQ buttons hide while the window sits over them (QA-73)");
+        Expect(gs.BottomLeftShown != gs.SectorOnLeft, "the bottom-left HQ buttons hide while the window sits over them (QA-73)");
         string hc = gs.SectorCardText(home), tip = gs.SectorCardTip(home);
         GD.Print("  tile " + home + ": " + hc.Replace("\n", " / ") + " | " + tip.Replace("\n", " / "));
         Expect(hc.Contains(home) && !hc.Any(char.IsDigit), "the headquarters tile shows its name and no numbers: " + hc.Replace("\n", " / "));
@@ -170,7 +172,7 @@ public partial class Main
         Expect(gs.SectorViewName == homeSec, "and Left steps back");
         gs.PressKey(Key.Escape);
         Expect(!gs.SectorViewOpen, "Esc closes the sector window");
-        Expect(gs.MarkedSectorName == null && gs.BottomLeftShown, "closing it unmarks the sector and brings back the bottom-left stocks");
+        Expect(gs.MarkedSectorName == null && gs.BottomLeftShown, "closing it unmarks the sector and brings back the bottom-left HQ buttons");
 
         // ---------------------------------------------------------------- sectors on the map
         var homeSys = gs.G.Systems.First(x => x.Name == home);

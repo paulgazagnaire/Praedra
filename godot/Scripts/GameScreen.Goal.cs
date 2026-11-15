@@ -62,12 +62,23 @@ public partial class GameScreen
             text = total > 0 ? $"Goal: {met}/{total} terms met" : "Goal";
             tip = text + ". How you win, and how close each side is (G).";
         }
-        // the clock card keeps it short (GOAL 0/2, WIN IN 12D); the full words are the tooltip's and the playtest's
+        // the top bar keeps it short, a grey label and a light value (GOAL 0/2, WIN IN 12D); the full words are the tooltip's and the
+        // playtest's. The countdown's value is blue when you are the one winning, red when the enemy is.
         _goalButton.SetMeta(UiTest.FullName, text);
-        _goalButton.Text = Vm.DominanceDueDay is int d2 && Vm.DominanceLeader is Side l2 ? $"{(l2 == Me ? "WIN" : "LOSE")} IN {Math.Max(0, d2 - S.Game.Day)}D"
-            : text.StartsWith("Goal: ", StringComparison.Ordinal) ? "GOAL " + text[6..].Split(' ')[0] : "GOAL";
-        _goalButton.ThemeTypeVariation = variation ?? "Chip";
+        if (Vm.DominanceDueDay is int d2 && Vm.DominanceLeader is Side l2)
+        {
+            _goalCaption.Text = l2 == Me ? "WIN IN" : "LOSE IN";
+            _goalValue.Text = $"{Math.Max(0, d2 - S.Game.Day)}D";
+        }
+        else
+        {
+            _goalCaption.Text = "GOAL";
+            _goalValue.Text = text.StartsWith("Goal: ", StringComparison.Ordinal) ? text[6..].Split(' ')[0] : "";
+        }
+        _goalValue.Visible = _goalValue.Text.Length > 0;
+        _goalValue.AddThemeColorOverride("font_color", variation == "Primary" ? Ui.You : variation == "DangerButton" ? Ui.Danger : BarValue);
         _goalButton.TooltipText = Ui.Wrap(tip);
+        FitGoalButton();
     }
 
     void ShowGoal()
