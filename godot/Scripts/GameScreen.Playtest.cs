@@ -179,6 +179,28 @@ public partial class GameScreen
         if (wasOpen) ToggleLayers();
         PlaceNotes();
         if (!searchClosedLayers || !layersClosedSearch) return "the search results and the layers list can be open together, one over the other";
+        // the drop-downs speak the bar's pixel words (Paul 2026-11-15, "Yes A"), and a hit reached with the arrow keys is lit
+        foreach (var lb in _layerButtons.Append(_routesChip).Append(_legendButton))
+            if (lb.GetThemeFont("font") != BarFont) return $"the layers list's \"{lb.Text}\" is not in the bar's pixel font";
+        // a word with é is set on BitPotion's line (the second font's line trimmed to it), so it stands level with its neighbours
+        var plainLine = new TextLine(); plainLine.AddString("Charter", BarFont, BarTextSize);
+        var wideLine = new TextLine(); wideLine.AddString("Ciénaga", BarFontFor("Ciénaga"), BarTextSize);
+        if (BarFontFor("Ciénaga") != BarFontWide || BarFontWide is not FontVariation { Fallbacks.Count: > 0 })
+            return "a name with a letter BitPotion lacks (Ciénaga) has no second font for it";
+        if (Math.Abs(wideLine.GetLineAscent() - plainLine.GetLineAscent()) > 0.5f || Math.Abs(wideLine.GetLineDescent() - plainLine.GetLineDescent()) > 0.5f)
+            return $"a word with é sits on another line ({wideLine.GetLineAscent():0}+{wideLine.GetLineDescent():0} px) than BitPotion's ({plainLine.GetLineAscent():0}+{plainLine.GetLineDescent():0})";
+        SetSearch("chart");
+        var hit = _searchList.GetChildCount() > 0 ? _searchList.GetChild(0) as Button : null;
+        var hitWords = hit?.FindChildren("*", "Label", true, false).OfType<Label>().ToList();
+        bool pixel = hitWords is { Count: 2 } && hitWords.All(l => l.GetThemeFont("font") == BarFontWide) && ((FontVariation)BarFontWide).BaseFont == BarFont;
+        hit?.GrabFocus();
+        bool lit = hitWords is { Count: 2 } && hitWords[1].GetThemeColor("font_color") == BarValue;
+        hit?.ReleaseFocus();
+        bool unlit = hitWords is { Count: 2 } && hitWords[1].GetThemeColor("font_color") == BarLabel;
+        CloseSearch();
+        if (wasOpen && !_layersCard.Visible) ToggleLayers();   // the search closed it
+        if (!pixel) return "the search results are not in the bar's pixel font";
+        if (!lit || !unlit) return "a search hit reached with the arrow keys is not lit, or stays lit after";
         string why = null;
         foreach (float w in new[] { 1440f, 1440f / 1.1f, 1440f / 1.25f, 1440f / 1.4f })
         {
@@ -229,7 +251,7 @@ public partial class GameScreen
     internal Praedra.Core.Clock.Side Player => S.Player;
     internal GalaxyView.MapMark? MarkOf(string system) => G.TryFindSystem(system, out int i) ? LayerMarkOf(i) : null;
     internal void SetSearch(string text) { _search.Text = text; RefreshSearch(); }
-    internal IReadOnlyList<string> SearchHits => _hits.Select(h => h.Text).ToList();
+    internal IReadOnlyList<string> SearchHits => _hits.Select(h => $"{h.Name}   {h.Detail}").ToList();
     internal void SubmitSearch() { if (_hits.Count > 0) PickHit(0); }
     internal int SelectedSystemIndex => _view.Selected;
     /// <summary>The rows of the Build tab now: name, can it be ordered here, and the reason shown when not (or the warning when it can).</summary>

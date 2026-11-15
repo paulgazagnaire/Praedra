@@ -16,7 +16,7 @@ public partial class GameScreen
     LineEdit _search;
     PanelContainer _searchResults;
     VBoxContainer _searchList;
-    readonly List<(string Text, Action Pick)> _hits = new();
+    readonly List<(string Name, string Detail, Action Pick)> _hits = new();
     const int MaxHits = 9;
 
     void BuildSearch(Container into)
@@ -46,7 +46,7 @@ public partial class GameScreen
         _searchResults.CustomMinimumSize = new Vector2(360, 0);
         _searchResults.Visible = false;
         _searchList = Ui.VBox(0);
-        _searchResults.AddChild(_searchList);
+        _searchResults.AddChild(DropCell(_searchList));   // the box and its black cell, as the bar's (TopBar)
         into.AddChild(_searchResults);
     }
 
@@ -75,21 +75,57 @@ public partial class GameScreen
         foreach (var h in Search(q).Take(MaxHits)) _hits.Add(h);
         if (_hits.Count == 0)
         {
-            _searchList.AddChild(Ui.Label($"Nothing called \"{q}\".", "Hint"));
+            string none = $"Nothing called \"{q}\".";
+            var l = BarText(none, BarLabel);
+            l.AddThemeFontOverride("font", BarFontFor(none));
+            l.CustomMinimumSize = new Vector2(0, DropRowH);
+            l.VerticalAlignment = VerticalAlignment.Center;
+            var pad = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore };
+            pad.AddThemeConstantOverride("margin_left", BarPad); pad.AddThemeConstantOverride("margin_right", BarPad);
+            pad.AddChild(l);
+            _searchList.AddChild(pad);
             ShowSearchResults();
             return;
         }
         for (int i = 0; i < _hits.Count; i++)
         {
             int k = i;
-            var b = Ui.Button(_hits[i].Text, () => PickHit(k), null, "Flat");
-            b.FocusMode = FocusModeEnum.All; // arrow keys walk the list
-            b.Alignment = HorizontalAlignment.Left;
-            b.CustomMinimumSize = new Vector2(0, 30);
-            b.ClipText = true;
-            _searchList.AddChild(b);
+            _searchList.AddChild(HitRow(_hits[i].Name, _hits[i].Detail, () => PickHit(k)));
         }
         ShowSearchResults();
+    }
+
+    /// <summary>
+    /// A hit in the bar's pixel words (Paul 2026-11-15, "Yes A"): the name in the light colour, then what it is in grey ("yours - Charter
+    /// Sector"), as the goal box shows GOAL 0/3. Under the mouse, or reached with the arrow keys, the grey words turn light too, so the whole
+    /// row is lit; no background, as in the bar. A long description is cut, never the name.
+    /// </summary>
+    Button HitRow(string name, string detail, Action pick)
+    {
+        var b = BarButton("", pick, null, BarFont, BarTextSize, BarLabel, BarPad);
+        b.FocusMode = FocusModeEnum.All;   // arrow keys walk the list
+        b.CustomMinimumSize = new Vector2(0, DropRowH);
+        b.SetMeta(UiTest.FullName, $"{name}   {detail}");
+        var words = Ui.HBox(12);
+        words.MouseFilter = MouseFilterEnum.Ignore;
+        words.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        words.OffsetLeft = BarPad; words.OffsetRight = -BarPad;
+        var n = BarText(name, BarValue);
+        n.AddThemeFontOverride("font", BarFontWide);   // one face for both words and every row: they stand on one line (BarFontWide)
+        var d = BarText(detail, BarLabel);
+        d.AddThemeFontOverride("font", BarFontWide);
+        d.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        d.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // cut with … ; not clipped, so an é's accent keeps its top
+        words.AddChild(n);
+        words.AddChild(d);
+        b.AddChild(words);
+        bool hover = false, focus = false;   // kept here: while their signals run, the button's own hover and focus are not yet updated
+        void Lit() => d.AddThemeColorOverride("font_color", hover || focus ? BarValue : BarLabel);
+        b.MouseEntered += () => { hover = true; Lit(); };
+        b.MouseExited += () => { hover = false; Lit(); };
+        b.FocusEntered += () => { focus = true; Lit(); };
+        b.FocusExited += () => { focus = false; Lit(); };
+        return b;
     }
 
     /// <summary>The results hang under the search box. One drop-down at a time: an open layers list closes, it would cover them.</summary>
@@ -100,28 +136,28 @@ public partial class GameScreen
     }
 
     /// <summary>Hits ranked: names that start with the text before names that contain it; systems, then fleets, then leaders.</summary>
-    IEnumerable<(string Text, Action Pick)> Search(string q)
+    IEnumerable<(string Name, string Detail, Action Pick)> Search(string q)
     {
         static int Rank(string name, string q) =>
             name.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0
             : name.Split(' ', '-').Any(w => w.StartsWith(q, StringComparison.OrdinalIgnoreCase)) ? 1
             : name.Contains(q, StringComparison.OrdinalIgnoreCase) ? 2 : 9;
 
-        var hits = new List<(int Rank, int Kind, string Name, string Text, Action Pick)>();
+        var hits = new List<(int Rank, int Kind, string Name, string Detail, Action Pick)>();
         for (int i = 0; i < G.Systems.Count; i++)
         {
             string n = G.Systems[i].Name;
             int r = Rank(n, q);
             if (r == 9) continue;
             int idx = i;
-            hits.Add((r, 0, n, $"{n}   {SystemWords(n)}", () => PickSystem(idx)));
+            hits.Add((r, 0, n, SystemWords(n), () => PickSystem(idx)));
         }
         foreach (var f in S.Game.State.Fleets.Values.Where(f => f.Side == Me))
         {
             int r = Rank(f.Name, q);
             if (r == 9) continue;
             int id = f.Id;
-            hits.Add((r, 1, f.Name, $"{f.Name}   fleet, {StatusOf(f)}", () => { CloseSearch(); SelectFleet(id, true); }));
+            hits.Add((r, 1, f.Name, $"fleet, {StatusOf(f)}", () => { CloseSearch(); SelectFleet(id, true); }));
         }
         foreach (var c in S.MyCharacters.Where(c => c.Status != CharacterStatus.Dead))
         {
@@ -129,9 +165,9 @@ public partial class GameScreen
             int r = Rank(n, q);
             if (r == 9) continue;
             int id = c.Id;
-            hits.Add((r, 2, n, $"{n}   leader, {S.WhereIsCharacter(c)}", () => { CloseSearch(); ShowTab(DrawerTab.Leaders); GoToCharacter(id); }));
+            hits.Add((r, 2, n, $"leader, {S.WhereIsCharacter(c)}", () => { CloseSearch(); ShowTab(DrawerTab.Leaders); GoToCharacter(id); }));
         }
-        return hits.OrderBy(h => h.Rank).ThenBy(h => h.Kind).ThenBy(h => h.Name, StringComparer.Ordinal).Select(h => (h.Text, h.Pick));
+        return hits.OrderBy(h => h.Rank).ThenBy(h => h.Kind).ThenBy(h => h.Name, StringComparer.Ordinal).Select(h => (h.Name, h.Detail, h.Pick));
     }
 
     /// <summary>"yours", "enemy, seen day 40", "neutral", "unexplored", with the sector: what the player knows, nothing more.</summary>

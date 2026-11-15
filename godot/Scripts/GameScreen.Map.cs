@@ -40,32 +40,31 @@ public partial class GameScreen
     void BuildMapTools()
     {
         // the layers list: the top bar hangs it under its Layers box (BuildTopBar)
+        // in the bar's pixel words (Paul 2026-11-15, "Yes A"): the layers on one black cell, Routes and Legend on another, 4 px apart as
+        // two boxes in the bar, no divider line; the layer on, Routes shown and the Legend open are in the light colour
         _layersCard = Ui.Hud(4, 4);
         _layersCard.Visible = false;   // closed at the start: the Layers switch opens it (Paul 2026-11-14, impeccable critique)
-        var v = Ui.VBox(2);
+        var v = Ui.VBox(4);
         _layersCard.AddChild(v);
+        var layers = Ui.VBox(0);
+        v.AddChild(DropCell(layers));
         var group = new ButtonGroup();
         foreach (var (layer, name, tip) in Layers)
         {
             var l = layer;
-            var b = Ui.Button(name, () => SetLayer(l), tip + " (V cycles the layers)", "Layer");
+            var b = DropRow(name, () => SetLayer(l), tip + " (V cycles the layers)");
             b.ToggleMode = true; b.ButtonGroup = group; b.ButtonPressed = layer == _layer;
-            b.Alignment = HorizontalAlignment.Left;
-            b.CustomMinimumSize = new Vector2(132, 30);
             _layerButtons.Add(b);
-            v.AddChild(b);
+            layers.AddChild(b);
         }
-        v.AddChild(new HSeparator());
-        _routesChip = Ui.Button("Routes", CycleLanes, "Show or hide the hyperspace routes (L)", "Layer");
+        var shows = Ui.VBox(0);
+        v.AddChild(DropCell(shows));
+        _routesChip = DropRow("Routes", CycleLanes, "Show or hide the hyperspace routes (L)");
         _routesChip.ToggleMode = true; _routesChip.ButtonPressed = true;
-        _routesChip.Alignment = HorizontalAlignment.Left;
-        _routesChip.CustomMinimumSize = new Vector2(132, 30);
-        v.AddChild(_routesChip);
-        _legendButton = Ui.Button("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean", "Layer");
+        shows.AddChild(_routesChip);
+        _legendButton = DropRow("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean");
         _legendButton.ToggleMode = true;
-        _legendButton.Alignment = HorizontalAlignment.Left;
-        _legendButton.CustomMinimumSize = new Vector2(132, 30);
-        v.AddChild(_legendButton);
+        shows.AddChild(_legendButton);
         // the key of the current layer, on its own small card at the top left so the map's names do not run through it
         _layerKey = Ui.Label("", "Hint", wrap: true);
         _layerKey.CustomMinimumSize = new Vector2(150, 0);
