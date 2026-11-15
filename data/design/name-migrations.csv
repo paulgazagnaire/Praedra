@@ -104,7 +104,7 @@ sector,Rendili Sector,Castra Sector
 sector,Rishi Sector,Pulau Hijau Sector
 sector,Rodia Sector,Sendero Sector
 sector,Ryloth Sector,Laterite Sector
-sector,Saleucami Sector,Ciénaga Sector
+sector,Saleucami Sector,Cienaga Sector
 sector,Sluis Van Sector,Kranholm Sector
 sector,Sullust Sector,Caminus Sector
 sector,Takodana Sector,Lagoa Funda Sector
@@ -540,7 +540,7 @@ system,Rothana,Kvitberg
 system,Ruuria,Rosenbach
 system,Ruusan,Ninefold
 system,Ryloth,Laterite
-system,Saleucami,Ciénaga
+system,Saleucami,Cienaga
 system,Salliche,Las Mieses
 system,Sarka,Corundum
 system,Sason,Goldcloud
@@ -714,7 +714,7 @@ character,Nien Nunb,Tam Szabo
 character,Hera Syndulla,Captain Sunday
 character,Shara Bey,Wick
 character,Tycho Celchu,Ansel Mbatha
-character,Winter Celchu,Vesna Ilić
+character,Winter Celchu,Vesna Ilic
 character,Kyle Katarn,Mateus Kale
 character,Quarrie,Ushe
 character,Jerjerrod,Project Director Cyprian Galena
@@ -751,3 +751,6 @@ defense,Death Star Shield,Harvester Shield
 group,core,heartland
 group,inner_rim,midreach
 group,outer_rim,farreach
+system,Ciénaga,Cienaga
+sector,Ciénaga Sector,Cienaga Sector
+character,Vesna Ilić,Vesna Ilic

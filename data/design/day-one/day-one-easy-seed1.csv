@@ -1,7 +1,7 @@
 name,start_owner,start_collective_support,start_weak,start_explored_all,start_explored_owner,is_hq,sector,group,on_route
 Feldspar,Hand,12,0,0,1,0,Feldspar Sector,midreach,1
 Umoya,neutral,50,0,0,0,0,Highfall Sector,farreach,1
-Seven Keys,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Seven Keys,neutral,50,0,0,0,0,Cienaga Sector,farreach,0
 Second Spring,Collective,62,0,0,1,0,Pulau Hijau Sector,farreach,0
 Truce Moor,neutral,50,0,0,0,0,Rauchtal Sector,farreach,0
 Westerholm,neutral,50,0,0,0,0,Rauchtal Sector,farreach,1
@@ -228,7 +228,7 @@ Slate Hill,neutral,50,0,0,0,0,Slate Hill Sector,farreach,1
 Last Platform,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
 Hoogstad,neutral,50,0,0,0,0,Muster Rock Sector,farreach,1
 Sendero,neutral,50,0,0,0,0,Sendero Sector,farreach,0
-Ciénaga,Hand,20,0,0,1,0,Ciénaga Sector,farreach,1
+Cienaga,Hand,20,0,0,1,0,Cienaga Sector,farreach,1
 Saltreach,neutral,50,0,0,0,0,Caminus Sector,farreach,1
 Greenfever,neutral,50,0,0,0,0,Greenfever Sector,farreach,1
 Cohors,Hand,17,0,0,1,0,Cohors Sector,farreach,1
@@ -250,7 +250,7 @@ Ridgefold,neutral,50,0,0,0,0,Highfall Sector,farreach,1
 Barewood,neutral,50,0,0,0,0,Muster Rock Sector,farreach,0
 Varmdal,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
 Kept Faith,Collective,73,0,0,1,0,Moorings Sector,farreach,1
-Needlepeak,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Needlepeak,neutral,50,0,0,0,0,Cienaga Sector,farreach,0
 Benigna,neutral,50,0,0,0,0,Dunmere Sector,farreach,0
 Salitre,neutral,50,0,0,0,0,Salitre Sector,farreach,1
 Excubia,Hand,21,0,1,1,0,Excubia Sector,heartland,1
@@ -383,7 +383,7 @@ Vidrio,neutral,50,0,0,0,0,Nebbia Sector,farreach,1
 Two Crowns,neutral,50,0,0,0,0,Akousma Sector,midreach,1
 Penhallow,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
 Pennygate,neutral,50,0,0,0,0,Bosque Alto Sector,midreach,1
-Supper Hill,Hand,19,0,0,1,0,Ciénaga Sector,farreach,0
+Supper Hill,Hand,19,0,0,1,0,Cienaga Sector,farreach,0
 Natalis,neutral,50,0,0,0,0,Feldspar Sector,midreach,1
 Campo Alto,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
 Sinkwater,neutral,50,0,0,0,0,Caminus Sector,farreach,1
@@ -403,7 +403,7 @@ Nacar,Hand,21,0,0,1,0,Vinculum Sector,midreach,1
 Azzurra,Hand,53,1,0,1,0,Ferraria Sector,midreach,1
 Longquay,neutral,50,0,0,0,0,Varmdal Sector,farreach,1
 Brandt's Giant,neutral,50,0,0,0,0,Highfall Sector,farreach,0
-Lunaria,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Lunaria,neutral,50,0,0,0,0,Cienaga Sector,farreach,0
 Laetitia,neutral,50,0,0,0,0,Zlatna Sector,farreach,1
 Tres Rios,neutral,50,0,0,0,0,Akousma Sector,midreach,1
 Hardwood,neutral,50,0,0,0,0,Slate Hill Sector,farreach,0
@@ -438,7 +438,7 @@ Stonebarrow,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
 The Kiln,neutral,50,0,0,0,0,Ironbeach Sector,farreach,0
 Stochos,neutral,50,0,0,0,0,Dunmere Sector,farreach,1
 Seven Gates,neutral,50,0,0,0,0,Ironbeach Sector,farreach,1
-Fuego Alto,neutral,50,0,0,0,0,Ciénaga Sector,farreach,1
+Fuego Alto,neutral,50,0,0,0,0,Cienaga Sector,farreach,1
 Hammada,neutral,50,0,0,0,0,Semeion Sector,midreach,1
 Requies,neutral,50,0,0,0,0,Cohors Sector,farreach,0
 Bread Street,neutral,50,0,0,0,0,Bauxite IV Sector,farreach,0
@@ -476,7 +476,7 @@ Galeholm,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
 Cairnfell,neutral,50,0,0,0,0,Mata Alta Sector,farreach,0
 The Wall,Collective,73,0,0,1,0,Moorings Sector,farreach,0
 Steading,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
-Lowmoor,neutral,50,0,0,0,0,Ciénaga Sector,farreach,1
+Lowmoor,neutral,50,0,0,0,0,Cienaga Sector,farreach,1
 Uhrwald,neutral,50,0,0,0,0,Drift Harbour Sector,farreach,1
 Glasshold,neutral,50,0,0,0,0,Akousma Sector,midreach,1
 Limonite III,Hand,17,0,0,1,0,Caza Real Sector,midreach,1
@@ -521,7 +521,7 @@ Pinehallow,neutral,50,0,0,0,0,Shelter Sector,farreach,1
 Clearholm,Hand,11,0,0,1,0,Clearholm Sector,farreach,0
 Mudhaven,neutral,50,0,0,0,0,Kranholm Sector,farreach,0
 Skopia,Hand,34,0,1,1,0,Castra Sector,heartland,1
-Spindle,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Spindle,neutral,50,0,0,0,0,Cienaga Sector,farreach,0
 Thousand Mouths,neutral,50,0,0,0,0,Akousma Sector,midreach,0
 Uzun Su,neutral,50,0,0,0,0,Mechane Sector,midreach,1
 Kovarna,neutral,50,0,0,0,0,Shelter Sector,farreach,1
@@ -533,7 +533,7 @@ Bellwether,neutral,50,0,0,0,0,Bellwether Sector,midreach,1
 Rio Lodo,neutral,50,0,0,0,0,Rio Lodo Sector,farreach,0
 Amoena,neutral,50,0,0,0,0,Lagoa Funda Sector,midreach,1
 Old Bench,neutral,50,0,0,0,0,Mata Alta Sector,farreach,0
-Sunscald,neutral,50,0,0,0,0,Ciénaga Sector,farreach,0
+Sunscald,neutral,50,0,0,0,0,Cienaga Sector,farreach,0
 Ain Tamra,neutral,50,0,0,0,0,Ulaan Tal Sector,farreach,0
 Rietmoor,neutral,50,0,0,0,0,Quieta Sector,midreach,1
 Cidermoor,neutral,50,0,0,0,0,Fairhaven Sector,farreach,0
