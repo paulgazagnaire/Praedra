@@ -4,7 +4,7 @@ Mercado Alto,Lenitas Sector,midreach,12,9,1,formula,
 Feldspar,Feldspar Sector,midreach,12,9,1,formula,
 Solheim,Laterite Sector,farreach,6,4,1,formula,
 Shirakaba,Fallout Sector,farreach,6,4,1,region,
-Sunscald,Ciénaga Sector,farreach,6,3,1,keyword,agricultural
+Sunscald,Cienaga Sector,farreach,6,3,1,keyword,agricultural
 Isfjell,Ilanga Sector,farreach,6,4,1,formula,
 Marl,Mechane Sector,midreach,6,3,1,formula,
 Bauxite IV,Bauxite IV Sector,farreach,6,4,1,formula,
@@ -42,7 +42,7 @@ Lowmarket,Bosque Alto Sector,midreach,12,11,1,formula,
 Salitre,Salitre Sector,farreach,6,4,1,formula,
 Scaldwell,Fallout Sector,farreach,8,7,1,keyword,billions of people; mining
 Quieta,Quieta Sector,midreach,12,9,1,formula,
-Lunaria,Ciénaga Sector,farreach,6,4,1,region,
+Lunaria,Cienaga Sector,farreach,6,4,1,region,
 Permit Hill,Moorings Sector,farreach,6,4,1,region,
 Scoria,Charter Sector,heartland,12,11,1,formula,
 Tessera,Mirabel Sector,midreach,11,8,1,formula,
@@ -102,7 +102,7 @@ Nueva Pradera,Caza Real Sector,midreach,10,7,1,formula,
 Meridian,Solacia Sector,farreach,6,4,1,formula,
 Thesauros,Thesauros Sector,farreach,6,3,1,formula,
 Penhallow,Lagoa Funda Sector,midreach,9,6,1,region,
-Spindle,Ciénaga Sector,farreach,6,3,1,region,
+Spindle,Cienaga Sector,farreach,6,3,1,region,
 Old Bench,Mata Alta Sector,farreach,6,4,1,region,
 Opsis,Kranholm Sector,farreach,6,4,1,formula,
 Porphyry,Mechane Sector,midreach,11,10,1,formula,
@@ -126,7 +126,7 @@ Altofen,Altofen Sector,midreach,9,6,1,region,
 Rauchtal,Rauchtal Sector,farreach,6,4,1,formula,
 Ashgrove,Caza Real Sector,midreach,10,7,1,region,
 Kanon,Solacia Sector,farreach,6,4,1,formula,
-Seven Keys,Ciénaga Sector,farreach,8,5,1,formula,
+Seven Keys,Cienaga Sector,farreach,8,5,1,formula,
 Kaukomaa,Bellwether Sector,midreach,10,7,1,keyword,billions of people
 Eldingar,Eldingar Sector,farreach,1,1,1,lore,lore pick (source notes removed 2026-10-25)
 Dongyu,Tormentum Sector,midreach,8,5,1,region,
@@ -251,9 +251,9 @@ Timberline,Longwire Sector,farreach,6,5,1,keyword,mining
 Valle Hondo,Charter Sector,heartland,12,11,1,formula,
 Montefosco,Caminus Sector,farreach,10,7,1,keyword,billions of people
 Landfall,Ulaan Tal Sector,farreach,6,4,1,region,
-Lowmoor,Ciénaga Sector,farreach,8,5,1,region,
+Lowmoor,Cienaga Sector,farreach,8,5,1,region,
 Longtide,Longtide Sector,midreach,7,5,1,lore,lore pick (source notes removed 2026-10-25)
-Supper Hill,Ciénaga Sector,farreach,6,4,1,region,
+Supper Hill,Cienaga Sector,farreach,6,4,1,region,
 Sinkwater,Caminus Sector,farreach,7,5,1,keyword,yards/academy
 Mbuga,Sendero Sector,farreach,8,5,1,formula,
 Rietmoor,Quieta Sector,midreach,6,4,1,region,
@@ -408,7 +408,7 @@ Stonebarrow,Fairhaven Sector,farreach,6,4,1,region,
 Kalinov,Lagoa Funda Sector,midreach,10,7,1,region,
 Castra,Castra Sector,heartland,12,5,1,lore,lore pick (source notes removed 2026-10-25)
 Remedium,Castra Sector,heartland,12,7,1,keyword,agricultural
-Fuego Alto,Ciénaga Sector,farreach,10,9,1,keyword,billions of people; mining
+Fuego Alto,Cienaga Sector,farreach,10,9,1,keyword,billions of people; mining
 Teloneum,Lagoa Funda Sector,midreach,8,5,1,formula,
 Mudhaven,Kranholm Sector,farreach,6,4,1,region,
 Pulau Hijau,Pulau Hijau Sector,farreach,4,3,1,lore,lore pick (source notes removed 2026-10-25)
@@ -419,7 +419,7 @@ Kvitberg,Rauchtal Sector,farreach,6,4,1,formula,
 Rosenbach,Clearholm Sector,farreach,6,4,1,formula,
 Ninefold,Bellwether Sector,midreach,10,7,1,formula,
 Laterite,Laterite Sector,farreach,6,3,1,lore,lore pick (source notes removed 2026-10-25)
-Ciénaga,Ciénaga Sector,farreach,6,4,1,formula,
+Cienaga,Cienaga Sector,farreach,6,4,1,formula,
 Las Mieses,Charter Sector,heartland,12,7,1,keyword,agricultural
 Corundum,Thesauros Sector,farreach,8,5,1,formula,
 Goldcloud,Zlatna Sector,farreach,4,1,1,keyword,gas giant
@@ -434,7 +434,7 @@ Ebbeholm,Shelter Sector,farreach,6,4,1,formula,
 Mar Seco,Drift Harbour Sector,farreach,6,4,1,keyword,mining; agricultural
 Motu Ahi,Salitre Sector,farreach,6,4,1,formula,
 Quebrada Honda,Eldingar Sector,farreach,6,4,1,formula,
-Needlepeak,Ciénaga Sector,farreach,8,5,1,formula,
+Needlepeak,Cienaga Sector,farreach,8,5,1,formula,
 Saffron Downs,Ferraria Sector,midreach,9,6,1,formula,
 Gnomon,Excubia Sector,heartland,11,6,1,lore,lore pick (source notes removed 2026-10-25)
 Make Do,Longwire Sector,farreach,6,4,1,formula,

@@ -226,7 +226,7 @@ public partial class GameScreen
         return b;
     }
 
-    /// <summary>BitPotion, or for words with a letter it lacks (Ciénaga, Vesna Ilić) <see cref="BarFontWide"/>.</summary>
+    /// <summary>BitPotion, or for words with a letter it lacks (an accented name such as "Ciénaga") <see cref="BarFontWide"/>.</summary>
     static Font BarFontFor(string text) =>
         Ui.Pixel is FontFile px && text.All(c => char.IsWhiteSpace(c) || px.HasChar(c)) ? BarFont : BarFontWide;
 
