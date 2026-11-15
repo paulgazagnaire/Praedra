@@ -95,11 +95,8 @@ public partial class GameScreen
         _reportPanel = NewModal(TwoColumns);   // every window and dialog is one or two window columns wide (Paul 2026-11-15)
         var rv = ModalBox(_reportPanel);
         _reportTitle = DialogHead(rv, "Report", TwoColumns, () => HideModal(_reportPanel));
-        var rs = new ScrollContainer { CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         _reportBody = Ui.Label("", null, Ui.Text2);
-        _reportBody.CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad - 10, 0);
-        rs.AddChild(_reportBody);
-        rv.AddChild(rs);
+        DialogBody(_reportPanel, rv, most: ReportMost).AddChild(_reportBody);
         var go = Ui.Button("Go there", () => { if (_reportMessage?.System is string sys) { HideModal(_reportPanel); GoTo(sys, true); } }, "Centre the map on the place");
         go.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         rv.AddChild(go);
@@ -125,10 +122,17 @@ public partial class GameScreen
         _savePanel = NewModal(SaveWidth);
         _settingsPanel = NewModal(SettingsWidth);
         _victoryPanel = NewModal(TwoColumns);
+        _modalLayer.Resized += () => { foreach (var p in _modalStack) FitDialog(p); };   // a new window or text size (Settings)
     }
 
     const int GoalWidth = TwoColumns, SaveWidth = TwoColumns, SettingsWidth = TwoColumns;
     const int DialogGap = 12;   // between the parts of a dialog; 24 under its head, as in a window
+    const int DialogMargin = WinPad;   // a dialog keeps 16 px clear of the screen's top and bottom (QA-105)
+    const int DialogBodyLeast = 120;   // a body that scrolls is never shorter than this
+    const int BarReach = WinPad - 1;   // the body's scroll bar lies in the dialog's right padding, against its edge, as a window's does
+    const int ReportMost = 420;        // a long report scrolls past this height even on a tall screen
+
+    readonly Dictionary<Control, (Control Holder, ScrollContainer Scroll, MarginContainer Pad, Control Body, float Most)> _dialogBodies = new();
 
     /// <summary>A dialog: the window's surface and edge, square, 16 px inside (Paul's "styles" frame).</summary>
     PanelContainer NewModal(int width)
@@ -145,6 +149,46 @@ public partial class GameScreen
         var v = Ui.VBox(DialogGap);
         p.AddChild(v);
         return v;
+    }
+
+    /// <summary>
+    /// The part of a dialog under its head: as tall as what it holds, and it scrolls only when the dialog would run off the screen (QA-105:
+    /// at 140% the Goal dialog was 628 px tall on a 579 px screen, so the end of "What the enemy needs" was cut off). The head and the
+    /// buttons under the body stay put. The grabber lies in the dialog's right padding, against its edge as in a window, so the text keeps
+    /// its width when the bar shows. `most` caps the body lower than the screen does (a long battle report).
+    /// </summary>
+    VBoxContainer DialogBody(PanelContainer panel, VBoxContainer v, int gap = DialogGap, float most = float.MaxValue)
+    {
+        var holder = new Control { MouseFilter = MouseFilterEnum.Ignore };   // the body's place in the dialog; the scroll reaches past it, into the padding
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        scroll.OffsetRight = BarReach;
+        holder.AddChild(scroll);
+        var pad = new MarginContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        foreach (var side in new[] { "margin_left", "margin_top", "margin_bottom" }) pad.AddThemeConstantOverride(side, 0);
+        pad.AddThemeConstantOverride("margin_right", BarReach);
+        scroll.AddChild(pad);
+        var body = Ui.VBox(gap);
+        pad.AddChild(body);
+        v.AddChild(holder);
+        _dialogBodies[panel] = (holder, scroll, pad, body, most);
+        body.MinimumSizeChanged += () => FitDialog(panel);   // wrapped text knows its height only once it has its width
+        return body;
+    }
+
+    void FitDialog(Control panel) => FitDialogIn(panel, GetViewportRect().Size.Y);
+
+    /// <summary>The body at the height of what it holds, or of what the screen leaves under the head and over the buttons when that is less.</summary>
+    void FitDialogIn(Control panel, float screen)
+    {
+        if (!_dialogBodies.TryGetValue(panel, out var b) || !IsInstanceValid(b.Body)) return;
+        var full = b.Body.GetCombinedMinimumSize();
+        float rest = panel.GetCombinedMinimumSize().Y - b.Holder.GetCombinedMinimumSize().Y;   // the head, the buttons, the gaps and the padding
+        float h = Mathf.Ceil(Math.Min(full.Y, Math.Min(b.Most, Math.Max(DialogBodyLeast, screen - 2 * DialogMargin - rest))));
+        // the bar takes its width from the padding, never from the text
+        int right = full.Y > h ? BarReach - Mathf.CeilToInt(b.Scroll.GetVScrollBar().GetCombinedMinimumSize().X) : BarReach;
+        if (b.Pad.GetThemeConstant("margin_right") != right) b.Pad.AddThemeConstantOverride("margin_right", right);
+        b.Holder.CustomMinimumSize = new Vector2(full.X, h);
     }
 
     /// <summary>
@@ -191,6 +235,8 @@ public partial class GameScreen
 
     void ShowModal(Control p)
     {
+        if (_dialogBodies.TryGetValue(p, out var b) && IsInstanceValid(b.Scroll)) b.Scroll.ScrollVertical = 0;   // the dialogs built once open at the top
+        FitDialog(p);
         _modalStack.Remove(p);
         _modalStack.Add(p);
         p.Visible = true;
@@ -251,7 +297,6 @@ public partial class GameScreen
         _reportMessage = m;
         SetDialogName(_reportTitle, m.Title ?? "Report");
         _reportBody.Text = m.Detail != null && m.Kind == MsgKind.Battle ? "Battle rules: " + GameBoot.RulesName(S.Rules) + "\n\n" + m.Detail : m.Detail ?? m.Text;
-        _reportBody.GetParent<ScrollContainer>().CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, Math.Min(420, 26 + 20 * _reportBody.Text.Count(c => c == '\n') + _reportBody.Text.Length / 3));
         ShowModal(_reportPanel);
         if (m.System != null && G.TryFindSystem(m.System, out int idx)) _view.Centre(idx);
     }
@@ -294,12 +339,7 @@ public partial class GameScreen
         _howPanel = NewModal(TwoColumns);
         var v = ModalBox(_howPanel);
         DialogHead(v, "How to play", TwoColumns, null, Ui.Label("Battle rules: " + GameBoot.RulesName(S.Rules), "Hint", wrap: false));   // Got it closes it
-        _howScroll = new ScrollContainer { CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, 470), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        v.AddChild(_howScroll);
-        var lines = Ui.VBox(6);
-        lines.CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad - 20, 0);
-        _howScroll.AddChild(lines);
-        lines.MinimumSizeChanged += FitHowTo;   // the wrapped text knows its height only once it has its width
+        var lines = DialogBody(_howPanel, v, 6);   // the text at its full height; it scrolls only when the screen is too short for it (a large text size)
         foreach (var (h, ls) in HowTo)
         {
             lines.AddChild(Ui.Space(4));
@@ -312,16 +352,7 @@ public partial class GameScreen
         v.AddChild(ok);
     }
 
-    ScrollContainer _howScroll;
-
-    void ShowHowTo() { FitHowTo(); ShowModal(_howPanel); }
-
-    /// <summary>The text at its full height, so nothing is cut off; it scrolls only when the screen is too short for it (a large text size).</summary>
-    void FitHowTo()
-    {
-        float full = _howScroll.GetChild<Control>(0).GetCombinedMinimumSize().Y;
-        _howScroll.CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, Math.Clamp(full, 120, Math.Max(120, GetViewportRect().Size.Y - 240)));
-    }
+    void ShowHowTo() => ShowModal(_howPanel);
 
     void CloseHowTo()
     {
@@ -338,7 +369,8 @@ public partial class GameScreen
         using var look = Ui.Window();
         var v = ModalBox(_savePanel);
         DialogHead(v, save ? "Save the game" : "Load a game", SaveWidth, () => HideModal(_savePanel));
-        v.AddChild(Ui.Label(save ? "Pick a slot. A used slot is overwritten (it asks first)." : $"Your current game (day {S.Game.Day}) is replaced by the one you load. It asks first.", "Hint"));
+        var body = DialogBody(_savePanel, v);
+        body.AddChild(Ui.Label(save ? "Pick a slot. A used slot is overwritten (it asks first)." : $"Your current game (day {S.Game.Day}) is replaced by the one you load. It asks first.", "Hint"));
         void Row(string label, string path, bool isAuto)
         {
             string info = GameBoot.SlotInfo(path);
@@ -366,7 +398,7 @@ public partial class GameScreen
                     $"Your current game (day {S.Game.Day}) will be replaced by: {info}. Anything since your last save is lost.", "Yes, load it", () => LoadRequested?.Invoke(p)), null, "Primary", info == null);
                 h.AddChild(b);
             }
-            v.AddChild(card);
+            body.AddChild(card);
         }
         for (int i = 1; i <= GameBoot.Slots; i++) Row($"Slot {i}", GameBoot.SlotPath(i), false);
         if (!save) Row("Autosave", GameBoot.AutoSaveSlot, true);
@@ -395,7 +427,8 @@ public partial class GameScreen
         using var look = Ui.Window();
         var v = ModalBox(_settingsPanel);
         DialogHead(v, "Settings", SettingsWidth, () => HideModal(_settingsPanel));
-        v.AddChild(Ui.Section("Size of text and panels"));
+        var body = DialogBody(_settingsPanel, v);
+        body.AddChild(Ui.Section("Size of text and panels"));
         var row = Ui.HBox(6);
         var group = new ButtonGroup();
         foreach (var sc in UiSettings.Scales)
@@ -403,14 +436,14 @@ public partial class GameScreen
             float s = sc;
             row.AddChild(Ui.Chip($"{Mathf.RoundToInt(sc * 100)}%", () => { UiSettings.Scale = s; UiSettings.ApplyScale(GetTree().Root); UiSettings.Save(); }, null, Mathf.IsEqualApprox(sc, UiSettings.Scale), group));
         }
-        v.AddChild(row);
-        v.AddChild(Ui.Label("Everything grows together: the map, the text and the panels.", "Hint"));
-        v.AddChild(Ui.Section("Stop the clock when"));
+        body.AddChild(row);
+        body.AddChild(Ui.Label("Everything grows together: the map, the text and the panels.", "Hint"));
+        body.AddChild(Ui.Section("Stop the clock when"));
         void Check(string text, bool value, Action<bool> set)
         {
             var cb = new CheckBox { Text = text, ButtonPressed = value, FocusMode = FocusModeEnum.None };
             cb.Toggled += on => { set(on); UiSettings.Save(); };
-            v.AddChild(cb);
+            body.AddChild(cb);
         }
         Check("a battle is fought (and show its report)", UiSettings.PauseBattle, on => UiSettings.PauseBattle = on);
         Check("a system changes hands", UiSettings.PauseCapture, on => UiSettings.PauseCapture = on);
@@ -430,15 +463,16 @@ public partial class GameScreen
     {
         using var scope = Ui.Window();
         var v = ModalBox(_victoryPanel);
+        var body = DialogBody(_victoryPanel, v);   // the buttons stay in sight
         bool won = winner == S.Player;
         // the one name in green or red: good, or danger (Paul's meaning colours), in the windows' pixel capitals at twice their size
         var t = Ui.Label(won ? "VICTORY" : "DEFEAT", null, won ? Ui.Good : Ui.Danger, 96, wrap: false);
         t.AddThemeFontOverride("font", Ui.NameFont(96));
         t.HorizontalAlignment = HorizontalAlignment.Center;
-        v.AddChild(t);
+        body.AddChild(t);
         var why = Ui.Label($"The {S.NameOf(winner)} has won the war, on day {S.Game.Day}. ({GameBoot.WinReason(S.Host)})", null, Ui.Text);
         why.HorizontalAlignment = HorizontalAlignment.Center;
-        v.AddChild(why);
+        body.AddChild(why);
         int mine = S.Game.State.SystemOwners.Count(kv => kv.Value == S.Player);
         int fleets = S.Game.State.Fleets.Values.Count(f => f.Side == S.Player);
         int ships = S.Game.State.Fleets.Values.Where(f => f.Side == S.Player).Sum(f => f.Ships.Count);
@@ -450,7 +484,7 @@ public partial class GameScreen
         cv.AddChild(Ui.Row("Systems you hold", mine.ToString()));
         cv.AddChild(Ui.Row("Your fleets", $"{fleets} ({ships} ships)"));
         cv.AddChild(Ui.Row("Battles in your log", battles.ToString()));
-        v.AddChild(card);
+        body.AddChild(card);
         var row = Ui.HBox(8);
         var look = Ui.Button("Look at the map", () => HideModal(_victoryPanel));
         look.SizeFlagsHorizontal = SizeFlags.ExpandFill; look.CustomMinimumSize = new Vector2(0, 40);
