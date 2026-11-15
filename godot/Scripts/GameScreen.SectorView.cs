@@ -168,8 +168,9 @@ public partial class GameScreen
         if (_secWin == null) return;
         var vp = _secLayer.Size;
         int n = Math.Max(1, count >= 0 ? count : _secCards.Count);
-        float w = Math.Min(2 * MgWidth + SlotGap, Math.Max(vp.X / 2 - 24, 2 * (TileWidth + CardGap) + 2 * GridPad));
-        w = Math.Min(w, vp.X - 32);
+        // two window columns, like the wide Infrastructure window (Paul 2026-11-15: every window one or two columns); narrower only when the
+        // screen has no room for two
+        float w = Math.Min(TwoColumns, vp.X - 32);
         int fit = Math.Clamp((int)((w - 2 * GridPad + CardGap) / (TileWidth + CardGap)), 1, 6);
         int cols = Math.Min(fit, Math.Max(2, (int)Math.Ceiling(Math.Sqrt(n))));
         _secGrid.Columns = cols;
@@ -301,7 +302,7 @@ public partial class GameScreen
 
         // ---- head: 48 px capitals, 32 px when the name is too long for the head
         string upper = _secName.ToUpperInvariant();
-        float width = _secWin.Size.X > 0 ? _secWin.Size.X : 2 * MgWidth + SlotGap;
+        float width = _secWin.Size.X > 0 ? _secWin.Size.X : TwoColumns;
         int size = Ui.NameSize(upper, width - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 8);
         _secTitle.Text = upper;
         _secTitle.AddThemeFontOverride("font", Ui.NameFont(size, upper));

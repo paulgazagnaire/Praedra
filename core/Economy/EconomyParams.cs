@@ -3,10 +3,13 @@ namespace Praedra.Core.Economy;
 /// <summary>Autoscrap pick. rule: m2-maintenance §Rule (New) AutoscrapMode.</summary>
 public enum AutoscrapMode
 {
-    /// <summary>DEFAULT. Classic behaviour: one uniform draw over the eligible objects.</summary>
+    /// <summary>Classic behaviour (switch): one uniform draw over the eligible objects, so a flagship can go before a regiment.</summary>
     Classic = 0,
     /// <summary>Proposal (economy/09 P4): junk first, yards last, no random draw.</summary>
     Smart = 1,
+    /// <summary>DEFAULT (Decided, Paul 2026-11-15: "Scrapping must target infrastructure first"): buildings that cost upkeep first (never a mine or
+    /// refinery), units only when no such building is left; no random draw.</summary>
+    InfrastructureFirst = 2,
 }
 
 /// <summary>How the autoscrap timer runs. rule: m2-maintenance §Overdraft and autoscrap (B5b §6).</summary>

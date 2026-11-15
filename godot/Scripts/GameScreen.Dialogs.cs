@@ -92,12 +92,12 @@ public partial class GameScreen
         _modalLayer.AddChild(_modalCenter);
 
         // report
-        _reportPanel = NewModal(600);
+        _reportPanel = NewModal(TwoColumns);   // every window and dialog is one or two window columns wide (Paul 2026-11-15)
         var rv = ModalBox(_reportPanel);
-        _reportTitle = DialogHead(rv, "Report", 600, () => HideModal(_reportPanel));
-        var rs = new ScrollContainer { CustomMinimumSize = new Vector2(560, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _reportTitle = DialogHead(rv, "Report", TwoColumns, () => HideModal(_reportPanel));
+        var rs = new ScrollContainer { CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         _reportBody = Ui.Label("", null, Ui.Text2);
-        _reportBody.CustomMinimumSize = new Vector2(550, 0);
+        _reportBody.CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad - 10, 0);
         rs.AddChild(_reportBody);
         rv.AddChild(rs);
         var go = Ui.Button("Go there", () => { if (_reportMessage?.System is string sys) { HideModal(_reportPanel); GoTo(sys, true); } }, "Centre the map on the place");
@@ -105,11 +105,11 @@ public partial class GameScreen
         rv.AddChild(go);
 
         // confirm: no ×, Cancel says it (and Esc)
-        _confirmPanel = NewModal(480);
+        _confirmPanel = NewModal(MgWidth);
         var cv = ModalBox(_confirmPanel);
-        _confirmTitle = DialogHead(cv, "", 480, null);
+        _confirmTitle = DialogHead(cv, "", MgWidth, null);
         _confirmBody = Ui.Label("", null, Ui.Text2);
-        _confirmBody.CustomMinimumSize = new Vector2(440, 0);
+        _confirmBody.CustomMinimumSize = new Vector2(MgWidth - 2 * WinPad, 0);
         cv.AddChild(_confirmBody);
         var crow = Ui.HBox(8);
         cv.AddChild(crow);
@@ -124,10 +124,10 @@ public partial class GameScreen
         _goalPanel = NewModal(GoalWidth);
         _savePanel = NewModal(SaveWidth);
         _settingsPanel = NewModal(SettingsWidth);
-        _victoryPanel = NewModal(560);
+        _victoryPanel = NewModal(TwoColumns);
     }
 
-    const int GoalWidth = 640, SaveWidth = 560, SettingsWidth = 520;
+    const int GoalWidth = TwoColumns, SaveWidth = TwoColumns, SettingsWidth = TwoColumns;
     const int DialogGap = 12;   // between the parts of a dialog; 24 under its head, as in a window
 
     /// <summary>A dialog: the window's surface and edge, square, 16 px inside (Paul's "styles" frame).</summary>
@@ -251,7 +251,7 @@ public partial class GameScreen
         _reportMessage = m;
         SetDialogName(_reportTitle, m.Title ?? "Report");
         _reportBody.Text = m.Detail != null && m.Kind == MsgKind.Battle ? "Battle rules: " + GameBoot.RulesName(S.Rules) + "\n\n" + m.Detail : m.Detail ?? m.Text;
-        _reportBody.GetParent<ScrollContainer>().CustomMinimumSize = new Vector2(560, Math.Min(420, 26 + 20 * _reportBody.Text.Count(c => c == '\n') + _reportBody.Text.Length / 3));
+        _reportBody.GetParent<ScrollContainer>().CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, Math.Min(420, 26 + 20 * _reportBody.Text.Count(c => c == '\n') + _reportBody.Text.Length / 3));
         ShowModal(_reportPanel);
         if (m.System != null && G.TryFindSystem(m.System, out int idx)) _view.Centre(idx);
     }
@@ -291,13 +291,13 @@ public partial class GameScreen
 
     void BuildHowTo()
     {
-        _howPanel = NewModal(800);
+        _howPanel = NewModal(TwoColumns);
         var v = ModalBox(_howPanel);
-        DialogHead(v, "How to play", 800, null, Ui.Label("Battle rules: " + GameBoot.RulesName(S.Rules), "Hint", wrap: false));   // Got it closes it
-        _howScroll = new ScrollContainer { CustomMinimumSize = new Vector2(760, 470), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        DialogHead(v, "How to play", TwoColumns, null, Ui.Label("Battle rules: " + GameBoot.RulesName(S.Rules), "Hint", wrap: false));   // Got it closes it
+        _howScroll = new ScrollContainer { CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, 470), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         v.AddChild(_howScroll);
         var lines = Ui.VBox(6);
-        lines.CustomMinimumSize = new Vector2(740, 0);
+        lines.CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad - 20, 0);
         _howScroll.AddChild(lines);
         lines.MinimumSizeChanged += FitHowTo;   // the wrapped text knows its height only once it has its width
         foreach (var (h, ls) in HowTo)
@@ -320,7 +320,7 @@ public partial class GameScreen
     void FitHowTo()
     {
         float full = _howScroll.GetChild<Control>(0).GetCombinedMinimumSize().Y;
-        _howScroll.CustomMinimumSize = new Vector2(760, Math.Clamp(full, 120, Math.Max(120, GetViewportRect().Size.Y - 240)));
+        _howScroll.CustomMinimumSize = new Vector2(TwoColumns - 2 * WinPad, Math.Clamp(full, 120, Math.Max(120, GetViewportRect().Size.Y - 240)));
     }
 
     void CloseHowTo()

@@ -23,6 +23,10 @@ public class SimpleAiTaskForceTests
         var preB7 = new Praedra.Core.Defenses.BombardParams { BombardWastedHits = false, BatteryReturnFire = false, BombardFleetsTogether = false,
             BombardDamageScales = false, MilitaryCollateral = false };
         var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { Bombard = preB7,
+            // autoscrap pinned to Classic (Dev lead 2026-11-15, m2-maintenance §Rule (New)): with the InfrastructureFirst default the passive
+            // Collective, over upkeep once it loses its mining worlds, scraps its yards and then its cheapest units and keeps its big ships, so
+            // some games run longer (seed 1 1426 -> 1570, seed 3 1291 -> no winner by 1600) and the floors no longer measure task forces
+            AutoscrapMode = Praedra.Core.Economy.AutoscrapMode.Classic,
             // capital and control pinned off (Dev lead 2026-10-26): it ends the TaskForces-off games 180 days after the Hearth falls, so the floors
             // no longer separate the switch (0 of 4 off games still going on day 1250); this test measures task forces
             Victory = new Praedra.Core.Victory.VictoryRules { DominanceSharePercent = 0 },
