@@ -12,7 +12,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// A system's Infrastructure window (Paul, 2026-11-03, with Classic's system window as the example): slots as dots, one card per yard with what
-/// it builds and a progress bar, what can be built as picture tiles (click one to order it), and the buildings as stacked tiles (right-click
+/// it builds and a progress bar, what can be built as picture tiles (click one to order it), and the buildings as tiles, one per building (right-click
 /// to scrap). The same orders as the drawer's build table (user stories E1-E6); the core judges them when the clock moves.
 /// rule: m2-construction §Build order, §Build time; m2-maintenance §Overdraft, §Scrapping and refunds.
 /// </summary>
@@ -74,15 +74,15 @@ public partial class GameScreen
         }
         strip.AddChild(gives);
         Add(strip);
-        // the buildings, stacked by kind
+        // the buildings, one tile each, grouped by kind
         var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == n).ToList();
         Section("Buildings", here.Count(o => o.Completed).ToString());
         var flow = new HFlowContainer();
         flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
         UnitTiles(flow, here.Where(o => o.Completed).OrderBy(o => Array.IndexOf(FacilityPriority, o.Class) is int i && i >= 0 ? i : 50).ThenBy(o => o.Class, StringComparer.Ordinal)
             .Select(o => ((Drag?)null, o, (string)null)), n);
-        foreach (var g in here.Where(o => !o.Completed).GroupBy(o => o.Class).OrderBy(g => g.Key, StringComparer.Ordinal))
-            flow.AddChild(Tile(UnitIcon.ForFacility(g.Key), hand, 1, g.Key, "being built", g.Count(), Ui.You, ghost: true));
+        foreach (var o in here.Where(o => !o.Completed).OrderBy(o => o.Class, StringComparer.Ordinal).ThenBy(o => o.Id))
+            flow.AddChild(Tile(UnitIcon.ForFacility(o.Class), hand, 1, o.Class, "being built", 1, Ui.You, ghost: true));   // one tile per building (Paul 2026-11-14)
         if (here.Count == 0) flow.AddChild(EmptySlot("None"));
         Add(flow);
         if (Me == Side.Collective && n == S.MyHqSystem) HqSection(n);

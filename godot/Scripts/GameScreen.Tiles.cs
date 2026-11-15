@@ -10,7 +10,7 @@ namespace PraedraViewer;
 
 /// <summary>
 /// The pieces of the management windows (Paul, 2026-11-03: "Right now, the interface is not very usable or visual", with Classic's windows as
-/// the example): tabs, unit tiles with a picture, identical units stacked as one tile with a count, and a right-click menu. Screens only.
+/// the example): tabs, unit tiles with a picture (one tile per unit, Paul 2026-11-14), and a right-click menu. Screens only.
 /// </summary>
 public partial class GameScreen
 {
@@ -95,8 +95,8 @@ public partial class GameScreen
     int SizeOfClass(string cls) => cls != null && Fm.Strength.Data.Classes.TryGetValue(cls, out var cc) ? Math.Clamp((int)cc.Size - 1, 0, 3) : 1;
 
     /// <summary>
-    /// A unit as a tile: its picture (or a leader's initials in a ring), its name, a short line under it, and "×N" when it stands for N
-    /// identical units. Dim when it can't move; faded when it is a drop shown before the day applies it.
+    /// A unit as a tile: its picture (or a leader's initials in a ring), its name and a short line under it. One tile is one unit (Paul
+    /// 2026-11-14); "×N" shows only on a drag preview that carries N units (Shift-drag). Dim when it can't move; faded when it is a drop shown before the day applies it.
     /// </summary>
     PanelContainer Tile(UnitIcon.Kind? kind, bool hand, int size4, string name, string sub, int count, Color accent, bool ghost = false, string avatar = null)
     {
@@ -194,37 +194,43 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// Units as tiles, identical ones (same class, same state, both movable or both not) stacked as one tile with a count. A drag takes one
-    /// unit; Shift takes the stack. A right-click offers to scrap. Units already dropped elsewhere today are left out (they show there).
+    /// Units as tiles, one tile per unit, never stacked (Paul 2026-11-14: "Unstack every units, ship, etc... I only want one per card").
+    /// Identical units (same class, same state, both movable or both not) still sit side by side. A drag takes that unit; Shift takes it
+    /// and every identical one beside it. A right-click offers to scrap. Units already dropped elsewhere today are left out (they show there).
     /// </summary>
     void UnitTiles(HFlowContainer flow, IEnumerable<(Drag? D, EconObject O, string Sub)> units, string system)
     {
         var list = units.Where(u => !(u.D is { } d && _moved.ContainsKey(d.Key)) && !_scrapped.Contains(u.O.Id)).ToList();
         foreach (var g in list.GroupBy(u => (u.O.Class, u.Sub, Can: u.D != null)))
         {
-            var objs = g.Select(u => u.O).ToList();
-            var drags = g.Where(u => u.D != null).Select(u => u.D.Value).ToList();
+            var members = g.ToList();
             string cls = g.Key.Class;
-            int n = objs.Count;
-            var tile = Tile(KindOf(objs[0].Category, cls), Me == Side.Hand, SizeOfClass(cls), cls, g.Key.Sub, n, g.Key.Can ? Ui.You : Ui.Text3);   // yours but not movable now: the readable grey, not the greyed-out one
-            string tip = (ClassTip(cls) is string ct ? ct + "\n" : "") + (n > 1 ? $"{n} {cls}. " : "");
-            if (drags.Count > 0)
+            int n = members.Count;
+            var scrapAll = members.Select(u => u.O).Where(o => o.Side == Me && Scrappable(o)).ToList();
+            foreach (var u in members)
             {
-                tile.SetMeta(UiTest.FullName, drags[0].Key);
-                MakeDraggable(tile, drags, cls);
-                tip += n > 1 ? $"Drag to move one; hold Shift as you start the drag to move all {n}." : "Drag it to another window.";
+                var tile = Tile(KindOf(u.O.Category, cls), Me == Side.Hand, SizeOfClass(cls), cls, g.Key.Sub, 1, g.Key.Can ? Ui.You : Ui.Text3);   // yours but not movable now: the readable grey, not the greyed-out one
+                string tip = ClassTip(cls) is string ct ? ct + "\n" : "";
+                if (u.D is { } own)
+                {
+                    // this unit first, then the identical ones beside it: a plain drag takes this one, Shift takes them all
+                    var drags = new List<Drag> { own };
+                    drags.AddRange(members.Where(m => m.D != null && m.O.Id != u.O.Id).Select(m => m.D.Value));
+                    tile.SetMeta(UiTest.FullName, own.Key);
+                    MakeDraggable(tile, drags, cls);
+                    tip += n > 1 ? $"Drag it to another window; hold Shift as you start the drag to move all {n} {cls} here." : "Drag it to another window.";
+                }
+                if (system != null && u.O.Side == Me && Scrappable(u.O))
+                {
+                    tip += "\nRight-click to scrap.";
+                    var one = u.O;
+                    var items = new List<(string, Action)> { ("Scrap this one...", () => AskScrap(new[] { one }, $"one {cls}", system)) };
+                    if (scrapAll.Count > 1) items.Add(($"Scrap all {scrapAll.Count} {cls}...", () => AskScrap(scrapAll, $"{scrapAll.Count} x {cls}", system)));
+                    RightClickMenu(tile, items.ToArray());
+                }
+                tile.TooltipText = Ui.Wrap(tip.Trim());
+                flow.AddChild(tile);
             }
-            var scrap = objs.Where(o => o.Side == Me && Scrappable(o)).ToList();
-            if (scrap.Count > 0 && system != null)
-            {
-                tip += "\nRight-click to scrap.";
-                var first = scrap[0];
-                var items = new List<(string, Action)> { ("Scrap one...", () => AskScrap(new[] { first }, $"one {cls}", system)) };
-                if (scrap.Count > 1) items.Add(($"Scrap all {scrap.Count}...", () => AskScrap(scrap, $"{scrap.Count} x {cls}", system)));
-                RightClickMenu(tile, items.ToArray());
-            }
-            tile.TooltipText = Ui.Wrap(tip.Trim());
-            flow.AddChild(tile);
         }
     }
 
