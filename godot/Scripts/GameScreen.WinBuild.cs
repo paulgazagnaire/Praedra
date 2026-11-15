@@ -168,7 +168,7 @@ public partial class GameScreen
         var p = S.Host.Construction.ProjectAt(n, fam);
         var queued = QueuedBuilds(n, fam);
         bool building = p is { Units.Count: > 0 }, idle = !building && queued.Count == 0;
-        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(148, 0) };   // two to a row in 306 px
+        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(148, 0) };   // two to a row in the planet column (InfraLeft)
         card.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, idle ? new Color(Ui.Warn, 0.5f) : new Color(Ui.You, 0.3f), 1, 8, 8));
         card.SetMeta(UiTest.FullName, $"Yard {n} {fam}");
         var v = Ui.VBox(3);
