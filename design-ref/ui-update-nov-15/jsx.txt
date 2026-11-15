@@ -1,0 +1,226 @@
+{
+  "file": {
+    "id": "01M4XB1NAX45Y7V9FT3DQMTQK1",
+    "name": "Praedra"
+  },
+  "contentHash": {
+    "tokens": "811c9dc5"
+  }
+}
+(
+    <div id="SIG-0" style={{ boxSizing: 'border-box', fontSynthesis: 'none', left: 1592, MozOsxFontSmoothing: 'grayscale', overflowWrap: 'anywhere', position: 'absolute', top: 710, WebkitFontSmoothing: 'antialiased' }}>
+      <div id="SGY-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/4GP51C71650SBQGEEA5C6ET3PZ.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '810px', left: 0, position: 'absolute', top: 0, width: '1440px' }} />
+      <div id="SIH-0" style={{ backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', boxSizing: 'border-box', height: '32px', left: 0, position: 'absolute', top: 0, width: '1440px' }} />
+      <div id="SIL-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', gap: 2, left: 1248, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SIW-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '40px', justifyContent: 'center', width: '40px' }}>
+          <div id="SIX-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '16px', fontWeight: 500, lineHeight: '22px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            ▶
+          </div>
+        </div>
+        <div id="SIS-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '40px', justifyContent: 'center', width: '40px' }}>
+          <div id="SIT-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            1x
+          </div>
+        </div>
+        <div id="SIJ-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '40px', justifyContent: 'center', width: '40px' }}>
+          <div id="SIK-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            2x
+          </div>
+        </div>
+        <div id="SIM-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '40px', justifyContent: 'center', width: '40px' }}>
+          <div id="SIN-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            5x
+          </div>
+        </div>
+      </div>
+      <div id="SMZ-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 1152, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SN0-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '16px' }}>
+          <div id="SN1-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            DAY
+          </div>
+          <div id="SN2-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999
+          </div>
+        </div>
+      </div>
+      <div id="SUI-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 679, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SUJ-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '16px' }}>
+          <div id="SUK-0" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="SUL-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="SUM-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="SUN-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="SUO-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SUP-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SUQ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SUR-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SUS-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SUT-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SUU-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SUV-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SUW-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="SUX-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SUY-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SUZ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SV0-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SV1-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SV2-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SV3-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="SV4-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="SV5-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SV6-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SV7-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SV8-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SV9-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SVA-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SVB-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SVC-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SVD-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 8, width: '1px' }} />
+          </div>
+          <div id="SVE-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Raw
+          </div>
+          <div id="SVF-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999
+          </div>
+        </div>
+      </div>
+      <div id="SWF-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 798, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SWG-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '16px' }}>
+          <div id="SWH-0" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="SWI-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="SWJ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="SWK-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="SWL-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SWM-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SWN-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SWO-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SWP-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SWQ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SWR-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SWS-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SWT-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SWU-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SWV-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SWW-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SWX-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SWY-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SWZ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SX0-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SX1-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="SX2-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="SX3-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 14, width: '1px' }} />
+            <div id="SX4-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 14, width: '1px' }} />
+            <div id="SX5-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="SX6-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="SX7-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SX8-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SX9-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SXA-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SXB-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SXC-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SXD-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="SXE-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SXF-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 4, width: '1px' }} />
+          </div>
+          <div id="SXG-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Refined
+          </div>
+          <div id="SXH-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999
+          </div>
+        </div>
+      </div>
+      <div id="SMS-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 941, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SMT-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '16px' }}>
+          <div id="SZE-0" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="SZF-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="SZG-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SZH-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SZI-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SZJ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SZK-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SZL-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SZM-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SZN-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SZO-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SZP-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SZQ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SZR-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SZS-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SZT-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="SZU-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SZV-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="SZW-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SZX-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SZY-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="SZZ-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="T00-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="T01-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="T02-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="T03-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="T04-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="T05-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="T06-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="T07-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="T08-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="T09-0" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 2, width: '1px' }} />
+          </div>
+          <div id="SMU-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Upkeep
+          </div>
+          <div id="SMV-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999/9999
+          </div>
+        </div>
+      </div>
+      <div id="SJQ-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 516, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SJR-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '16px' }}>
+          <div id="SJS-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Layers
+          </div>
+        </div>
+      </div>
+      <div id="SJU-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 65, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SJV-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '16px' }}>
+          <div id="SJW-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            GOAL
+          </div>
+          <div id="SJX-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            0/3
+          </div>
+        </div>
+      </div>
+      <div id="SJI-0" style={{ alignItems: 'center', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 197, padding: '4px', position: 'absolute', top: 0, width: '320px' }}>
+        <div id="SJJ-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', flexShrink: 0, gap: 4, height: '40px', justifyContent: 'space-between', paddingInline: '16px', width: '310px' }}>
+          <div id="SJK-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Search
+          </div>
+          <div id="SMB-0" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="SMC-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 3, width: '3px' }} />
+            <div id="SMD-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 11, width: '3px' }} />
+            <div id="SME-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SMF-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="SMG-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SMH-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SMI-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '3px', left: 2, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SMJ-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '3px', left: 10, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="SMK-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SML-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="SMM-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SMN-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="SMO-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="SMP-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="SMQ-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="SMR-0" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 13, width: '1px' }} />
+          </div>
+        </div>
+      </div>
+      <div id="SJM-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', borderLeftColor: '#181B21', borderLeftStyle: 'solid', borderLeftWidth: '1px', borderRightColor: '#181B21', borderRightStyle: 'solid', borderRightWidth: '1px', boxSizing: 'border-box', display: 'flex', left: 16, padding: '4px', position: 'absolute', top: 0, width: 'max-content' }}>
+        <div id="SJN-0" style={{ alignItems: 'center', backgroundColor: '#000000', boxSizing: 'border-box', display: 'flex', gap: 4, height: '40px', justifyContent: 'center', paddingInline: '13px' }}>
+          <div id="SJO-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#B0B2B7', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '22px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            ≡
+          </div>
+        </div>
+      </div>
+    </div>
+  )

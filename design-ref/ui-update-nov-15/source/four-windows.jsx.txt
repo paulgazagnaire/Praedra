@@ -1,0 +1,509 @@
+{
+  "file": {
+    "id": "01M4XB1NAX45Y7V9FT3DQMTQK1",
+    "name": "Praedra"
+  },
+  "contentHash": {
+    "tokens": "811c9dc5"
+  }
+}
+(
+    <div id="NNY-0" style={{ backgroundColor: '#111214', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', fontSynthesis: 'none', left: '2020px', MozOsxFontSmoothing: 'grayscale', overflow: 'clip', overflowWrap: 'anywhere', position: 'absolute', top: '-1577px', WebkitFontSmoothing: 'antialiased' }}>
+      <div id="RNW-0" style={{ boxSizing: 'border-box', flexShrink: '0', height: '810px', minHeight: '0px', overflow: 'clip', position: 'relative', width: '1440px' }}>
+        <div id="RNX-0" style={{ backgroundColor: '#111214', boxSizing: 'border-box', height: '810px', left: '0px', position: 'absolute', top: '0px', width: '1440px' }} />
+        <div id="RNY-0" style={{ boxSizing: 'border-box', height: '810px', left: '0px', overflow: 'clip', position: 'absolute', top: '0px', width: '1440px' }}>
+          <div id="RNZ-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/4GP51C71650SBQGEEA5C6ET3PZ.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '810px', left: '0px', position: 'absolute', top: '0px', width: '1440px' }} />
+          <div id="RO0-0" style={{ boxSizing: 'border-box', height: '46px', left: '20px', position: 'absolute', top: '20px', width: '46px' }}>
+            <div id="RO1-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '46px', left: '0px', position: 'absolute', top: '0px', width: '46px' }} />
+            <div id="RO2-0" style={{ boxSizing: 'border-box', color: '#B0B2B7', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '22px', fontWeight: 500, height: '30px', left: '15.5px', lineHeight: '30px', position: 'absolute', textAlign: 'center', top: '8px', whiteSpace: 'pre', width: '15px' }}>
+              ≡
+            </div>
+          </div>
+          <div id="RO3-0" style={{ boxSizing: 'border-box', height: '42px', left: '557.5px', position: 'absolute', top: '20px', width: '325px' }}>
+            <div id="RO4-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '42px', left: '0px', position: 'absolute', top: '0px', width: '325px' }} />
+            <div id="RO5-0" style={{ boxSizing: 'border-box', height: '34px', left: '10px', position: 'absolute', top: '4px', width: '305px' }}>
+              <div id="RO6-0" style={{ boxSizing: 'border-box', height: '34px', left: '20px', position: 'absolute', top: '0px', width: '210px' }}>
+                <div id="RO8-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', height: '18px', left: '10px', lineHeight: '18px', position: 'absolute', top: '8px', whiteSpace: 'pre', width: '104px' }}>
+                  Search{'  '}( / )
+                </div>
+              </div>
+              <div id="RO9-0" style={{ backgroundColor: '#232529', boxSizing: 'border-box', height: '34px', left: '235.5px', position: 'absolute', top: '0px', width: '1px' }} />
+              <div id="ROA-0" style={{ boxSizing: 'border-box', height: '26px', left: '242px', position: 'absolute', top: '4px', width: '63px' }}>
+                <div id="ROC-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '49px' }}>
+                  Layers
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="ROD-0" style={{ boxSizing: 'border-box', height: '52px', left: '1041px', position: 'absolute', top: '20px', width: '379px' }}>
+            <div id="ROE-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '52px', left: '0px', position: 'absolute', top: '0px', width: '379px' }} />
+            <div id="ROF-0" style={{ boxSizing: 'border-box', height: '44px', left: '4px', position: 'absolute', top: '4px', width: '371px' }}>
+              <div id="ROG-0" style={{ boxSizing: 'border-box', height: '26px', left: '0px', position: 'absolute', top: '9px', width: '79px' }}>
+                <div id="ROI-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '65px' }}>
+                  GOAL 0/3
+                </div>
+              </div>
+              <div id="ROJ-0" style={{ backgroundColor: '#232529', boxSizing: 'border-box', height: '44px', left: '88.5px', position: 'absolute', top: '0px', width: '1px' }} />
+              <div id="ROK-0" style={{ boxSizing: 'border-box', height: '38px', left: '107px', position: 'absolute', top: '3px', width: '52px' }}>
+                <div id="ROL-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '11px', height: '19px', left: '0px', letterSpacing: '1px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '24px' }}>
+                  DAY
+                </div>
+                <div id="ROM-0" style={{ boxSizing: 'border-box', color: '#ECEBE8', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '18px', fontWeight: 500, height: '28px', left: '0px', lineHeight: '28px', position: 'absolute', top: '11.5px', whiteSpace: 'pre', width: '13px' }}>
+                  0
+                </div>
+              </div>
+              <div id="RON-0" style={{ boxSizing: 'border-box', height: '44px', left: '171px', position: 'absolute', top: '0px', width: '44px' }}>
+                <div id="ROP-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '16px', fontWeight: 500, height: '22px', left: '16px', lineHeight: '22px', position: 'absolute', textAlign: 'center', top: '11px', whiteSpace: 'pre', width: '12px' }}>
+                  ▶
+                </div>
+              </div>
+              <div id="ROQ-0" style={{ boxSizing: 'border-box', height: '26px', left: '219px', position: 'absolute', top: '9px', width: '32px' }}>
+                <div id="ROS-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '18px' }}>
+                  1x
+                </div>
+              </div>
+              <div id="ROT-0" style={{ boxSizing: 'border-box', height: '26px', left: '255px', position: 'absolute', top: '9px', width: '32px' }}>
+                <div id="ROV-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '18px' }}>
+                  2x
+                </div>
+              </div>
+              <div id="ROW-0" style={{ boxSizing: 'border-box', height: '26px', left: '291px', position: 'absolute', top: '9px', width: '32px' }}>
+                <div id="ROX-0" style={{ backgroundColor: '#2E3036', boxSizing: 'border-box', height: '26px', left: '0px', position: 'absolute', top: '0px', width: '32px' }} />
+                <div id="ROY-0" style={{ boxSizing: 'border-box', color: '#ECEBE8', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '18px' }}>
+                  5x
+                </div>
+              </div>
+              <div id="ROZ-0" style={{ boxSizing: 'border-box', height: '26px', left: '327px', position: 'absolute', top: '9px', width: '40px' }}>
+                <div id="RP1-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '26px' }}>
+                  10x
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="RP2-0" style={{ boxSizing: 'border-box', height: '102px', left: '20px', position: 'absolute', top: '688px', width: '318px' }}>
+            <div id="RP3-0" style={{ boxSizing: 'border-box', height: '60px', left: '0px', position: 'absolute', top: '0px', width: '318px' }}>
+              <div id="RP4-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '60px', left: '0px', position: 'absolute', top: '0px', width: '318px' }} />
+              <div id="RP5-0" style={{ boxSizing: 'border-box', height: '42px', left: '14px', position: 'absolute', top: '9px', width: '290px' }}>
+                <div id="RP6-0" style={{ boxSizing: 'border-box', height: '39px', left: '0px', position: 'absolute', top: '1px', width: '76px' }}>
+                  <div id="RP7-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '11px', height: '19px', left: '0px', letterSpacing: '1px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '24px' }}>
+                    RAW
+                  </div>
+                  <div id="RP8-0" style={{ boxSizing: 'border-box', color: '#ECEBE8', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '16px', fontWeight: 500, height: '25px', left: '0px', lineHeight: '25px', position: 'absolute', top: '15.5px', whiteSpace: 'pre', width: '12px' }}>
+                    0
+                  </div>
+                </div>
+                <div id="RP9-0" style={{ backgroundColor: '#232529', boxSizing: 'border-box', height: '42px', left: '81.5px', position: 'absolute', top: '0px', width: '1px' }} />
+                <div id="RPA-0" style={{ boxSizing: 'border-box', height: '39px', left: '88px', position: 'absolute', top: '1px', width: '84px' }}>
+                  <div id="RPB-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '11px', height: '19px', left: '0px', letterSpacing: '1px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '55px' }}>
+                    REFINED
+                  </div>
+                  <div id="RPC-0" style={{ boxSizing: 'border-box', color: '#ECEBE8', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '16px', fontWeight: 500, height: '25px', left: '0px', lineHeight: '25px', position: 'absolute', top: '15.5px', whiteSpace: 'pre', width: '31px' }}>
+                    300
+                  </div>
+                </div>
+                <div id="RPD-0" style={{ backgroundColor: '#232529', boxSizing: 'border-box', height: '42px', left: '177.5px', position: 'absolute', top: '0px', width: '1px' }} />
+                <div id="RPE-0" style={{ boxSizing: 'border-box', height: '42px', left: '184px', position: 'absolute', top: '0px', width: '106px' }}>
+                  <div id="RPF-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '11px', height: '19px', left: '0px', letterSpacing: '1px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '47px' }}>
+                    UPKEEP
+                  </div>
+                  <div id="RPG-0" style={{ boxSizing: 'border-box', color: '#ECEBE8', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '16px', fontWeight: 500, height: '25px', left: '0px', lineHeight: '25px', position: 'absolute', top: '15.5px', whiteSpace: 'pre', width: '108px' }}>
+                    1094 / 2200
+                  </div>
+                  <div id="RPH-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/2HE0BVWH845E11K60Z0TPMSMWA.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '2px', left: '0px', position: 'absolute', top: '40px', width: '106px' }} />
+                </div>
+              </div>
+            </div>
+            <div id="RPI-0" style={{ boxSizing: 'border-box', height: '34px', left: '0px', position: 'absolute', top: '68px', width: '162px' }}>
+              <div id="RPJ-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '34px', left: '0px', position: 'absolute', top: '0px', width: '162px' }} />
+              <div id="RPK-0" style={{ boxSizing: 'border-box', height: '26px', left: '4px', position: 'absolute', top: '4px', width: '154px' }}>
+                <div id="RPL-0" style={{ boxSizing: 'border-box', height: '26px', left: '0px', position: 'absolute', top: '0px', width: '48px' }}>
+                  <div id="RPN-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '34px' }}>
+                    → HQ
+                  </div>
+                </div>
+                <div id="RPO-0" style={{ backgroundColor: '#232529', boxSizing: 'border-box', height: '26px', left: '53.5px', position: 'absolute', top: '0px', width: '1px' }} />
+                <div id="RPP-0" style={{ boxSizing: 'border-box', height: '26px', left: '60px', position: 'absolute', top: '0px', width: '94px' }}>
+                  <div id="RPR-0" style={{ boxSizing: 'border-box', color: '#84878E99', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '7px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '4px', whiteSpace: 'pre', width: '80px' }}>
+                    → Enemy HQ
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="RPS-0" style={{ boxSizing: 'border-box', height: '87px', left: '1110px', position: 'absolute', top: '703px', width: '310px' }}>
+            <div id="RPT-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '87px', left: '0px', position: 'absolute', top: '0px', width: '310px' }} />
+            <div id="RPU-0" style={{ boxSizing: 'border-box', height: '67px', left: '14px', position: 'absolute', top: '10px', width: '282px' }}>
+              <div id="RPV-0" style={{ boxSizing: 'border-box', height: '20px', left: '0px', position: 'absolute', top: '0px', width: '282px' }}>
+                <div id="RPW-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '11px', height: '19px', left: '0px', letterSpacing: '1px', lineHeight: '19px', position: 'absolute', top: '0.5px', whiteSpace: 'pre', width: '77px' }}>
+                  ORDER · D0
+                </div>
+                <div id="RPX-0" style={{ boxSizing: 'border-box', height: '20px', left: '231px', position: 'absolute', top: '0px', width: '51px' }}>
+                  <div id="RPZ-0" style={{ boxSizing: 'border-box', color: '#84878E', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '18px', left: '1px', lineHeight: '18px', position: 'absolute', textAlign: 'center', top: '1px', whiteSpace: 'pre', width: '49px' }}>
+                    open →
+                  </div>
+                </div>
+              </div>
+              <div id="RQ0-0" style={{ boxSizing: 'border-box', color: '#ECEBE8', fontFamily: '"Inter", system-ui, sans-serif', fontSize: '15px', fontWeight: 600, height: '44px', left: '0px', lineHeight: '22px', position: 'absolute', top: '24.5px', whiteSpace: 'pre', width: '253px' }}>
+                You lead the Hand from Charter. F1<br />explains how to play.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="RQ1-0" style={{ boxSizing: 'border-box', height: '714px', left: '16px', position: 'absolute', top: '80px', width: '344px' }}>
+          <div id="RQ2-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '714px', left: '0px', position: 'absolute', top: '0px', width: '344px' }} />
+          <div id="RQ3-0" style={{ boxSizing: 'border-box', height: '712px', left: '1px', position: 'absolute', top: '1px', width: '342px' }}>
+            <div id="RQ4-0" style={{ boxSizing: 'border-box', height: '115px', left: '16px', position: 'absolute', top: '16px', width: '310px' }}>
+              <div id="RQ5-0" style={{ boxSizing: 'border-box', height: '66px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                <div id="RQ6-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '232px' }}>
+                  GROUND · HEARTLAND · CHARTER SECTOR
+                </div>
+                <div id="RQ7-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '20px', width: '310px' }}>
+                  <div id="RQ8-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '48px', fontWeight: 500, height: '27px', left: '0px', lineHeight: '27px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '104px' }}>
+                    CHARTER
+                  </div>
+                  <div id="RQ9-0" style={{ boxSizing: 'border-box', height: '25px', left: '230px', position: 'absolute', top: '0px', width: '80px' }}>
+                    <div id="RQA-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '28px', left: '-1px', letterSpacing: '-5px', lineHeight: '28px', position: 'absolute', textAlign: 'center', top: '-1.5px', whiteSpace: 'pre', width: '26px' }}>
+                      ⋮⋮
+                    </div>
+                    <div id="RQB-0" style={{ boxSizing: 'border-box', height: '25px', left: '28px', position: 'absolute', top: '0px', width: '24px' }}>
+                      <div id="RQC-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                        –
+                      </div>
+                    </div>
+                    <div id="RQD-0" style={{ boxSizing: 'border-box', height: '25px', left: '56px', position: 'absolute', top: '0px', width: '24px' }}>
+                      <div id="RQE-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                        ×
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div id="RQF-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '20px', left: '0px', lineHeight: '20px', position: 'absolute', top: '47.5px', whiteSpace: 'pre', width: '169px' }}>
+                  Loyalty 100% · 7 regiments
+                </div>
+              </div>
+              <div id="RQG-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '90px', width: '310px' }}>
+                <div id="RQH-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '59px' }}>
+                  <div id="RQI-0" style={{ borderBottomColor: '#909EBD', borderBottomStyle: 'solid', borderBottomWidth: '3px', boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '59px' }} />
+                  <div id="RQJ-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '61px' }}>
+                    Leaders 1
+                  </div>
+                </div>
+                <div id="RQK-0" style={{ boxSizing: 'border-box', height: '25px', left: '69px', position: 'absolute', top: '0px', width: '54px' }}>
+                  <div id="RQM-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '56px' }}>
+                    Troops 7
+                  </div>
+                </div>
+                <div id="RQN-0" style={{ boxSizing: 'border-box', height: '25px', left: '133px', position: 'absolute', top: '0px', width: '52px' }}>
+                  <div id="RQP-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '54px' }}>
+                    Fighters
+                  </div>
+                </div>
+                <div id="RQQ-0" style={{ boxSizing: 'border-box', height: '25px', left: '195px', position: 'absolute', top: '0px', width: '50px' }}>
+                  <div id="RQS-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '52px' }}>
+                    Fleets 2
+                  </div>
+                </div>
+                <div id="RQT-0" style={{ boxSizing: 'border-box', height: '25px', left: '255px', position: 'absolute', top: '0px', width: '28px' }}>
+                  <div id="RQV-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '30px' }}>
+                    Lore
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="RQW-0" style={{ boxSizing: 'border-box', height: '557px', left: '0px', overflow: 'clip', position: 'absolute', top: '155px', width: '342px' }}>
+              <div id="RQX-0" style={{ boxSizing: 'border-box', height: '194px', left: '16px', position: 'absolute', top: '0px', width: '310px' }}>
+                <div id="RQY-0" style={{ boxSizing: 'border-box', height: '157px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                  <div id="RQZ-0" style={{ boxSizing: 'border-box', height: '120px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                    <div id="RR0-0" style={{ boxSizing: 'border-box', height: '120px', left: '0px', position: 'absolute', top: '0px', width: '106px' }}>
+                      <div id="RR1-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '54px' }}>
+                        GENERAL
+                      </div>
+                      <div id="RR2-0" style={{ boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '24px', width: '106px' }}>
+                        <div id="RR3-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/106MK7677HPBFRGFAEBEJDKPQ7.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '0px', width: '92px' }} />
+                      </div>
+                    </div>
+                    <div id="RR4-0" style={{ boxSizing: 'border-box', height: '120px', left: '114px', position: 'absolute', top: '0px', width: '196px' }}>
+                      <div id="RR5-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '143px' }}>
+                        LEADERS ON THE PLANET
+                      </div>
+                      <div id="RR6-0" style={{ boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '24px', width: '196px' }}>
+                        <div id="RR7-0" style={{ boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '0px', width: '92px' }}>
+                          <div id="RR8-0" style={{ borderColor: '#5AA9F04D', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '0px', width: '92px' }} />
+                          <div id="RR9-0" style={{ boxSizing: 'border-box', height: '84px', left: '4px', position: 'absolute', top: '6px', width: '84px' }}>
+                            <div id="RRA-0" style={{ boxSizing: 'border-box', height: '36px', left: '24px', position: 'absolute', top: '2px', width: '36px' }}>
+                              <div id="RRB-0" style={{ borderColor: '#5AA9F0', borderRadius: '18px', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '36px', left: '0px', position: 'absolute', top: '0px', width: '36px' }} />
+                              <div id="RRC-0" style={{ boxSizing: 'border-box', color: '#5AA9F0', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, height: '19px', left: '9.5px', lineHeight: '19px', position: 'absolute', textAlign: 'center', top: '8.5px', whiteSpace: 'pre', width: '17px' }}>
+                                TC
+                              </div>
+                            </div>
+                            <div id="RRD-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '20px', left: '11.5px', lineHeight: '20px', position: 'absolute', textAlign: 'center', top: '40.5px', whiteSpace: 'pre', width: '61px' }}>
+                              The Chair
+                            </div>
+                            <div id="RRE-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '10px', lineHeight: '19px', position: 'absolute', textAlign: 'center', top: '59.5px', whiteSpace: 'pre', width: '64px' }}>
+                              passenger
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="RRF-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '0px', lineHeight: '17px', position: 'absolute', textDecoration: 'underline 1px', textUnderlinePosition: 'from-font', top: '140px', whiteSpace: 'pre', width: '106px' }}>
+                    Send a mission...
+                  </div>
+                </div>
+                <div id="RRG-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '0px', lineHeight: '17px', position: 'absolute', textDecoration: 'underline 1px', textUnderlinePosition: 'from-font', top: '177px', whiteSpace: 'pre', width: '157px' }}>
+                  Infrastructure at Charter
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="RRH-0" style={{ boxSizing: 'border-box', height: '714px', left: '370px', position: 'absolute', top: '80px', width: '344px' }}>
+          <div id="RRI-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '714px', left: '0px', position: 'absolute', top: '0px', width: '344px' }} />
+          <div id="RRJ-0" style={{ boxSizing: 'border-box', height: '712px', left: '1px', position: 'absolute', top: '1px', width: '342px' }}>
+            <div id="RRK-0" style={{ boxSizing: 'border-box', height: '66px', left: '16px', position: 'absolute', top: '16px', width: '310px' }}>
+              <div id="RRL-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '112px' }}>
+                FLEET · AT CHARTER
+              </div>
+              <div id="RRM-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '20px', width: '310px' }}>
+                <div id="RRN-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '48px', fontWeight: 500, height: '27px', left: '0px', lineHeight: '27px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '101px' }}>
+                  FLEET 1
+                </div>
+                <div id="RRO-0" style={{ boxSizing: 'border-box', height: '25px', left: '230px', position: 'absolute', top: '0px', width: '80px' }}>
+                  <div id="RRP-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '28px', left: '-1px', letterSpacing: '-5px', lineHeight: '28px', position: 'absolute', textAlign: 'center', top: '-1.5px', whiteSpace: 'pre', width: '26px' }}>
+                    ⋮⋮
+                  </div>
+                  <div id="RRQ-0" style={{ boxSizing: 'border-box', height: '25px', left: '28px', position: 'absolute', top: '0px', width: '24px' }}>
+                    <div id="RRR-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                      –
+                    </div>
+                  </div>
+                  <div id="RRS-0" style={{ boxSizing: 'border-box', height: '25px', left: '56px', position: 'absolute', top: '0px', width: '24px' }}>
+                    <div id="RRT-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                      ×
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="RRU-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '20px', left: '0px', lineHeight: '20px', position: 'absolute', top: '47.5px', whiteSpace: 'pre', width: '201px' }}>
+                3 ships · strength 112 · speed 80
+              </div>
+            </div>
+            <div id="RRV-0" style={{ boxSizing: 'border-box', height: '606px', left: '0px', overflow: 'clip', position: 'absolute', top: '106px', width: '342px' }}>
+              <div id="RRW-0" style={{ boxSizing: 'border-box', height: '379px', left: '16px', position: 'absolute', top: '0px', width: '310px' }}>
+                <div id="RRX-0" style={{ boxSizing: 'border-box', height: '342px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                  <div id="RRY-0" style={{ boxSizing: 'border-box', height: '69px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                    <div id="RRZ-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '75px' }}>
+                      FLEETS HERE
+                    </div>
+                    <div id="RS0-0" style={{ boxSizing: 'border-box', height: '45px', left: '0px', position: 'absolute', top: '24px', width: '310px' }}>
+                      <div id="RS1-0" style={{ boxSizing: 'border-box', height: '45px', left: '0px', position: 'absolute', top: '0px', width: '150px' }}>
+                        <div id="RS2-0" style={{ borderColor: '#909EBD', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '45px', left: '0px', position: 'absolute', top: '0px', width: '150px' }} />
+                        <div id="RS3-0" style={{ boxSizing: 'border-box', height: '33px', left: '4px', position: 'absolute', top: '6px', width: '142px' }}>
+                          <div id="RS4-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1KYTTQG7W226T4QKJDA1VKNAFC.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '26px', left: '0px', position: 'absolute', top: '3px', width: '46px' }} />
+                          <div id="RS5-0" style={{ boxSizing: 'border-box', height: '33px', left: '54px', position: 'absolute', top: '0px', width: '88px' }}>
+                            <div id="RS6-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '20px', left: '0px', lineHeight: '20px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '43px' }}>
+                              Fleet 1
+                            </div>
+                            <div id="RS7-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '15.5px', whiteSpace: 'pre', width: '89px' }}>
+                              3 ships · str 112
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div id="RS8-0" style={{ boxSizing: 'border-box', height: '45px', left: '156px', position: 'absolute', top: '0px', width: '150px' }}>
+                        <div id="RS9-0" style={{ borderColor: '#3A3A3A', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '45px', left: '0px', position: 'absolute', top: '0px', width: '150px' }} />
+                        <div id="RSA-0" style={{ boxSizing: 'border-box', height: '33px', left: '4px', position: 'absolute', top: '6px', width: '142px' }}>
+                          <div id="RSB-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/5A3YP129JVF3PV49RMF5Q4707N.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '26px', left: '0px', position: 'absolute', top: '3px', width: '46px' }} />
+                          <div id="RSC-0" style={{ boxSizing: 'border-box', height: '33px', left: '54px', position: 'absolute', top: '0px', width: '88px' }}>
+                            <div id="RSD-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', fontWeight: 500, height: '20px', left: '0px', lineHeight: '20px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '45px' }}>
+                              Fleet 3
+                            </div>
+                            <div id="RSE-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '15.5px', whiteSpace: 'pre', width: '84px' }}>
+                              2 ships · str 10
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="RSF-0" style={{ boxSizing: 'border-box', height: '249px', left: '0px', position: 'absolute', top: '93px', width: '310px' }}>
+                    <div id="RSG-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                      <div id="RSH-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '63px' }}>
+                        <div id="RSI-0" style={{ borderBottomColor: '#909EBD', borderBottomStyle: 'solid', borderBottomWidth: '3px', boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '63px' }} />
+                        <div id="RSJ-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '65px' }}>
+                          Command
+                        </div>
+                      </div>
+                      <div id="RSK-0" style={{ boxSizing: 'border-box', height: '25px', left: '73px', position: 'absolute', top: '0px', width: '46px' }}>
+                        <div id="RSM-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '48px' }}>
+                          Ships 3
+                        </div>
+                      </div>
+                      <div id="RSN-0" style={{ boxSizing: 'border-box', height: '25px', left: '129px', position: 'absolute', top: '0px', width: '63px' }}>
+                        <div id="RSP-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '65px' }}>
+                          Fighters 4
+                        </div>
+                      </div>
+                      <div id="RSQ-0" style={{ boxSizing: 'border-box', height: '25px', left: '202px', position: 'absolute', top: '0px', width: '43px' }}>
+                        <div id="RSS-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '45px' }}>
+                          Troops
+                        </div>
+                      </div>
+                      <div id="RST-0" style={{ boxSizing: 'border-box', height: '25px', left: '255px', position: 'absolute', top: '0px', width: '42px' }}>
+                        <div id="RSV-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '44px' }}>
+                          Orders
+                        </div>
+                      </div>
+                    </div>
+                    <div id="RSW-0" style={{ boxSizing: 'border-box', height: '200px', left: '0px', position: 'absolute', top: '49px', width: '310px' }}>
+                      <div id="RSX-0" style={{ boxSizing: 'border-box', height: '120px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                        <div id="RSY-0" style={{ boxSizing: 'border-box', height: '120px', left: '0px', position: 'absolute', top: '0px', width: '98px' }}>
+                          <div id="RSZ-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '53px' }}>
+                            ADMIRAL
+                          </div>
+                          <div id="RT0-0" style={{ boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '24px', width: '98px' }}>
+                            <div id="RT1-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/7GT4B5YZ1DA8DXHPBY8Y29BYN3.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '0px', width: '92px' }} />
+                          </div>
+                        </div>
+                        <div id="RT2-0" style={{ boxSizing: 'border-box', height: '120px', left: '106px', position: 'absolute', top: '0px', width: '98px' }}>
+                          <div id="RT3-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '54px' }}>
+                            GENERAL
+                          </div>
+                          <div id="RT4-0" style={{ boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '24px', width: '98px' }}>
+                            <div id="RT5-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/765DGBVTPF0J0MXWW84Q9BEK29.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '0px', width: '92px' }} />
+                          </div>
+                        </div>
+                        <div id="RT6-0" style={{ boxSizing: 'border-box', height: '120px', left: '212px', position: 'absolute', top: '0px', width: '98px' }}>
+                          <div id="RT7-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '77px' }}>
+                            COMMANDER
+                          </div>
+                          <div id="RT8-0" style={{ boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '24px', width: '98px' }}>
+                            <div id="RT9-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1WFQD6PC61XT7Y91922FWEKDGQ.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '96px', left: '0px', position: 'absolute', top: '0px', width: '92px' }} />
+                          </div>
+                        </div>
+                      </div>
+                      <div id="RTA-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '140.5px', whiteSpace: 'pre', width: '76px' }}>
+                        PASSENGERS
+                      </div>
+                      <div id="RTB-0" style={{ boxSizing: 'border-box', height: '34px', left: '0px', position: 'absolute', top: '166px', width: '310px' }}>
+                        <div id="RTC-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/62PXJ2JQQK012NNKWWW6V2QY6X.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '34px', left: '0px', position: 'absolute', top: '0px', width: '46px' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div id="RTD-0" style={{ boxSizing: 'border-box', height: '17px', left: '0px', position: 'absolute', top: '362px', width: '310px' }}>
+                  <div id="RTE-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '0px', lineHeight: '17px', position: 'absolute', textDecoration: 'underline 1px', textUnderlinePosition: 'from-font', top: '0px', whiteSpace: 'pre', width: '115px' }}>
+                    Ground at Charter
+                  </div>
+                  <div id="RTF-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '129px', lineHeight: '17px', position: 'absolute', textDecoration: 'underline 1px', textUnderlinePosition: 'from-font', top: '0px', whiteSpace: 'pre', width: '46px' }}>
+                    Move...
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="RTG-0" style={{ boxSizing: 'border-box', height: '714px', left: '724px', position: 'absolute', top: '80px', width: '344px' }}>
+          <div id="RTH-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '714px', left: '0px', position: 'absolute', top: '0px', width: '344px' }} />
+          <div id="RTI-0" style={{ boxSizing: 'border-box', height: '712px', left: '1px', position: 'absolute', top: '1px', width: '342px' }}>
+            <div id="RTJ-0" style={{ boxSizing: 'border-box', height: '94px', left: '16px', position: 'absolute', top: '16px', width: '310px' }}>
+              <div id="RTK-0" style={{ boxSizing: 'border-box', height: '45px', left: '0px', position: 'absolute', top: '0px', width: '310px' }}>
+                <div id="RTL-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '249px' }}>
+                  GROUND · MIDREACH · BOSQUE ALTO SECTOR
+                </div>
+                <div id="RTM-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '20px', width: '310px' }}>
+                  <div id="RTN-0" style={{ boxSizing: 'border-box', color: '#4A4F5B', fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '48px', fontWeight: 500, height: '27px', left: '0px', lineHeight: '27px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '143px' }}>
+                    BRUSHFIELD
+                  </div>
+                  <div id="RTO-0" style={{ boxSizing: 'border-box', height: '25px', left: '230px', position: 'absolute', top: '0px', width: '80px' }}>
+                    <div id="RTP-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '28px', left: '-1px', letterSpacing: '-5px', lineHeight: '28px', position: 'absolute', textAlign: 'center', top: '-1.5px', whiteSpace: 'pre', width: '26px' }}>
+                      ⋮⋮
+                    </div>
+                    <div id="RTQ-0" style={{ boxSizing: 'border-box', height: '25px', left: '28px', position: 'absolute', top: '0px', width: '24px' }}>
+                      <div id="RTR-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                        –
+                      </div>
+                    </div>
+                    <div id="RTS-0" style={{ boxSizing: 'border-box', height: '25px', left: '56px', position: 'absolute', top: '0px', width: '24px' }}>
+                      <div id="RTT-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                        ×
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="RTU-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '69px', width: '310px' }}>
+                <div id="RTV-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '46px' }}>
+                  <div id="RTW-0" style={{ borderBottomColor: '#909EBD', borderBottomStyle: 'solid', borderBottomWidth: '3px', boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '0px', width: '46px' }} />
+                  <div id="RTX-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '48px' }}>
+                    Ground
+                  </div>
+                </div>
+                <div id="RTY-0" style={{ boxSizing: 'border-box', height: '25px', left: '56px', position: 'absolute', top: '0px', width: '39px' }}>
+                  <div id="RU0-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '41px' }}>
+                    Fleets
+                  </div>
+                </div>
+                <div id="RU1-0" style={{ boxSizing: 'border-box', height: '25px', left: '105px', position: 'absolute', top: '0px', width: '28px' }}>
+                  <div id="RU3-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '-1px', lineHeight: '17px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '30px' }}>
+                    Lore
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="RU4-0" style={{ boxSizing: 'border-box', height: '578px', left: '0px', overflow: 'clip', position: 'absolute', top: '134px', width: '342px' }}>
+              <div id="RU5-0" style={{ boxSizing: 'border-box', height: '74px', left: '16px', position: 'absolute', top: '0px', width: '310px' }}>
+                <div id="RU6-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '40px', left: '0px', lineHeight: '20px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '266px' }}>
+                  Unexplored: you don't know who is on the<br />ground here.
+                </div>
+                <div id="RU7-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '0px', lineHeight: '17px', position: 'absolute', textDecoration: 'underline 1px', textUnderlinePosition: 'from-font', top: '57px', whiteSpace: 'pre', width: '174px' }}>
+                  Infrastructure at Brushfield
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="RU8-0" style={{ boxSizing: 'border-box', height: '714px', left: '1078px', position: 'absolute', top: '80px', width: '344px' }}>
+          <div id="RU9-0" style={{ backgroundColor: '#0B0B0D', borderColor: '#606060', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', height: '714px', left: '0px', position: 'absolute', top: '0px', width: '344px' }} />
+          <div id="RUA-0" style={{ boxSizing: 'border-box', height: '712px', left: '1px', position: 'absolute', top: '1px', width: '342px' }}>
+            <div id="RUB-0" style={{ boxSizing: 'border-box', height: '45px', left: '16px', position: 'absolute', top: '16px', width: '310px' }}>
+              <div id="RUC-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', height: '19px', left: '0px', lineHeight: '19px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '301px' }}>
+                INFRASTRUCTURE · MIDREACH · BOSQUE ALTO SECTOR
+              </div>
+              <div id="RUD-0" style={{ boxSizing: 'border-box', height: '25px', left: '0px', position: 'absolute', top: '20px', width: '310px' }}>
+                <div id="RUE-0" style={{ boxSizing: 'border-box', color: '#4A4F5B', fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '48px', fontWeight: 500, height: '27px', left: '0px', lineHeight: '27px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '143px' }}>
+                  BRUSHFIELD
+                </div>
+                <div id="RUF-0" style={{ boxSizing: 'border-box', height: '25px', left: '230px', position: 'absolute', top: '0px', width: '80px' }}>
+                  <div id="RUG-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '28px', left: '-1px', letterSpacing: '-5px', lineHeight: '28px', position: 'absolute', textAlign: 'center', top: '-1.5px', whiteSpace: 'pre', width: '26px' }}>
+                    ⋮⋮
+                  </div>
+                  <div id="RUH-0" style={{ boxSizing: 'border-box', height: '25px', left: '28px', position: 'absolute', top: '0px', width: '24px' }}>
+                    <div id="RUI-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                      –
+                    </div>
+                  </div>
+                  <div id="RUJ-0" style={{ boxSizing: 'border-box', height: '25px', left: '56px', position: 'absolute', top: '0px', width: '24px' }}>
+                    <div id="RUK-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"JetBrains Mono", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                      ×
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="RUL-0" style={{ boxSizing: 'border-box', height: '627px', left: '0px', overflow: 'clip', position: 'absolute', top: '85px', width: '342px' }}>
+              <div id="RUM-0" style={{ boxSizing: 'border-box', height: '74px', left: '16px', position: 'absolute', top: '0px', width: '310px' }}>
+                <div id="RUN-0" style={{ boxSizing: 'border-box', color: '#7D8699', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '40px', left: '0px', lineHeight: '20px', position: 'absolute', top: '-1.5px', whiteSpace: 'pre', width: '293px' }}>
+                  Unexplored: you don't know what is built here.<br />Send a fleet or a spy to look.
+                </div>
+                <div id="RUO-0" style={{ boxSizing: 'border-box', color: '#909EBD', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '13px', height: '17px', left: '0px', lineHeight: '17px', position: 'absolute', textDecoration: 'underline 1px', textUnderlinePosition: 'from-font', top: '57px', whiteSpace: 'pre', width: '132px' }}>
+                  Ground at Brushfield
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )

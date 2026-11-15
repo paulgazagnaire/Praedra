@@ -1,0 +1,59 @@
+name	id	x	y	width	height
+base-interface	1I6-1	-640	-2425	1280	832
+Frame	1JY-1	660	-2425	1280	832
+Sector window - Charter Sector (Hand)	RUQ-0	2020	-2425	1366	768
+Sector window - Charter Sector (Hand)	S5U-0	1592	-140	1366	768
+ui-update-nov-15	SIG-0	1592	710	1440	810
+Ground	MZW-0	2490	-2736	128	7
+Energy	MZG-0	2466	-2645	128	6
+icon-hand-24px	NCQ-0	2146	-2802	16	16
+icon-fleet	N33-0	2170	-2806	24	24
+Frame	N5I-0	1753	-3118	168	276
+icon-military	N9G-0	2202	-2806	24	24
+Frame	NJM-0	1950	-3118	152	200
+Frame	PIP-0	2118	-3118	152	196
+Frame	NLY-1	2243	-3233	128	24
+icon-hand-16px	NMR-1	2086	-3288	16	16
+icon-fleet-16px	NN2-1	2086	-3392	16	16
+icon-infrastructure-16px	NNC-1	1982	-3392	16	16
+icon-military-16px	NNP-1	1982	-3288	16	16
+Frame	PKV-0	2205	-3437	90	90
+Frame	NLU-1	2216	-3532	59	12
+Raw	NME-1	818	-3425	4	59
+Raw	PKW-0	2197	-3420	4	59
+icon-infrastructure	N7Y-0	2234	-2806	24	24
+icon-fleet-24px	ND1-0	2464	-3221	24	24
+icon-fleet-16px	N9R-0	2464	-3261	16	16
+icon-hand-24px	NBL-0	2424	-3221	24	24
+icon-hand-16px	SJY-0	2428	-3261	16	16
+icon-magnifiying-16px	N28-0	2428	-3301	16	16
+icon-infrastructure-24px	NDI-0	2504	-3221	24	24
+icon-infrastructure-16px	N8W-0	2504	-3261	16	16
+icon-military-24px	NDZ-0	2544	-3221	24	24
+icon-military-16px	N27-0	2544	-3261	16	16
+Frame	N30-0	1746	-3296	104	96
+Frame	NIE-0	2149	-2756	112	16
+Four windows - Charter (Hand) - 2026-11-14	NNY-0	2020	-1577	1440	810
+styles	Q20-0	1128	-1206	344	106
+Window - Sector	NYL-0	3540	-1577	1464	1136
+Window - Ground	NYM-0	5072	-1577	3320	1855
+Window - Fleet	NYN-0	8456	-1577	2584	1664
+Window - Infrastructure	NYO-0	11120	-1577	3096	1639
+Frame	PRJ-0	854	-3652	152	152
+Frame	PXU-0	656	-3652	152	152
+system-info	PUB-0	196	-3652	96	133
+Frame	PNV-0	495	-3652	103	101
+Frame	PQ9-0	700	-3462	50	2
+Frame	PMT-0	1012	-3652	152	152
+icon-fleet-24px	SN3-0	3119	955	24	24
+icon-fleet-16px	SNI-0	3119	915	16	16
+icon-hand-24px	SNS-0	3079	955	24	24
+icon-hand-16px	SO9-0	3083	915	16	16
+icon-magnifiying-16px	SQC-0	3235	915	16	16
+icon-raw-material-16px	STC-0	3271	915	16	16
+icon-refined-material-16px	SXI-0	3307	915	16	16
+icon-upkeep-16px	SOK-0	3343	915	16	16
+icon-infrastructure-24px	SOZ-0	3159	955	24	24
+icon-infrastructure-16px	SPG-0	3159	915	16	16
+icon-military-24px	SPT-0	3199	955	24	24
+icon-military-16px	SQ3-0	3199	915	16	16

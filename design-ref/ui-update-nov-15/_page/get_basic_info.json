@@ -1,0 +1,600 @@
+{
+ "fileName": "Praedra",
+ "pageName": "UIs---V2--human",
+ "pageId": "p-3-1",
+ "url": "https://app.paper.design/file/01M4XB1NAX45Y7V9FT3DQMTQK1/p-3-1",
+ "rootNodeId": "root_node_p-3-1",
+ "nodeCount": 4623,
+ "artboardCount": 58,
+ "artboards": [
+  {
+   "id": "1I6-1",
+   "name": "base-interface",
+   "childCount": 5,
+   "width": 1280,
+   "height": 832,
+   "worldX": -640,
+   "worldY": -2425
+  },
+  {
+   "id": "1JY-1",
+   "name": "Frame",
+   "childCount": 5,
+   "width": 1280,
+   "height": 832,
+   "worldX": 660,
+   "worldY": -2425
+  },
+  {
+   "id": "RUQ-0",
+   "name": "Sector window - Charter Sector (Hand)",
+   "childCount": 3,
+   "width": 1366,
+   "height": 768,
+   "worldX": 2020,
+   "worldY": -2425
+  },
+  {
+   "id": "S5U-0",
+   "name": "Sector window - Charter Sector (Hand)",
+   "childCount": 3,
+   "width": 1366,
+   "height": 768,
+   "worldX": 1592,
+   "worldY": -140
+  },
+  {
+   "id": "SIG-0",
+   "name": "ui-update-nov-15",
+   "childCount": 11,
+   "width": 1440,
+   "height": 810,
+   "worldX": 1592,
+   "worldY": 710
+  },
+  {
+   "id": "MZW-0",
+   "name": "Ground",
+   "childCount": 7,
+   "width": 128,
+   "height": 7,
+   "worldX": 2490,
+   "worldY": -2736
+  },
+  {
+   "id": "MZG-0",
+   "name": "Energy",
+   "childCount": 14,
+   "width": 128,
+   "height": 6,
+   "worldX": 2466,
+   "worldY": -2645
+  },
+  {
+   "id": "NCQ-0",
+   "name": "icon-hand-24px",
+   "childCount": 10,
+   "width": 16,
+   "height": 16,
+   "worldX": 2146,
+   "worldY": -2802
+  },
+  {
+   "id": "N33-0",
+   "name": "icon-fleet",
+   "childCount": 14,
+   "width": 24,
+   "height": 24,
+   "worldX": 2170,
+   "worldY": -2806
+  },
+  {
+   "id": "N5I-0",
+   "name": "Frame",
+   "childCount": 4,
+   "width": 168,
+   "height": 276,
+   "worldX": 1753,
+   "worldY": -3118
+  },
+  {
+   "id": "N9G-0",
+   "name": "icon-military",
+   "childCount": 9,
+   "width": 24,
+   "height": 24,
+   "worldX": 2202,
+   "worldY": -2806
+  },
+  {
+   "id": "NJM-0",
+   "name": "Frame",
+   "childCount": 6,
+   "width": 152,
+   "height": 200,
+   "worldX": 1950,
+   "worldY": -3118
+  },
+  {
+   "id": "PIP-0",
+   "name": "Frame",
+   "childCount": 6,
+   "width": 152,
+   "height": 196,
+   "worldX": 2118,
+   "worldY": -3118
+  },
+  {
+   "id": "NLY-1",
+   "name": "Frame",
+   "childCount": 2,
+   "width": 128,
+   "height": 24,
+   "worldX": 2243,
+   "worldY": -3233
+  },
+  {
+   "id": "NMR-1",
+   "name": "icon-hand-16px",
+   "childCount": 10,
+   "width": 16,
+   "height": 16,
+   "worldX": 2086,
+   "worldY": -3288
+  },
+  {
+   "id": "NN2-1",
+   "name": "icon-fleet-16px",
+   "childCount": 9,
+   "width": 16,
+   "height": 16,
+   "worldX": 2086,
+   "worldY": -3392
+  },
+  {
+   "id": "NNC-1",
+   "name": "icon-infrastructure-16px",
+   "childCount": 12,
+   "width": 16,
+   "height": 16,
+   "worldX": 1982,
+   "worldY": -3392
+  },
+  {
+   "id": "NNP-1",
+   "name": "icon-military-16px",
+   "childCount": 8,
+   "width": 16,
+   "height": 16,
+   "worldX": 1982,
+   "worldY": -3288
+  },
+  {
+   "id": "PKV-0",
+   "name": "Frame",
+   "childCount": 1,
+   "width": 90,
+   "height": 90,
+   "worldX": 2205,
+   "worldY": -3437
+  },
+  {
+   "id": "NLU-1",
+   "name": "Frame",
+   "childCount": 1,
+   "width": 59,
+   "height": 12,
+   "worldX": 2216,
+   "worldY": -3532
+  },
+  {
+   "id": "NME-1",
+   "name": "Raw",
+   "childCount": 12,
+   "width": 4,
+   "height": 59,
+   "worldX": 818,
+   "worldY": -3425
+  },
+  {
+   "id": "PKW-0",
+   "name": "Raw",
+   "childCount": 12,
+   "width": 4,
+   "height": 59,
+   "worldX": 2197,
+   "worldY": -3420
+  },
+  {
+   "id": "N7Y-0",
+   "name": "icon-infrastructure",
+   "childCount": 16,
+   "width": 24,
+   "height": 24,
+   "worldX": 2234,
+   "worldY": -2806
+  },
+  {
+   "id": "ND1-0",
+   "name": "icon-fleet-24px",
+   "childCount": 14,
+   "width": 24,
+   "height": 24,
+   "worldX": 2464,
+   "worldY": -3221
+  },
+  {
+   "id": "N9R-0",
+   "name": "icon-fleet-16px",
+   "childCount": 9,
+   "width": 16,
+   "height": 16,
+   "worldX": 2464,
+   "worldY": -3261
+  },
+  {
+   "id": "NBL-0",
+   "name": "icon-hand-24px",
+   "childCount": 16,
+   "width": 24,
+   "height": 24,
+   "worldX": 2424,
+   "worldY": -3221
+  },
+  {
+   "id": "SJY-0",
+   "name": "icon-hand-16px",
+   "childCount": 10,
+   "width": 16,
+   "height": 16,
+   "worldX": 2428,
+   "worldY": -3261
+  },
+  {
+   "id": "N28-0",
+   "name": "icon-magnifiying-16px",
+   "childCount": 14,
+   "width": 16,
+   "height": 16,
+   "worldX": 2428,
+   "worldY": -3301
+  },
+  {
+   "id": "NDI-0",
+   "name": "icon-infrastructure-24px",
+   "childCount": 16,
+   "width": 24,
+   "height": 24,
+   "worldX": 2504,
+   "worldY": -3221
+  },
+  {
+   "id": "N8W-0",
+   "name": "icon-infrastructure-16px",
+   "childCount": 12,
+   "width": 16,
+   "height": 16,
+   "worldX": 2504,
+   "worldY": -3261
+  },
+  {
+   "id": "NDZ-0",
+   "name": "icon-military-24px",
+   "childCount": 9,
+   "width": 24,
+   "height": 24,
+   "worldX": 2544,
+   "worldY": -3221
+  },
+  {
+   "id": "N27-0",
+   "name": "icon-military-16px",
+   "childCount": 8,
+   "width": 16,
+   "height": 16,
+   "worldX": 2544,
+   "worldY": -3261
+  },
+  {
+   "id": "N30-0",
+   "name": "Frame",
+   "childCount": 1,
+   "width": 104,
+   "height": 96,
+   "worldX": 1746,
+   "worldY": -3296
+  },
+  {
+   "id": "NIE-0",
+   "name": "Frame",
+   "childCount": 4,
+   "width": 112,
+   "height": 16,
+   "worldX": 2149,
+   "worldY": -2756
+  },
+  {
+   "id": "NNY-0",
+   "name": "Four windows - Charter (Hand) - 2026-11-14",
+   "childCount": 1,
+   "width": 1440,
+   "height": 810,
+   "worldX": 2020,
+   "worldY": -1577
+  },
+  {
+   "id": "Q20-0",
+   "name": "styles",
+   "childCount": 2,
+   "width": 344,
+   "height": 106,
+   "worldX": 1128,
+   "worldY": -1206
+  },
+  {
+   "id": "NYL-0",
+   "name": "Window - Sector",
+   "childCount": 2,
+   "width": 1464,
+   "height": 1136,
+   "worldX": 3540,
+   "worldY": -1577
+  },
+  {
+   "id": "NYM-0",
+   "name": "Window - Ground",
+   "childCount": 2,
+   "width": 3320,
+   "height": 1855,
+   "worldX": 5072,
+   "worldY": -1577
+  },
+  {
+   "id": "NYN-0",
+   "name": "Window - Fleet",
+   "childCount": 2,
+   "width": 2584,
+   "height": 1664,
+   "worldX": 8456,
+   "worldY": -1577
+  },
+  {
+   "id": "NYO-0",
+   "name": "Window - Infrastructure",
+   "childCount": 2,
+   "width": 3096,
+   "height": 1639,
+   "worldX": 11120,
+   "worldY": -1577
+  },
+  {
+   "id": "PRJ-0",
+   "name": "Frame",
+   "childCount": 8,
+   "width": 152,
+   "height": 152,
+   "worldX": 854,
+   "worldY": -3652
+  },
+  {
+   "id": "PXU-0",
+   "name": "Frame",
+   "childCount": 11,
+   "width": 152,
+   "height": 152,
+   "worldX": 656,
+   "worldY": -3652
+  },
+  {
+   "id": "PUB-0",
+   "name": "system-info",
+   "childCount": 10,
+   "width": 96,
+   "height": 133,
+   "worldX": 196,
+   "worldY": -3652
+  },
+  {
+   "id": "PNV-0",
+   "name": "Frame",
+   "childCount": 9,
+   "width": 103,
+   "height": 101,
+   "worldX": 495,
+   "worldY": -3652
+  },
+  {
+   "id": "PQ9-0",
+   "name": "Frame",
+   "childCount": 2,
+   "width": 50,
+   "height": 2,
+   "worldX": 700,
+   "worldY": -3462
+  },
+  {
+   "id": "PMT-0",
+   "name": "Frame",
+   "childCount": 17,
+   "width": 152,
+   "height": 152,
+   "worldX": 1012,
+   "worldY": -3652
+  },
+  {
+   "id": "SN3-0",
+   "name": "icon-fleet-24px",
+   "childCount": 14,
+   "width": 24,
+   "height": 24,
+   "worldX": 3119,
+   "worldY": 955
+  },
+  {
+   "id": "SNI-0",
+   "name": "icon-fleet-16px",
+   "childCount": 9,
+   "width": 16,
+   "height": 16,
+   "worldX": 3119,
+   "worldY": 915
+  },
+  {
+   "id": "SNS-0",
+   "name": "icon-hand-24px",
+   "childCount": 16,
+   "width": 24,
+   "height": 24,
+   "worldX": 3079,
+   "worldY": 955
+  },
+  {
+   "id": "SO9-0",
+   "name": "icon-hand-16px",
+   "childCount": 10,
+   "width": 16,
+   "height": 16,
+   "worldX": 3083,
+   "worldY": 915
+  },
+  {
+   "id": "SQC-0",
+   "name": "icon-magnifiying-16px",
+   "childCount": 14,
+   "width": 16,
+   "height": 16,
+   "worldX": 3235,
+   "worldY": 915
+  },
+  {
+   "id": "STC-0",
+   "name": "icon-raw-material-16px",
+   "childCount": 29,
+   "width": 16,
+   "height": 16,
+   "worldX": 3271,
+   "worldY": 915
+  },
+  {
+   "id": "SXI-0",
+   "name": "icon-refined-material-16px",
+   "childCount": 34,
+   "width": 16,
+   "height": 16,
+   "worldX": 3307,
+   "worldY": 915
+  },
+  {
+   "id": "SOK-0",
+   "name": "icon-upkeep-16px",
+   "childCount": 31,
+   "width": 16,
+   "height": 16,
+   "worldX": 3343,
+   "worldY": 915
+  },
+  {
+   "id": "SOZ-0",
+   "name": "icon-infrastructure-24px",
+   "childCount": 16,
+   "width": 24,
+   "height": 24,
+   "worldX": 3159,
+   "worldY": 955
+  },
+  {
+   "id": "SPG-0",
+   "name": "icon-infrastructure-16px",
+   "childCount": 12,
+   "width": 16,
+   "height": 16,
+   "worldX": 3159,
+   "worldY": 915
+  },
+  {
+   "id": "SPT-0",
+   "name": "icon-military-24px",
+   "childCount": 9,
+   "width": 24,
+   "height": 24,
+   "worldX": 3199,
+   "worldY": 955
+  },
+  {
+   "id": "SQ3-0",
+   "name": "icon-military-16px",
+   "childCount": 8,
+   "width": 16,
+   "height": 16,
+   "worldX": 3199,
+   "worldY": 915
+  }
+ ],
+ "pages": [
+  {
+   "type": "page",
+   "id": "p-1-0",
+   "name": "Page 1",
+   "icon": null,
+   "isActive": false
+  },
+  {
+   "type": "page",
+   "id": "p-4-0",
+   "name": "Art-Direction",
+   "icon": null,
+   "isActive": false
+  },
+  {
+   "type": "page",
+   "id": "p-6-0",
+   "name": "TheCollective",
+   "icon": null,
+   "isActive": false
+  },
+  {
+   "type": "page",
+   "id": "p-5-0",
+   "name": "galaxy",
+   "icon": null,
+   "isActive": false
+  },
+  {
+   "type": "page",
+   "id": "p-2-0",
+   "name": "UIs---V1",
+   "icon": null,
+   "isActive": false
+  },
+  {
+   "type": "page",
+   "id": "p-3-1",
+   "name": "UIs---V2--human",
+   "icon": null,
+   "isActive": true
+  },
+  {
+   "type": "page",
+   "id": "p-7-0",
+   "name": "The Hand",
+   "icon": null,
+   "isActive": false
+  }
+ ],
+ "fontFamilies": [
+  "System Sans-Serif",
+  "Michroma",
+  "Share Tech Mono",
+  "Rajdhani",
+  "Geist Mono",
+  "Space Grotesk",
+  "Geist Pixel",
+  "BitPotion",
+  "Pixelify Sans",
+  "JetBrains Mono",
+  "Inter"
+ ],
+ "tokens": {
+  "items": []
+ }
+}
