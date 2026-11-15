@@ -67,7 +67,9 @@ public class EconomySoakTests
         Assert.True(startups >= firstCycles);
         long smuggleRolls = ev.OfType<ResourceProduced>().Count(e => e.SmugglePercent > 0);
         long picks = ev.OfType<ObjectScrapped>().Count(e => e.Reason == "Autoscrap");
-        Assert.Equal(startups + smuggleRolls + picks, d.Game.Rng.Draws);
+        // only the Classic autoscrap draws; the default InfrastructureFirst picks without a draw (m2-maintenance §Rule (New))
+        long pickDraws = d.Economy.AutoscrapMode == AutoscrapMode.Classic ? picks : 0;
+        Assert.Equal(startups + smuggleRolls + pickDraws, d.Game.Rng.Draws);
         Assert.True(smuggleRolls > 0, "the demo has low-support systems, so smuggling rolls happen");
         Assert.True(picks > 0, "the Hand starts over capacity");
         Assert.Contains(ev, e => e is FleetArrived);
@@ -85,7 +87,8 @@ public class EconomySoakTests
         long overCapacity = ev.OfType<FacilityDestroyed>().Count(e => e.Reason != DestroyReason.Disaster);
         long incidents = 2 /* arming */ + 3 * ev.OfType<ResourceIncident>().Count() + overCapacity
                        + ev.OfType<Disaster>().Sum(x => 2L + x.Rolled);
-        long rest = d.Game.Rng.Draws - smuggleRolls - picks - incidents; // first-cycle draws: at most one per mine or refinery ever placed
+        long pickDraws = d.Economy.AutoscrapMode == AutoscrapMode.Classic ? picks : 0; // InfrastructureFirst (the default) draws nothing
+        long rest = d.Game.Rng.Draws - smuggleRolls - pickDraws - incidents; // first-cycle draws: at most one per mine or refinery ever placed
         Assert.InRange(rest, 0, placed);
     }
 

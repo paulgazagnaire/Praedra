@@ -109,7 +109,7 @@ public partial class GameScreen
         // ---- upkeep (E6)
         int load = eco.Load(Me), cap = eco.Capacity(Me);
         if (load > cap)
-            list.Add(new Item("upkeep-over", Level.Danger, $"Upkeep over the limit: {load} of {cap}", $"Every {eco.Params.ScrapPeriod} days the game scraps one of your units ({(eco.AutoscrapMode == Praedra.Core.Economy.AutoscrapMode.Classic ? "at random" : "cheapest troops first")}) until you are back under it. Build mines and refineries (each pair adds {eco.Params.CapacityPerFacility}), or choose what goes yourself: Scrap in a fleet's window or a system's Forces and Overview.", null,
+            list.Add(new Item("upkeep-over", Level.Danger, $"Upkeep over the limit: {load} of {cap}", $"Every {eco.Params.ScrapPeriod} days the game scraps one of your {eco.AutoscrapMode switch { Praedra.Core.Economy.AutoscrapMode.Classic => "units at random", Praedra.Core.Economy.AutoscrapMode.Smart => "units (cheapest troops first)", _ => "buildings (never a mine or refinery; defences first, construction yards last), then units once no such building is left" }} until you are back under it. Build mines and refineries (each pair adds {eco.Params.CapacityPerFacility}), or choose what goes yourself: Scrap in a fleet's window or a system's Forces and Overview.", null,
                 new() { ("Fleets", () => ShowTab(DrawerTab.Fleets), null) }));
         else if (cap > 0 && load * 10 >= cap * 9)
             list.Add(new Item("upkeep-near", Level.Warn, $"Upkeep near the limit: {load} of {cap}", "A build order that would pass the limit is refused. Build a mine and a refinery to raise it.", null, new()));

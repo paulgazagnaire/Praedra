@@ -294,6 +294,7 @@ public class B5bEconomyTests
     public void B5b_8_AShipPickedInTransitIsScrappedOnArrival()
     {
         var w = new EcoWorld(); // capacity 0, so the Hand is over from the first day: armed at hook 1, first firing at hook 11
+        w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch); the default InfrastructureFirst draws nothing
         w.Hold(Home, Side.Hand, 100);
         int fleet = w.Fleets.AddFleet(Side.Hand, "F", new[] { "Mandate" }, Home);
         int ship = w.State.Fleets[fleet].Ships.Single();

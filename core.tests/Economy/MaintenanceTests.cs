@@ -3,7 +3,7 @@ using Praedra.Core.Economy;
 
 namespace Praedra.Core.Tests.Economy;
 
-// Tests of m2-maintenance (ids M1 to M22) on the real costs file. Hook time T = K + 1; events carry Day = T.
+// Tests of m2-maintenance (ids M1 to M25) on the real costs file. Hook time T = K + 1; events carry Day = T.
 // Hand fixture E: 7 mines and 7 refineries (capacity 350); Orbital Shipyard id 100; 4 Mandate ids 101 to 104;
 // 10 Pacifier Regiments ids 105 to 114; all completed. Load = 13 + 4 x 71 + 10 x 6 = 357.
 public class MaintenanceTests
@@ -69,6 +69,7 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
+        w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch); the default is InfrastructureFirst (M23, M24)
         w.Hold(Home, Side.Hand);
         int a = w.Eco.AddObject(Side.Hand, "Mandate"); // 71
         int b = w.Eco.AddObject(Side.Hand, "Indenture");       // 29
@@ -135,6 +136,7 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
+        w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch); the default is InfrastructureFirst (M23, M24)
         w.Stub!.Expect(0, 14, 0);
         w.Run(11);
         var s = Assert.Single(Scraps(w));
@@ -151,6 +153,7 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
+        w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch); the default is InfrastructureFirst (M23, M24)
         w.Stub!.Expect(0, 14, 14);
         w.Run(11);
         var s = Assert.Single(Scraps(w));
@@ -198,6 +201,58 @@ public class MaintenanceTests
         Assert.Equal(new[] { "AutoscrapWarning", "ObjectScrapped" }, kinds);
         Assert.Equal(13, Scraps(w)[0].Object); // cost 10 beats cost 20
         Assert.Equal(13, w.Events<AutoscrapWarning>()[0].Object);
+    }
+
+    // m2-maintenance M23
+    [Fact]
+    public void M23_InfrastructureFirstIsTheDefaultAndScrapsTheShipyardBeforeAnyUnitWithNoDraws()
+    {
+        // Paul 2026-11-15: "Scrapping must target infrastructure first". Fixture E's only building with upkeep is the shipyard (id 100).
+        var w = FixtureE();
+        Assert.Equal(AutoscrapMode.InfrastructureFirst, w.Eco.AutoscrapMode);
+        w.Run(11);
+        var s = Assert.Single(Scraps(w));
+        Assert.Equal((100, 10, "Autoscrap"), (s.Object, s.Refund, s.Reason));
+        Assert.Equal(344, w.Eco.Load(Side.Hand)); // under 350: no more firings
+        w.Run(10);
+        Assert.Single(Scraps(w));
+        Assert.DoesNotContain(w.Stub!.Requests, r => r.Max is 13 or 14); // autoscrap made no draw
+    }
+
+    // m2-maintenance M24
+    [Fact]
+    public void M24_InfrastructureFirstOrderDefencesTrainingShipyardsConstructionYardsThenUnitsNeverMinesOrRefineries()
+    {
+        var w = new EcoWorld();
+        w.Hold(Home, Side.Hand);
+        w.Mine(Home, id: 1); w.Refinery(Home, id: 2);                       // capacity 50
+        w.Eco.AddFacility(Home, FacilityKind.ConstructionYard, id: 10);     // 10
+        w.Eco.AddFacility(Home, FacilityKind.OrbitalShipyard, id: 11);      // 13
+        w.Eco.AddFacility(Home, FacilityKind.TrainingFacility, id: 12);     // 10
+        w.Eco.AddFacility(Home, FacilityKind.Lien150, id: 13);              // 4
+        w.Eco.AddFacility(Home, FacilityKind.CovenantI, id: 14);            // 7: highest upkeep first inside the defences
+        w.Eco.AddObject(Side.Hand, "Pacifiers", id: 20);                    // 6
+        w.Eco.AddObject(Side.Hand, "Mandate", id: 21);                      // 71: load 121, far over 50
+        w.Run(11 + 10 * 6);                                                 // seven firings: Steps 10, 20, ... 70
+        Assert.Equal(new[] { 14, 13, 12, 11, 10, 20, 21 }, Scraps(w).Select(x => x.Object).ToArray());
+        Assert.NotNull(w.Eco.Find(1)); Assert.NotNull(w.Eco.Find(2));      // the mine and the refinery stay
+        Assert.Equal(0, w.Eco.Load(Side.Hand));
+    }
+
+    // m2-maintenance M25
+    [Fact]
+    public void M25_InfrastructureFirstScrapsTheBuildingWithTheMostUpkeepSoOneFiringEndsTheOverdraft()
+    {
+        // Ponytail on #303: cheapest first would take three Lien-150 batteries (upkeep 4 each) to end 9 over; the Escrow (12) ends it at once.
+        var w = new EcoWorld();
+        w.Hold(Home, Side.Hand);
+        w.Mine(Home, id: 1); w.Refinery(Home, id: 2);                       // capacity 50
+        for (int i = 10; i < 20; i++) w.Eco.AddFacility(Home, FacilityKind.Lien150, id: i); // 40
+        w.Eco.AddFacility(Home, FacilityKind.CovenantI, id: 20);            // 7
+        w.Eco.AddFacility(Home, FacilityKind.EscrowI, id: 21);              // 12: load 59
+        w.Run(11 + 10 * 3);
+        Assert.Equal(21, Assert.Single(Scraps(w)).Object);
+        Assert.Equal(47, w.Eco.Load(Side.Hand));
     }
 
     // m2-maintenance M16
@@ -263,6 +318,7 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = FixtureE();
+        w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch); the default is InfrastructureFirst (M23, M24)
         w.Hold("Caminus", Side.Collective);
         w.Mine("Caminus"); w.Refinery("Caminus");
         for (int i = 0; i < 3; i++) w.Eco.AddObject(Side.Collective, "Ark"); // 210 over capacity 50
@@ -279,6 +335,7 @@ public class MaintenanceTests
         // B5b 2026-10-18: the autoscrap timer is armed when the overdraft is first seen (B5b §6, [EXE-own] 0x5329f0).
         // These worlds are over from Day 0; the 6.7 hook first sees it at T = 1, so the first firing is T = 11 (was 10).
         var w = new EcoWorld();
+        w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch); the default is InfrastructureFirst (M23, M24)
         w.Hold(Home, Side.Hand);
         int done = w.Eco.AddObject(Side.Hand, "Pacifiers");
         w.Eco.AddObject(Side.Hand, "Pacifiers", completed: false);
@@ -294,6 +351,7 @@ public class MaintenanceTests
         (string hash, long draws, int scraps, int firstCycles) Run()
         {
             var w = FixtureE(new EcoWorld(seed: 5));
+            w.Eco.AutoscrapMode = AutoscrapMode.Classic; // the Classic draw (switch)
             w.Run(2000);
             return (GameSave.StateHash(w.Game), w.Game.Rng.Draws, Scraps(w).Count, w.E.Objects.Values.Count(o => o.FirstDone));
         }
