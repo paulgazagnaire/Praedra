@@ -38,6 +38,8 @@ public partial class Main
         Expect(gs.TopText.StartsWith("Day 0"), "the clock shows the day: " + gs.TopText);
         string barWhy = gs.TopBarProblem();
         Expect(barWhy == null, "the top bar as Paul drew it (ui-update-nov-15): stocks, day and clock in it, over the windows, and it fits at every interface size" + (barWhy != null ? ": " + barWhy : ""));
+        string dialogWhy = gs.DialogFitProblem();
+        Expect(dialogWhy == null, "every dialog fits the 1029 x 579 screen of 140% text, its body scrolling under the head (QA-105)" + (dialogWhy != null ? ": " + dialogWhy : ""));
 
         // ---------------------------------------------------------------- a click on the map: the card, then the window on demand
         string cardSys = s.MyHqSystem ?? GameBoot.HandCapital;

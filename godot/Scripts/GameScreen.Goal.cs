@@ -87,9 +87,10 @@ public partial class GameScreen
         var v = ModalBox(_goalPanel);
         bool hand = Me == Side.Hand;
         DialogHead(v, "How you win", GoalWidth, () => HideModal(_goalPanel), Ui.Tag(hand ? "YOU ARE THE HAND" : "YOU ARE THE COLLECTIVE", Ui.You));
+        var body = DialogBody(_goalPanel, v);   // the three cards scroll under the head when the screen is short (QA-105)
 
         // ---- the standard win: the enemy capital AND its key leaders
-        var c1 = GoalCard(v, "Win: take their capital and hold their leaders", "All of these at once. Capture a leader in a battle where they stand, or with an Abduction mission.");
+        var c1 = GoalCard(body, "Win: take their capital and hold their leaders", "All of these at once. Capture a leader in a battle where they stand, or with an Abduction mission.");
         if (hand)
         {
             var hq = S.Fog.KnownHq(Me);
@@ -127,7 +128,7 @@ public partial class GameScreen
             else if (owner == S.Enemy) theirs++;
         }
         int pct = Vm.Rules.DominanceSharePercent;
-        var c2 = GoalCard(v, "Or: hold the galaxy", $"Once the enemy capital has fallen, hold {pct}% of the systems the two sides hold, for {Vm.Rules.DominanceDays} days.");
+        var c2 = GoalCard(body, "Or: hold the galaxy", $"Once the enemy capital has fallen, hold {pct}% of the systems the two sides hold, for {Vm.Rules.DominanceDays} days.");
         if (pct > 0)
         {
             // the run counts only once the enemy capital is gone (rule: m5-setup-and-victory §Victory, capital and control)
@@ -154,7 +155,7 @@ public partial class GameScreen
         c2.AddChild(Ui.Label("Either side also wins at once when the other holds no system.", "Hint"));
 
         // ---- what the enemy needs from you
-        var c3 = GoalCard(v, "What the enemy needs", hand ? "The Collective wins by taking Charter and holding these leaders prisoner." : "The Hand wins by taking the Hearth and holding these leaders prisoner.");
+        var c3 = GoalCard(body, "What the enemy needs", hand ? "The Collective wins by taking Charter and holding these leaders prisoner." : "The Hand wins by taking the Hearth and holding these leaders prisoner.");
         if (hand)
         {
             var (known, owner) = S.KnownOwnerOf(GameBoot.HandCapital);

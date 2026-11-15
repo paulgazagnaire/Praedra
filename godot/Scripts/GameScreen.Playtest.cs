@@ -190,6 +190,40 @@ public partial class GameScreen
         PlaceBar();
         return why;
     }
+
+    /// <summary>The dialogs that hold a body, each with a way to open it (a long report for the report).</summary>
+    IEnumerable<(string Name, Action Open, Control Panel)> Dialogs() => new (string, Action, Control)[]
+    {
+        ("How you win", ShowGoal, _goalPanel), ("Load a game", () => ShowSaves(false), _savePanel), ("Save the game", () => ShowSaves(true), _savePanel),
+        ("Settings", ShowSettings, _settingsPanel), ("How to play", ShowHowTo, _howPanel), ("Victory", () => ShowVictory(S.Player), _victoryPanel),
+        ("Report", () => ShowReport(new Message(S.Game.Day, "A long report", null, MsgKind.Info, "A long report", string.Join("\n", Enumerable.Range(1, 60).Select(i => $"Line {i} of a long report."))) ), _reportPanel),
+    };
+
+    /// <summary>
+    /// QA-105: at 140% the screen is 1029 x 579 and the Goal dialog was 628 px tall, Load 581. Every dialog must fit that screen less its
+    /// margins, its body scrolling for the rest, with the head and the buttons still in it. Null, or what is wrong. Puts the dialogs back as they were.
+    /// </summary>
+    internal string DialogFitProblem(float screen = 579)
+    {
+        var open = _modalStack.ToList();
+        string why = null;
+        foreach (var (name, show, panel) in Dialogs())
+        {
+            show();
+            if (!_dialogBodies.TryGetValue(panel, out var b) || b.Holder.GetParent()?.GetParent() != panel) { why = $"\"{name}\" has no body that can scroll"; break; }
+            FitDialogIn(panel, screen);
+            float tall = panel.GetCombinedMinimumSize().Y, room = screen - 2 * DialogMargin;
+            if (tall > room + 1) { why = $"\"{name}\" is {tall:0} px tall on a {screen:0} px screen (room {room:0})"; break; }
+            bool scrolls = b.Body.GetCombinedMinimumSize().Y > b.Holder.CustomMinimumSize.Y;
+            int right = (int)b.Pad.GetThemeConstant("margin_right");
+            if (scrolls && right >= BarReach) { why = $"\"{name}\" scrolls but its text runs under the bar"; break; }
+        }
+        foreach (var (_, _, panel) in Dialogs()) HideModal(panel);
+        foreach (var p in open) if (!_modalStack.Contains(p)) { _modalStack.Add(p); p.Visible = true; }
+        _modalLayer.Visible = _modalStack.Count > 0;
+        foreach (var p in _modalStack) FitDialog(p);
+        return why;
+    }
     internal float ScreenWidth => _secLayer?.Size.X ?? 0;
     internal string LayerName => _layer.ToString();
     internal Praedra.Core.Clock.Side Player => S.Player;
@@ -375,6 +409,12 @@ public partial class GameScreen
         OpenMgmt(MgKind.Ground, what.Replace('_', ' '), tab: tab);
     }
     public void ShotGoal() => ShowGoal();
+    /// <summary>--dialog NAME (screenshots only): opens that dialog ("How you win", "Load a game", "Settings", "Victory", "Report"...).</summary>
+    public void ShotDialog(string name)
+    {
+        foreach (var (n, show, _) in Dialogs()) if (n.StartsWith(name.Replace('_', ' '), StringComparison.OrdinalIgnoreCase)) { show(); return; }
+        GD.PrintErr("no dialog " + name);
+    }
 
     /// <summary>--strike SYSTEM (screenshots only): a harvester fleet of yours appears there and destroys it, then one day runs, to show a harvested system.</summary>
     public void ShotStrike(string system)
