@@ -90,10 +90,14 @@ public partial class GameScreen
     // Four tall columns side by side (Paul 2026-11-03: "I liked this grid. I think 4 windows side by side could fit"; 1440 wide screen)
     const int MgWidth = 344;
     const int SlotGap = 10;
-    // the wide Infrastructure window: the planet column (two yard cards or three tiles a row), the build column (four build tiles a row,
-    // so a whole tab fits without scrolling), the gap between them, and the window's edges, margins and scroll grabber (BodyWidth)
-    const int InfraLeft = 312, InfraRight = 4 * TileW + 3 * 6;
-    const int WideWidth = InfraLeft + WinGap + InfraRight + 34 + 4;
+    // Every window is one or two of those columns wide (Paul 2026-11-15: "Make sure every window is either one or two columns by default").
+    // Two columns: both columns and the gap between them, so a wide window lines up with the windows beside it.
+    const int TwoColumns = 2 * MgWidth + SlotGap;
+    // the wide Infrastructure window, exactly two columns: the build column (three build tiles a row), the gap, and the planet column (two
+    // yard cards or three tiles a row) taking what is left after the window's edges, margins and scroll grabber (BodyWidth)
+    const int InfraRight = 3 * TileW + 2 * 6;
+    const int WideWidth = TwoColumns;
+    const int InfraLeft = WideWidth - 34 - 4 - WinGap - InfraRight;
 
     static float WidthOf(MgWin w) => w.Wide ? WideWidth : MgWidth;
 
