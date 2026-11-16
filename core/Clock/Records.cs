@@ -89,7 +89,8 @@ public sealed record DebugSetTroopsOrder(long Sequence, Side Side, string System
 /// Praedra.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
 /// </summary>
 /// <para><paramref name="ByAdvisor"/>: the side's advisor gave the order, so its units may later be redirected (m2-construction §Redirect training);
-/// left out of the save and hash while false.</para>
+/// left out of the save and hash while false. Only the advisor (SimpleAi in advisor mode) may set it: the core does not check who sent the order,
+/// so a screen must never set it, or the player's own regiments could be redirected.</para>
 public sealed record BuildOrder(long Sequence, Side Side, string System, YardFamily Family, string Class, int Count, string? Destination,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ByAdvisor = false)
     : Order(Sequence, Side);

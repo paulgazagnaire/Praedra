@@ -64,6 +64,32 @@ public class SibylTests
         Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == o.Sequence);
     }
 
+    // S3: with one idle training facility, the uprising with the fewest regiments standing gets it (a short world rises the same day, so the
+    // ordering that matters in play is among worlds in uprising: fewest regiments, then name)
+    [Fact]
+    public void S3_OneIdleFacility_GoesToTheUprisingWithFewestRegiments()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        var quiet = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Hand).Select(kv => kv.Key).OrderBy(x => x, StringComparer.Ordinal)
+            .Where(w => h.Economy.SlotsOf(w).Populated && !h.Economy.Objects.Any(o => o.System == w && o.Category == ObjectCategory.Facility
+                && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k))).Take(2).ToList();
+        string few = quiet[1], more = quiet[0]; // the one with fewer regiments is second by name, so the name is not what decides
+        var training = HandFacilities(h, FacilityKind.TrainingFacility).Select(o => o.System!).Distinct().ToList();
+        foreach (var t in training.Skip(1)) h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 1, t); // busy: only the first is idle
+        s.Submit(SibylJob.ManageGarrisons, true);
+        h.Control.DebugOrdersEnabled = true;
+        h.Control.SubmitDebugSetTroops(Side.Hand, few, Side.Hand, "Tranches", 1);
+        h.Control.SubmitDebugSetTroops(Side.Hand, more, Side.Hand, "Tranches", 2);
+        h.Control.SubmitDebugSetSupport(Side.Hand, few, 55);
+        h.Control.SubmitDebugSetSupport(Side.Hand, more, 65); // Hand support 35: need 3, so 2 standing rise too
+        h.Game.Step();
+        Assert.True(h.Support.IsUprising(few) && h.Support.IsUprising(more));
+        var orders = s.PlanDay().Where(x => x.Kind != "Redirect").ToList();
+        var o = Assert.Single(orders);
+        Assert.Equal($"3 x Tranches at {training[0]} for {few}", o.Detail);
+    }
+
     // S4: regiments already on order count
     [Fact]
     public void S4_RegimentsOnOrderCount_NoSecondOrder()
@@ -202,6 +228,22 @@ public class SibylTests
         var done = Assert.Single(h.Game.Events.OfType<UnitCompleted>(), e => e.Object == first);
         Assert.Equal(world, done.Destination);
         Assert.False(h.Economy.Objects.Single(o => o.Id == first).ByAdvisor);
+    }
+
+    // m2-construction C26 (save): the advisor's mark survives a save and load, and the loaded game can still redirect
+    [Fact]
+    public void C26_ByAdvisorSurvivesSaveAndLoad()
+    {
+        var h = NewHost();
+        string t = TrainingWorld(h), world = QuietWorld(h);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 2, t, byAdvisor: true);
+        h.Game.Step();
+        var loaded = GameHost.Load(h.SaveWithSettings());
+        Assert.Equal(loaded.StateHash(), h.StateHash());
+        Assert.Equal(2, loaded.Construction.AdvisorUnitsInTraining(t));
+        long seq = loaded.Construction.SubmitRedirectTraining(Side.Hand, t, 2, world);
+        loaded.Game.Step();
+        Assert.Contains(loaded.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == seq);
     }
 
     // m2-construction C27: the player's own project cannot be redirected

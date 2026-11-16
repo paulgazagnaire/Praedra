@@ -294,7 +294,8 @@ public sealed partial class GameSession
             var m = new Message(day, t, null, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
             Messages.Add(m); outcome.New.Add(m);
         }
-        foreach (var x in advised)
+        var accepted = Game.Events.OfType<OrderAccepted>().Select(e => e.Sequence).ToHashSet();
+        foreach (var x in advised.Where(x => accepted.Contains(x.Sequence))) // a refused one shows as "Order refused" only (ReadEvents)
         {
             var (text, place) = SibylWords(x.Detail);
             var m = new Message(day, "Sibyl: " + text + ".", place, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
