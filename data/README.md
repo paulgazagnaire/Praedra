@@ -62,7 +62,7 @@ Loaders read `classic/<file>` and, for `unit-and-facility-costs.csv`, `research-
 
 ## Praedra names (`design/name-migrations.csv`)
 
-`design/name-migrations.csv` (kind, old, new) lists every Classic placeholder name that has a Praedra name: 555 systems, 65 sectors, 29 capital ships, 10 regiments, 9 special forces, 8 fighters, 5 defenses and 65 characters (characters by their short in-game name: the nickname, else the name without its title or epithet, so "Isvet Vahr, called Ledger" is Ledger; Lore Master's table `praedra/specs/engine/names/praedra-names.csv`, approved by Paul 2026-10-25). Two things use it:
+`design/name-migrations.csv` (kind, old, new) lists every Classic placeholder name that has a Praedra name: 555 systems, 65 sectors, 29 capital ships, 10 regiments, 9 special forces, 8 fighters, 5 defenses and 65 characters (characters by their short in-game name: the nickname, else the name without its title or epithet, so "Isvet Nib, called Ledger" is Ledger; Lore Master's table `praedra/specs/engine/names/praedra-names.csv`, approved by Paul 2026-10-25). Two things use it:
 - `tools/names/apply_names.py` rewrote the CSVs here and the strings and comments of the C# code. Files copied in later from the shared specs may still carry the old names: run `python3 -I tools/names/apply_names.py` from the repository root after copying (it leaves renamed files alone; `--check` only reports). It skips every `kind` column (mission kinds are not places).
 - A save written before the rename loads with every old name replaced (`core/Setup/NameMigrations.cs`, called by `GameHost.Load`).
 
