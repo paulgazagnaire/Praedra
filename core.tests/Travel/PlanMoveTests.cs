@@ -44,9 +44,10 @@ public class PlanMoveTests
         Assert.True(via.Ok);
         // v6 re-pin 2026-10-24: Classis is no longer linked to Charter; the path flies the router's own way to the waypoint
         // (Classis, Quies, Consolatio, Charter), then on to The Thaw. Sector spread re-pin 2026-11-12: Classis (467,428) is 79 units from Charter
-        // (was 88) and the router's own way is Classis, Gemina Major, Charter; the prefix is that path, whatever its length.
+        // (was 88) and the router's own way is Classis, Gemina Major, Charter; the prefix is that path, whatever its length. Old-tongue names
+        // 2026-11-16: Bina Major became Gemina Major, which now sorts after Consolatio, so the equal-time tie goes to Consolatio.
         var toCharter = h.PlanMove(Side.Collective, f, "Charter").Path;
-        Assert.Equal(new[] { "Classis", "Gemina Major", "Charter" }, toCharter);
+        Assert.Equal(new[] { "Classis", "Consolatio", "Charter" }, toCharter);
         Assert.Equal(toCharter, via.Path.Take(toCharter.Count));
         Assert.Equal("The Thaw", via.Path[^1]);
         Assert.True(via.ArrivalDay >= fast.ArrivalDay); // the fastest path was the router's own choice
