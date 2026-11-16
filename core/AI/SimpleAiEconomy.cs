@@ -319,11 +319,16 @@ public sealed partial class SimpleAi
     /// <summary>Landed regiments of the side on a system above what its garrison needs.</summary>
     internal List<int> SpareRegimentIds(string system)
     {
+        // the world PlanHqHide sends the Hearth to today keeps all its regiments: the HQ only goes in transit in this Step, so SpecialSystem
+        // does not cover it yet, and a fleet loading them would leave the Hearth arriving on a bare world (SafeHearth, seed 2 on 2026-11-16)
+        if (system == _hqMoveTo) return new List<int>();
         var ids = _h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == _side && o.System == system && o.AboardShip == 0)
             .Select(o => o.Id).ToList();
         int keep = Held(system) ? GarrisonTarget(system) : 0;
         return ids.Count > keep ? ids.Skip(keep).ToList() : new List<int>();
     }
+
+    private string? _hqMoveTo; // PlanHqHide's destination today (null when the HQ stays)
 
     // The Classic AI's garrison wish (B6b §3, EXE-own 0x434e4d..0x43507c): below 70 support min((79 - s) / 10, 6), doubled in an uprising (after the cap);
     // the special world's base is 9 (the claimed-world base 3 and the base drift are the Classic AI's, not built here).

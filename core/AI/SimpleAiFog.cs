@@ -521,6 +521,7 @@ public sealed partial class SimpleAi
         bool toRefuge = best == null && _p.SafeHearth && risk.GetValueOrDefault(at) >= _p.HqMoveRisk;
         if (toRefuge) best = refuge;
         if (best == null) return;
+        _hqMoveTo = best; // no regiment leaves it today (SpareRegimentIds): the HQ leaves in this Step, before it is in transit
         long seq = _h.Fog.SubmitMoveHq(_side, best);
         Note(seq, "MoveHq", $"HQ {at} -> {best} (risk {risk.GetValueOrDefault(at)}{(toRefuge ? ", refuge" : "")})");
     }
