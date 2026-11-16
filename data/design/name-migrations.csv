@@ -692,30 +692,30 @@ character,Lando Calrissian,Foreman
 character,Chewbacca,Oti
 character,Jan Dodonna,Old Debt
 character,Crix Madine,Sister Wake
-character,Carlist Rieekan,June Halvorsen
-character,Afyon,Captain Oz Petrenko
-character,Drayson,Admiral Marta Sobel
+character,Carlist Rieekan,June Halvey
+character,Afyon,Captain Oz Varrick
+character,Drayson,Admiral Mara Keel
 character,Borsk Fey'lya,Day After
 character,Tura Raftican,Static
-character,Bren Derlin,Rowan Achterberg
+character,Bren Derlin,Rowan Furrow
 character,Talon Karrde,Kettle
-character,Narra,Tove Lindqvist
+character,Narra,Tay Linnet
 character,Huoba Neva,Isse
 character,Page,Jackdaw
 character,Syub Snunb,Sefa
 character,Adar Tallon,Gran
-character,Sarin Virgilio,Captain Niko Sava
-character,Vanden Willard,Ivo Hartmann
-character,Roget Jiriss,Ruy Bastos
+character,Sarin Virgilio,Captain Nikan Sev
+character,Vanden Willard,Ives Hart
+character,Roget Jiriss,Ry Bastow
 character,Mazer Rackus,Brother Nail
 character,Orrimaarko,Tavi
-character,Airen Cracken,Ida Kral
-character,Nien Nunb,Tam Szabo
+character,Airen Cracken,Ida Kell
+character,Nien Nunb,Tam Okkel
 character,Hera Syndulla,Captain Sunday
 character,Shara Bey,Wick
-character,Tycho Celchu,Ansel Mbatha
-character,Winter Celchu,Vesna Ilic
-character,Kyle Katarn,Mateus Kale
+character,Tycho Celchu,Ansel Batten
+character,Winter Celchu,Vessa Lisk
+character,Kyle Katarn,Mat Kale
 character,Quarrie,Ushe
 character,Jerjerrod,Project Director Cyprian Galena
 character,Ozzel,Admiral Lucan Mordant
@@ -753,7 +753,7 @@ group,inner_rim,midreach
 group,outer_rim,farreach
 system,Ciénaga,Kelmeer
 sector,Ciénaga Sector,Kelmeer Sector
-character,Vesna Ilić,Vesna Ilic
+character,Vesna Ilić,Vessa Lisk
 system,Amargura,Murreen
 system,Bilokray,Icefair
 system,Cienaga,Kelmeer
@@ -941,3 +941,16 @@ sector,Zlatna Sector,Hardcoin Sector
 sector,Salitre Sector,Coppertoll Sector
 sector,Lesnaya Sector,Taruval Sector
 sector,Altofen Sector,Atuun Sector
+character,Admiral Marta Sobel,Admiral Mara Keel
+character,Ansel Mbatha,Ansel Batten
+character,Captain Niko Sava,Captain Nikan Sev
+character,Captain Oz Petrenko,Captain Oz Varrick
+character,Ida Kral,Ida Kell
+character,Ivo Hartmann,Ives Hart
+character,June Halvorsen,June Halvey
+character,Mateus Kale,Mat Kale
+character,Rowan Achterberg,Rowan Furrow
+character,Ruy Bastos,Ry Bastow
+character,Tam Szabo,Tam Okkel
+character,Tove Lindqvist,Tay Linnet
+character,Vesna Ilic,Vessa Lisk
