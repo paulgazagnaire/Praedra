@@ -205,8 +205,25 @@ public partial class Main
         bool before = UiSettings.PauseUprising;
         Expect(gs.SetCheck("an uprising starts", !before) && UiSettings.PauseUprising == !before, "a pause switch can be ticked");
         gs.SetCheck("an uprising starts", before);
+        // Sibyl, the Hand's advisor (rule: m6-advisor-sibyl): her two switches are in the settings, and a click only marks the wish for today
+        Expect(gs.SetCheck("Manage production", true) && s.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction) && !s.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction),
+            "Sibyl's Manage production can be ticked; it takes effect when the day runs");
+        gs.SetCheck("Manage production", false);
+        Expect(!s.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction) && gs.SetCheck("Manage garrisons", false), "and unticked again, next to Manage garrisons");
         gs.PressKey(Key.Escape);
         Expect(!gs.SettingsVisible, "Esc closes the settings");
+        {
+            // on a game of its own: switched on, she says so, and from the next day orders mines or refineries at the idle construction yard
+            var hs = GameSession.New(s.Data, Side.Hand, Preset.Medium, seed: 1);
+            hs.SetSibyl(Praedra.Core.AI.SibylJob.ManageProduction, true);
+            var said = new System.Collections.Generic.List<Message>();
+            for (int d = 0; d < 3; d++) said.AddRange(hs.StepDay().New);
+            Expect(said.Any(m => m.Text == "Sibyl will manage your production from tomorrow."), "Sibyl says when she starts");
+            var built = said.FirstOrDefault(m => m.Text.StartsWith("Sibyl: a ", StringComparison.Ordinal));
+            Expect(built != null && (built.Text.Contains(" Mine ordered at ") || built.Text.Contains(" Refinery ordered at ")) && built.System != null,
+                "Sibyl orders a mine or refinery the next day: " + (built?.Text ?? "none"));
+            Expect(!said.Any(m => m.Text.StartsWith("Order refused", StringComparison.Ordinal)), "and it is not refused");
+        }
 
         // ---------------------------------------------------------------- quick save, Esc
         Forget(GameBoot.SaveSlot);

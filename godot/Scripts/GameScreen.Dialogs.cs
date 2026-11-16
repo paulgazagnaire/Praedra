@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Praedra.Core.AI;
 using Praedra.Core.Characters;
 
 using Side = Praedra.Core.Clock.Side;
@@ -68,7 +69,7 @@ public partial class GameScreen
             ("Save game...", () => ShowSaves(true), "Six save slots. Ctrl/Cmd+S saves to the last slot you used."),
             ("Load game...", () => ShowSaves(false), "Load one of your saves, or the autosave (every 30 days)."),
             ("Goal...", ShowGoal, "How you win, and how close each side is (G)"),
-            ("Settings...", ShowSettings, "Text and panel size, and which events stop the clock"),
+            ("Settings...", ShowSettings, "Sibyl, your advisor; text and panel size; and which events stop the clock"),
             ("How to play", ShowHowTo, "Short instructions (F1)"),
             ("Back to the start screen...", AskMenu, "Leaves this game (asks first)"),
         })
@@ -428,6 +429,23 @@ public partial class GameScreen
         var v = ModalBox(_settingsPanel);
         DialogHead(v, "Settings", SettingsWidth, () => HideModal(_settingsPanel));
         var body = DialogBody(_settingsPanel, v);
+        if (S.HasAdvisor)
+        {
+            // Sibyl's two switches: game state, saved with this game (rule: m6-advisor-sibyl §Switches)
+            body.AddChild(Ui.Section("Sibyl, your advisor (this game)"));
+            void Job(SibylJob job, string text, string hint)
+            {
+                var cb = new CheckBox { Text = text, ButtonPressed = S.SibylOn(job), FocusMode = FocusModeEnum.None, TooltipText = hint };
+                cb.Toggled += on => S.SetSibyl(job, on);
+                body.AddChild(cb);
+                body.AddChild(Ui.Label(hint, "Hint"));
+            }
+            Job(SibylJob.ManageGarrisons, "Manage garrisons",
+                "Trains regiments for every world short of its garrison, worlds in uprising first.");
+            Job(SibylJob.ManageProduction, "Manage production",
+                "Builds mines and refineries at your idle construction yards, never anything else, and never scraps.");
+            body.AddChild(Ui.Label("She only uses yards you left idle, and starts the day after you switch her on.", "Hint"));
+        }
         body.AddChild(Ui.Section("Size of text and panels"));
         var row = Ui.HBox(6);
         var group = new ButtonGroup();
