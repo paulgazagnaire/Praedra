@@ -238,6 +238,8 @@ public sealed partial class SimpleAi
             var yard = room < count * Maint(cls) ? null : TrainingYardNear(s);
             if (yard == null)
             {
+                // rule: m6-advisor-sibyl §Messages: an uprising she cannot pay for because of the margin is said, so the player can free room
+                if (_advisor && _h.Support.IsUprising(s) && room < count * Maint(cls)) _advisorNotes.Add(s);
                 if (!first) { if (Budget < count * Maint(cls)) continue; return; } // every training yard is busy
                 _garrisonShort += deficit;
                 _garrisonReserve += deficit * Maint(cls); // GarrisonsFirst: unpaid or waiting for a yard, its upkeep is still kept from the ships
@@ -280,6 +282,9 @@ public sealed partial class SimpleAi
     private int _garrisonReserve;
     /// <summary>Regiments the garrisons are still short after the day's orders, for want of a facility or of upkeep room (set by PlanGarrison). rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
     private int _garrisonShort;
+    /// <summary>Worlds in uprising the advisor left without new regiments today for want of upkeep room (ordinal order of planning). rule: m6-advisor-sibyl §Messages.</summary>
+    private readonly List<string> _advisorNotes = new();
+    internal IReadOnlyList<string> AdvisorUnpaidUprisings => _advisorNotes;
     /// <summary>
     /// Training facilities wanted: DesiredTrainingFacilities, and with GarrisonsFirst while far ahead one more per GarrisonShortPerTrainingFacility
     /// regiments the garrisons are short (queued ones count), up to MaxTrainingFacilities (one facility trains about 10 regiments in 250 days:

@@ -43,12 +43,19 @@ public sealed class Sibyl
     /// <summary>The orders queued by the last <see cref="PlanDay"/>.</summary>
     public IReadOnlyList<SubmittedOrder> Submitted { get; private set; } = Array.Empty<SubmittedOrder>();
 
+    /// <summary>
+    /// Worlds in uprising the last <see cref="PlanDay"/> could not send new regiments to because she keeps her upkeep margin (the screen tells the
+    /// player to free room). rule: m6-advisor-sibyl §Manage Garrisons 6, §Messages.
+    /// </summary>
+    public IReadOnlyList<string> UnpaidUprisings { get; private set; } = Array.Empty<string>();
+
     /// <summary>Queue today's orders for the jobs that are on. Reads state only; nothing when both are off.</summary>
     public IReadOnlyList<SubmittedOrder> PlanDay()
     {
         bool g = IsOn(SibylJob.ManageGarrisons), p = IsOn(SibylJob.ManageProduction);
-        if (!g && !p) return Submitted = Array.Empty<SubmittedOrder>();
+        if (!g && !p) { UnpaidUprisings = Array.Empty<string>(); return Submitted = Array.Empty<SubmittedOrder>(); }
         _ai.PlanAdvisor(g, p);
+        UnpaidUprisings = _ai.AdvisorUnpaidUprisings.ToList();
         return Submitted = _ai.Submitted.ToList();
     }
 }
