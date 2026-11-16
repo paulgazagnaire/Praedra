@@ -67,7 +67,7 @@ public sealed partial class SimpleAi
     public void PlanDay()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear();
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear(); _hqMoveTo = null;
         int day = Today, phase = (int)_side;
         _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
