@@ -153,6 +153,28 @@ public class SibylTests
         Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == tf.Sequence);
     }
 
+    // S16 (QA-107): both on, short of room (under 200 free) and a training facility wanted: the idle construction yard builds a mine or refinery first
+    [Fact]
+    public void S16_ShortOfRoom_MinesAndRefineriesComeFirst()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string world = QuietWorld(h);
+        string other = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Hand && kv.Key != world).Select(kv => kv.Key).OrderBy(x => x, StringComparer.Ordinal).First();
+        foreach (var t in HandFacilities(h, FacilityKind.TrainingFacility).Select(o => o.System!).Distinct())
+            h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 1, t);
+        int free = h.Economy.Free(Side.Hand), standing = h.Support.RegimentCount(other);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        s.Submit(SibylJob.ManageProduction, true);
+        h.Control.DebugOrdersEnabled = true;
+        h.Control.SubmitDebugSetTroops(Side.Hand, other, Side.Hand, "Tranches", standing + (free - 150) / 3); // about 150 room left
+        Riot(h, world);
+        Assert.InRange(h.Economy.Free(Side.Hand), 110, 199);
+        var orders = s.PlanDay();
+        Assert.DoesNotContain(orders, x => x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal));
+        Assert.Contains(orders, x => x.Detail.StartsWith("Mine at ", StringComparison.Ordinal) || x.Detail.StartsWith("Refinery at ", StringComparison.Ordinal));
+    }
+
     // S13: the buffer: a calm world at support 62 with no regiments gets one (the rule's need there is 0)
     [Fact]
     public void S13_CalmWorldNearAStep_GetsOneRegiment()
