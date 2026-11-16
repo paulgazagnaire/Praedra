@@ -175,6 +175,25 @@ public class SibylTests
         Assert.Contains(orders, x => x.Detail.StartsWith("Mine at ", StringComparison.Ordinal) || x.Detail.StartsWith("Refinery at ", StringComparison.Ordinal));
     }
 
+    // S17 (QA-108): both on, garrisons short, every training facility busy, construction yards fewer than wanted: a construction yard comes first
+    [Fact]
+    public void S17_YardsBeforeMoreTrainingFacilities()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string world = QuietWorld(h);
+        Assert.NotEmpty(HandFacilities(h, FacilityKind.TrainingFacility));
+        foreach (var t in HandFacilities(h, FacilityKind.TrainingFacility).Select(o => o.System!).Distinct())
+            h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 1, t);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        s.Submit(SibylJob.ManageProduction, true);
+        Riot(h, world);
+        Assert.True(h.Economy.Free(Side.Hand) >= 200);
+        var yards = s.PlanDay().Where(x => !x.Detail.Contains(" x Tranches", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(yards);
+        Assert.StartsWith("Construction Yard at ", yards[0].Detail);
+    }
+
     // S13: the buffer: a calm world at support 62 with no regiments gets one (the rule's need there is 0)
     [Fact]
     public void S13_CalmWorldNearAStep_GetsOneRegiment()
