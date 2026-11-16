@@ -64,8 +64,11 @@ public sealed record SimpleAiParams
     // ---- the player's advisor (Sibyl). rule: m6-advisor-sibyl (Paul 2026-11-16: "Both", "aggressively develop infrastructure"). DEFAULT values.
     /// <summary>A calm world keeps the garrison of its support minus this many points (one more regiment within 5 of a step). rule: m6-advisor-sibyl §Manage Garrisons 2.</summary>
     public int AdvisorBufferSupport { get; init; } = 5;
-    /// <summary>Free upkeep room the advisor keeps when she orders for a calm world or builds a training facility (an uprising may use it all). rule: m6-advisor-sibyl §Manage Garrisons 6.</summary>
-    public int AdvisorUpkeepMargin { get; init; } = 50;
+    /// <summary>
+    /// Free upkeep room every advisor order leaves (regiments, uprisings included, and yards): two mine and refinery pairs of capacity, so one
+    /// capacity loss does not start the autoscrap on the player's yards (QA-106). rule: m6-advisor-sibyl §Manage Garrisons 6, §Manage Production 1a.
+    /// </summary>
+    public int AdvisorUpkeepMargin { get; init; } = 100;
     /// <summary>Most training facilities the advisor builds to. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
     public int AdvisorMaxTrainingFacilities { get; init; } = 12;
     /// <summary>One more training facility per this many regiments still short. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
@@ -74,8 +77,6 @@ public sealed record SimpleAiParams
     public int AdvisorMaxConstructionYards { get; init; } = 12;
     /// <summary>One construction yard wanted per this many populated held worlds (plus one). rule: m6-advisor-sibyl §Manage Production 1a.</summary>
     public int AdvisorWorldsPerConstructionYard { get; init; } = 4;
-    /// <summary>Free upkeep room a new construction yard must leave (one mine and refinery pair's capacity). rule: m6-advisor-sibyl §Manage Production 1a.</summary>
-    public int AdvisorYardUpkeepRoom { get; init; } = 50;
 
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>
     public int InvasionRegimentTarget { get; init; } = 10;

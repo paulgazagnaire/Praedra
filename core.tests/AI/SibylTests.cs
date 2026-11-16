@@ -171,6 +171,31 @@ public class SibylTests
         Assert.Contains(s.PlanDay(), x => x.Detail.StartsWith("1 x Tranches at ", StringComparison.Ordinal) && x.Detail.EndsWith(" for " + world, StringComparison.Ordinal));
     }
 
+    // S14 (QA-106): every order of hers that costs upkeep leaves 100 free (two mine and refinery pairs), uprisings included
+    [Fact]
+    public void S14_HerOrdersLeaveTheUpkeepMargin()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        s.Submit(SibylJob.ManageProduction, true);
+        h.Game.Step();
+        int checkedDays = 0;
+        for (int d = 0; d < 300; d++)
+        {
+            int free = h.Economy.Free(Side.Hand);
+            int spent = s.PlanDay().Where(x => x.Kind == "Build").Sum(x =>
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(x.Detail, @"^(?:(\d+) x )?(.+?) at ");
+                int n = m.Groups[1].Success ? int.Parse(m.Groups[1].Value) : 1;
+                return n * h.Economy.Costs.Get(m.Groups[2].Value).Maintenance;
+            });
+            if (spent > 0) { Assert.True(free - spent >= 100, $"day {h.Game.Day}: free {free}, spent {spent}"); checkedDays++; }
+            h.Game.Step();
+        }
+        Assert.True(checkedDays > 0);
+    }
+
     // S6: a yard with the player's own project is left alone
     [Fact]
     public void S6_AYardWithThePlayersProjectIsNotUsed()
