@@ -46,6 +46,8 @@ public sealed partial class SimpleAi
         foreach (var y in YardSystems(YardFamily.Construction))
         {
             if (!CanOrderAt(y, YardFamily.Construction)) continue;
+            // rule: m6-advisor-sibyl §Manage Production 0 (QA-107): short of room, mines and refineries come back first
+            if (production && Budget < _p.AdvisorRebuildRoom && ChooseFacility(y) is { } rebuild) { OrderFacility(y, rebuild.Item1, rebuild.Item2); continue; }
             if (garrisons && TryAdvisorYard(y, FacilityKind.TrainingFacility, AdvisorTrainingWanted(), _p.AdvisorUpkeepMargin)) continue;
             if (!production) continue;
             if (_h.Economy.Refined(_side) >= _p.ExtraYardRefinedReserve
