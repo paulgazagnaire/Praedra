@@ -18,7 +18,7 @@ internal sealed class HarvesterWorld
     public const string A1 = "A1", A2 = "A2", A3 = "A3", A4 = "A4", A5 = "A5", A6 = "A6", B1 = "B1", B2 = "B2", B3 = "B3";
     public const string HarvesterClass = "harvester", Mandate = "Mandate", Corvette = "Dodger";
     // character record ids (data/classic/characters.csv): four Collective minors and two majors
-    public const int Nobody = 578, Ravilla = 641, Sobel = 840, DayAfter = 841, Tura = 842, Achterberg = 843;
+    public const int Nobody = 578, Ravilla = 641, Keel = 840, DayAfter = 841, Tura = 842, Furrow = 843;
     public const string Sa = "SA", Sb = "SB";
 
     private static readonly Lazy<GameData> _data = new(() =>

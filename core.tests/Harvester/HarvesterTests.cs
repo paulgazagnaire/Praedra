@@ -356,7 +356,7 @@ public class HarvesterTests
     [Fact]
     public void DS5_CharactersOnTheDestroyedPlanet()
     {
-        var minors = new[] { Sobel, DayAfter, Tura, Achterberg };
+        var minors = new[] { Keel, DayAfter, Tura, Furrow };
         ulong seed = FindSeed(MinorCombats(minors), hits: 2);
         var w = new HarvesterWorld(seed: seed);
         w.Hold(A1, Side.Collective, 80); w.Hold(B3, Side.Collective, 80); w.Hold(A6, Side.Collective, 80);
@@ -392,7 +392,7 @@ public class HarvesterTests
     [Fact]
     public void DS5_NoHeldSystemLeftMeansCaptured()
     {
-        var minors = new[] { Sobel, DayAfter, Tura, Achterberg };
+        var minors = new[] { Keel, DayAfter, Tura, Furrow };
         ulong seed = FindSeed(MinorCombats(minors), hits: 2);
         var w = new HarvesterWorld(seed: seed);
         w.Hold(A1, Side.Collective, 80);
@@ -709,7 +709,7 @@ public class HarvesterTests
         for (int i = 0; i < 5; i++) w.Host.Economy.AddObject(Side.Hand, "Tranches", A4);
         w.Host.Economy.AddFacility(A3, FacilityKind.Mine);
         w.Fleet(Side.Collective, A3, Corvette, Corvette);
-        foreach (var m in new[] { Sobel, DayAfter, Tura, Achterberg }) w.Person(m, A3);
+        foreach (var m in new[] { Keel, DayAfter, Tura, Furrow }) w.Person(m, A3);
         w.Person(Nobody, A3);
         int first = w.Harvester(Side.Hand, A3, Mandate), second = w.Harvester(Side.Hand, A5);
         w.Game.Step();

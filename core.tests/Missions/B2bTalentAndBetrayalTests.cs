@@ -10,7 +10,7 @@ namespace Praedra.Core.Tests.Missions;
 // the success rolls. B2d: the team starts at H so the leaving and arriving checks have no sensers (sensers stand in the check's scopes).
 public class B2bTalentAndBetrayalTests
 {
-    private const int Crix = 837, Halvorsen = 838; // Collective characters who can betray (nobetray 0)
+    private const int Crix = 837, Halvey = 838; // Collective characters who can betray (nobetray 0)
 
     private static CharacterRecord Talent(MissionWorld w, int id, int force)
     {
@@ -257,12 +257,12 @@ public class B2bTalentAndBetrayalTests
     [Fact]
     public void B2b11_ShiftLoyaltyNoOps()
     {
-        var w = World(agents: new[] { (Foreman, 0), (Varo, 0), (Halvorsen, 0) });
-        w.Ch.Get(Halvorsen)!.Loyalty = 50;
+        var w = World(agents: new[] { (Foreman, 0), (Varo, 0), (Halvey, 0) });
+        w.Ch.Get(Halvey)!.Loyalty = 50;
         var ctx = new StepContext(w.Game, w.Game.Day);
         w.Ch.ShiftLoyalty(ctx, 3, 5);
         w.Ch.ShiftLoyalty(ctx, CharacterModule.SideNumberCollective, 0);
-        Assert.Equal((100, 100, 50), (w.Ch.Get(Foreman)!.Loyalty, w.Ch.Get(Varo)!.Loyalty, w.Ch.Get(Halvorsen)!.Loyalty));
+        Assert.Equal((100, 100, 50), (w.Ch.Get(Foreman)!.Loyalty, w.Ch.Get(Varo)!.Loyalty, w.Ch.Get(Halvey)!.Loyalty));
         Assert.Empty(w.Events<LoyaltyChanged>());
     }
 
