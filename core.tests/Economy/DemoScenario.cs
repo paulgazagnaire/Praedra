@@ -73,7 +73,7 @@ public sealed class DemoScenario
         fleets.AddFleet(Side.Hand, "Navalia Picket", new[] { "Mandate" }, "Navalia");
         fleets.AddFleet(Side.Collective, "Caminus Picket", new[] { "Dodger" }, "Caminus");
         eco.AddObject(Side.Collective, "Swift", "Caminus"); // a squadron based at Caminus (a corvette has no berth)
-        int interdictor = fleets.AddFleet(Side.Hand, "Interdiction", new[] { "Subpoena" }, "Tierra Larga");
+        int interdictor = fleets.AddFleet(Side.Hand, "Interdiction", new[] { "Subpoena" }, "Annavori");
         int transport = fleets.AddFleet(Side.Collective, "Supply", new[] { "Mule" }, "The Thaw");
         fleets.SubmitMove(Side.Hand, interdictor, "Drift Harbour");
         fleets.SubmitMove(Side.Collective, transport, "The Shoal");

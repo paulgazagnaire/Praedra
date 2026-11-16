@@ -272,7 +272,7 @@ public sealed record SimpleAiParams
     /// FogUnknownDefenders (FogUnknownWinDefenders on the winning system) as if never seen. Only espionage, an assault or holding the system
     /// shows group D (m5-fog-and-hq §F1), so an old count is never refreshed by a fleet passing by, and with the staleness margin it only grew.
     /// An assault on a wrong guess shows the true garrison, so a bad guess corrects itself. AI trainer 2026-10-17 (QA-5): in seed 8 Hard the
-    /// Hand, holding 375-449 systems, never took Two Crowns and Hutan Raya (0 regiments each from day 2400) because it still believed the 6
+    /// Hand, holding 375-449 systems, never took Two Crowns and Hal Taru (0 regiments each from day 2400) because it still believed the 6
     /// regiments it saw there around day 1250 (9 with the margin, so 18 regiments asked aboard). 0 = never forget (the AI of before).
     /// </summary>
     public int FogGroundForgetDays { get; init; } = 365;

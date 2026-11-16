@@ -15,9 +15,9 @@ public class NewGameTests
     private static GameHost Make(StartPreset p, int seed = 1, GameSettings? s = null) =>
         NewGame.Create(GameData.Default, new NewGameOptions { Seed = seed, Preset = p, Settings = (s ?? new GameSettings()) with { DealMode = DealMode.File } });
 
-    // v6 re-pin 2026-10-24: the day-one files' HQ is Altofen on the spiral map (deal_day_one.py, setup-victory/09; was Cutbank, now only 122 units
+    // v6 re-pin 2026-10-24: the day-one files' HQ is Atuun on the spiral map (deal_day_one.py, setup-victory/09; was Cutbank, now only 122 units
     // from Charter, inside the 200-unit HQ rule).
-    private const string FileHq = "Altofen";
+    private const string FileHq = "Atuun";
 
     private static int Held(GameHost h, Side s) => h.Game.State.SystemOwners.Count(kv => kv.Value == s);
 

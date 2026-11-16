@@ -179,7 +179,7 @@ public class B4SetupTests
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal), there.OrderBy(kv => kv.Key, StringComparer.Ordinal));
             Assert.All(h.Economy.Objects.Where(o => o.System == hq && o.Category != ObjectCategory.Facility), o => Assert.True(o.Completed));
         }
-        // File mode too (the HQ is Altofen in the v6 day-one files; Cutbank on v5)
+        // File mode too (the HQ is Atuun in the v6 day-one files; Cutbank on v5)
         var f = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = Classic with { DealMode = DealMode.File } });
         Assert.Equal(2, Standing(f, Side.Collective, "Militia", f.HqSystem!));
         // switch off (DEFAULT): only the garrison stands there (min_garrison 1 of the data), no Fleet regiment, no squadron

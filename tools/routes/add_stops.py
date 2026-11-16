@@ -6,7 +6,7 @@ link A-B is split into A-C and C-B on the same route, C being the system closest
 gives way to the great route (a pair of systems has one link only). Repeats until no great-route link passes a system, then writes
 the lanes file and the planets' route columns back and prints every split. A second run finds nothing to do and changes nothing.
 Then Paul's own route edits (MOVES) are applied, also idempotent: Yard Road runs Fusoria - Commonhold instead of turning back through
-Meseta (Paul 2026-11-12).
+Neverdown (Paul 2026-11-12).
 usage: python3 tools/routes/add_stops.py   (run from the repository root)
 """
 import sys, os, csv, collections
@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from geo import load, pt_seg, ROOT, write_planets
 
 # Paul 2026-11-12: "The route should connect Fusoria to Commonhold. and we should remove the route between Maseta and Commonhold."
-MOVES = [(('Commonhold', 'Meseta'), ('Fusoria', 'Commonhold'))]  # (old pair, new pair): the link keeps its row, route and tier
+MOVES = [(('Commonhold', 'Neverdown'), ('Fusoria', 'Commonhold'))]  # (old pair, new pair): the link keeps its row, route and tier
 NEAR = 5.0  # map units as drawn; the decision card's figure (8 great-route links passed a system closer than this)
 L, P, raw, D = load()
 pair = lambda a, b: (a, b) if a < b else (b, a)

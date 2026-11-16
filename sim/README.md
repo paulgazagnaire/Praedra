@@ -37,7 +37,7 @@ Builds `core/Setup/TestCampaign.cs` through the composition root (`GameHost`, wh
 support, construction and control in order) and runs it. This is a TEST scenario, not the real game start: about 17 systems per side in two
 regions with support values, mines, refineries, yards (the starting-facilities rows that fall inside the regions), garrisons, a standing
 one reserve fleet of real ships per side (they pay upkeep) and a few fleets; then fixed scripted orders by day (periodic build orders, fleet moves, a Subpoena fleet
-parked on Tierra Larga from day 60 for a blockade) and one scripted capture (Hand takes Fiducia on day 400, a stand-in for the M3 assault).
+parked on Annavori from day 60 for a blockade) and one scripted capture (Hand takes Fiducia on day 400, a stand-in for the M3 assault).
 It prints a summary per side on day 0 and every 365 days (systems held, raw, refined, free maintenance with capacity and load, facilities,
 ships, fighters, regiments, uprisings active, items built, objects scrapped), then the event totals, the final state hash, the random
 draws and a runtime line (the runner's own clock). Same seed and ruleset, same output except the runtime. `--ruleset` is the support

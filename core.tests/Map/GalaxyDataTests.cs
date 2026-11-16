@@ -42,7 +42,7 @@ public class GalaxyDataTests
     [Fact]
     public void G3_RouteSystems() // m1-galaxy-data G3: 285 systems on a route, the rest reached by free travel only
     {
-        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example. QA-40 re-pin 2026-10-25: 359. Route thinning 2026-11-11: 283. Route stops 2026-11-12: 285 (Ribeira and The Notch).
+        // v6 re-pin 2026-10-24: 358 on a route (was 332); The Shoal is on a route now, The Thaw is the off-route example. QA-40 re-pin 2026-10-25: 359. Route thinning 2026-11-11: 283. Route stops 2026-11-12: 285 (Nalivol and The Notch).
         Assert.Equal(285, G.Systems.Count(s => G.OnRoute(s.Index)));
         Assert.Equal(285, G.Systems.Count(s => G.NeighboursOf(s.Index).Count > 0));
         Assert.Empty(G.NeighboursOf(G.Get("Glasswood").Index));
@@ -68,9 +68,9 @@ public class GalaxyDataTests
     public void G5_RouteInferredLaneIsTier1() // m1-galaxy-data G5
     {
         // v6 re-pin 2026-10-24: v6 has no route-inferred links; the kind stays tier 1 in the tier table, and a real great-route
-        // link (Charter-Bina Major, Trunk Line) is tier 1 with factor 300.
+        // link (Charter-Gemina Major, Trunk Line) is tier 1 with factor 300.
         Assert.Equal(1, TestData.Tiers.TierOfKind("route-inferred"));
-        var l = G.FindLane("Charter", "Bina Major")!;
+        var l = G.FindLane("Charter", "Gemina Major")!;
         Assert.Equal("route", l.Kind);
         Assert.Equal("Trunk Line", l.Routes);
         Assert.Equal(1, l.Tier);
@@ -80,12 +80,12 @@ public class GalaxyDataTests
     [Fact]
     public void G6_OfficialLaneIsTier2() // m1-galaxy-data G6
     {
-        var l = G.FindLane("Consolatio", "Bina Major")!; // route thinning 2026-11-11: Charter has no minor link left; Bina Major's, next door (was Charter-Hartwell, Tutela)
+        var l = G.FindLane("Consolatio", "Gemina Major")!; // route thinning 2026-11-11: Charter has no minor link left; Gemina Major's, next door (was Charter-Hartwell, Tutela)
         Assert.Equal("official", l.Kind);
         Assert.Equal(2, l.Tier);
         Assert.Equal(150, l.FactorPercent);
-        Assert.Equal("bridge", G.FindLane("Pennygate", "Tierra Larga")!.Kind); // v6 re-pin 2026-10-24 (was Greysand-Felsite)
-        Assert.Equal(2, G.FindLane("Pennygate", "Tierra Larga")!.Tier); // bridge: a minor link
+        Assert.Equal("bridge", G.FindLane("Pennygate", "Annavori")!.Kind); // v6 re-pin 2026-10-24 (was Greysand-Felsite)
+        Assert.Equal(2, G.FindLane("Pennygate", "Annavori")!.Tier); // bridge: a minor link
     }
 
     [Fact]
@@ -99,15 +99,15 @@ public class GalaxyDataTests
     public void G8_BaseDistanceCharterClassis() // m1-galaxy-data G8
     {
         // v6 re-pin 2026-10-24: Charter sits at the centre (500,500); Classis is no longer linked to it, so the stored
-        // lane base distance is checked on Charter-Bina Major (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
+        // lane base distance is checked on Charter-Gemina Major (503,471): 3*3 + 29*29 = 850, isqrt 29, /5 = 5.
         // Sector spread re-pin 2026-11-12: the Classis Sector moved; Classis (467,428) (was (454,424): 46*46 + 76*76 = 7892, isqrt 88).
-        var c = G.Get("Charter"); var k = G.Get("Classis"); var t = G.Get("Bina Major");
+        var c = G.Get("Charter"); var k = G.Get("Classis"); var t = G.Get("Gemina Major");
         Assert.Equal((500, 500), (c.MapX, c.MapY));
         Assert.Equal((467, 428), (k.MapX, k.MapY));
         Assert.Equal(6273, 33 * 33 + 72 * 72);
         Assert.Equal(79, (int)GalaxyLoader.Isqrt(6273));
         Assert.Equal((503, 471), (t.MapX, t.MapY));
-        Assert.Equal(5, G.FindLane("Charter", "Bina Major")!.BaseDistance);
+        Assert.Equal(5, G.FindLane("Charter", "Gemina Major")!.BaseDistance);
     }
 
     [Fact]
@@ -151,14 +151,14 @@ public class GalaxyDataTests
     public void G12_SamePairTwiceFails() // m1-galaxy-data G12 (check 3)
     {
         var ex = Assert.Throws<DataLoadException>(() =>
-            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Bina Major,Charter,route,Trunk Line,,\n", TestData.Tiers));
+            GalaxyLoader.Load(TestData.PlanetsText, TestData.LanesText + "Gemina Major,Charter,route,Trunk Line,,\n", TestData.Tiers));
         Assert.Contains("already has a lane", ex.Message);
     }
 
     [Fact]
     public void G13_NeighboursBothWaysAndSorted() // m1-galaxy-data G13
     {
-        var a = G.Get("Charter"); var b = G.Get("Bina Major"); // v6 re-pin 2026-10-24 (Classis-Hiberna is no longer a link)
+        var a = G.Get("Charter"); var b = G.Get("Gemina Major"); // v6 re-pin 2026-10-24 (Classis-Hiberna is no longer a link)
         Assert.Contains(G.NeighboursOf(a.Index), n => n.System == b.Index);
         Assert.Contains(G.NeighboursOf(b.Index), n => n.System == a.Index);
         foreach (var s in G.Systems)

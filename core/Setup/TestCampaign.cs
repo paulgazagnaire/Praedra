@@ -38,7 +38,7 @@ public sealed class TestCampaign
     /// </summary>
     public const int CaptureRegiments = 6;
     /// <summary>The Collective system the Hand's interdiction fleet parks at, from day <see cref="BlockadeFrom"/>.</summary>
-    public const string BlockadedSystem = "Tierra Larga";
+    public const string BlockadedSystem = "Annavori";
     public const int BlockadeFrom = 60;
     public const string InterdictionFleet = "Interdiction";
     /// <summary>
@@ -103,12 +103,12 @@ public sealed class TestCampaign
     private const string RebArmy = "Militia", RebFleet = "Deckhands";
 
     // Hand: Charter and its neighbours, Navalia and Classis (starting yards). Collective support is low where the Hand is popular.
-    // Tranquilla starts 2 regiments short (uprising from the first day). Granero is garrisoned with fleet regiments (weight 0.6 in New).
+    // Tranquilla starts 2 regiments short (uprising from the first day). Tiryal is garrisoned with fleet regiments (weight 0.6 in New).
     private static readonly Site[] HandRegion =
     {
-        new("Charter", 10, 3, 3, 0, Storm, 2), new("Mirabel", 15, 3, 2, 0, Army), new("Classis", 65, 2, 2, 0, Army),
+        new("Charter", 10, 3, 3, 0, Storm, 2), new("Unbought", 15, 3, 2, 0, Army), new("Classis", 65, 2, 2, 0, Army),
         new("Navalia", 20, 2, 2, 0, Army), new("Tutela", 25, 0, 0, 0, Army), new("Tranquilla", 70, 0, 0, 2, Army),
-        new("Belmare", 30, 2, 1, 0, Army), new("Gnomon", 40, 0, 0, 0, Army), new("Granero", 55, 0, 0, 0, ImpFleet),
+        new("Hal Lumet", 30, 2, 1, 0, Army), new("Gnomon", 40, 0, 0, 0, Army), new("Tiryal", 55, 0, 0, 0, ImpFleet),
         new("Fusoria", 45, 0, 0, 0, Army), new("Porphyry", 20, 3, 3, 0, Army), new("Magnetite III", 30, 2, 2, 0, Army),
         new("Hiberna", 55, 0, 0, 0, Army), new("Vigilia", 25, 2, 2, 0, Army), new("Fiscus", 40, 2, 2, 0, Army),
         new("Vallum", 35, 0, 0, 0, Army), new("Ommata", 45, 0, 0, 0, Army), new("Tormentum", 25, 2, 2, 0, Army),
@@ -119,8 +119,8 @@ public sealed class TestCampaign
     {
         new("Caminus", 80, 2, 2, 0, RebArmy, 2), new("Cunabula", 75, 2, 1, 0, RebArmy), new("Wellhead", 70, 0, 0, 0, RebArmy),
         new("Glassfield", 65, 0, 0, 0, RebArmy), new("Halfpenny", 80, 2, 2, 0, RebArmy), new("Opsis", 90, 0, 0, 0, RebArmy),
-        new("Fiducia", 55, 2, 2, 0, RebArmy, 1), new("Ribeira", 85, 0, 0, 0, RebArmy), new("Feriae", 85, 0, 0, 0, RebArmy),
-        new("Tierra Larga", 50, 2, 2, 0, RebArmy), new("Clinker", 70, 0, 0, 0, RebArmy), new("Last Platform", 95, 0, 0, 0, RebArmy),
+        new("Fiducia", 55, 2, 2, 0, RebArmy, 1), new("Nalivol", 85, 0, 0, 0, RebArmy), new("Feriae", 85, 0, 0, 0, RebArmy),
+        new("Annavori", 50, 2, 2, 0, RebArmy), new("Clinker", 70, 0, 0, 0, RebArmy), new("Last Platform", 95, 0, 0, 0, RebArmy),
         new("Endline", 35, 0, 0, 2, RebArmy), new("Salus", 60, 2, 2, 0, RebArmy), new("Folio", 75, 0, 0, 0, RebArmy),
         new("Craterhold", 65, 1, 2, 0, RebFleet),
     };
@@ -133,8 +133,8 @@ public sealed class TestCampaign
         ("Navalia", FacilityKind.ConstructionYard), ("Fiscus", FacilityKind.TrainingFacility),
         ("Caminus", FacilityKind.TrainingFacility), ("Caminus", FacilityKind.ConstructionYard),
         ("Fiducia", FacilityKind.TrainingFacility), ("Fiducia", FacilityKind.ConstructionYard),
-        ("Tierra Larga", FacilityKind.TrainingFacility), ("Salus", FacilityKind.OrbitalShipyard),
-        ("Tierra Larga", FacilityKind.Lien150), // the battery of the scripted bombardment (m3-planetary-defenses)
+        ("Annavori", FacilityKind.TrainingFacility), ("Salus", FacilityKind.OrbitalShipyard),
+        ("Annavori", FacilityKind.Lien150), // the battery of the scripted bombardment (m3-planetary-defenses)
     };
 
     // Standing "navy": the ships of each side's reserve fleet. They carry maintenance load like every fleet ship (one registry, m3-fleets).
@@ -237,7 +237,7 @@ public sealed class TestCampaign
         new(220, 500, Side.Hand, "Navalia", YardFamily.Construction, "Refinery", 1, "Gnomon"),
         // Collective
         new(10, 100, Side.Collective, "Caminus", YardFamily.Training, RebArmy, 3, "Endline"),
-        new(40, 90, Side.Collective, "Tierra Larga", YardFamily.Training, RebArmy, 2, "Tierra Larga"),
+        new(40, 90, Side.Collective, "Annavori", YardFamily.Training, RebArmy, 2, "Annavori"),
         new(30, 150, Side.Collective, "Caminus", YardFamily.Shipyard, "Dodger", 2),
         new(20, 400, Side.Collective, "Salus", YardFamily.Shipyard, "Mender", 1, "Caminus"),
         new(200, 400, Side.Collective, "Salus", YardFamily.Shipyard, "Swift", 3),
