@@ -294,7 +294,8 @@ public sealed partial class GameSession
             var m = new Message(day, t, null, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
             Messages.Add(m); outcome.New.Add(m);
         }
-        foreach (var x in advised)
+        var accepted = Game.Events.OfType<OrderAccepted>().Select(e => e.Sequence).ToHashSet();
+        foreach (var x in advised.Where(x => accepted.Contains(x.Sequence))) // a refused one shows as "Order refused" only (ReadEvents)
         {
             var (text, place) = SibylWords(x.Detail);
             var m = new Message(day, "Sibyl: " + text + ".", place, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
@@ -316,7 +317,7 @@ public sealed partial class GameSession
 
     /// <summary>
     /// Sibyl's order in plain words and the world it is for: "3 x Tranches at Charter for Remedium" becomes "3 Tranches ordered at Charter for
-    /// Remedium"; "Mine at Tamarisk from Charter" becomes "a Mine ordered at Charter for Tamarisk".
+    /// Remedium"; "Mine at Tamarisk from Charter" becomes "a Mine ordered at Charter for Tamarisk"; a redirect names the uprising world. rule: m6-advisor-sibyl §Messages.
     /// </summary>
     static string SibylJobWords(SibylJob job, bool ing = false) => job == SibylJob.ManageGarrisons
         ? (ing ? "managing your garrisons" : "manage your garrisons")
@@ -324,6 +325,9 @@ public sealed partial class GameSession
 
     static (string Text, string Place) SibylWords(string detail)
     {
+        var moved = System.Text.RegularExpressions.Regex.Match(detail, @"^(\d+) x (.+) in training at (.+) redirected from (.+) to (.+)$");
+        if (moved.Success)
+            return ($"{moved.Groups[1].Value} {moved.Groups[2].Value} in training at {moved.Groups[3].Value} now go to {moved.Groups[5].Value} (uprising) instead of {moved.Groups[4].Value}", moved.Groups[5].Value);
         var troops = System.Text.RegularExpressions.Regex.Match(detail, @"^(\d+) x (.+) at (.+) for (.+)$");
         if (troops.Success)
             return ($"{troops.Groups[1].Value} {troops.Groups[2].Value} ordered at {troops.Groups[3].Value} for {troops.Groups[4].Value}", troops.Groups[4].Value);

@@ -145,7 +145,7 @@ public sealed partial class SimpleAi
 
     private void OrderRegiments(string yard, string cls, int count, string dest)
     {
-        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Training, cls, count, dest);
+        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Training, cls, count, dest, byAdvisor: _advisor); // m2-construction §Redirect training
         Note(seq, "Build", $"{count} x {cls} at {yard} for {dest}");
         _busy.Add((yard, YardFamily.Training));
         _plannedLoad += count * Maint(cls);
@@ -172,6 +172,7 @@ public sealed partial class SimpleAi
         if (!Available(cls)) return;
         var pending = PendingRegiments();
         var held = HeldSystems();
+        var redirected = new HashSet<string>(StringComparer.Ordinal);
         // far ahead, the side needs its garrisons more than new warships; the advisor always puts uprisings first (m6-advisor-sibyl §Manage Garrisons 4)
         bool first = _advisor || (_p.GarrisonsFirst && Finishing());
         // GarrisonsFirst: the worlds in uprising, then the fewest regiments, get the upkeep first (ties: ordinal name)
@@ -181,6 +182,8 @@ public sealed partial class SimpleAi
             int need = GarrisonTarget(s);
             if (need == 0) continue;
             int deficit = need - _h.Support.RegimentCount(s) - pending.GetValueOrDefault(s);
+            if (deficit <= 0) continue;
+            if (_advisor && _h.Support.IsUprising(s)) deficit -= RedirectForUprising(s, cls, deficit, pending, redirected);
             if (deficit <= 0) continue;
             int count = Math.Min(deficit, _p.GarrisonBatch);
             if (first) while (count > 1 && Budget < count * Maint(cls)) count--;
@@ -194,6 +197,34 @@ public sealed partial class SimpleAi
             OrderRegiments(yard, cls, count, s);
             if (first) _garrisonReserve += (deficit - count) * Maint(cls);
         }
+    }
+
+    /// <summary>
+    /// The advisor sends her own regiments still in training to a world in uprising: training facilities by travel time to the world (unrated
+    /// speed; ties: ordinal), one redirect per facility a day, never from an order bound for another world in uprising. The world they were
+    /// bound for no longer counts them. Returns how many were redirected. rule: m6-advisor-sibyl §Manage Garrisons 8; m2-construction §Redirect training.
+    /// </summary>
+    private int RedirectForUprising(string world, string cls, int deficit, Dictionary<string, int> pending, HashSet<string> redirected)
+    {
+        int moved = 0;
+        foreach (var t in YardSystems(YardFamily.Training).OrderBy(t => Ticks(t, world, UnratedSpeed)).ThenBy(t => t, StringComparer.Ordinal))
+        {
+            if (moved >= deficit) break;
+            if (redirected.Contains(t)) continue;
+            var pr = _h.Construction.ProjectAt(t, YardFamily.Training);
+            if (pr == null || pr.Side != _side) continue;
+            string from = pr.Destination;
+            if (from == world || (Held(from) && _h.Support.IsUprising(from))) continue;
+            int k = Math.Min(_h.Construction.AdvisorUnitsInTraining(t), deficit - moved);
+            if (k <= 0) continue;
+            long seq = _h.Construction.SubmitRedirectTraining(_side, t, k, world);
+            Note(seq, "Redirect", $"{k} x {cls} in training at {t} redirected from {from} to {world}");
+            redirected.Add(t);
+            pending[world] = pending.GetValueOrDefault(world) + k;
+            pending[from] = pending.GetValueOrDefault(from) - k;
+            moved += k;
+        }
+        return moved;
     }
 
     /// <summary>GarrisonsFirst: upkeep the garrisons still short of their need would take, kept from new ships (set by PlanGarrison).</summary>
