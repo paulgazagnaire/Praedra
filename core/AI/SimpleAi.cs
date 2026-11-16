@@ -93,6 +93,7 @@ public sealed partial class SimpleAi
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
         _hops = null; _finishing = null;
         _rng = new GameRng((ulong)Today * 2 + (ulong)_side + 0x5B1B, 0xA1);
+        _advisorNotes.Clear();
         _view = null; // her own side's worlds and yards only: nothing of the other side is read
         _advisor = true;
         try

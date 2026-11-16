@@ -196,6 +196,26 @@ public class SibylTests
         Assert.True(checkedDays > 0);
     }
 
+    // S15: with less than her margin free, an uprising gets no new regiments, and she says so
+    [Fact]
+    public void S15_NoRoomForAnUprising_IsSaid()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string world = QuietWorld(h);
+        string other = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Hand && kv.Key != world).Select(kv => kv.Key).OrderBy(x => x, StringComparer.Ordinal).First();
+        int free = h.Economy.Free(Side.Hand), standing = h.Support.RegimentCount(other);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        h.Control.DebugOrdersEnabled = true;
+        h.Control.SubmitDebugSetTroops(Side.Hand, other, Side.Hand, "Tranches", standing + (free - 60) / 3); // about 60 room left
+        Riot(h, world);
+        int room = h.Economy.Free(Side.Hand);
+        Assert.InRange(room, 0, 99);
+        var orders = s.PlanDay();
+        Assert.DoesNotContain(orders, x => x.Detail.EndsWith(" for " + world, StringComparison.Ordinal));
+        Assert.Contains(world, s.UnpaidUprisings);
+    }
+
     // S6: a yard with the player's own project is left alone
     [Fact]
     public void S6_AYardWithThePlayersProjectIsNotUsed()

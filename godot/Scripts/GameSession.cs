@@ -68,6 +68,9 @@ public sealed partial class GameSession
     // Switches the player set today: sent as one order each when the day runs (a marker can change once per day), so a box clicked on and
     // off again in one day sends nothing.
     readonly Dictionary<SibylJob, bool> _sibylWanted = new();
+    /// <summary>The day Sibyl last said she has no upkeep room for a world's uprising (screen state only: she says it again after 30 days).</summary>
+    readonly Dictionary<string, int> _sibylUnpaidSaid = new(StringComparer.Ordinal);
+    const int SibylRepeatDays = 30;
     /// <summary>Is the job on, counting a switch the player set today (it takes effect when the day runs).</summary>
     public bool SibylOn(SibylJob job) => _sibylWanted.TryGetValue(job, out var v) ? v : Advisor.IsOn(job);
     public void SetSibyl(SibylJob job, bool on) => _sibylWanted[job] = on;
@@ -299,6 +302,14 @@ public sealed partial class GameSession
         {
             var (text, place) = SibylWords(x.Detail);
             var m = new Message(day, "Sibyl: " + text + ".", place, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
+            Messages.Add(m); outcome.New.Add(m);
+        }
+        // rule: m6-advisor-sibyl §Messages: an uprising she leaves unpaid because she keeps her upkeep margin, once a month per world
+        foreach (var rising in HasAdvisor ? Advisor.UnpaidUprisings : Array.Empty<string>())
+        {
+            if (_sibylUnpaidSaid.TryGetValue(rising, out int said) && day - said < SibylRepeatDays) continue;
+            _sibylUnpaidSaid[rising] = day;
+            var m = new Message(day, $"Sibyl: no upkeep room to send regiments to {rising} (uprising). Free some upkeep, or order them yourself.", rising, MsgKind.Warn) { Cat = MsgCat.Orders, Tag = "Sibyl" };
             Messages.Add(m); outcome.New.Add(m);
         }
         ReadEvents(outcome);
