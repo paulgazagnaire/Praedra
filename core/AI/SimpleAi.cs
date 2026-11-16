@@ -84,8 +84,8 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Sibyl, the player's advisor (<see cref="Sibyl"/>): the garrison and mine-and-refinery planning only, for the player's own side, with the
-    /// advisor's rules (garrison = the rule's need, uprisings first; only mines and refineries; no upkeep margin). Reads state, queues orders, keeps
+    /// Sibyl, the player's advisor (<see cref="Sibyl"/>): garrisons, training facilities, construction yards, mines and refineries, for the
+    /// player's own side, with the advisor's rules (garrison = the rule's need plus a buffer, uprisings first; no shipyards; no upkeep margin). Reads state, queues orders, keeps
     /// nothing between days, and never touches the side's AI memory. rule: m6-advisor-sibyl.
     /// </summary>
     internal void PlanAdvisor(bool garrisons, bool production)
@@ -97,8 +97,9 @@ public sealed partial class SimpleAi
         _advisor = true;
         try
         {
-            if (production) PlanEconomy();
+            // rule: m6-advisor-sibyl: garrisons first, then the idle construction yards (training facilities, then her production)
             if (garrisons) PlanGarrison();
+            PlanAdvisorYards(garrisons, production);
         }
         finally { _advisor = false; }
     }

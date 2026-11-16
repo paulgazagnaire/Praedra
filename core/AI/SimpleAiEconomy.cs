@@ -19,17 +19,63 @@ public sealed partial class SimpleAi
             var choice = ChooseFacility(y);
             if (choice == null) continue;
             var (kind, dest) = choice.Value;
-            string cls = FacilityKinds.ClassName(kind);
-            int m = Maint(cls);
+            int m = Maint(FacilityKinds.ClassName(kind));
             if (m > 0 && Budget < m) continue;
-            long seq = _h.Construction.SubmitBuild(_side, y, YardFamily.Construction, cls, 1, dest);
-            Note(seq, "Build", $"{cls} at {dest} from {y}");
-            _busy.Add((y, YardFamily.Construction));
-            _plannedLoad += m;
-            _reservedEnergy[dest] = _reservedEnergy.GetValueOrDefault(dest) + 1;
-            if (kind == FacilityKind.Mine) _reservedRaw[dest] = _reservedRaw.GetValueOrDefault(dest) + 1;
+            OrderFacility(y, kind, dest);
         }
     }
+
+    private void OrderFacility(string yard, FacilityKind kind, string dest)
+    {
+        string cls = FacilityKinds.ClassName(kind);
+        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Construction, cls, 1, dest);
+        Note(seq, "Build", $"{cls} at {dest} from {yard}");
+        _busy.Add((yard, YardFamily.Construction));
+        _plannedLoad += Maint(cls);
+        _reservedEnergy[dest] = _reservedEnergy.GetValueOrDefault(dest) + 1;
+        if (kind == FacilityKind.Mine) _reservedRaw[dest] = _reservedRaw.GetValueOrDefault(dest) + 1;
+    }
+
+    /// <summary>
+    /// The advisor's use of her side's idle construction yards (ordinal order): a training facility while the garrisons are short and every
+    /// training facility is busy (Manage Garrisons 9), else with Manage Production a construction yard while the side has few for its worlds
+    /// (1a), else a mine or refinery (1b). rule: m6-advisor-sibyl (Paul 2026-11-16: "Both", "aggressively develop infrastructure").
+    /// </summary>
+    private void PlanAdvisorYards(bool garrisons, bool production)
+    {
+        foreach (var y in YardSystems(YardFamily.Construction))
+        {
+            if (!CanOrderAt(y, YardFamily.Construction)) continue;
+            if (garrisons && TryAdvisorYard(y, FacilityKind.TrainingFacility, AdvisorTrainingWanted(), _p.AdvisorUpkeepMargin)) continue;
+            if (!production) continue;
+            if (_h.Economy.Refined(_side) >= _p.ExtraYardRefinedReserve
+                && TryAdvisorYard(y, FacilityKind.ConstructionYard, AdvisorConstructionWanted(), _p.AdvisorYardUpkeepRoom)) continue;
+            if (ChooseFacility(y) is { } choice) OrderFacility(y, choice.Item1, choice.Item2);
+        }
+    }
+
+    private bool TryAdvisorYard(string from, FacilityKind kind, int want, int room)
+    {
+        string cls = FacilityKinds.ClassName(kind);
+        if (CountYards(Yards.FamilyOf(kind)) >= want || !Available(cls) || Budget - Maint(cls) < Math.Max(0, room)) return false;
+        var site = PickSite(from, kind);
+        if (site == null) return false;
+        OrderFacility(from, kind, site);
+        return true;
+    }
+
+    /// <summary>Training facilities wanted: none unless the garrisons are short and none is idle. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    private int AdvisorTrainingWanted()
+    {
+        if (_garrisonShort <= 0 || YardSystems(YardFamily.Training).Any(t => CanOrderAt(t, YardFamily.Training))) return 0;
+        int built = _h.Economy.Objects.Count(o => o.Completed && IsYardClass(o, YardFamily.Training) && _h.Economy.OwnerOf(o) == _side);
+        int per = Math.Max(1, _p.AdvisorShortPerTrainingFacility);
+        return Math.Min(_p.AdvisorMaxTrainingFacilities, built + (_garrisonShort + per - 1) / per);
+    }
+
+    /// <summary>Construction yards wanted: one plus one per few populated worlds. rule: m6-advisor-sibyl §Manage Production 1a.</summary>
+    private int AdvisorConstructionWanted() =>
+        Math.Min(_p.AdvisorMaxConstructionYards, 1 + HeldSystems().Count(s => _h.Economy.SlotsOf(s).Populated) / Math.Max(1, _p.AdvisorWorldsPerConstructionYard));
 
     private (FacilityKind, string)? ChooseFacility(string from)
     {
@@ -37,7 +83,7 @@ public sealed partial class SimpleAi
         var order = new List<FacilityKind>();
         int refined = eco.Refined(_side);
         int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
-        // rule: m6-advisor-sibyl §Manage Production 4: the advisor builds only mines and refineries
+        // rule: m6-advisor-sibyl §Manage Production 1: the advisor's yards come from PlanAdvisorYards, so here only mines and refineries
         if (!_advisor && ships == 0) order.Add(FacilityKind.OrbitalShipyard);
         if (!_advisor && train == 0) order.Add(FacilityKind.TrainingFacility);
         // rule: m2-construction §Build time: a yard adds 1 point per cycle, so throughput is the number of yards; refined that floats is turned into yards.
@@ -97,7 +143,7 @@ public sealed partial class SimpleAi
                 int here = YardsAt(s, fam) + _reservedYards.GetValueOrDefault((s, fam));
                 if (here >= _p.YardsPerSystem) continue;
                 if (here > 0) score += 40 * here;
-                score -= BorderDanger(s) * 15;
+                if (!_advisor) score -= BorderDanger(s) * 15; // the advisor reads only her own worlds (m6-advisor-sibyl §Manage Garrisons 9)
             }
             else score -= YardsAnyAt(s) * 3; // keep room on the yard systems for more yards
             if (score > bestScore) { bestScore = score; best = s; }
@@ -167,7 +213,7 @@ public sealed partial class SimpleAi
     // rule: m2-uprisings-and-garrison §Required garrison N: keep N regiments on every system where the support is low.
     private void PlanGarrison()
     {
-        _garrisonReserve = 0;
+        _garrisonReserve = 0; _garrisonShort = 0;
         string cls = _p.GarrisonRegiment(_side);
         if (!Available(cls)) return;
         var pending = PendingRegiments();
@@ -186,16 +232,19 @@ public sealed partial class SimpleAi
             if (_advisor && _h.Support.IsUprising(s)) deficit -= RedirectForUprising(s, cls, deficit, pending, redirected);
             if (deficit <= 0) continue;
             int count = Math.Min(deficit, _p.GarrisonBatch);
-            if (first) while (count > 1 && Budget < count * Maint(cls)) count--;
-            var yard = Budget < count * Maint(cls) ? null : TrainingYardNear(s);
+            // rule: m6-advisor-sibyl §Manage Garrisons 6: the advisor spends all free room on an uprising, and keeps a margin for calm worlds
+            int room = Budget - (_advisor && !_h.Support.IsUprising(s) ? _p.AdvisorUpkeepMargin : 0);
+            if (first) while (count > 1 && room < count * Maint(cls)) count--;
+            var yard = room < count * Maint(cls) ? null : TrainingYardNear(s);
             if (yard == null)
             {
                 if (!first) { if (Budget < count * Maint(cls)) continue; return; } // every training yard is busy
+                _garrisonShort += deficit;
                 _garrisonReserve += deficit * Maint(cls); // GarrisonsFirst: unpaid or waiting for a yard, its upkeep is still kept from the ships
                 continue;
             }
             OrderRegiments(yard, cls, count, s);
-            if (first) _garrisonReserve += (deficit - count) * Maint(cls);
+            if (first) { _garrisonReserve += (deficit - count) * Maint(cls); _garrisonShort += deficit - count; }
         }
     }
 
@@ -229,6 +278,8 @@ public sealed partial class SimpleAi
 
     /// <summary>GarrisonsFirst: upkeep the garrisons still short of their need would take, kept from new ships (set by PlanGarrison).</summary>
     private int _garrisonReserve;
+    /// <summary>Regiments the garrisons are still short after the day's orders (set by PlanGarrison). rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    private int _garrisonShort;
     /// <summary>
     /// Training facilities wanted: DesiredTrainingFacilities, and with GarrisonsFirst while far ahead one more per GarrisonShortPerTrainingFacility
     /// regiments the garrisons are short (queued ones count), up to MaxTrainingFacilities (one facility trains about 10 regiments in 250 days:
@@ -294,7 +345,9 @@ public sealed partial class SimpleAi
     internal int GarrisonTarget(string system)
     {
         int need = _h.Support.RequiredGarrison(system);
-        if (_advisor) return need; // rule: m6-advisor-sibyl §Manage Garrisons 2: the rule's need only
+        if (_advisor) // rule: m6-advisor-sibyl §Manage Garrisons 2: the rule's need, and a calm world near a step keeps one more (the buffer)
+            return _h.Support.IsUprising(system) ? need : Math.Max(need, Praedra.Core.Support.SupportModule.RequiredGarrison(_h.Support.Params,
+                _h.Economy.SupportOf(system, _side) - _p.AdvisorBufferSupport, false, _side == Side.Hand && _h.Support.IsHarvesterSector(system)));
         int s = _h.Economy.SupportOf(system, _side); // its own world: the AI sees it
         if (!_p.ClassicGarrisonFloor)
         {
