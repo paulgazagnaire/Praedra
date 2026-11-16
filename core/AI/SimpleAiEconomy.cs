@@ -49,7 +49,7 @@ public sealed partial class SimpleAi
             if (garrisons && TryAdvisorYard(y, FacilityKind.TrainingFacility, AdvisorTrainingWanted(), _p.AdvisorUpkeepMargin)) continue;
             if (!production) continue;
             if (_h.Economy.Refined(_side) >= _p.ExtraYardRefinedReserve
-                && TryAdvisorYard(y, FacilityKind.ConstructionYard, AdvisorConstructionWanted(), _p.AdvisorYardUpkeepRoom)) continue;
+                && TryAdvisorYard(y, FacilityKind.ConstructionYard, AdvisorConstructionWanted(), _p.AdvisorUpkeepMargin)) continue;
             if (ChooseFacility(y) is { } choice) OrderFacility(y, choice.Item1, choice.Item2);
         }
     }
@@ -232,8 +232,8 @@ public sealed partial class SimpleAi
             if (_advisor && _h.Support.IsUprising(s)) deficit -= RedirectForUprising(s, cls, deficit, pending, redirected);
             if (deficit <= 0) continue;
             int count = Math.Min(deficit, _p.GarrisonBatch);
-            // rule: m6-advisor-sibyl §Manage Garrisons 6: the advisor spends all free room on an uprising, and keeps a margin for calm worlds
-            int room = Budget - (_advisor && !_h.Support.IsUprising(s) ? _p.AdvisorUpkeepMargin : 0);
+            // rule: m6-advisor-sibyl §Manage Garrisons 6: the advisor keeps a margin on every order, uprisings included (QA-106)
+            int room = Budget - (_advisor ? _p.AdvisorUpkeepMargin : 0);
             if (first) while (count > 1 && room < count * Maint(cls)) count--;
             var yard = room < count * Maint(cls) ? null : TrainingYardNear(s);
             if (yard == null)
@@ -278,7 +278,7 @@ public sealed partial class SimpleAi
 
     /// <summary>GarrisonsFirst: upkeep the garrisons still short of their need would take, kept from new ships (set by PlanGarrison).</summary>
     private int _garrisonReserve;
-    /// <summary>Regiments the garrisons are still short after the day's orders (set by PlanGarrison). rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    /// <summary>Regiments the garrisons are still short after the day's orders, for want of a facility or of upkeep room (set by PlanGarrison). rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
     private int _garrisonShort;
     /// <summary>
     /// Training facilities wanted: DesiredTrainingFacilities, and with GarrisonsFirst while far ahead one more per GarrisonShortPerTrainingFacility
