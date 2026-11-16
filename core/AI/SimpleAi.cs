@@ -83,6 +83,29 @@ public sealed partial class SimpleAi
         if ((day + phase) % _p.MilitaryEvery == 0) PlanMilitary();
     }
 
+    /// <summary>
+    /// Sibyl, the player's advisor (<see cref="Sibyl"/>): the garrison and mine-and-refinery planning only, for the player's own side, with the
+    /// advisor's rules (garrison = the rule's need, uprisings first; only mines and refineries; no upkeep margin). Reads state, queues orders, keeps
+    /// nothing between days, and never touches the side's AI memory. rule: m6-advisor-sibyl.
+    /// </summary>
+    internal void PlanAdvisor(bool garrisons, bool production)
+    {
+        _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
+        _hops = null; _finishing = null;
+        _rng = new GameRng((ulong)Today * 2 + (ulong)_side + 0x5B1B, 0xA1);
+        _view = null; // her own side's worlds and yards only: nothing of the other side is read
+        _advisor = true;
+        try
+        {
+            if (production) PlanEconomy();
+            if (garrisons) PlanGarrison();
+        }
+        finally { _advisor = false; }
+    }
+
+    /// <summary>True while <see cref="PlanAdvisor"/> runs: the advisor's rules apply. rule: m6-advisor-sibyl.</summary>
+    private bool _advisor;
+
     /// <summary>One line for logs: capital, rally, fleets and what they hold. Reads state only.</summary>
     public string Status()
     {
@@ -315,7 +338,7 @@ public sealed partial class SimpleAi
     private bool Destroyed(string s) => _h.Game.State.Harvester.IsDestroyed(s);
     private IEnumerable<string> HeldSystems() => S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key); // sorted ordinal
     private int UnratedSpeed => _h.Construction.Params.UnratedDeliverySpeed;
-    private int Budget => _h.Economy.Free(_side) - _plannedLoad - _p.MaintenanceMargin;
+    private int Budget => _h.Economy.Free(_side) - _plannedLoad - (_advisor ? 0 : _p.MaintenanceMargin); // rule: m6-advisor-sibyl §Manage Garrisons 6 (no margin)
     private int Maint(string cls) => _h.Economy.Costs.Get(cls).Maintenance;
     private bool Suspended(string sys) => _h.Support.IsUprising(sys) || _h.Fleets.IsEconomicBlockade(sys, _side);
 

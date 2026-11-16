@@ -37,10 +37,11 @@ public sealed partial class SimpleAi
         var order = new List<FacilityKind>();
         int refined = eco.Refined(_side);
         int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
-        if (ships == 0) order.Add(FacilityKind.OrbitalShipyard);
-        if (train == 0) order.Add(FacilityKind.TrainingFacility);
+        // rule: m6-advisor-sibyl §Manage Production 4: the advisor builds only mines and refineries
+        if (!_advisor && ships == 0) order.Add(FacilityKind.OrbitalShipyard);
+        if (!_advisor && train == 0) order.Add(FacilityKind.TrainingFacility);
         // rule: m2-construction §Build time: a yard adds 1 point per cycle, so throughput is the number of yards; refined that floats is turned into yards.
-        if (refined >= _p.ExtraYardRefinedReserve)
+        if (!_advisor && refined >= _p.ExtraYardRefinedReserve)
         {
             // the construction yards build everything else: the first ones come before the other yards
             if (cons < _p.EarlyConstructionYards) order.Add(FacilityKind.ConstructionYard);
@@ -171,7 +172,8 @@ public sealed partial class SimpleAi
         if (!Available(cls)) return;
         var pending = PendingRegiments();
         var held = HeldSystems();
-        bool first = _p.GarrisonsFirst && Finishing(); // far ahead, the side needs its garrisons more than new warships
+        // far ahead, the side needs its garrisons more than new warships; the advisor always puts uprisings first (m6-advisor-sibyl §Manage Garrisons 4)
+        bool first = _advisor || (_p.GarrisonsFirst && Finishing());
         // GarrisonsFirst: the worlds in uprising, then the fewest regiments, get the upkeep first (ties: ordinal name)
         if (first) held = held.OrderByDescending(_h.Support.IsUprising).ThenBy(_h.Support.RegimentCount).ThenBy(s => s, StringComparer.Ordinal).ToList();
         foreach (var s in held)
@@ -261,6 +263,7 @@ public sealed partial class SimpleAi
     internal int GarrisonTarget(string system)
     {
         int need = _h.Support.RequiredGarrison(system);
+        if (_advisor) return need; // rule: m6-advisor-sibyl §Manage Garrisons 2: the rule's need only
         int s = _h.Economy.SupportOf(system, _side); // its own world: the AI sees it
         if (!_p.ClassicGarrisonFloor)
         {
