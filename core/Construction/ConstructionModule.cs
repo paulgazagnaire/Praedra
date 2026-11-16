@@ -101,6 +101,7 @@ public sealed class ConstructionModule
         if (support != null) m.IsInUprising = support.IsUprising; // yards stop in an uprising (m2-uprisings-and-garrison)
         game.RegisterOrderHandler<BuildOrder>(m.HandleBuild);
         game.RegisterOrderHandler<StopBuildOrder>(m.HandleStop);
+        game.RegisterOrderHandler<RedirectTrainingOrder>(m.HandleRedirectTraining);
         game.RegisterOrderHandler<SendRegimentOrder>(m.HandleSendRegiment);
         game.RegisterHook("3", m.DeliveryArrivals);
         game.RegisterHook("4", m.DeliveryStops);
@@ -144,8 +145,19 @@ public sealed class ConstructionModule
     public IReadOnlyList<int> RefinedLine(Side side) => C.Of(side).RefinedLine;
 
     /// <summary>Queue a BuildOrder (validated in the next Step). Returns its sequence number.</summary>
-    public long SubmitBuild(Side side, string system, YardFamily family, string className, int count, string? destination = null) =>
-        _game.Submit(seq => new BuildOrder(seq, side, system, family, className, count, destination));
+    public long SubmitBuild(Side side, string system, YardFamily family, string className, int count, string? destination = null, bool byAdvisor = false) =>
+        _game.Submit(seq => new BuildOrder(seq, side, system, family, className, count, destination, byAdvisor));
+
+    /// <summary>Queue a RedirectTraining order (validated in the next Step). rule: m2-construction §Redirect training.</summary>
+    public long SubmitRedirectTraining(Side side, string system, int count, string destination) =>
+        _game.Submit(seq => new RedirectTrainingOrder(seq, side, system, count, destination));
+
+    /// <summary>The advisor's units at the head of the training project's current order on a system (the ones RedirectTraining may move). rule: m2-construction §Redirect training.</summary>
+    public int AdvisorUnitsInTraining(string system)
+    {
+        var p = C.Find(system, YardFamily.Training);
+        return p == null ? 0 : p.Units.TakeWhile(id => E.Objects.TryGetValue(id, out var u) && u.ByAdvisor).Count();
+    }
 
     public long SubmitStop(Side side, string system, YardFamily family) =>
         _game.Submit(seq => new StopBuildOrder(seq, side, system, family));
@@ -279,6 +291,7 @@ public sealed class ConstructionModule
                 E.Objects[id].Side = o.Side; // a queued facility belongs to the ordering side whatever happens to the system
             }
             else id = _eco.AddObject(o.Side, o.Class, null, completed: false);
+            if (o.ByAdvisor) E.Objects[id].ByAdvisor = true; // rule: m2-construction §Redirect training
             ids.Add(id);
         }
         // rule: m2-construction §Projects and queues (B5b §7): the new units join the queue behind the current order
@@ -347,6 +360,33 @@ public sealed class ConstructionModule
         AnnounceDeparture(ctx, ctx.Day, d);
         int total = path.TotalTicks, arrival = ctx.Day + total; var names = new ValueList<string>(d.Path.ToList());
         return OrderResult.Accept((i, dd) => new OrderAccepted(i, dd, o.Sequence, null, names, total, arrival));
+    }
+
+    // rule: m2-construction §Redirect training (rejections in the sheet's order; a rejection changes nothing)
+    private OrderResult HandleRedirectTraining(StepContext ctx, RedirectTrainingOrder o)
+    {
+        if (!_galaxy.TryFindSystem(o.System, out _) || !_galaxy.TryFindSystem(o.Destination, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
+        if (_eco.IsDestroyed(o.System) || _eco.IsDestroyed(o.Destination)) return OrderResult.Reject(RejectReason.SystemDestroyed);
+        if (_fleets.OwnerOf(o.System) != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        var p = C.Find(o.System, YardFamily.Training);
+        if (p == null || p.Side != o.Side) return OrderResult.Reject(RejectReason.NoProject);
+        int run = AdvisorUnitsInTraining(o.System);
+        if (run == 0) return OrderResult.Reject(RejectReason.NotAdvisorUnits);
+        if (o.Count < 1) return OrderResult.Reject(RejectReason.BadCount);
+        if (o.Destination == p.Destination) return OrderResult.Reject(RejectReason.NoChange);
+        if (!Controls(o.Destination, o.Side)) return OrderResult.Reject(RejectReason.BadDestination);
+        if (o.Destination != o.System && !_fleets.FindPath(o.System, o.Destination, Params.UnratedDeliverySpeed).Ok) return OrderResult.Reject(RejectReason.Unreachable);
+
+        // ---- accepted: the leading advisor units keep their place and progress; the rest of the order queues right behind on its old destination
+        int k = Math.Min(run, o.Count);
+        if (k < p.Units.Count)
+        {
+            var rest = new QueuedOrder { Destination = p.Destination, Units = p.Units.Skip(k).ToList() };
+            p.Units = p.Units.Take(k).ToList();
+            (p.Next ??= new List<QueuedOrder>()).Insert(0, rest);
+        }
+        p.Destination = o.Destination;
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
     private OrderResult HandleStop(StepContext ctx, StopBuildOrder o)
@@ -566,6 +606,7 @@ public sealed class ConstructionModule
         int id = p.Units[0];
         p.Units.RemoveAt(0);
         p.Progress = 0;
+        E.Objects[id].ByAdvisor = false; // finished: no longer the advisor's to redirect (m2-construction §Redirect training)
         string dest = p.Destination;
         if (p.Units.Count == 0)
         {

@@ -139,4 +139,106 @@ public class SibylTests
         h.Game.Step();
         Assert.Empty(s.PlanDay());
     }
+
+    // ---- redirect of Sibyl's own regiments in training (m6-advisor-sibyl §Manage Garrisons 8; m2-construction §Redirect training)
+
+    private static string TrainingWorld(GameHost h) => HandFacilities(h, FacilityKind.TrainingFacility).First().System!;
+
+    private static Project TrainingProject(GameHost h, string t) => h.Construction.ProjectAt(t, YardFamily.Training)!;
+
+    // S9: her regiments in training for a quiet world go to the world that rises
+    [Fact]
+    public void S9_HerRegimentsInTraining_AreRedirectedToTheUprising()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string t = TrainingWorld(h), world = QuietWorld(h);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 2, t, byAdvisor: true);
+        Riot(h, world);
+        Assert.Equal(t, TrainingProject(h, t).Destination);
+        var orders = s.PlanDay();
+        var r = Assert.Single(orders, x => x.Kind == "Redirect");
+        Assert.Equal($"2 x Tranches in training at {t} redirected from {t} to {world}", r.Detail);
+        h.Game.Step();
+        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == r.Sequence);
+        Assert.Equal(world, TrainingProject(h, t).Destination);
+    }
+
+    // S10: regiments the player ordered are never redirected
+    [Fact]
+    public void S10_ThePlayersRegimentsInTraining_AreNotRedirected()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string t = TrainingWorld(h), world = QuietWorld(h);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 2, t);
+        Riot(h, world);
+        Assert.DoesNotContain(s.PlanDay(), x => x.Kind == "Redirect");
+        h.Game.Step();
+        Assert.Equal(t, TrainingProject(h, t).Destination);
+    }
+
+    // m2-construction C26: the advisor's regiments in training get a new destination, keep their progress, and leave for it when finished
+    [Fact]
+    public void C26_RedirectTraining_ChangesTheDestination_AndTheyGoThere()
+    {
+        var h = NewHost();
+        string t = TrainingWorld(h), world = QuietWorld(h);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 2, t, byAdvisor: true);
+        for (int d = 0; d < 3; d++) h.Game.Step();
+        var p = TrainingProject(h, t);
+        int first = p.Units[0], progress = p.Progress;
+        long seq = h.Construction.SubmitRedirectTraining(Side.Hand, t, 5, world);
+        h.Game.Step();
+        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == seq);
+        p = TrainingProject(h, t);
+        Assert.Equal(world, p.Destination);
+        Assert.Equal(first, p.Units[0]);
+        Assert.True(p.Progress >= progress);
+        Assert.Null(p.Next);
+        for (int d = 0; d < 400 && !h.Game.Events.OfType<UnitCompleted>().Any(e => e.Object == first); d++) h.Game.Step();
+        var done = Assert.Single(h.Game.Events.OfType<UnitCompleted>(), e => e.Object == first);
+        Assert.Equal(world, done.Destination);
+        Assert.False(h.Economy.Objects.Single(o => o.Id == first).ByAdvisor);
+    }
+
+    // m2-construction C27: the player's own project cannot be redirected
+    [Fact]
+    public void C27_RedirectTraining_OnThePlayersProject_IsRefused()
+    {
+        var h = NewHost();
+        string t = TrainingWorld(h), world = QuietWorld(h);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 2, t);
+        h.Game.Step();
+        long seq = h.Construction.SubmitRedirectTraining(Side.Hand, t, 2, world);
+        h.Game.Step();
+        Assert.Contains(h.Game.Events.OfType<OrderRejected>(), e => e.Sequence == seq && e.Reason == RejectReason.NotAdvisorUnits);
+        Assert.Equal(t, TrainingProject(h, t).Destination);
+    }
+
+    // m2-construction C28: the player's regiments that joined her order stay on the old destination, queued right behind
+    [Fact]
+    public void C28_RedirectTraining_LeavesThePlayersJoinedUnitsBehind()
+    {
+        var h = NewHost();
+        string t = TrainingWorld(h), world = QuietWorld(h);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 2, t, byAdvisor: true);
+        h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 1, t);
+        h.Game.Step();
+        var p = TrainingProject(h, t);
+        Assert.Equal(3, p.Units.Count);
+        int players = p.Units[2];
+        Assert.Equal(2, h.Construction.AdvisorUnitsInTraining(t));
+        long seq = h.Construction.SubmitRedirectTraining(Side.Hand, t, 5, world);
+        h.Game.Step();
+        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == seq);
+        p = TrainingProject(h, t);
+        Assert.Equal(world, p.Destination);
+        Assert.Equal(2, p.Units.Count);
+        var q = Assert.Single(p.Next!);
+        Assert.Equal(t, q.Destination);
+        Assert.Equal(new[] { players }, q.Units);
+    }
 }
