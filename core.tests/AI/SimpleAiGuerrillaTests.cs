@@ -131,7 +131,7 @@ public class SimpleAiGuerrillaTests
         // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): on, seeds 1-8 (Sabotage, Incite, Espionage,
         // special-force missions, raids, Civilian strikes): 8, 30, 32, 10, 10, 10; 4, 14, 33, 8, 25, 24; 11, 30, 21, 9, 23, 22; 19, 18, 25, 37,
         // 47, 46; 4, 44, 24, 7, 12, 12; 2, 12, 21, 12, 22, 22; 17, 55, 24, 5, 38, 36; 0, 50, 30, 19, 4, 4 (in all 65, 253, 210, 107, 181, 176; at
-        // least 5 of each on seeds 1, 3, 4 and 7). Off: seed 4 started 6 Espionage missions on day 285 (Azzurra, Buyback, Bina Major, ...), all
+        // least 5 of each on seeds 1, 3, 4 and 7). Off: seed 4 started 6 Espionage missions on day 285 (Nuumi, Buyback, Gemina Major, ...), all
         // from the key hunt (SimpleAiParams.KeyHunt, DEFAULT on: the Collective, ahead, spies for The Chair and Ravilla), an AI rule outside
         // Underground and Guerrilla; with KeyHunt off seed 4 has none (seeds 1-3 none either way). So the off games run with KeyHunt off too:
         // what they check is that Underground and Guerrilla gate these orders.

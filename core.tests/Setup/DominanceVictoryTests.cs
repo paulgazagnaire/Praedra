@@ -9,7 +9,7 @@ namespace Praedra.Core.Tests.Setup;
 // DominanceSharePercent of the systems the two sides hold for DominanceDays days running wins. Tests V20 to V27.
 public class DominanceVictoryTests
 {
-    private const string FileHq = "Altofen"; // the day-one files' Hearth (NewGameTests)
+    private const string FileHq = "Atuun"; // the day-one files' Hearth (NewGameTests)
 
     private static GameHost Make(StartPreset p, VictoryRules rules) =>
         NewGame.Create(GameData.Default, new NewGameOptions { Seed = 1, Preset = p, Settings = new GameSettings { DealMode = DealMode.File, Victory = rules } });

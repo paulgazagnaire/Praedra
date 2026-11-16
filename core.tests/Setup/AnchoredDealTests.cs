@@ -80,7 +80,7 @@ public class AnchoredDealTests
     public void AN5_LockedNeutralsStayNeutral()
     {
         var locked = ND.Anchors.Where(a => a.Owner == null).Select(a => a.System).ToList();
-        Assert.Contains("Amargura", locked); Assert.Contains("Breakyard", locked);
+        Assert.Contains("Murreen", locked); Assert.Contains("Breakyard", locked);
         foreach (var p in Presets)
             for (int seed = 1; seed <= 10; seed++)
             {
@@ -152,7 +152,7 @@ public class AnchoredDealTests
         foreach (var (sys, o) in ND.FixedOwners) owners[sys] = o;
         Assert.Equal(owners.Values.Count(v => v == Side.Collective), Count(h, Side.Collective));
         Assert.Equal(owners.Values.Count(v => v == Side.Hand), Count(h, Side.Hand));
-        Assert.Equal("Altofen", h.HqSystem); // v6 re-pin 2026-10-24: the day-one files' HQ on the spiral map (was Cutbank)
+        Assert.Equal("Atuun", h.HqSystem); // v6 re-pin 2026-10-24: the day-one files' HQ on the spiral map (was Cutbank)
         foreach (var s in new[] { "Navalia", "Incus", "Classis", "Castra" }) Assert.Equal(Side.Hand, Holder(h, s));
         foreach (var s in new[] { "Caminus", "The Moorings", "Ferraria" }) Assert.Null(Holder(h, s));
         Assert.Equal(h.StateHash(), Make(p, 1, DealMode.File).StateHash());

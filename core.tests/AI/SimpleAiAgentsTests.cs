@@ -110,8 +110,8 @@ public class SimpleAiAgentsTests
         // game changes; the AI code does not. Previous pin e7b86ea4...0b83.
         // Route stops re-pin 2026-11-12 (Paul, decision card "Add the stops", and Yard Road Fusoria-Commonhold): 8 great-route links now stop at
         // the system they were drawn through, so some paths change and the game changes; the AI code does not. Previous pin 8636bbfc...f01d.
-        // Accent-free names re-pin 2026-11-15 (Paul: the pixel font has no é; Lore Master: Ciénaga -> Cienaga): systems are ordered by name, so
-        // Cienaga now sorts before Cinco Lunas and seed 1 plays another game; the AI code does not change. Previous pin 8f68c3b5...5732.
+        // Accent-free names re-pin 2026-11-15 (Paul: the pixel font has no é; Lore Master: Ciénaga -> Kelmeer): systems are ordered by name, so
+        // Kelmeer now sorts before Gemshaft and seed 1 plays another game; the AI code does not change. Previous pin 8f68c3b5...5732.
         Assert.Equal("f892e3529930e22c7dc67f753d53bd50f3e626c3ab32373dbbbf92841f7a14b0", h.StateHash());
     }
 
