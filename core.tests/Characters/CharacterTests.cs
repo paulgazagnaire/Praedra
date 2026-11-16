@@ -284,7 +284,7 @@ public class CharacterTests
         int f = w.Fleet(Side.Collective, Shoal);
         int moving = w.Fleet(Side.Collective, Shoal);
         int imp = w.Fleet(Side.Hand, Shoal, Mandate);
-        w.Add(Keth, Shoal); w.Add(Wake, Shoal); w.Add(Oti, Shoal); w.Add(Varrick, Shoal); w.Add(OldDebt, Shoal);
+        w.Add(Keth, Shoal); w.Add(Wake, Shoal); w.Add(Oti, Shoal); w.Add(Gantry, Shoal); w.Add(OldDebt, Shoal);
         w.Add(FortyOne, Thaw);
         w.Ch.IsOnMission = id => id == OldDebt;
         long Attach(Side s, int c, int fleet, CharacterPost p) => w.Submit(seq => new AttachCharacterOrder(seq, s, c, fleet, p));
@@ -297,7 +297,7 @@ public class CharacterTests
         long a5 = Attach(Side.Collective, Wake, f, CharacterPost.Admiral);
         long a6 = Attach(Side.Collective, OldDebt, f, CharacterPost.None);
         long ok = Attach(Side.Collective, Keth, f, CharacterPost.Admiral);
-        long a7 = Attach(Side.Collective, Varrick, f, CharacterPost.Admiral);
+        long a7 = Attach(Side.Collective, Gantry, f, CharacterPost.Admiral);
         long a8 = Attach(Side.Collective, Keth, f, CharacterPost.None);
         long chewie = Attach(Side.Collective, Oti, f, CharacterPost.None);
         w.Game.Step();
@@ -314,7 +314,7 @@ public class CharacterTests
         Assert.Null(w.Reason(chewie));
         Assert.Equal((f, CharacterPost.None), (w.C(Oti).AttachedFleet, w.C(Oti).Post));
         Assert.Equal((f, CharacterPost.Admiral), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
-        foreach (var id in new[] { Wake, Varrick, OldDebt, FortyOne }) Assert.Equal(0, w.C(id).AttachedFleet);
+        foreach (var id in new[] { Wake, Gantry, OldDebt, FortyOne }) Assert.Equal(0, w.C(id).AttachedFleet);
     }
 
     // m5-characters-and-talent CH12
@@ -717,12 +717,12 @@ public class CharacterTests
     {
         var w = new CharWorld();
         int into = w.Fleet(Side.Collective, Shoal), from = w.Fleet(Side.Collective, Shoal);
-        w.Add(Keth, Shoal); w.Add(Varrick, Shoal);
+        w.Add(Keth, Shoal); w.Add(Gantry, Shoal);
         w.Ch.SetPost(Keth, into, CharacterPost.Admiral);
-        w.Ch.SetPost(Varrick, from, CharacterPost.Admiral);
+        w.Ch.SetPost(Gantry, from, CharacterPost.Admiral);
         Assert.Null(w.Try(seq => new MergeFleetsOrder(seq, Side.Collective, from, into)));
         Assert.Equal((into, CharacterPost.Admiral), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
-        Assert.Equal((into, CharacterPost.None), (w.C(Varrick).AttachedFleet, w.C(Varrick).Post));
+        Assert.Equal((into, CharacterPost.None), (w.C(Gantry).AttachedFleet, w.C(Gantry).Post));
         Assert.Equal(CharacterCause.Merged, Assert.Single(w.Events<PostVacated>()).Cause);
     }
 
@@ -779,7 +779,7 @@ public class CharacterTests
         var data = GameData.Default.Characters;
         var v = data.AddedHeroLimitViolations();
         Assert.Contains(v, x => x.Name == "Captain Sunday" && x.Rule == 6);
-        foreach (var name in new[] { "Clementia Noll", "Mat Kale", "Usura", "Mora", "Damnum", "Director Pythia Kallos", "Ushe" })
+        foreach (var name in new[] { "Clementia Noll", "Mat Thistle", "Usura", "Mora", "Damnum", "Director Pythia Kallos", "Ushe" })
             Assert.Contains(v, x => x.Name == name && x.Rule == 2);
         Assert.All(v, x => Assert.True(data.Get(x.Character).Added)); // the original 60 pass (exempt)
         Assert.DoesNotContain(v, x => x.Rule is 1 or 3 or 4 or 7);

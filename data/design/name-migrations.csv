@@ -693,7 +693,7 @@ character,Chewbacca,Oti
 character,Jan Dodonna,Old Debt
 character,Crix Madine,Sister Wake
 character,Carlist Rieekan,June Halvey
-character,Afyon,Captain Oz Varrick
+character,Afyon,Captain Oz Gantry
 character,Drayson,Admiral Mara Keel
 character,Borsk Fey'lya,Day After
 character,Tura Raftican,Static
@@ -709,13 +709,13 @@ character,Vanden Willard,Ives Hart
 character,Roget Jiriss,Ry Bastow
 character,Mazer Rackus,Brother Nail
 character,Orrimaarko,Tavi
-character,Airen Cracken,Ida Kell
-character,Nien Nunb,Tam Okkel
+character,Airen Cracken,Ida Hush
+character,Nien Nunb,Pip Okkel
 character,Hera Syndulla,Captain Sunday
 character,Shara Bey,Wick
 character,Tycho Celchu,Ansel Batten
 character,Winter Celchu,Vessa Lisk
-character,Kyle Katarn,Mat Kale
+character,Kyle Katarn,Mat Thistle
 character,Quarrie,Ushe
 character,Jerjerrod,Project Director Cyprian Galena
 character,Ozzel,Admiral Lucan Mordant
@@ -944,13 +944,17 @@ sector,Altofen Sector,Atuun Sector
 character,Admiral Marta Sobel,Admiral Mara Keel
 character,Ansel Mbatha,Ansel Batten
 character,Captain Niko Sava,Captain Nikan Sev
-character,Captain Oz Petrenko,Captain Oz Varrick
-character,Ida Kral,Ida Kell
+character,Captain Oz Petrenko,Captain Oz Gantry
+character,Ida Kral,Ida Hush
 character,Ivo Hartmann,Ives Hart
 character,June Halvorsen,June Halvey
-character,Mateus Kale,Mat Kale
+character,Mateus Kale,Mat Thistle
 character,Rowan Achterberg,Rowan Furrow
 character,Ruy Bastos,Ry Bastow
-character,Tam Szabo,Tam Okkel
+character,Tam Szabo,Pip Okkel
 character,Tove Lindqvist,Tay Linnet
 character,Vesna Ilic,Vessa Lisk
+character,Captain Oz Varrick,Captain Oz Gantry
+character,Ida Kell,Ida Hush
+character,Mat Kale,Mat Thistle
+character,Tam Okkel,Pip Okkel

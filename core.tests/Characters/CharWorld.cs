@@ -15,7 +15,7 @@ internal sealed class CharWorld
     public const string Corvette = "Dodger", Mandate = "Mandate", Ark = "Ark";
     // record ids (data/classic/characters.csv)
     public const int MaeAbara = 576, Ledger = 577, Nobody = 578, Midwife = 579, Chair = 640, Ravilla = 641;
-    public const int Keth = 832, FortyOne = 833, Foreman = 834, Oti = 835, OldDebt = 836, Wake = 837, Varrick = 839, Keel = 840, DayAfter = 841, Tura = 842;
+    public const int Keth = 832, FortyOne = 833, Foreman = 834, Oti = 835, OldDebt = 836, Wake = 837, Gantry = 839, Keel = 840, DayAfter = 841, Tura = 842;
     public const int Varo = 898, EightyEight = 899;
 
     /// <summary>The Classic Talent values (Classic): TalentSkillPercent 100, TalentTrainingChancePercent 100, TalentTrainingGainPercent 50 (GNPRTB 6173).
