@@ -61,6 +61,22 @@ public sealed record SimpleAiParams
     public int GarrisonShortPerTrainingFacility { get; init; } = 20;
     /// <summary>GarrisonsFirst: most training facilities the side wants. DEFAULT.</summary>
     public int MaxTrainingFacilities { get; init; } = 12;
+    // ---- the player's advisor (Sibyl). rule: m6-advisor-sibyl (Paul 2026-11-16: "Both", "aggressively develop infrastructure"). DEFAULT values.
+    /// <summary>A calm world keeps the garrison of its support minus this many points (one more regiment within 5 of a step). rule: m6-advisor-sibyl §Manage Garrisons 2.</summary>
+    public int AdvisorBufferSupport { get; init; } = 5;
+    /// <summary>Free upkeep room the advisor keeps when she orders for a calm world or builds a training facility (an uprising may use it all). rule: m6-advisor-sibyl §Manage Garrisons 6.</summary>
+    public int AdvisorUpkeepMargin { get; init; } = 50;
+    /// <summary>Most training facilities the advisor builds to. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    public int AdvisorMaxTrainingFacilities { get; init; } = 12;
+    /// <summary>One more training facility per this many regiments still short. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    public int AdvisorShortPerTrainingFacility { get; init; } = 8;
+    /// <summary>Most construction yards the advisor builds to. rule: m6-advisor-sibyl §Manage Production 1a.</summary>
+    public int AdvisorMaxConstructionYards { get; init; } = 12;
+    /// <summary>One construction yard wanted per this many populated held worlds (plus one). rule: m6-advisor-sibyl §Manage Production 1a.</summary>
+    public int AdvisorWorldsPerConstructionYard { get; init; } = 4;
+    /// <summary>Free upkeep room a new construction yard must leave (one mine and refinery pair's capacity). rule: m6-advisor-sibyl §Manage Production 1a.</summary>
+    public int AdvisorYardUpkeepRoom { get; init; } = 50;
+
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>
     public int InvasionRegimentTarget { get; init; } = 10;
     /// <summary>Troop slots the AI wants on its ships. DEFAULT.</summary>

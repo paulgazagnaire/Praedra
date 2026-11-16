@@ -220,8 +220,8 @@ public partial class Main
             for (int d = 0; d < 3; d++) said.AddRange(hs.StepDay().New);
             Expect(said.Any(m => m.Text == "Sibyl will manage your production from tomorrow."), "Sibyl says when she starts");
             var built = said.FirstOrDefault(m => m.Text.StartsWith("Sibyl: a ", StringComparison.Ordinal));
-            Expect(built != null && (built.Text.Contains(" Mine ordered at ") || built.Text.Contains(" Refinery ordered at ")) && built.System != null,
-                "Sibyl orders a mine or refinery the next day: " + (built?.Text ?? "none"));
+            Expect(built != null && (built.Text.Contains(" Construction Yard ordered at ") || built.Text.Contains(" Mine ordered at ") || built.Text.Contains(" Refinery ordered at ")) && built.System != null,
+                "Sibyl orders a construction yard, mine or refinery the next day: " + (built?.Text ?? "none"));
             Expect(!said.Any(m => m.Text.StartsWith("Order refused", StringComparison.Ordinal)), "and it is not refused");
         }
 

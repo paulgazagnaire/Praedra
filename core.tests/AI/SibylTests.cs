@@ -59,7 +59,7 @@ public class SibylTests
         var orders = s.PlanDay();
         var o = Assert.Single(orders, x => x.Detail.EndsWith(" for " + world, StringComparison.Ordinal));
         Assert.StartsWith("3 x Tranches at ", o.Detail); // need 4 in the uprising, 1 standing
-        Assert.All(orders, x => Assert.Contains("Tranches", x.Detail));
+        Assert.All(orders, x => Assert.True(x.Detail.Contains("Tranches") || x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal), x.Detail));
         h.Game.Step();
         Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == o.Sequence);
     }
@@ -85,7 +85,7 @@ public class SibylTests
         h.Control.SubmitDebugSetSupport(Side.Hand, more, 65); // Hand support 35: need 3, so 2 standing rise too
         h.Game.Step();
         Assert.True(h.Support.IsUprising(few) && h.Support.IsUprising(more));
-        var orders = s.PlanDay().Where(x => x.Kind != "Redirect").ToList();
+        var orders = s.PlanDay().Where(x => x.Detail.Contains(" x Tranches at ", StringComparison.Ordinal)).ToList();
         var o = Assert.Single(orders);
         Assert.Equal($"3 x Tranches at {training[0]} for {few}", o.Detail);
     }
@@ -104,9 +104,9 @@ public class SibylTests
         Assert.DoesNotContain(s.PlanDay(), x => x.Detail.EndsWith(" for " + world, StringComparison.Ordinal));
     }
 
-    // S5: production orders only mines and refineries, and balances them
+    // S5, S12: production builds construction yards while the Hand has few for its worlds, then mines and refineries; never anything else
     [Fact]
-    public void S5_ProductionOn_IdleConstructionYardsGetMinesOrRefineriesOnly()
+    public void S5_S12_ProductionOn_BuildsConstructionYardsThenMinesAndRefineries()
     {
         var h = NewHost();
         var s = new Sibyl(h, Side.Hand);
@@ -114,13 +114,61 @@ public class SibylTests
         h.Game.Step();
         var orders = s.PlanDay();
         Assert.NotEmpty(orders);
-        Assert.All(orders, x => Assert.True(x.Detail.StartsWith("Mine at ", StringComparison.Ordinal) || x.Detail.StartsWith("Refinery at ", StringComparison.Ordinal), x.Detail));
-        int mines = h.Economy.Objects.Count(o => o.Class == "Mine" && o.Side == Side.Hand), refs = h.Economy.Objects.Count(o => o.Class == "Refinery" && o.Side == Side.Hand);
-        Assert.StartsWith(mines <= refs ? "Mine" : "Refinery", orders[0].Detail);
-        // one order per idle construction yard system at most
-        Assert.Equal(orders.Count, orders.Select(x => x.Detail[(x.Detail.LastIndexOf(" from ", StringComparison.Ordinal) + 6)..]).Distinct().Count());
+        Assert.StartsWith("Construction Yard at ", orders[0].Detail); // S12: one yard for many worlds, refined above 40, upkeep room
         h.Game.Step();
         Assert.All(orders, x => Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == x.Sequence));
+        var seen = new List<string>();
+        for (int d = 0; d < 400; d++)
+        {
+            foreach (var x in s.PlanDay())
+            {
+                Assert.True(x.Detail.StartsWith("Mine at ", StringComparison.Ordinal) || x.Detail.StartsWith("Refinery at ", StringComparison.Ordinal)
+                    || x.Detail.StartsWith("Construction Yard at ", StringComparison.Ordinal), x.Detail);
+                seen.Add(x.Detail);
+            }
+            // one order per idle construction yard system at most
+            Assert.Equal(s.Submitted.Count, s.Submitted.Select(x => x.Detail[(x.Detail.LastIndexOf(" from ", StringComparison.Ordinal) + 6)..]).Distinct().Count());
+            h.Game.Step();
+            Assert.All(s.Submitted, x => Assert.DoesNotContain(h.Game.Events.OfType<OrderRejected>(), e => e.Sequence == x.Sequence));
+        }
+        Assert.Contains(seen, x => x.StartsWith("Mine at ", StringComparison.Ordinal) || x.StartsWith("Refinery at ", StringComparison.Ordinal));
+        Assert.True(HandFacilities(h, FacilityKind.ConstructionYard).Count() > 1);
+    }
+
+    // S11: garrisons short and every training facility busy: an idle construction yard builds a training facility (production off)
+    [Fact]
+    public void S11_ShortAndEveryTrainingFacilityBusy_BuildsATrainingFacility()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string world = QuietWorld(h);
+        foreach (var t in HandFacilities(h, FacilityKind.TrainingFacility).Select(o => o.System!).Distinct())
+            h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 1, t);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        Riot(h, world);
+        var orders = s.PlanDay();
+        Assert.DoesNotContain(orders, x => x.Detail.Contains(" x Tranches at ", StringComparison.Ordinal));
+        var tf = Assert.Single(orders, x => x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal));
+        h.Game.Step();
+        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == tf.Sequence);
+    }
+
+    // S13: the buffer: a calm world at support 62 with no regiments gets one (the rule's need there is 0)
+    [Fact]
+    public void S13_CalmWorldNearAStep_GetsOneRegiment()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string world = QuietWorld(h);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        h.Control.DebugOrdersEnabled = true;
+        h.Control.SubmitDebugSetTroops(Side.Hand, world, Side.Hand, "Tranches", 0);
+        h.Control.SubmitDebugSetSupport(Side.Hand, world, 38); // Hand support 62
+        h.Game.Step();
+        Assert.False(h.Support.IsUprising(world));
+        Assert.Equal(0, h.Support.RequiredGarrison(world));
+        Assert.Equal(0, h.Support.RegimentCount(world));
+        Assert.Contains(s.PlanDay(), x => x.Detail.StartsWith("1 x Tranches at ", StringComparison.Ordinal) && x.Detail.EndsWith(" for " + world, StringComparison.Ordinal));
     }
 
     // S6: a yard with the player's own project is left alone
