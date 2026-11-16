@@ -188,10 +188,32 @@ public class SibylTests
         s.Submit(SibylJob.ManageGarrisons, true);
         s.Submit(SibylJob.ManageProduction, true);
         Riot(h, world);
-        Assert.True(h.Economy.Free(Side.Hand) >= 200);
+        Assert.True(h.Economy.Free(Side.Hand) >= 300);
         var yards = s.PlanDay().Where(x => !x.Detail.Contains(" x Tranches", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(yards);
         Assert.StartsWith("Construction Yard at ", yards[0].Detail);
+    }
+
+    // S18 (QA-109): as S17 but with only about 250 upkeep room free: the training facility comes before another construction yard
+    [Fact]
+    public void S18_LittleRoom_TrainingFacilityBeforeYards()
+    {
+        var h = NewHost();
+        var s = new Sibyl(h, Side.Hand);
+        string world = QuietWorld(h);
+        string other = h.Game.State.SystemOwners.Where(kv => kv.Value == Side.Hand && kv.Key != world).Select(kv => kv.Key).OrderBy(x => x, StringComparer.Ordinal).First();
+        foreach (var t in HandFacilities(h, FacilityKind.TrainingFacility).Select(o => o.System!).Distinct())
+            h.Construction.SubmitBuild(Side.Hand, t, YardFamily.Training, "Tranches", 1, t);
+        int free = h.Economy.Free(Side.Hand), standing = h.Support.RegimentCount(other);
+        s.Submit(SibylJob.ManageGarrisons, true);
+        s.Submit(SibylJob.ManageProduction, true);
+        h.Control.DebugOrdersEnabled = true;
+        h.Control.SubmitDebugSetTroops(Side.Hand, other, Side.Hand, "Tranches", standing + (free - 260) / 3); // about 260 room left
+        Riot(h, world);
+        Assert.InRange(h.Economy.Free(Side.Hand), 220, 299);
+        var yards = s.PlanDay().Where(x => !x.Detail.Contains(" x Tranches", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(yards);
+        Assert.StartsWith("Training Facility at ", yards[0].Detail);
     }
 
     // S13: the buffer: a calm world at support 62 with no regiments gets one (the rule's need there is 0)

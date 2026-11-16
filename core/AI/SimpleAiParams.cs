@@ -74,6 +74,11 @@ public sealed record SimpleAiParams
     /// facility or a construction yard, so lost capacity comes back before more upkeep is added (QA-107). rule: m6-advisor-sibyl §Manage Production 0.
     /// </summary>
     public int AdvisorRebuildRoom { get; init; } = 200;
+    /// <summary>
+    /// Construction yards come before more training facilities (m6-advisor-sibyl §Manage Production 1a) only while at least this much upkeep room
+    /// is free and a training facility is finished; below it the garrisons' training facilities come first (QA-109). DEFAULT.
+    /// </summary>
+    public int AdvisorYardsFirstRoom { get; init; } = 300;
     /// <summary>Most training facilities the advisor builds to. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
     public int AdvisorMaxTrainingFacilities { get; init; } = 12;
     /// <summary>One more training facility per this many regiments still short. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>

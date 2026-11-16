@@ -49,8 +49,8 @@ public sealed partial class SimpleAi
             // rule: m6-advisor-sibyl §Manage Production 0 (QA-107): short of room, mines and refineries come back first
             if (production && Budget < _p.AdvisorRebuildRoom && ChooseFacility(y) is { } rebuild) { OrderFacility(y, rebuild.Item1, rebuild.Item2); continue; }
             // rule: m6-advisor-sibyl §Manage Production 1a (QA-108): once the side has a training facility, more construction yards come first,
-            // so one yard is not spent on training facilities back to back
-            bool yardsFirst = garrisons && CountYards(YardFamily.Training) > 0;
+            // so one yard is not spent on training facilities back to back; only with room to spare and a finished training facility (QA-109)
+            bool yardsFirst = garrisons && Budget >= _p.AdvisorYardsFirstRoom && FinishedYards(YardFamily.Training) > 0;
             if (production && yardsFirst && TryAdvisorConstructionYard(y)) continue;
             if (garrisons && TryAdvisorYard(y, FacilityKind.TrainingFacility, AdvisorTrainingWanted(), _p.AdvisorUpkeepMargin)) continue;
             if (!production) continue;
@@ -58,6 +58,8 @@ public sealed partial class SimpleAi
             if (ChooseFacility(y) is { } choice) OrderFacility(y, choice.Item1, choice.Item2);
         }
     }
+
+    private int FinishedYards(YardFamily fam) => _h.Economy.Objects.Count(o => o.Completed && IsYardClass(o, fam) && _h.Economy.OwnerOf(o) == _side);
 
     private bool TryAdvisorConstructionYard(string from) =>
         _h.Economy.Refined(_side) >= _p.ExtraYardRefinedReserve && TryAdvisorYard(from, FacilityKind.ConstructionYard, AdvisorConstructionWanted(), _p.AdvisorUpkeepMargin);
