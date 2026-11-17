@@ -18,7 +18,7 @@ public partial class GameScreen
     enum MapLayer { Owners, Support, Trouble, Yards, Intel, Slots }
 
     MapLayer _layer = MapLayer.Owners;
-    Button _routesChip;
+    Button _routesChip, _deliveriesChip;
     Label _layerKey;
     PanelContainer _layerKeyCard;
 
@@ -62,6 +62,11 @@ public partial class GameScreen
         _routesChip = DropRow("Routes", CycleLanes, "Show or hide the hyperspace routes (L)");
         _routesChip.ToggleMode = true; _routesChip.ButtonPressed = true;
         shows.AddChild(_routesChip);
+        // Paul 2026-11-17 ("yes!"): units and buildings on their way can crowd the map in a build wave; this hides them (kept between games)
+        _deliveriesChip = DropRow("Deliveries", () => SetDeliveriesShown(!UiSettings.ShowDeliveries),
+            "Show or hide your new ships, troops and buildings on their way from the yard, and troops sent alone (leaders, mission teams and the HQ always show)");
+        _deliveriesChip.ToggleMode = true; _deliveriesChip.ButtonPressed = UiSettings.ShowDeliveries;
+        shows.AddChild(_deliveriesChip);
         _legendButton = DropRow("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean");
         _legendButton.ToggleMode = true;
         shows.AddChild(_legendButton);

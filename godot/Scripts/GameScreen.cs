@@ -85,6 +85,7 @@ public partial class GameScreen : Control
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
         _fleets.CharacterRoutes = CharacterRoutes;
         _fleets.Movers = Movers;
+        _fleets.ShowDeliveries = UiSettings.ShowDeliveries;
         _fleets.HqRoute = () => S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } h ? (h.Path, h.HopIndex, GameSession.HqArrivalDay(h)) : null;
         _fleets.Bind(S.Game, G);
 
