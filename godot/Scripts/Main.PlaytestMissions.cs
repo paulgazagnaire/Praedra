@@ -154,6 +154,8 @@ public partial class Main
         int id = SendThroughPlanner(gs, open, tick, MissionKind.Espionage, target, checkRefusedKind);
         if (id < 0) return;
         var m = mm.Get(id); var rec = mm.Data.Get(MissionKind.Espionage);
+        if (m.Departed && m.TotalTicks > 0 && m.Phase == MissionPhase.Outbound)   // Paul 2026-11-17: everything that moves shows on the map
+            Expect(gs.MoverLabels().Any(l => l.Contains($"to {target}")), $"the map shows the team travelling to {target}: {string.Join(" | ", gs.MoverLabels())}");
         int lastDay = m.ArrivalDay + rec.TimerMin + rec.TimerSpread, from = s.Messages.Count;
         if (defer) { _missionFinish = () => FinishSpy(gs, id, target, lastDay, from); return; }
         Expect(OutcomeWithin(gs, "Espionage", target, lastDay), $"an Espionage result on {target} within the expected days");
