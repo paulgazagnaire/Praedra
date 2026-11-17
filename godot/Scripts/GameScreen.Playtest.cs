@@ -259,6 +259,7 @@ public partial class GameScreen
     internal string SelectedSystemName => _view.Selected >= 0 ? G.Systems[_view.Selected].Name : null;
     internal IReadOnlyList<string> EnemyMarkerSystems() => _fleets.EnemyMarkerSystems();
     internal IReadOnlyList<int> DrawnFleetIds() => _fleets.DrawnFleetIds();
+    internal IReadOnlyList<string> MoverLabels() => _fleets.MoverLabels();
     internal bool DrawnDestroyed(string system) => G.TryFindSystem(system, out int i) && _view.DrawsDestroyed(i);
     internal bool DrawnUnknown(string system) => G.TryFindSystem(system, out int i) && _view.IsUnknown(i);
     internal string HoverTextFor(string system) { if (!G.TryFindSystem(system, out int i)) return ""; _view.ShotHover(i); OnViewChanged(); return _hoverLabel.Text; }
