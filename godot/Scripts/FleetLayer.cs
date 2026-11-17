@@ -33,6 +33,9 @@ public partial class FleetLayer : Control
     /// <summary>The player's own things travelling that are not fleets (leaders alone, mission teams, built units and buildings on the way,
     /// regiments sent alone, the moving HQ). Own side only: fog hides the enemy's (rule: m5-fog-and-hq §F3).</summary>
     public Func<IEnumerable<Mover>> Movers { get; set; }
+    /// <summary>Draw deliveries (units and buildings on their way from the yard, troops sent alone)? Layers > Deliveries.</summary>
+    public bool ShowDeliveries { get; set; } = true;
+    static bool IsDelivery(MoverKind k) => k is MoverKind.Regiment or MoverKind.Ship or MoverKind.Fighter or MoverKind.Facility;
     const float PickRadiusPx = 13f;
     const float MoverR = 5.5f;
     const float LabelZoom = 2.0f;
@@ -148,7 +151,7 @@ public partial class FleetLayer : Control
         var list = new List<(Mover, Vector2, Vector2)>();
         if (Movers == null) return list;
         foreach (var m in Movers())
-            if (PlaceMover(m, out var p, out var h)) list.Add((m, p, h));
+            if ((ShowDeliveries || !IsDelivery(m.Kind)) && PlaceMover(m, out var p, out var h)) list.Add((m, p, h));
         return list;
     }
 
@@ -406,8 +409,9 @@ public partial class FleetLayer : Control
         {
             var col = m.Kind == MoverKind.Hq ? new Color(1f, 0.95f, 0.5f) : ColorOf(Player ?? Side.Hand);
             var edge = new Color(1, 1, 1, 0.9f);
-            // the route still ahead (leaders and the HQ already have their own route line)
-            if (!m.Held && m.Kind != MoverKind.Leader && m.Kind != MoverKind.Hq && m.Path.Count > 1)
+            // the route still ahead (a lone leader, with its hop times, and the HQ already have their own route line; a Move group does not)
+            bool ownLine = m.Kind == MoverKind.Hq || (m.Kind == MoverKind.Leader && m.HopTicks != null);
+            if (!m.Held && !ownLine && m.Path.Count > 1)
             {
                 var faint = col; faint.A = 0.45f;
                 var from = p;

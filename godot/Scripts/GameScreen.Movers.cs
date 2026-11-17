@@ -42,7 +42,7 @@ public partial class GameScreen
             var first = g.OrderBy(x => x.d.Id).First().d;
             var classes = g.Select(x => x.o?.Class ?? "unit").Distinct().ToList();
             int n = g.Count();
-            string what = n == 1 ? classes[0] : classes.Count == 1 ? $"{n} x {classes[0]}" : $"{n} units";
+            string what = n == 1 ? classes[0] : classes.Count == 1 ? $"{classes[0]} and {n - 1} more" : $"{n} units";   // never "N x": one unit per card (Paul 2026-11-14)
             int arrive = first.DueDay;
             for (int h = first.Index + 1; h < first.HopTicks.Count; h++) arrive += first.HopTicks[h];
             string label = first.Held ? $"{what} to {first.To}, held at {first.Path[first.Index]}" : $"{what} to {first.To}, day {arrive}";

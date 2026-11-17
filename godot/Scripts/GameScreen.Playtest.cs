@@ -180,7 +180,7 @@ public partial class GameScreen
         PlaceNotes();
         if (!searchClosedLayers || !layersClosedSearch) return "the search results and the layers list can be open together, one over the other";
         // the drop-downs speak the bar's pixel words (Paul 2026-11-15, "Yes A"), and a hit reached with the arrow keys is lit
-        foreach (var lb in _layerButtons.Append(_routesChip).Append(_legendButton))
+        foreach (var lb in _layerButtons.Append(_routesChip).Append(_deliveriesChip).Append(_legendButton))
             if (lb.GetThemeFont("font") != BarFont) return $"the layers list's \"{lb.Text}\" is not in the bar's pixel font";
         // a word with é is set on BitPotion's line (the second font's line trimmed to it), so it stands level with its neighbours
         var plainLine = new TextLine(); plainLine.AddString("Charter", BarFont, BarTextSize);
@@ -260,6 +260,8 @@ public partial class GameScreen
     internal IReadOnlyList<string> EnemyMarkerSystems() => _fleets.EnemyMarkerSystems();
     internal IReadOnlyList<int> DrawnFleetIds() => _fleets.DrawnFleetIds();
     internal IReadOnlyList<string> MoverLabels() => _fleets.MoverLabels();
+    /// <summary>Press Layers > Deliveries as a click would; returns whether the row is now lit.</summary>
+    internal bool PressDeliveries() { _deliveriesChip.EmitSignal(BaseButton.SignalName.Pressed); return _deliveriesChip.ButtonPressed; }
     internal bool DrawnDestroyed(string system) => G.TryFindSystem(system, out int i) && _view.DrawsDestroyed(i);
     internal bool DrawnUnknown(string system) => G.TryFindSystem(system, out int i) && _view.IsUnknown(i);
     internal string HoverTextFor(string system) { if (!G.TryFindSystem(system, out int i)) return ""; _view.ShotHover(i); OnViewChanged(); return _hoverLabel.Text; }
