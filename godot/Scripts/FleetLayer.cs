@@ -409,8 +409,9 @@ public partial class FleetLayer : Control
         {
             var col = m.Kind == MoverKind.Hq ? new Color(1f, 0.95f, 0.5f) : ColorOf(Player ?? Side.Hand);
             var edge = new Color(1, 1, 1, 0.9f);
-            // the route still ahead (leaders and the HQ already have their own route line)
-            if (!m.Held && m.Kind != MoverKind.Leader && m.Kind != MoverKind.Hq && m.Path.Count > 1)
+            // the route still ahead (a lone leader, with its hop times, and the HQ already have their own route line; a Move group does not)
+            bool ownLine = m.Kind == MoverKind.Hq || (m.Kind == MoverKind.Leader && m.HopTicks != null);
+            if (!m.Held && !ownLine && m.Path.Count > 1)
             {
                 var faint = col; faint.A = 0.45f;
                 var from = p;

@@ -805,7 +805,7 @@ public partial class DashedBox : StyleBox
 /// <summary>A tiny drawn icon (no art files): dots, rings, fleet triangles, warning marks. Used in the legend, tabs and rows.</summary>
 public partial class Glyph : Control
 {
-    public enum Kind { Dot, Ring, DoubleRing, Triangle, TriangleDown, Square, Diamond, Cross, Warn, DashedRing, Bar }
+    public enum Kind { Dot, Ring, DoubleRing, Triangle, TriangleDown, Square, Diamond, Cross, Warn, DashedRing, Bar, Hexagon, DiamondRing }
     public Kind Shape;
     public Color Color = Ui.Text;
     public Color? Fill;
@@ -859,6 +859,17 @@ public partial class Glyph : Control
                 DrawCircle(p + new Vector2(0, r * 0.58f), 1.1f, Ui.MapBg);
                 break;
             }
+            case Kind.Hexagon:
+            {
+                var hex = new Vector2[6];
+                for (int i = 0; i < 6; i++) hex[i] = p + Vector2.FromAngle(Mathf.Pi / 6f + i * Mathf.Pi / 3f) * r;
+                DrawColoredPolygon(hex, Color);
+                break;
+            }
+            case Kind.DiamondRing:
+                DrawColoredPolygon(new[] { p + new Vector2(0, -r * 0.6f), p + new Vector2(r * 0.6f, 0), p + new Vector2(0, r * 0.6f), p + new Vector2(-r * 0.6f, 0) }, Color);
+                DrawArc(p, r - 0.5f, 0, Mathf.Tau, 20, Color, 1.3f, true);
+                break;
             case Kind.Bar: DrawRect(new Rect2(new Vector2(1, p.Y - 2), new Vector2(IconSize + 2, 4)), Color); break;
         }
     }
