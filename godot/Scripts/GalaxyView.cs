@@ -15,13 +15,10 @@ public partial class GalaxyView : Control
 {
     // Zoom (1 = whole galaxy fits).
     const float MinZoom = 0.8f, MaxZoom = 16f;
-    // Names of systems nobody holds come in only from NeutralNameZoom, unexplored ones from UnknownNameZoom: zoomed out the map names
-    // the worlds that matter (yours, the enemy's, the capitals), and hovering any dot still names it.
-    // Paul's mockup (2026-10-28) shows dots and no names at the opening zoom: held systems are named only from OwnedNameZoom, and pointing at
-    // a sector names all its systems.
-    const float OwnedNameZoom = 3.4f;
-    const float NeutralNameZoom = 5.0f;
-    const float UnknownNameZoom = 7.0f;
+    // Paul 2026-11-18 (map declutter, pick 1): only your own systems are named, from NameZoom; every other name (the enemy's, nobody's,
+    // unexplored) shows only while you point at its sector or one of its dots, or select it. Holding Alt names everything (pick 9).
+    // The words on fleets and everything that moves come in at the same step (FleetLayer, pick 2).
+    public const float NameZoom = 3.4f;
     // Room kept free around every name, so two names never touch: space is part of the label.
     static readonly Vector2 NamePad = new(7, 3);
     const float PickRadiusPx = 11f;
@@ -115,6 +112,21 @@ public partial class GalaxyView : Control
 
     public float Zoom => _zoom;
 
+    /// <summary>While Alt (Option) is held: every system name and every mover's words, whatever the zoom (Paul 2026-11-18, pick 9).</summary>
+    bool _showAllNames;
+    public bool ShowAllNames { get => _showAllNames; set { if (_showAllNames == value) return; _showAllNames = value; QueueRedraw(); } }
+    /// <summary>The mouse on the map, or null when it is off it: the fleet layer shows the words of the glyph under it.</summary>
+    public Vector2? MousePos { get; private set; }
+
+    /// <summary>A dot drawn in a side's colour (yours or the enemy's, as your side knows it): words on the map never cover one.</summary>
+    public bool IsHeld(int i) => !DrawsDestroyed(i) && IsUnknown?.Invoke(i) != true && OwnerOf?.Invoke(i) != null;
+
+    /// <summary>How far the outermost state ring of a system (HQ, uprising, blockade) reaches past its dot, in px; 0 for none. Names and
+    /// parked fleets start outside it.</summary>
+    public float RingOut(int i) =>
+        DrawsDestroyed(i) || IsUnknown?.Invoke(i) == true ? 0f
+        : IsBlockaded?.Invoke(i) == true ? 15f : IsUprising?.Invoke(i) == true ? 12.25f : IsHq?.Invoke(i) == true ? 9f : 1.2f;
+
     public void Init(Galaxy galaxy)
     {
         Galaxy = galaxy;
@@ -197,7 +209,7 @@ public partial class GalaxyView : Control
         Changed();
     }
     /// <summary>Pretend the mouse is over a system (playtest and screenshots).</summary>
-    public void ShotHover(int system) { Hovered = system; QueueRedraw(); }
+    public void ShotHover(int system) { Hovered = system; HoveredSector = -1; QueueRedraw(); }   // as the mouse does: on a dot, no open space
     /// <summary>Pretend the mouse is over a sector's open space (playtest and screenshots).</summary>
     public void ShotHoverSector(string name) { HoveredSector = _sectors.FindIndex(x => x.name == name); Hovered = -1; QueueRedraw(); }
     /// <summary>Click a sector's open space as the mouse would (playtest).</summary>
@@ -266,6 +278,7 @@ public partial class GalaxyView : Control
             }
             else
             {
+                MousePos = mm.Position;
                 int h = Pick(mm.Position);
                 int hs = h >= 0 ? -1 : SectorAt(mm.Position);
                 if (h != Hovered || hs != HoveredSector)
@@ -282,6 +295,7 @@ public partial class GalaxyView : Control
 
     public override void _Notification(int what)
     {
+        if (what == NotificationMouseExit) MousePos = null;
         if (what == NotificationMouseExit && (Hovered != -1 || HoveredSector != -1)) { Hovered = -1; HoveredSector = -1; StateChanged?.Invoke(); QueueRedraw(); }
         if (what == NotificationResized) Changed();
     }
@@ -328,7 +342,7 @@ public partial class GalaxyView : Control
         return best;
     }
 
-    float SystemRadius => Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
+    public float SystemRadius => Mathf.Clamp(3.2f + _zoom * 1.0f, 3.6f, 10f);
 
     // ---- drawing ----
     // Colours of the map itself. Only the owner of a system gets a strong colour (blue you, orange the enemy);
@@ -337,11 +351,24 @@ public partial class GalaxyView : Control
     static readonly Color MajorRouteColor = new(0.72f, 0.75f, 0.80f);
     static readonly Color DotOutline = new(0.03f, 0.04f, 0.07f, 0.95f);
     static readonly Color SectorColor = new(0.70f, 0.78f, 0.95f);
+    // Route widths and brightness (Paul 2026-11-18, pick 4 "a bit too big": great 1.8 -> 1.0 px, others 1.0 -> 0.6 px, the pointed
+    // system's links 2.6 / 1.8 -> 1.6 / 1.0 px). In layout px: the window scale multiplies them (x1.11 at 1600x1000, about x2.1 on Retina).
+    const float GreatRouteWidth = 1.0f, GreatRouteAlpha = 0.40f;
+    const float RouteWidth = 0.6f, RouteAlpha = 0.22f;
+    const float FocusGreatWidth = 1.6f, FocusRouteWidth = 1.0f;
+    // the move preview: solid legs on a route, dashes for a free jump (one dashed style per meaning, map declutter 2026-11-18)
+    const float PreviewWidth = 3f, PreviewJumpWidth = 1.6f, PreviewJumpDash = 6f;
+    // unexplored systems: a smaller, fainter ring, so your blue and the grey dots read first (pick 5)
+    static readonly Color UnknownRing = new(0.45f, 0.48f, 0.55f, 0.30f);
+    const float UnknownRingSize = 0.6f, UnknownRingWidth = 1.0f;
+    // a black veil over the galaxy picture on the game map only (pick 6: 40% darker; the title screen keeps it as tuned)
+    const float BackdropVeil = 0.4f;
 
     public override void _Draw()
     {
         if (Galaxy == null) return;
         if (_backdrop == null) DrawRect(new Rect2(Vector2.Zero, Size), Ui.MapBg); // the backdrop paints the background itself
+        else DrawRect(new Rect2(Vector2.Zero, Size), new Color(0, 0, 0, BackdropVeil)); // drawn after the picture (ShowBehindParent), under the map
         int focus = Selected >= 0 ? Selected : Hovered;
         var screenRect = new Rect2(Vector2.Zero, Size).Grow(40);
         float radius = SystemRadius;
@@ -384,13 +411,13 @@ public partial class GalaxyView : Control
             var lane = Galaxy.Lanes[_drawOrder[k]];
             var a = SystemScreen(lane.A); var b = SystemScreen(lane.B);
             if (!screenRect.HasPoint(a) && !screenRect.HasPoint(b) && !SegmentMayCross(a, b)) continue;
-            if (lane.Tier == 1) DrawLine(a, b, new Color(MajorRouteColor, 0.34f), 1.8f, true);
-            else DrawLine(a, b, new Color(LaneColor, 0.18f), 1.0f, true);
+            if (lane.Tier == 1) DrawLine(a, b, new Color(MajorRouteColor, GreatRouteAlpha), GreatRouteWidth, true);
+            else DrawLine(a, b, new Color(LaneColor, RouteAlpha), RouteWidth, true);
         }
         // route links of the focused system, drawn on top
         if (_showRoutes && focus >= 0)
             foreach (var nb in Galaxy.NeighboursOf(focus))
-                DrawLine(SystemScreen(focus), SystemScreen(nb.System), new Color(1f, 1f, 1f, 0.7f), nb.Lane.Tier == 1 ? 2.6f : 1.8f, true);
+                DrawLine(SystemScreen(focus), SystemScreen(nb.System), new Color(1f, 1f, 1f, 0.7f), nb.Lane.Tier == 1 ? FocusGreatWidth : FocusRouteWidth, true);
 
         // route preview: solid along a route link, dashed for a free jump through open space
         if (PathPreview is { Count: > 1 })
@@ -399,8 +426,8 @@ public partial class GalaxyView : Control
             {
                 var a = SystemScreen(PathPreview[k]); var b = SystemScreen(PathPreview[k + 1]);
                 bool route = PathRouteHop != null && k < PathRouteHop.Count ? PathRouteHop[k] : Galaxy.FindLane(PathPreview[k], PathPreview[k + 1]) != null;
-                if (route) DrawLine(a, b, PathColor, 4f, true);
-                else DrawDashedLine(a, b, PathColor, 3f, 9f, true, true);
+                if (route) DrawLine(a, b, PathColor, PreviewWidth, true);
+                else DrawDashedLine(a, b, PathColor, PreviewJumpWidth, PreviewJumpDash, true, true);
             }
             for (int k = 1; k + 1 < PathPreview.Count; k++) // the stops on the way
                 DrawCircle(SystemScreen(PathPreview[k]), 3.2f, PathColor);
@@ -459,7 +486,7 @@ public partial class GalaxyView : Control
             if (IsUnknown?.Invoke(i) == true)
             {
                 // never explored by the player's side: nothing known about owner or state (fog of war)
-                DrawArc(p, radius * 0.7f, 0, Mathf.Tau, 16, new Color(0.45f, 0.48f, 0.55f, 0.55f), 1.2f, true);
+                DrawArc(p, radius * UnknownRingSize, 0, Mathf.Tau, 16, UnknownRing, UnknownRingWidth, true);
                 continue;
             }
             var owner = OwnerOf?.Invoke(i);
@@ -542,22 +569,37 @@ public partial class GalaxyView : Control
         new(1, 0), new(-1, 0), new(0, 1), new(0, -1), new(0.7f, -0.7f), new(0.7f, 0.7f), new(-0.7f, -0.7f), new(-0.7f, 0.7f),
     };
 
+    /// <summary>The sector being pointed at: the one under the mouse, or the one of the dot under it (pointing at a dot keeps its
+    /// sector's names on: they used to blink off as the mouse crossed a dot). The selected system's sector does not count.</summary>
+    int PointedSector => HoveredSector >= 0 ? HoveredSector : Hovered >= 0 ? _sectorOf[Hovered] : -1;
+
+    /// <summary>Is the name of this system wanted now? Yours from <see cref="NameZoom"/>; any other only while its sector or dot is pointed
+    /// at, or it is selected; everything while Alt is held (Paul 2026-11-18, picks 1 and 9).</summary>
+    public bool NameWanted(int i)
+    {
+        if (i == Selected || i == Hovered || _showAllNames) return true;
+        int ps = PointedSector;
+        if (ps >= 0 && _sectorOf[i] == ps) return true;
+        return _zoom >= NameZoom && IsUnknown?.Invoke(i) != true && Player != null && OwnerOf?.Invoke(i) == Player;
+    }
+
     void DrawSystemNames(int focus, float radius, Rect2 screenRect, LabelSpace taken)
     {
         var view = new Rect2(Vector2.Zero, Size);
         var order = new List<(int i, int rank)>();
+        int pointed = PointedSector;
         for (int i = 0; i < _pos.Length; i++)
         {
             var p = SystemScreen(i);
             if (!screenRect.HasPoint(p)) continue;
-            float r = radius + 1.5f;
+            // every dot keeps its own rings free (HQ, uprising, blockade): "Charter" used to end under its own HQ ring
+            float r = radius + Math.Max(1.5f, RingOut(i) + 0.5f);
             taken.Add(new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r)));
+            if (!NameWanted(i)) continue;
             bool unknown = IsUnknown?.Invoke(i) == true;
-            bool key = i == focus || i == Hovered || (HoveredSector >= 0 && _sectorOf[i] == HoveredSector);
-            if (!key && unknown && _zoom < UnknownNameZoom) continue;
-            if (!key && !unknown && OwnerOf?.Invoke(i) == null && _zoom < NeutralNameZoom) continue;
-            if (!key && _zoom < OwnedNameZoom) continue;
-            order.Add((i, LabelRank(i, focus, unknown)));
+            int rank = LabelRank(i, focus, unknown);
+            if (pointed >= 0 && _sectorOf[i] == pointed) rank = Math.Max(rank, 50); // the pointed sector's names before your names nearby
+            order.Add((i, rank));
         }
         if (LabelObstacles != null) foreach (var rect in LabelObstacles()) taken.Add(rect);
         order.Sort((x, y) => x.rank != y.rank ? y.rank.CompareTo(x.rank) : _weight[y.i] != _weight[x.i] ? _weight[y.i].CompareTo(_weight[x.i]) : x.i.CompareTo(y.i));
@@ -569,7 +611,7 @@ public partial class GalaxyView : Control
             string text = Galaxy.Systems[i].Name;
             var size = _font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
             var p = SystemScreen(i);
-            float gap = radius + (key ? 6f : 3f);
+            float gap = radius + RingOut(i) + (key ? 6f : 3f);   // start outside the system's own rings
             Rect2? spot = null;
             foreach (var d in Spots)
             {
@@ -601,8 +643,9 @@ public partial class GalaxyView : Control
         return 10;
     }
 
-    /// <summary>Rectangles already used on screen; a coarse grid keeps the overlap test cheap with 360 names.</summary>
-    sealed class LabelSpace
+    /// <summary>Rectangles already used on screen; a coarse grid keeps the overlap test cheap with 360 names. The fleet layer places its
+    /// words with it too.</summary>
+    internal sealed class LabelSpace
     {
         const float Cell = 64f;
         readonly Dictionary<(int, int), List<Rect2>> _cells = new(); // looked up by key only, never iterated

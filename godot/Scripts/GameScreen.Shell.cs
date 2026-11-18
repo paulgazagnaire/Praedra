@@ -10,9 +10,9 @@ namespace PraedraViewer;
 /// <summary>
 /// The frame of the game screen, after Paul's mockup (2026-10-28): the map fills the window and a few small dark pieces float at its edges.
 /// Across the top the bar (Paul's "ui-update-nov-15" frame, GameScreen.TopBar.cs): menu, goal, search, layers, your stocks, the day and the
-/// clock. Under it, centred, one pill for whatever needs you; bottom left the way home; bottom centre the thing you clicked; bottom right
-/// the latest message. Everything longer (a system's details, Build, Fleets, Leaders, Missions, the log, a sector) opens as a window on
-/// demand and closes with Esc.
+/// clock. Under it, centred, one pill for whatever needs you; bottom left the map legend when asked for; bottom centre the thing you
+/// clicked; bottom right the short notes, the one place for news (map declutter, Paul's All A 2026-11-18). Everything longer (a system's
+/// details, Build, Fleets, Leaders, Missions, the log, a sector) opens as a window on demand and closes with Esc.
 /// </summary>
 public partial class GameScreen
 {
@@ -32,7 +32,7 @@ public partial class GameScreen
     HBoxContainer _orderActions;
     VBoxContainer _toastBox, _topCentre, _topLeft;
     Control _noteLayer;
-    Button _myHqButton, _enemyHqButton, _legendButton, _layersButton;
+    Button _myHqMenu, _enemyHqMenu, _legendButton, _layersButton;
     Control _bottomLeft;
 
     void BuildUi()
@@ -111,19 +111,21 @@ public partial class GameScreen
         _hqStatusLabel = Ui.Label("", null, Ui.Gold, Ui.Small, wrap: false);
         hqPill.AddChild(_hqStatusLabel);
         _topCentre.AddChild(hqPill);
-        // the short notes come next, under the pills, but in a layer of their own that the tree puts over the windows: an
-        // order's note or a red warning goes by in seconds and must be seen, and clicked, while you work in them (story W9). Tree order,
-        // not ZIndex: ZIndex only drew a note over a window, and its click still went to the window (QA-104).
+        // the short notes: one place for news, the bottom-right corner (Paul 2026-11-18, pick 7: nothing pops up in the middle of the
+        // map), in a layer of their own that the tree puts over the windows: an order's note or a red warning goes by in seconds and must be
+        // seen, and clicked, while you work in them (story W9). Tree order, not ZIndex: ZIndex only drew a note over a window, and its
+        // click still went to the window (QA-104). The newest note is at the bottom.
         _toastBox = Ui.VBox(6);
         _toastBox.MouseFilter = MouseFilterEnum.Ignore;
-        _toastBox.SetAnchorsPreset(LayoutPreset.CenterTop);
-        _toastBox.GrowHorizontal = GrowDirection.Both;
+        _toastBox.SetAnchorsPreset(LayoutPreset.BottomRight);
+        _toastBox.GrowHorizontal = GrowDirection.Begin; _toastBox.GrowVertical = GrowDirection.Begin;
+        _toastBox.OffsetRight = -Edge; _toastBox.OffsetBottom = -Edge; _toastBox.OffsetLeft = -Edge; _toastBox.OffsetTop = -Edge;
         _noteLayer = new Control { MouseFilter = MouseFilterEnum.Ignore, Name = "Notes" };
         _noteLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _noteLayer.AddChild(_toastBox);
-        _topCentre.SortChildren += PlaceNotes;
 
-        // ---- bottom left: the way to the headquarters (your stocks are in the top bar since Paul's "ui-update-nov-15" frame)
+        // ---- bottom left: the map legend, when asked for (Layers > Legend). The HQ buttons are gone (Paul 2026-11-18, pick 10): H centres
+        // the map on your HQ, and both HQs are in the menu.
         var bl = Ui.VBox(Ui.Block);
         bl.SetAnchorsPreset(LayoutPreset.BottomLeft);
         bl.GrowVertical = GrowDirection.Begin;
@@ -136,17 +138,6 @@ public partial class GameScreen
         _legendCard.Visible = false;
         _legendCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         bl.AddChild(_legendCard);
-        var nav = Ui.Hud(4, 4);
-        nav.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        bl.AddChild(nav);
-        var navRow = Ui.HBox(0);
-        nav.AddChild(navRow);
-        _myHqButton = Ui.Button("\u2192 HQ", () => GoToCapital(S.Player), "Centre the map on your headquarters", "Chip");
-        _myHqButton.SetMeta(UiTest.FullName, "My HQ");
-        navRow.AddChild(_myHqButton);
-        navRow.AddChild(new VSeparator());
-        _enemyHqButton = Ui.Button("\u2192 Enemy HQ", () => GoToCapital(S.Enemy), null, "Chip");
-        navRow.AddChild(_enemyHqButton);
         // no Fit button: the Home key shows the whole galaxy (Paul 2026-11-14)
 
         // ---- bottom centre: what you clicked, or the order bar of a move
@@ -170,10 +161,7 @@ public partial class GameScreen
         _orderActions = Ui.HBox(6);
         ov.AddChild(_orderActions);
 
-        // ---- bottom right: the latest messages
-        BuildMessageCorner();
-
-        // ---- the hover card follows the mouse
+        // ---- the hover card: over a dot, after a short rest, one line above the pointer (pick 8)
         _hoverCard = Ui.Card(new Color("0d0e10", 0.97f), Ui.LineHi, 10, 7);
         _hoverCard.MouseFilter = MouseFilterEnum.Ignore;
         _hoverCard.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
@@ -219,7 +207,6 @@ public partial class GameScreen
         RefreshOrderBar();
         RefreshPill();
         RefreshSelectionCard();
-        RefreshMessageCorner();
     }
 
     /// <summary>The pill's note before the first day. While a yard at your headquarters stands idle it says that first: giving the yards
@@ -240,13 +227,17 @@ public partial class GameScreen
         else
         {
             int urgent = _attention.Count(a => a.Level == Level.Danger), watch = _attention.Count(a => a.Level == Level.Warn);
-            if (urgent + watch > 0) { text = urgent > 0 ? $"{urgent} urgent, {watch} to watch" : $"{Ui.Count(watch, "thing", "things")} to watch"; dot = urgent > 0 ? Ui.Danger : Ui.Warn; }
+            if (urgent + watch > 0) { text = NeedsCount(urgent, watch); dot = urgent > 0 ? Ui.Danger : Ui.Warn; }
         }
         _banner.Text = text ?? "";
         var g = (Glyph)_banner.GetParent().GetChild(0);
         g.Color = dot; g.QueueRedraw();
         _pill.Visible = text != null;
     }
+
+    /// <summary>The pill's count, only the parts that are not zero: "1 urgent", not "1 urgent, 0 to watch" (map declutter 2026-11-18).</summary>
+    internal static string NeedsCount(int urgent, int watch) =>
+        urgent == 0 ? $"{Ui.Count(watch, "thing", "things")} to watch" : watch == 0 ? $"{urgent} urgent" : $"{urgent} urgent, {watch} to watch";
 
     bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission || _moveFighters != null;
 
@@ -261,12 +252,15 @@ public partial class GameScreen
         _view.QueueRedraw();
     }
 
-    /// <summary>Where the map must not put system names: fleet markers, and the boxes on the map (a name under a box can't be read).</summary>
-    IEnumerable<Rect2> MapLabelObstacles()
+    /// <summary>Where the map must not put system names: fleet markers and their words, and the boxes on the map (a name under a box can't
+    /// be read).</summary>
+    IEnumerable<Rect2> MapLabelObstacles() => _fleets.Obstacles().Concat(MapBoxes());
+
+    /// <summary>The boxes over the map, in its coordinates: no word on the map goes under one.</summary>
+    IEnumerable<Rect2> MapBoxes()
     {
-        foreach (var r in _fleets.Obstacles()) yield return r;
         var origin = _view.GlobalPosition;
-        foreach (var box in new Control[] { _orderBar, _topLeft, _barStrip, _barLeft, _barRight, _searchResults, _layersCard, _bottomLeft, _selCard, _msgCorner, _drawer })
+        foreach (var box in new Control[] { _orderBar, _topLeft, _barStrip, _barLeft, _barRight, _searchResults, _layersCard, _bottomLeft, _selCard, _drawer })
         {
             if (box == null || !box.IsVisibleInTree()) continue;
             var g = box.GetGlobalRect();
@@ -280,7 +274,7 @@ public partial class GameScreen
                 var g = c.GetGlobalRect();
                 yield return new Rect2(g.Position - origin, g.Size);
             }
-        // the short notes under them, in their own layer
+        // the short notes in the corner, in their own layer
         if (_toastBox != null && _toastBox.GetChildCount() > 0 && _toastBox.IsVisibleInTree())
         {
             var g = _toastBox.GetGlobalRect();
@@ -290,17 +284,40 @@ public partial class GameScreen
 
     // ================================================================== the hover card
 
-    void ShowHover(string text)
+    /// <summary>How long the mouse rests on a dot before its card shows: crossing the map no longer flashes a card at every dot.</summary>
+    const double HoverRest = 0.4;
+    double _hoverWait;
+    int _hoverAt = -1;
+
+    /// <summary>The card for the dot under the mouse (null: none). Its words are set at once; the card itself shows after a short rest
+    /// on the same dot (Paul 2026-11-18, pick 8).</summary>
+    void ShowHover(string text, int system = -1)
     {
-        _hoverLabel.Text = text;
-        _hoverCard.Visible = !string.IsNullOrEmpty(text);
-        if (!_hoverCard.Visible) return;
+        _hoverLabel.Text = text ?? "";
+        if (string.IsNullOrEmpty(text)) { _hoverCard.Visible = false; _hoverAt = -1; return; }
+        if (system != _hoverAt) { _hoverCard.Visible = false; _hoverWait = HoverRest; _hoverAt = system; return; }
+        if (_hoverCard.Visible) PlaceHover();
+    }
+
+    void TickHover(double delta)
+    {
+        if (_hoverAt < 0 || _hoverCard.Visible || string.IsNullOrEmpty(_hoverLabel.Text)) return;
+        _hoverWait -= delta;
+        if (_hoverWait > 0) return;
+        _hoverCard.Visible = true;
+        PlaceHover();
+    }
+
+    /// <summary>Above the pointer and to its right, so it never covers the names the pointing brings in (they sit beside the dots);
+    /// below it at the top edge, to the left at the right edge.</summary>
+    void PlaceHover()
+    {
         _hoverCard.ResetSize();
         var mouse = _mapHolder.GetLocalMousePosition();
         var size = _hoverCard.GetCombinedMinimumSize();
-        var p = mouse + new Vector2(18, 18);
-        if (p.X + size.X > _mapHolder.Size.X - 8) p.X = mouse.X - size.X - 14;
-        if (p.Y + size.Y > _mapHolder.Size.Y - 8) p.Y = mouse.Y - size.Y - 14;
+        var p = mouse + new Vector2(12, -size.Y - 14);
+        if (p.Y < 4) p.Y = mouse.Y + 22;
+        if (p.X + size.X > _mapHolder.Size.X - 8) p.X = mouse.X - size.X - 12;
         _hoverCard.Position = new Vector2(Math.Max(4, p.X), Math.Max(4, p.Y));
     }
 
@@ -308,41 +325,43 @@ public partial class GameScreen
 
     readonly List<(PanelContainer Card, double Left)> _toasts = new();
     const int MaxToasts = 3;
+    /// <summary>A note is one line at most this wide; a longer one ends in "..." and says it all in its tooltip (and in the Log).</summary>
+    const float NoteMaxWidth = 520f;
+    /// <summary>A note fades out over its last moments instead of vanishing.</summary>
+    const double NoteFade = 0.6;
 
-    /// <summary>The short notes sit under the pills, a block apart, where they sat when they were part of that stack; they follow it each
-    /// time it is laid out (a pill shown or hidden). With no pill they start right under the bar. An open search result list or layers
-    /// list pushes them below it too: the notes' layer is over the bar's, and a note that names a system takes clicks, so a note over a
-    /// drop-down would hide its rows and take the click meant for one.</summary>
+    /// <summary>The notes keep to the bottom-right corner; with the side window open there they move to its left, so they never cover it.</summary>
     void PlaceNotes()
     {
-        if (_toastBox == null || _noteLayer == null || !_noteLayer.IsInsideTree()) return;   // placed again once the layer is in
-        float top = _topCentre.GlobalPosition.Y - _noteLayer.GlobalPosition.Y, bottom = top - Ui.Block;
-        foreach (var c in _topCentre.GetChildren().OfType<Control>())
-            if (c.Visible) bottom = Math.Max(bottom, top + c.Position.Y + c.Size.Y);
-        foreach (var d in new Control[] { _searchResults, _layersCard })
-            if (d != null && d.Visible)
-                bottom = Math.Max(bottom, d.GlobalPosition.Y - _noteLayer.GlobalPosition.Y + Math.Max(d.Size.Y, d.GetCombinedMinimumSize().Y));
-        _toastBox.OffsetTop = bottom + Ui.Block;
+        if (_toastBox == null) return;
+        float right = -Edge - (_drawer != null && _drawer.Visible ? DrawerWidth + Ui.Block : 0);
+        if (_toastBox.OffsetRight != right) { _toastBox.OffsetRight = right; _toastBox.OffsetLeft = right; }
     }
 
-    /// <summary>A short note under the top bar that goes by itself (order sent, saved, something happened).</summary>
+    /// <summary>A short one-line note in the bottom-right corner that fades by itself (an answer to your order, red news, saved).</summary>
     void Toast(string text, MsgKind kind = MsgKind.Info, string system = null)
     {
         var dot = Ui.KindColor(kind, Ui.Text3);
         var card = Ui.Hud(12, 7);
-        card.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        card.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         var h = Ui.HBox(Ui.Block);
         h.MouseFilter = MouseFilterEnum.Ignore;
         h.AddChild(new Glyph(Glyph.Kind.Dot, dot, 8) { CustomMinimumSize = new Vector2(10, 0) });
-        var l = Ui.Label(text, null, Ui.Text, Ui.Small);
-        l.CustomMinimumSize = new Vector2(380, 0);   // every note the same width, so stacked notes line up (impeccable critique 2026-11-14)
+        var l = Ui.Label(text, null, Ui.Text, Ui.Small, wrap: false);
+        if (l.GetCombinedMinimumSize().X > NoteMaxWidth)
+        {
+            l.ClipText = true;
+            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            l.CustomMinimumSize = new Vector2(NoteMaxWidth, 0);
+            card.TooltipText = Ui.Wrap(text);
+        }
         h.AddChild(l);
         card.AddChild(h);
         if (system != null)
         {
             card.MouseFilter = MouseFilterEnum.Stop;
             card.MouseDefaultCursorShape = CursorShape.PointingHand;
-            card.TooltipText = "Click to go there";
+            card.TooltipText = string.IsNullOrEmpty(card.TooltipText) ? "Click to go there" : card.TooltipText + "\nClick to go there";
             card.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) GoTo(system, true); };
         }
         else card.MouseFilter = MouseFilterEnum.Ignore;
@@ -358,11 +377,16 @@ public partial class GameScreen
             var (card, left) = _toasts[i];
             left -= delta;
             if (left <= 0) { card.QueueFree(); _toasts.RemoveAt(i); }
-            else _toasts[i] = (card, left);
+            else
+            {
+                _toasts[i] = (card, left);
+                if (left < NoteFade) card.Modulate = new Color(1, 1, 1, (float)(left / NoteFade));
+            }
         }
+        PlaceNotes();
     }
 
-    // ================================================================== headquarters buttons
+    // ================================================================== headquarters: H, Shift+H and the menu
 
     void GoToCapital(Side side)
     {
@@ -385,14 +409,16 @@ public partial class GameScreen
 
     static string HqMovingText(Praedra.Core.Fog.HqState h) => $"HQ moving to {h.Path[^1]}, arrives day {GameSession.HqArrivalDay(h)}";
 
-    /// <summary>The HQ buttons and the HQ line follow what the player's side knows (rule: m5-fog-and-hq §N5 KnownHq).</summary>
+    /// <summary>The menu's HQ entries and the HQ line follow what the player's side knows (rule: m5-fog-and-hq §N5 KnownHq): the enemy
+    /// entry is greyed, and says why, until your picture has shown its HQ.</summary>
     void RefreshHq()
     {
-        if (_enemyHqButton == null) return;
+        if (_enemyHqMenu == null) return;
         bool known = S.EnemyHqSystem != null;
-        _enemyHqButton.SetMeta(UiTest.FullName, known ? "Enemy HQ" : "Enemy HQ: unknown");
-        _enemyHqButton.AddThemeColorOverride("font_color", known ? Ui.Text3 : new Color(Ui.Text3, 0.6f));
-        _enemyHqButton.TooltipText = Ui.Wrap(known ? "Centre the map on the enemy headquarters: the system you must take to win" : EnemyHqUnknownText);
+        _enemyHqMenu.SetMeta(UiTest.FullName, known ? "Go to enemy HQ" : "Go to enemy HQ: unknown");
+        _enemyHqMenu.AddThemeColorOverride("font_color", known ? Ui.Text : new Color(Ui.Text3, 0.6f));
+        _enemyHqMenu.AddThemeColorOverride("font_hover_color", known ? Ui.Text : new Color(Ui.Text3, 0.6f));
+        _enemyHqMenu.TooltipText = Ui.Wrap(known ? "Centre the map on the enemy headquarters: the system you must take to win (Shift+H)" : EnemyHqUnknownText);
         var h = S.OwnHq;
         string line = h == null ? null
             : h.Status == Praedra.Core.Fog.HqStatus.InTransit ? HqMovingText(h) + "."

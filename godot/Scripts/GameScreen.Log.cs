@@ -109,9 +109,11 @@ public partial class GameScreen
         "ResearchLevelReached", "HearthTipGiven", "HqSectorClueGiven", "MissionSucceeded", "CharacterFreed", "CharacterEscaped", "TalentDiscovered", "DominanceChanged",
     };
 
-    /// <summary>A refused order, a loss, a warning, or real good news: the rest stays in the log.</summary>
+    /// <summary>Which of the day's news pops up as a note: red news (a refused order, a loss, an uprising) and real good news (mostly the
+    /// answer to a mission you sent). Amber news no longer pops up (Paul 2026-11-18, pick 7: one place for news, red only): Needs you, the
+    /// pill and the map's rings already show it, and the Log (E) keeps everything.</summary>
     static bool ToastWorthy(Message m) =>
-        m.Kind is MsgKind.Bad || (m.Kind == MsgKind.Warn && m.Tag != "Contact") || (m.Tag != null && GoodNews.Contains(m.Tag) && m.Kind != MsgKind.Info);
+        m.Kind is MsgKind.Bad || (m.Tag != null && GoodNews.Contains(m.Tag) && m.Kind != MsgKind.Info);
 
     void AppendLogRow(Message m)
     {

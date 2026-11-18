@@ -171,8 +171,6 @@ public partial class GameScreen
         _barLeft.SortChildren += PlaceDrops;
         _searchResults.VisibilityChanged += PlaceDrops;
         _layersCard.VisibilityChanged += PlaceDrops;
-        _searchResults.Resized += PlaceNotes;   // more or fewer results
-        _layersCard.Resized += PlaceNotes;
         return _barLayer;
     }
 
@@ -476,7 +474,6 @@ public partial class GameScreen
         var origin = _barLayer.GlobalPosition;
         Hang(_searchResults, _searchBox.GlobalPosition.X - origin.X, Math.Max(SearchResultsWidth, _searchBox.Size.X));
         Hang(_layersCard, _layersBox.GlobalPosition.X - origin.X, _layersBox.Size.X);
-        PlaceNotes();   // the notes go below an open drop-down
     }
 
     /// <summary>Puts a drop-down under its box, at least as wide. Zero-sized offsets: it keeps exactly the size its contents need.</summary>

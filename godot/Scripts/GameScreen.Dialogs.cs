@@ -53,16 +53,15 @@ public partial class GameScreen
             ("Sector", "S", ToggleSectorView, "Every system of a sector at a glance, with its planet, buildings, fleets and forces (or click a sector on the map)"),
         })
         {
-            var b = Ui.Button(text, () => { ToggleMenu(); act(); }, tip, "Flat");
-            b.Alignment = HorizontalAlignment.Left;
-            b.CustomMinimumSize = new Vector2(0, 34);
-            var k = Ui.Label(key, "StatLabel", wrap: false);
-            k.SetAnchorsPreset(LayoutPreset.RightWide);
-            k.OffsetLeft = -28; k.OffsetRight = -10;
-            k.HorizontalAlignment = HorizontalAlignment.Right; k.VerticalAlignment = VerticalAlignment.Center;
-            b.AddChild(k);
-            mv.AddChild(b);
+            mv.AddChild(MenuButton(text, key, act, tip));
         }
+        mv.AddChild(new HSeparator());
+        // the two headquarters (they were buttons at the bottom left until Paul's map declutter, 2026-11-18): H and Shift+H do the same
+        _myHqMenu = MenuButton("Go to your HQ", "H", () => GoToCapital(S.Player), "Centre the map on your headquarters (H)");
+        _myHqMenu.SetMeta(UiTest.FullName, "Go to your HQ");
+        mv.AddChild(_myHqMenu);
+        _enemyHqMenu = MenuButton("Go to enemy HQ", null, () => GoToCapital(S.Enemy), null);
+        mv.AddChild(_enemyHqMenu);   // greyed until found: RefreshHq
         mv.AddChild(new HSeparator());
         foreach (var (text, act, tip) in new (string, Action, string)[]
         {
@@ -268,6 +267,21 @@ public partial class GameScreen
         else if (top == _confirmPanel) CloseConfirm();
         else HideModal(top);
         return true;
+    }
+
+    /// <summary>One line of the ≡ menu: closes the menu, then acts; its key, if any, at the right.</summary>
+    Button MenuButton(string text, string key, Action act, string tip)
+    {
+        var b = Ui.Button(text, () => { ToggleMenu(); act(); }, tip, "Flat");
+        b.Alignment = HorizontalAlignment.Left;
+        b.CustomMinimumSize = new Vector2(0, 34);
+        if (key == null) return b;
+        var k = Ui.Label(key, "StatLabel", wrap: false);
+        k.SetAnchorsPreset(LayoutPreset.RightWide);
+        k.OffsetLeft = -28; k.OffsetRight = -10;
+        k.HorizontalAlignment = HorizontalAlignment.Right; k.VerticalAlignment = VerticalAlignment.Center;
+        b.AddChild(k);
+        return b;
     }
 
     void ToggleMenu()

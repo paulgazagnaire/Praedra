@@ -81,6 +81,7 @@ public partial class GameScreen : Control
         _fleets.Player = S.Player;
         _view.Player = S.Player;
         _view.LabelObstacles = MapLabelObstacles;
+        _fleets.Boxes = MapBoxes;
         _fleets.Planned = () => S.PlannedMoves;
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
         _fleets.CharacterRoutes = CharacterRoutes;
@@ -195,6 +196,7 @@ public partial class GameScreen : Control
         _fleets.DayFraction = _playing ? (float)Math.Min(_acc, 0.999) : 0f;
 
         TickToasts(delta);
+        TickHover(delta);
         TickSectorView(delta);
         TickMgmt(delta);
 
@@ -235,6 +237,19 @@ public partial class GameScreen : Control
         }
     }
 
+    /// <summary>Hold Alt (Option on a Mac) to see every system name and every mover's words; let go and the map is sparse again (Paul
+    /// 2026-11-18, pick 9). Read here, before any box can take the key, and never marked handled: Alt does nothing else.</summary>
+    public override void _Input(InputEvent e)
+    {
+        if (e is InputEventKey { Keycode: Key.Alt } k && _view != null) _view.ShowAllNames = k.Pressed;
+    }
+
+    public override void _Notification(int what)
+    {
+        // the release of Alt never comes when the window loses the keyboard (Cmd+Tab away while holding it): let go of it then
+        if ((what == NotificationWMWindowFocusOut || what == NotificationApplicationFocusOut) && _view != null) _view.ShowAllNames = false;
+    }
+
     public override void _UnhandledKeyInput(InputEvent e)
     {
         if (e is not InputEventKey { Pressed: true } k) return;
@@ -263,6 +278,7 @@ public partial class GameScreen : Control
             case Key.Left when SectorViewOpen: StepSector(-1); break;
             case Key.Right when SectorViewOpen: StepSector(1); break;
             case Key.Home: _view.ResetView(); break;
+            case Key.H when !cmd: GoToCapital(k.ShiftPressed ? S.Enemy : S.Player); break;   // the HQ buttons' job (pick 10)
             case Key.Equal: case Key.Plus: case Key.KpAdd: _view.ZoomCentre(1.25f); break;
             case Key.Minus: case Key.KpSubtract: _view.ZoomCentre(1f / 1.25f); break;
             case Key.Key1: SetSpeed(0); break;

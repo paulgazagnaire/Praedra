@@ -499,12 +499,13 @@ public partial class Main
             Expect(gs.PanelText().Contains("Unexplored") && !gs.PanelText().Contains("Owner:"), "its panel shows no owner, only 'Unexplored'");
         }
 
-        // hyperspace routes (Paul 2026-10-16, planets/15): shown by default, L hides them; hovering names the routes; the move preview says how it travels
+        // hyperspace routes (Paul 2026-10-16, planets/15): shown by default, L hides them; hovering a system not yours names the routes (on
+        // yours the one-line card gives support and troops instead, map declutter 2026-11-18); the move preview says how it travels
         Expect(gs.RoutesShown, "the hyperspace routes are drawn by default");
-        string major = gs.G.Systems.Where(x => gs.G.NeighboursOf(x.Index).Any(nb => nb.Lane.Tier == 1)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
-        string open = gs.G.Systems.Where(x => !gs.G.OnRoute(x.Index)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
+        string major = gs.G.Systems.Where(x => s.OwnerOf(x.Name) != me && gs.G.NeighboursOf(x.Index).Any(nb => nb.Lane.Tier == 1)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
+        string open = gs.G.Systems.Where(x => s.OwnerOf(x.Name) != me && !gs.G.OnRoute(x.Index)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
         Expect(gs.HoverTextFor(major).Contains("major route"), $"hovering {major} names its major route: " + gs.HoverTextFor(major));
-        Expect(gs.HoverTextFor(open).Contains("No route here"), $"hovering {open} says it is off the routes: " + gs.HoverTextFor(open));
+        Expect(gs.HoverTextFor(open).Contains("no route here"), $"hovering {open} says it is off the routes: " + gs.HoverTextFor(open));
         var mover = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && s.Host.Fleets.SpeedOf(f) > 0).OrderBy(f => f.Id).FirstOrDefault();
         if (mover != null)
         {
@@ -517,13 +518,15 @@ public partial class Main
         gs.View.Select(-1);
     }
 
-    /// <summary>Hand: the Enemy HQ button says unknown while the Hand's picture has not shown the Hearth.</summary>
+    /// <summary>Hand: the menu's Go to enemy HQ is greyed and says unknown while the Hand's picture has not shown the Hearth.</summary>
     void PlaytestHandHqUnknown(GameScreen gs)
     {
         var s = gs.S;
         Expect(s.Fog.KnownHq(Side.Hand) == null, "the Hand does not know the Hearth at the start");
-        Expect(gs.ButtonTexts().Contains("Enemy HQ: unknown"), "the Enemy HQ button says unknown");
-        Expect(gs.Click("Enemy HQ: unknown") && gs.ToastText.Contains("unknown"), "pressing it says the HQ location is unknown: " + gs.ToastText);
+        Expect(gs.EnemyHqEntry == "Go to enemy HQ: unknown", "the menu's Go to enemy HQ says unknown: " + gs.EnemyHqEntry);
+        Expect(gs.ClickViaMenu("Go to enemy HQ") && gs.ToastText.Contains("unknown"), "choosing it says the HQ location is unknown: " + gs.ToastText);
+        gs.PressKey(Key.H, shift: true);
+        Expect(gs.ToastText.Contains("unknown"), "and so does Shift+H");
     }
 
     /// <summary>Collective: Move HQ... with a refused order (plain reason), then a real move that arrives.</summary>
@@ -532,8 +535,8 @@ public partial class Main
         var s = gs.S; var me = s.Player; var fm = s.Host.Fleets;
         string hq = s.MyHqSystem;
         Expect(hq != null, "the Collective has an HQ");
-        Expect(gs.ButtonTexts().Contains("Enemy HQ"), "the Collective knows the enemy capital");
-        Expect(gs.Click("My HQ"), "click My HQ");
+        Expect(gs.EnemyHqEntry == "Go to enemy HQ", "the Collective knows the enemy capital: " + gs.EnemyHqEntry);
+        gs.PressKey(Key.H);
         gs.PlayRefresh();
         Expect(gs.Has("Move HQ..."), "the HQ system panel offers Move HQ...");
         int speed = s.Fog.HqRules.Speed;
@@ -557,7 +560,7 @@ public partial class Main
         Expect(s.MyHqSystem == hq, "the HQ stayed");
 
         // accepted
-        gs.Click("My HQ"); gs.PlayRefresh();
+        gs.PressKey(Key.H); gs.PlayRefresh();
         Expect(gs.Click("Move HQ..."), "click Move HQ... again");
         gs.HoverTextFor(dest);
         Expect(gs.Banner.Contains("HQ to " + dest) && gs.Banner.Contains("arrives day"), "preview shows route and arrival day: " + gs.Banner);
@@ -573,7 +576,7 @@ public partial class Main
         {
             int arrive = GameSession.HqArrivalDay(h);
             Expect(gs.HqStatusText == $"HQ moving to {dest}, arrives day {arrive}.", "HQ line: " + gs.HqStatusText);
-            Expect(gs.Click("My HQ") && gs.ToastText.Contains("HQ moving to " + dest), "My HQ while moving says where it goes: " + gs.ToastText);
+            Expect(gs.ClickViaMenu("Go to your HQ") && gs.ToastText.Contains("HQ moving to " + dest), "Go to your HQ while it moves says where it goes: " + gs.ToastText);
             Expect(RunUntil(gs, () => s.MyHqSystem == dest, 200), $"the HQ arrived at {dest} (day {s.Game.Day}, expected {arrive})");
             Expect(s.Game.Day == arrive, $"on the announced day {arrive}");
         }

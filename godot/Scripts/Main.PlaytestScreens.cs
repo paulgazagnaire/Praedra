@@ -28,9 +28,15 @@ public partial class Main
         // ---------------------------------------------------------------- the frame
         Expect(!gs.WindowOpen, "the map starts with no window open");
         Expect(gs.PillText.Contains("Play"), "the pill under the top bar says to press Play: " + gs.PillText);
-        Expect(gs.MessageCornerText.Length > 0, "the message corner shows the latest message: " + gs.MessageCornerText.Replace("\n", " / "));
+        string notesWhy = gs.NotesCornerProblem();
+        Expect(notesWhy == null, "news has one place, the bottom-right corner: one-line notes that fade, no card left from older news (map declutter, pick 7)"
+            + (notesWhy != null ? ": " + notesWhy : ""));
+        Expect(GameScreen.NeedsCount(1, 0) == "1 urgent" && GameScreen.NeedsCount(0, 2) == "2 things to watch" && GameScreen.NeedsCount(1, 2) == "1 urgent, 2 to watch",
+            "the pill says only the parts that are not zero: " + GameScreen.NeedsCount(1, 0));
+        Expect(GameScreen.PopsUp(MsgKind.Bad) && !GameScreen.PopsUp(MsgKind.Warn) && !GameScreen.PopsUp(MsgKind.Info) && GameScreen.PopsUp(MsgKind.Good, "MissionSucceeded"),
+            "only red news and real good news pop up; amber news stays in Needs you and the Log");
         Expect(gs.Click("Menu") && gs.MenuVisible, "the menu button opens the menu");
-        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Log", "Sector", "Save game...", "Settings..." })
+        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Log", "Sector", "Go to your HQ", "Save game...", "Settings..." })
             Expect(gs.Has(item), $"the menu offers {item}");
         gs.PressKey(Key.Escape);
         Expect(!gs.MenuVisible, "Esc closes the menu");
@@ -153,7 +159,7 @@ public partial class Main
         Expect(cards.Count > 0 && cards[0] == home, "the headquarters comes first: " + string.Join(", ", cards));
         Expect(gs.SectorWindowWidth <= gs.ScreenWidth / 2 + 1, $"the sector window takes half the screen at most ({gs.SectorWindowWidth} of {gs.ScreenWidth})");
         Expect(gs.MarkedSectorName == homeSec, $"the map marks the open sector (QA-74): {gs.MarkedSectorName}");
-        Expect(gs.BottomLeftShown != gs.SectorOnLeft, "the bottom-left HQ buttons hide while the window sits over them (QA-73)");
+        Expect(gs.BottomLeftShown != gs.SectorOnLeft, "the bottom-left box (the legend) hides while the window sits over it (QA-73)");
         string hc = gs.SectorCardText(home), tip = gs.SectorCardTip(home);
         GD.Print("  tile " + home + ": " + hc.Replace("\n", " / ") + " | " + tip.Replace("\n", " / "));
         Expect(hc.Contains(home) && !hc.Any(char.IsDigit), "the headquarters tile shows its name and no numbers: " + hc.Replace("\n", " / "));
@@ -174,7 +180,7 @@ public partial class Main
         Expect(gs.SectorViewName == homeSec, "and Left steps back");
         gs.PressKey(Key.Escape);
         Expect(!gs.SectorViewOpen, "Esc closes the sector window");
-        Expect(gs.MarkedSectorName == null && gs.BottomLeftShown, "closing it unmarks the sector and brings back the bottom-left HQ buttons");
+        Expect(gs.MarkedSectorName == null && gs.BottomLeftShown, "closing it unmarks the sector and brings back the bottom-left box");
 
         // ---------------------------------------------------------------- sectors on the map
         var homeSys = gs.G.Systems.First(x => x.Name == home);
@@ -183,11 +189,13 @@ public partial class Main
         Expect(gs.SectorUnder(inSec) == sec, $"pointing inside {sec} finds that sector: {gs.SectorUnder(inSec)}");
         Expect(gs.SectorUnderScreen(new Vector2(-5000, -5000)) == null, "pointing at empty space far off the map finds no sector");
         gs.ShotSectorHover(sec.Replace(' ', '_'));
-        Expect(gs.HoverCardText.Contains(sec) && gs.HoverCardText.Contains("Click to open"), "hovering a sector names it and says a click opens it: " + gs.HoverCardText.Replace("\n", " / "));
+        Expect(gs.HoverWords == "" && !gs.HoverCardShown, "pointing at a sector's open space shows no card: its outline, name and system names say it (pick 8): " + gs.HoverWords);
         gs.ClickSector(sec);
         Expect(gs.SectorViewOpen && gs.SectorViewName == sec, $"clicking {sec} on the map opens its sector window");
         gs.PressKey(Key.S);
         Expect(!gs.SectorViewOpen, "S closes it again");
+
+        PlaytestDeclutter(gs, home);
 
         // ---------------------------------------------------------------- the goal
         Expect(gs.GoalButtonText.StartsWith("Goal: 0/3 terms met", StringComparison.Ordinal), "the Goal button counts the capital and the leaders you hold: " + gs.GoalButtonText);
