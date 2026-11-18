@@ -326,14 +326,14 @@ public partial class GameScreen
     }
 
     /// <summary>Routes of the player's characters travelling alone (and the trips just ordered), for the map. Own side only.</summary>
-    IEnumerable<(string Label, IReadOnlyList<string> Path, int HopIndex)> CharacterRoutes()
+    IEnumerable<(IReadOnlyList<string> Path, int HopIndex, bool Planned)> CharacterRoutes()
     {
         foreach (var c in S.MyCharacters)
         {
             if (c.AttachedFleet == 0 && c.Transit is { } t)
-                yield return ($"{S.CharName(c.Id)} arrives day {GameSession.ArrivalDay(t)}", t.Path, t.HopIndex);
+                yield return (t.Path, t.HopIndex, false);
             else if (S.PlannedCharacterMoveOf(c.Id) is { } pm)
-                yield return ($"{S.CharName(c.Id)} arrives day {pm.ArrivalDay}", pm.Path, 0);
+                yield return (pm.Path, 0, true);
         }
     }
 }

@@ -28,17 +28,26 @@ public partial class FleetLayer : Control
     public Func<IReadOnlyList<(string System, FleetPicture Fleet)>> EnemyFleets { get; set; }
     /// <summary>The player's own HQ while it moves (path, the hop it is on, arrival day), or null.</summary>
     public Func<(IReadOnlyList<string> Path, int HopIndex, int ArrivalDay)?> HqRoute { get; set; }
-    /// <summary>The player's own characters travelling alone (label, path, the hop they are on), including trips that start next day.</summary>
-    public Func<IEnumerable<(string Label, IReadOnlyList<string> Path, int HopIndex)>> CharacterRoutes { get; set; }
+    /// <summary>The player's own characters travelling alone (path, the hop they are on), and trips ordered that start next day (Planned).</summary>
+    public Func<IEnumerable<(IReadOnlyList<string> Path, int HopIndex, bool Planned)>> CharacterRoutes { get; set; }
     /// <summary>The player's own things travelling that are not fleets (leaders alone, mission teams, built units and buildings on the way,
     /// regiments sent alone, the moving HQ). Own side only: fog hides the enemy's (rule: m5-fog-and-hq §F3).</summary>
     public Func<IEnumerable<Mover>> Movers { get; set; }
     /// <summary>Draw deliveries (units and buildings on their way from the yard, troops sent alone)? Layers > Deliveries.</summary>
     public bool ShowDeliveries { get; set; } = true;
     static bool IsDelivery(MoverKind k) => k is MoverKind.Regiment or MoverKind.Ship or MoverKind.Fighter or MoverKind.Facility;
+    /// <summary>Screen rectangles the words must keep off (the boxes on the map), set by the owner.</summary>
+    public Func<IEnumerable<Rect2>> Boxes { get; set; }
     const float PickRadiusPx = 13f;
     const float MoverR = 5.5f;
-    const float LabelZoom = 2.0f;
+    /// <summary>Below this zoom the fleets of one side at a system share one marker with a count.</summary>
+    const float StackZoom = 2.0f;
+    // One dashed style per meaning (map declutter, Paul's All A 2026-11-18): a thing on its way in its own colour at 55%, 1.2 px, dash 4
+    // (the selected fleet's at 100%, 1.6 px; the moving HQ keeps its gold); an order not started yet in white at 85%, 1.6 px, dash 6.
+    const float WayAlpha = 0.55f, WayWidth = 1.2f, WaySelWidth = 1.6f, WayDash = 4f;
+    static readonly Color PlannedColor = new(1f, 1f, 1f, 0.85f);
+    const float PlannedWidth = 1.6f, PlannedDash = 6f;
+    static readonly Color HqGold = new(1f, 0.95f, 0.5f);
 
     Game _game;
     Galaxy _galaxy;
@@ -61,7 +70,11 @@ public partial class FleetLayer : Control
     Color ColorOf(Side s) => Ui.OwnerColor(s, Player ?? Side.Hand);
 
     /// <summary>Zoomed out, the fleets of one side at a system share one marker with a count (Tab steps through them); zoomed in, each has its own.</summary>
-    bool Stacked => Map.Zoom < LabelZoom;
+    bool Stacked => Map.Zoom < StackZoom;
+
+    /// <summary>Words on every fleet and mover: from the zoom where your system names come in, or while Alt is held (Paul 2026-11-18,
+    /// pick 2). Otherwise only the selected fleet and the glyph under the mouse have words.</summary>
+    bool WordsOn => Map.Zoom >= GalaxyView.NameZoom || Map.ShowAllNames;
 
     // how many fleets share each stacked marker, filled by Layout (looked up by key, never iterated)
     readonly Dictionary<(string System, bool Own), int> _stack = new();
@@ -100,10 +113,7 @@ public partial class FleetLayer : Control
         if (f.At != null && _galaxy.TryFindSystem(f.At, out int s))
         {
             int slot = SlotFor(f.At, f.Side == Player || Player == null, slots);
-            // above the dot, stacked upwards one row per fleet (a name label fits beside each marker); after 6 rows a new column
-            const int rows = 6;
-            float colWidth = map.Zoom >= LabelZoom ? 130f : 14f;
-            pos = map.SystemScreen(s) + new Vector2(-6f + colWidth * (slot / rows), -13f - 16f * (slot % rows));
+            pos = ParkedAt(s, slot);
             return true;
         }
         return false;
@@ -131,12 +141,21 @@ public partial class FleetLayer : Control
     {
         pos = Vector2.Zero;
         if (!_galaxy.TryFindSystem(system, out int s)) return false;
-        var map = Map;
         int slot = SlotFor(system, false, slots);
-        const int rows = 6;
-        float colWidth = map.Zoom >= LabelZoom ? 130f : 14f;
-        pos = map.SystemScreen(s) + new Vector2(-6f + colWidth * (slot / rows), -13f - 16f * (slot % rows));
+        pos = ParkedAt(s, slot);
         return true;
+    }
+
+    /// <summary>Where a parked fleet's marker goes: above the dot, stacked upwards one row per fleet, after 6 rows a new column. The first
+    /// row starts just outside the system's outermost ring: on an HQ or an uprising the triangle used to sit across the rings.</summary>
+    Vector2 ParkedAt(int system, int slot)
+    {
+        var map = Map;
+        const int rows = 6;
+        float colWidth = map.Zoom >= GalaxyView.NameZoom ? 80f : 14f;   // room for a short name beside each column once names show
+        // the triangle reaches about 7 px below its centre (base and outline); 2 px of air above the ring
+        float first = Mathf.Max(13f, map.SystemRadius + map.RingOut(system) + 9f);
+        return map.SystemScreen(system) + new Vector2(-6f + colWidth * (slot / rows), -first - 16f * (slot % rows));
     }
 
     /// <summary>The systems where an enemy fleet marker is drawn now (for the playtest).</summary>
@@ -193,44 +212,35 @@ public partial class FleetLayer : Control
         pos = pts[^1]; return true;
     }
 
-    /// <summary>The labels of the movers drawn now (for the playtest).</summary>
+    /// <summary>The labels of the movers drawn now, as whole sentences (for the playtest).</summary>
     public IReadOnlyList<string> MoverLabels() => _game == null ? Array.Empty<string>() : PlacedMovers().Select(x => x.m.Label).ToList();
 
-    /// <summary>Screen rectangles of the fleet markers and their names, so the map keeps system names off them.</summary>
+    /// <summary>Where the marker of an own fleet is drawn now, or null (for the playtest).</summary>
+    public Vector2? MarkerOf(int fleetId) => _game == null ? null : Layout().Own.Where(o => o.f.Id == fleetId).Select(o => (Vector2?)o.pos).FirstOrDefault();
+
+    /// <summary>The words on the map's fleets and movers right now, as placed (for the playtest).</summary>
+    public IReadOnlyList<string> WordsShown() => _game == null ? Array.Empty<string>() : Words(Layout(), PlacedMovers()).Select(w => w.Text).ToList();
+
+    /// <summary>The words placed now with their boxes (for the playtest's overlap checks).</summary>
+    public IReadOnlyList<MapWord> WordsPlaced() => _game == null ? Array.Empty<MapWord>() : Words(Layout(), PlacedMovers());
+
+    /// <summary>Screen rectangles of the fleet and mover markers and their words, so the map keeps system names off them.</summary>
     public IEnumerable<Rect2> Obstacles()
     {
-        if (_game == null) yield break;
-        var map = Map;
-        var font = Ui.Medium ?? ThemeDB.FallbackFont;
+        if (_game == null) return Array.Empty<Rect2>();
         var layout = Layout();
-        foreach (var (f, p, _) in layout.Own)
-        {
-            bool selected = map.SelectedFleet == f.Id;
-            float r = selected ? 10f : 8.5f;
-            yield return new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
-            if (map.Zoom >= LabelZoom || selected) yield return NameBox(font, p, r, f.Name);
-        }
-        foreach (var (_, pic, p) in layout.Enemy)
-        {
-            const float r = 8.5f;
-            yield return new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
-            if (map.Zoom >= LabelZoom) yield return NameBox(font, p, r, EnemyText(pic));
-        }
-        foreach (var (m, p, _) in PlacedMovers())
-        {
-            yield return new Rect2(p - new Vector2(MoverR + 1, MoverR + 1), new Vector2(2 * MoverR + 2, 2 * MoverR + 2));
-            if (map.Zoom >= LabelZoom) yield return NameBox(font, p, MoverR, m.Label);
-        }
+        var movers = PlacedMovers();
+        return MarkerBoxes(layout, movers).Concat(Words(layout, movers).Select(w => w.Box)).ToList();
     }
 
-    static Rect2 NameBox(Font font, Vector2 p, float r, string text)
+    /// <summary>"3 ships, 1 squadron": what the player's side sees of an enemy fleet. The colour and the down triangle already say whose.</summary>
+    static string EnemyText(FleetPicture pic)
     {
-        var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 13);
-        var baseLine = p + new Vector2(r + 3f, -r * 0.6f);
-        return new Rect2(baseLine - new Vector2(0, font.GetAscent(13)), size);
+        var parts = new List<string>(2);
+        if (pic.ShipCount > 0 || pic.SquadronCount == 0) parts.Add(Ui.Count(pic.ShipCount, "ship", "ships"));
+        if (pic.SquadronCount > 0) parts.Add(Ui.Count(pic.SquadronCount, "squadron", "squadrons"));
+        return string.Join(", ", parts);
     }
-
-    static string EnemyText(FleetPicture pic) => $"Enemy: {pic.ShipCount} ship(s){(pic.SquadronCount > 0 ? $", {pic.SquadronCount} sq." : "")}";
 
     /// <summary>The system index of the enemy marker under a screen point, or -1.</summary>
     public int PickEnemySystem(Vector2 screen)
@@ -258,14 +268,225 @@ public partial class FleetLayer : Control
         return best;
     }
 
-    void DrawDestination(Font font, Vector2 at, string text, Color col, bool label)
+    // ================================================================== what is drawn: one marker per fleet (or per stack zoomed out)
+
+    /// <summary>The own fleet markers drawn: every fleet, or zoomed out one per stack (the selected fleet's, else the first) with its count.</summary>
+    List<(Fleet f, Vector2 p, Vector2 h, int count)> DrawnOwn(List<(Fleet f, Vector2 pos, Vector2 heading)> own)
     {
-        DrawArc(at, 9f, 0, Mathf.Tau, 20, col, 2f, true);
-        if (!label) return;
-        var pos = at + new Vector2(12f, 16f);
-        DrawStringOutline(font, pos, text, HorizontalAlignment.Left, -1, 12, 4, new Color(0, 0, 0, 0.9f));
-        DrawString(font, pos, text, HorizontalAlignment.Left, -1, 12, col);
+        var map = Map;
+        var list = new List<(Fleet, Vector2, Vector2, int)>();
+        var drawnStacks = new HashSet<string>(StringComparer.Ordinal); // membership only
+        foreach (var (f, p, h) in own.OrderBy(x => map.SelectedFleet == x.f.Id ? 0 : 1).ThenBy(x => x.f.Id))
+        {
+            int count = 1;
+            if (Stacked && f.At != null)
+            {
+                if (!drawnStacks.Add(f.At)) continue;
+                count = _stack.TryGetValue((f.At, f.Side == Player || Player == null), out int n) ? n : 1;
+            }
+            list.Add((f, p, h, count));
+        }
+        return list;
     }
+
+    /// <summary>The enemy markers drawn: one per system zoomed out, with its count.</summary>
+    List<(FleetPicture pic, Vector2 p, int count)> DrawnEnemy(List<(string System, FleetPicture Fleet, Vector2 pos)> enemy)
+    {
+        var list = new List<(FleetPicture, Vector2, int)>();
+        var drawn = new HashSet<string>(StringComparer.Ordinal); // membership only
+        foreach (var (sys, pic, p) in enemy)
+        {
+            int count = 1;
+            if (Stacked)
+            {
+                if (!drawn.Add(sys)) continue;
+                count = _stack.TryGetValue((sys, false), out int n) ? n : 1;
+            }
+            list.Add((pic, p, count));
+        }
+        return list;
+    }
+
+    static Rect2 Around(Vector2 p, float r) => new(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
+    static Rect2 BadgeBox(Vector2 p, float r) => Around(p + new Vector2(r * 0.95f, -r * 0.95f), 8.5f);
+
+    /// <summary>The markers' own boxes (fleets, enemy fleets, movers and their count badges).</summary>
+    List<Rect2> MarkerBoxes((List<(Fleet f, Vector2 pos, Vector2 heading)> Own, List<(string System, FleetPicture Fleet, Vector2 pos)> Enemy) layout,
+        List<(Mover m, Vector2 pos, Vector2 heading)> movers)
+    {
+        var map = Map;
+        var list = new List<Rect2>();
+        foreach (var (f, p, _, count) in DrawnOwn(layout.Own))
+        {
+            float r = map.SelectedFleet == f.Id ? 10f : 8.5f;
+            list.Add(Around(p, r));
+            if (count > 1) list.Add(BadgeBox(p, r));
+        }
+        foreach (var (_, p, count) in DrawnEnemy(layout.Enemy))
+        {
+            list.Add(Around(p, 8.5f));
+            if (count > 1) list.Add(BadgeBox(p, 8.5f));
+        }
+        foreach (var (m, p, _) in movers)
+        {
+            list.Add(Around(p, MoverR + (m.Kind == MoverKind.Mission ? 3.5f : 1f)));
+            if (m.Count > 1) list.Add(BadgeBox(p, MoverR));
+        }
+        return list;
+    }
+
+    // ================================================================== words
+
+    /// <summary>One piece of text on the map: what it says, its baseline, its box, colour and size.</summary>
+    public readonly record struct MapWord(string Text, Vector2 Base, Rect2 Box, Color Col, int Size);
+
+    /// <summary>The glyph under the mouse: 0 own fleet (Id), 1 enemy marker (index in the drawn list), 2 mover (index); or (-1, -1).</summary>
+    (int Kind, int Id) Pointed(List<(Fleet f, Vector2 p, Vector2 h, int count)> own, List<(FleetPicture pic, Vector2 p, int count)> enemy,
+        List<(Mover m, Vector2 pos, Vector2 heading)> movers)
+    {
+        if (Map.MousePos is not { } mouse) return (-1, -1);
+        (int, int) best = (-1, -1); float bestD = PickRadiusPx * PickRadiusPx;
+        void Try(Vector2 p, int kind, int id) { float d = p.DistanceSquaredTo(mouse); if (d < bestD) { bestD = d; best = (kind, id); } }
+        foreach (var o in own) Try(o.p, 0, o.f.Id);
+        for (int i = 0; i < enemy.Count; i++) Try(enemy[i].p, 1, i);
+        for (int i = 0; i < movers.Count; i++) Try(movers[i].pos, 2, i);
+        return best;
+    }
+
+    /// <summary>
+    /// Every word on the fleets and movers, placed once (map declutter, Paul's All A 2026-11-18). At the opening zoom there are none: the
+    /// selected fleet and the glyph under the mouse get "Fleet 1 · day 6". From the zoom where your system names come in (or with Alt held)
+    /// each glyph gets its short name ("Fleet 1", "The Chair", "Espionage"). A word sits beside its glyph (right, left, above or below; a
+    /// parked fleet right or left only, next to its own row), never over another word, a marker, a system's rings, a box on the map or
+    /// past the screen's edge; first it looks for room off the system dots too. A word with no room is left out, except the selected or
+    /// pointed one. A word may cover a grey or unexplored dot when nothing else is free, never a blue or orange one. A glyph off the screen
+    /// has no word.
+    /// </summary>
+    List<MapWord> Words((List<(Fleet f, Vector2 pos, Vector2 heading)> Own, List<(string System, FleetPicture Fleet, Vector2 pos)> Enemy) layout,
+        List<(Mover m, Vector2 pos, Vector2 heading)> movers)
+    {
+        var map = Map;
+        var font = Ui.Medium ?? ThemeDB.FallbackFont;
+        var view = new Rect2(Vector2.Zero, map.Size);
+        var own = DrawnOwn(layout.Own);
+        var enemy = DrawnEnemy(layout.Enemy);
+        var pointed = Pointed(own, enemy, movers);
+        bool all = WordsOn;
+        var outp = new List<MapWord>();
+        if (!all && pointed.Kind < 0 && map.SelectedFleet < 0) return outp;   // the opening screen: no words
+
+        var taken = new GalaxyView.LabelSpace();
+        foreach (var b in MarkerBoxes(layout, movers)) taken.Add(b);
+        if (Boxes != null) foreach (var b in Boxes()) taken.Add(b);
+        var dots = new Discs();    // every system dot with its rings: kept clear if there is any room
+        var keep = new Discs();    // the dots that are someone's (blue, orange) and every state ring (HQ, uprising, blockade): never covered
+        var near = view.Grow(30);
+        float rad = map.SystemRadius;
+        for (int i = 0; i < _galaxy.Systems.Count; i++)
+        {
+            var q = map.SystemScreen(i);
+            if (!near.HasPoint(q)) continue;
+            float ro = map.RingOut(i);
+            float r = rad + Mathf.Max(1.5f, ro + 0.5f);
+            dots.Add(q, r + 2f);
+            if (ro > 2f || map.IsHeld(i)) keep.Add(q, r);
+        }
+
+        void Put(string text, Vector2 p, float r, Color col, int fs, bool must, bool parked, float badge)
+        {
+            if (!view.HasPoint(p)) return;   // a glyph off the screen has no word
+            var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, fs);
+            var spots = new List<Vector2>
+            {
+                new(p.X + r + 4f + badge, p.Y - size.Y / 2f), new(p.X - r - 4f - size.X, p.Y - size.Y / 2f),
+            };
+            if (!parked) { spots.Add(new(p.X - size.X / 2f, p.Y - r - 3f - size.Y)); spots.Add(new(p.X - size.X / 2f, p.Y + r + 3f)); }
+            Rect2? at = null;
+            for (int pass = 0; pass < 2 && at == null; pass++)
+                foreach (var sp in spots)
+                {
+                    var b = new Rect2(sp, size);
+                    if (!view.Encloses(b)) continue;
+                    if (taken.Hits(b.Grow(2f)) || keep.Hits(b) || (pass == 0 && dots.Hits(b))) continue;
+                    at = b; break;
+                }
+            if (at == null && must)
+            {
+                var b = new Rect2(spots[0], size);   // the selected or pointed word always shows, kept on the screen
+                b.Position = new Vector2(Mathf.Clamp(b.Position.X, 0, Mathf.Max(0, view.Size.X - size.X)), Mathf.Clamp(b.Position.Y, 0, Mathf.Max(0, view.Size.Y - size.Y)));
+                at = b;
+            }
+            if (at is not { } box) return;
+            taken.Add(box.Grow(3f));
+            outp.Add(new MapWord(text, box.Position + new Vector2(0, font.GetAscent(fs)), box, col, fs));
+        }
+
+        var planned = new Dictionary<int, int>();   // fleet id -> arrival day of an order not started yet; looked up, never iterated
+        if (Planned != null) foreach (var kv in Planned()) planned[kv.Key] = kv.Value.ArrivalDay;
+        string FleetWords(Fleet f, bool full)
+        {
+            if (!full) return f.Name;
+            if (planned.TryGetValue(f.Id, out int day)) return $"{f.Name} · day {day}";
+            if (f.Transit is { } t && f.At == null) { int a = t.DueDay; for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) a += t.HopTicks[h]; return $"{f.Name} · day {a}"; }
+            return f.Name;
+        }
+        Color MoverColour(Mover m) => m.Kind == MoverKind.Hq ? HqGold : ColorOf(Player ?? Side.Hand);
+
+        // the selected fleet and the pointed glyph first: they always show, with the day
+        foreach (var (f, p, _, count) in own)
+        {
+            bool sel = map.SelectedFleet == f.Id, pt = pointed == (0, f.Id);
+            if (sel || pt) Put(FleetWords(f, true), p, sel ? 10f : 8.5f, ColorOf(f.Side), 13, true, f.At != null, count > 1 ? 12f : 0f);
+        }
+        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyText(e.pic), e.p, 8.5f, ColorOf(e.pic.Side), 13, true, true, e.count > 1 ? 12f : 0f); }
+        float MoverRoom(Mover m) => MoverR + (m.Kind == MoverKind.Mission ? 4f : 1f);   // a mission team's ring is wider than its diamond
+        if (pointed.Kind == 2) { var (m, p, _) = movers[pointed.Id]; Put(m.Point ?? m.Label, p, MoverRoom(m), MoverColour(m), 12, true, false, m.Count > 1 ? 12f : 0f); }
+        if (!all) return outp;
+
+        // then every other glyph's short name
+        foreach (var (f, p, _, count) in own)
+            if (map.SelectedFleet != f.Id && pointed != (0, f.Id)) Put(FleetWords(f, false), p, 8.5f, ColorOf(f.Side), 13, false, f.At != null, count > 1 ? 12f : 0f);
+        for (int i = 0; i < enemy.Count; i++)
+            if (pointed != (1, i)) Put(EnemyText(enemy[i].pic), enemy[i].p, 8.5f, ColorOf(enemy[i].pic.Side), 13, false, true, enemy[i].count > 1 ? 12f : 0f);
+        for (int i = 0; i < movers.Count; i++)
+            if (pointed != (2, i)) { var (m, p, _) = movers[i]; Put(m.Name ?? m.Label, p, MoverRoom(m), MoverColour(m), 12, false, false, m.Count > 1 ? 12f : 0f); }
+        return outp;
+    }
+
+    (int, int) _lastPointed = (-1, -1);
+
+    /// <summary>Round things on the screen (system dots with their rings): a word's box hits one only where it really reaches the circle, so
+    /// a name can sit at the corner of a ring's square. A coarse grid keeps it cheap.</summary>
+    sealed class Discs
+    {
+        const float Cell = 64f;
+        readonly Dictionary<(int, int), List<(Vector2 C, float R)>> _cells = new(); // looked up by key only, never iterated
+        public void Add(Vector2 c, float r)
+        {
+            int x0 = Mathf.FloorToInt((c.X - r) / Cell), x1 = Mathf.FloorToInt((c.X + r) / Cell);
+            int y0 = Mathf.FloorToInt((c.Y - r) / Cell), y1 = Mathf.FloorToInt((c.Y + r) / Cell);
+            for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++)
+            {
+                if (!_cells.TryGetValue((x, y), out var list)) _cells[(x, y)] = list = new List<(Vector2, float)>();
+                list.Add((c, r));
+            }
+        }
+        public bool Hits(Rect2 b)
+        {
+            int x0 = Mathf.FloorToInt(b.Position.X / Cell), x1 = Mathf.FloorToInt(b.End.X / Cell);
+            int y0 = Mathf.FloorToInt(b.Position.Y / Cell), y1 = Mathf.FloorToInt(b.End.Y / Cell);
+            for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++)
+                if (_cells.TryGetValue((x, y), out var list))
+                    foreach (var (c, r) in list)
+                    {
+                        var near = new Vector2(Mathf.Clamp(c.X, b.Position.X, b.End.X), Mathf.Clamp(c.Y, b.Position.Y, b.End.Y));
+                        if (near.DistanceSquaredTo(c) < r * r) return true;
+                    }
+            return false;
+        }
+    }
+
+    // ================================================================== drawing
 
     public override void _Draw()
     {
@@ -273,58 +494,39 @@ public partial class FleetLayer : Control
         var map = Map;
         var font = Ui.Medium ?? ThemeDB.FallbackFont;
         var layout = Layout();
+        var movers = PlacedMovers();
         var placed = layout.Own;
+        var mine = ColorOf(Player ?? Side.Hand);
 
-        // the player's own HQ while it moves: a dashed gold line along the rest of its route, arrival day at the end
-        if (HqRoute?.Invoke() is { } hq && hq.Path.Count > 1)
+        // A route's end has no ring and no text (Paul 2026-11-18, pick 3): the dashed line stops at the destination's dot, and the
+        // arrival day is in the glyph's own words.
+        void Dashes(IReadOnlyList<string> path, int fromIndex, Vector2? start, Color col, float width, float dash)
         {
-            var gold = new Color(1f, 0.95f, 0.5f, 0.95f);
-            Vector2? from = null;
-            for (int i = Math.Max(0, hq.HopIndex); i < hq.Path.Count; i++)
+            Vector2? from = start;
+            for (int i = Math.Max(0, fromIndex); i < path.Count; i++)
             {
-                if (!_galaxy.TryFindSystem(hq.Path[i], out int sys)) break;
+                if (!_galaxy.TryFindSystem(path[i], out int sys)) break;
                 var to = map.SystemScreen(sys);
-                if (from is Vector2 f0) DrawDashedLine(f0, to, gold, 2.5f, 5f);
+                if (from is Vector2 f0) DrawDashedLine(f0, to, col, width, dash, true, true);
                 from = to;
             }
-            if (from is Vector2 end) DrawDestination(font, end, $"HQ arrives day {hq.ArrivalDay}", gold, true);
         }
 
-        // the player's characters travelling alone: a thin dashed light-blue line, arrival day at the end
+        // the player's own HQ while it moves: gold
+        if (HqRoute?.Invoke() is { } hq && hq.Path.Count > 1) Dashes(hq.Path, hq.HopIndex, null, new Color(HqGold, WayAlpha), WayWidth, WayDash);
+
+        // the player's characters travelling alone; a trip ordered that has not started yet is an order: white
         if (CharacterRoutes != null)
             foreach (var cr in CharacterRoutes())
-            {
-                var blue = new Color(0.55f, 0.85f, 1f, 0.9f);
-                Vector2? from = null;
-                for (int i = Math.Max(0, cr.HopIndex); i < cr.Path.Count; i++)
-                {
-                    if (!_galaxy.TryFindSystem(cr.Path[i], out int sys)) break;
-                    var to = map.SystemScreen(sys);
-                    if (from is Vector2 f0) DrawDashedLine(f0, to, blue, 1.8f, 4f);
-                    from = to;
-                }
-                if (from is Vector2 end) DrawDestination(font, end, cr.Label, blue, map.Zoom >= LabelZoom);
-            }
+                if (cr.Planned) Dashes(cr.Path, 0, null, PlannedColor, PlannedWidth, PlannedDash);
+                else Dashes(cr.Path, cr.HopIndex, null, new Color(mine, WayAlpha), WayWidth, WayDash);
 
-        // remaining route of each moving fleet: dashed line from the marker through the rest of its path; the selected own fleet's route is bold
+        // the rest of each moving fleet's route, from its marker; the selected fleet's is brighter
         foreach (var (f, p, _) in placed)
         {
             if (f.Transit is not { } t || f.At != null) continue;
             bool sel = map.SelectedFleet == f.Id;
-            var col = ColorOf(f.Side); col.A = sel ? 1f : 0.7f;
-            var from = p;
-            for (int i = t.HopIndex + 1; i < t.Path.Count; i++)
-            {
-                if (!_galaxy.TryFindSystem(t.Path[i], out int sys)) break;
-                var to = map.SystemScreen(sys);
-                DrawDashedLine(from, to, col, sel ? 3.5f : 2f, 7f);
-                from = to;
-            }
-            if (f.Side == Player || sel)
-            {
-                int arrive = t.DueDay; for (int h2 = t.HopIndex + 1; h2 < t.HopTicks.Count; h2++) arrive += t.HopTicks[h2];
-                DrawDestination(font, from, $"{f.Name} arrives day {arrive}", col, sel || map.Zoom >= LabelZoom);
-            }
+            Dashes(t.Path, t.HopIndex + 1, p, new Color(ColorOf(f.Side), sel ? 1f : WayAlpha), sel ? WaySelWidth : WayWidth, WayDash);
         }
 
         // orders given but not started yet (they begin when the next day does)
@@ -333,94 +535,72 @@ public partial class FleetLayer : Control
             {
                 var hit = placed.FirstOrDefault(x => x.f.Id == kv.Key);
                 if (hit.f == null) continue;
-                var plan = kv.Value;
-                var from = hit.pos;
-                var white = new Color(1f, 1f, 1f, 0.9f);
-                for (int i = 1; i < plan.Path.Count; i++)
-                {
-                    if (!_galaxy.TryFindSystem(plan.Path[i], out int sys)) break;
-                    var to = map.SystemScreen(sys);
-                    DrawDashedLine(from, to, white, 3f, 6f);
-                    from = to;
-                }
-                DrawDestination(font, from, $"{hit.f.Name} arrives day {plan.ArrivalDay}", white, map.SelectedFleet == kv.Key || map.Zoom >= LabelZoom);
+                Dashes(kv.Value.Path, 1, hit.pos, PlannedColor, PlannedWidth, PlannedDash);
             }
 
-        DrawMovers(font);
+        DrawMovers(font, movers);
 
-        var drawnStacks = new HashSet<string>(StringComparer.Ordinal); // membership only
-        foreach (var (f, p, h) in placed.OrderBy(x => map.SelectedFleet == x.f.Id ? 0 : 1).ThenBy(x => x.f.Id))
+        foreach (var (f, p, h, count) in DrawnOwn(placed))
         {
             var col = ColorOf(f.Side);
             bool selected = map.SelectedFleet == f.Id;
-            int count = 1;
-            if (Stacked && f.At != null)
-            {
-                if (!drawnStacks.Add(f.At)) continue; // one marker per stack: the selected fleet's, else the first
-                count = _stack.TryGetValue((f.At, f.Side == Player || Player == null), out int n) ? n : 1;
-            }
             float r = selected ? 10f : 8.5f;
             var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
             DrawColoredPolygon(tri, col);
             bool own = f.Side == Player;
             DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, selected ? Colors.White : own ? new Color(1, 1, 1, 0.9f) : new Color(0, 0, 0, 0.85f), selected ? 2.5f : own ? 1.6f : 1.2f, true);
-
             if (count > 1) Badge(font, p, r, count, col);
-            if (map.Zoom >= LabelZoom || selected)
-            {
-                var pos = p + new Vector2(r + 3f + (count > 1 ? 14f : 0f), -r * 0.6f);
-                DrawStringOutline(font, pos, f.Name, HorizontalAlignment.Left, -1, 13, 4, new Color(0, 0, 0, 0.9f));
-                DrawString(font, pos, f.Name, HorizontalAlignment.Left, -1, 13, col);
-            }
         }
 
-        // enemy fleets the player's side sees now: a pointed-down triangle with a dark outline, labelled with what was seen (no name)
-        var drawnEnemy = new HashSet<string>(StringComparer.Ordinal); // membership only
-        foreach (var (sys, pic, p) in layout.Enemy)
+        // enemy fleets the player's side sees now: a pointed-down triangle with a dark outline (no name: what was seen is in its words)
+        foreach (var (pic, p, count) in DrawnEnemy(layout.Enemy))
         {
-            if (Stacked && !drawnEnemy.Add(sys)) continue;
             var col = ColorOf(pic.Side);
             const float r = 8.5f;
-            if (Stacked && _stack.TryGetValue((sys, false), out int ne) && ne > 1) Badge(font, p, r, ne, col);
+            if (count > 1) Badge(font, p, r, count, col);
             var h = Vector2.Down; var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
             DrawColoredPolygon(tri, col);
             DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, new Color(0, 0, 0, 0.85f), 1.2f, true);
-            if (map.Zoom >= LabelZoom)
-            {
-                string text = EnemyText(pic);
-                var pos = p + new Vector2(r + 3f, -r * 0.6f);
-                DrawStringOutline(font, pos, text, HorizontalAlignment.Left, -1, 13, 4, new Color(0, 0, 0, 0.9f));
-                DrawString(font, pos, text, HorizontalAlignment.Left, -1, 13, col);
-            }
         }
+
+        // the words last, so no line or marker paints over them
+        foreach (var w in Words(layout, movers))
+        {
+            DrawStringOutline(font, w.Base, w.Text, HorizontalAlignment.Left, -1, w.Size, 4, new Color(0, 0, 0, 0.9f));
+            DrawString(font, w.Base, w.Text, HorizontalAlignment.Left, -1, w.Size, w.Col);
+        }
+
+        // the map's system names keep off these words: when the glyph under the mouse changes, the map places its names again
+        var pt = Pointed(DrawnOwn(placed), DrawnEnemy(layout.Enemy), movers);
+        if (pt != _lastPointed) { _lastPointed = pt; map.QueueRedraw(); }
     }
 
     /// <summary>
     /// The player's own movers: a small glyph per kind (leader diamond, mission team diamond in a ring, regiment square, building hexagon, ship or
-    /// fighter hollow triangle, HQ gold disc), moving like a fleet; the rest of the route as a faint dashed line; the label only when zoomed in.
+    /// fighter hollow triangle, HQ gold disc), moving like a fleet, and the rest of the route as a dashed line. Their words are placed with
+    /// the fleets' (<see cref="Words"/>).
     /// </summary>
-    void DrawMovers(Font font)
+    void DrawMovers(Font font, List<(Mover m, Vector2 pos, Vector2 heading)> movers)
     {
         var map = Map;
-        bool labels = map.Zoom >= LabelZoom;
-        foreach (var (m, p, h) in PlacedMovers())
+        foreach (var (m, p, h) in movers)
         {
-            var col = m.Kind == MoverKind.Hq ? new Color(1f, 0.95f, 0.5f) : ColorOf(Player ?? Side.Hand);
+            var col = m.Kind == MoverKind.Hq ? HqGold : ColorOf(Player ?? Side.Hand);
             var edge = new Color(1, 1, 1, 0.9f);
             // the route still ahead (a lone leader, with its hop times, and the HQ already have their own route line; a Move group does not)
             bool ownLine = m.Kind == MoverKind.Hq || (m.Kind == MoverKind.Leader && m.HopTicks != null);
             if (!m.Held && !ownLine && m.Path.Count > 1)
             {
-                var faint = col; faint.A = 0.45f;
+                var faint = new Color(col, WayAlpha);
                 var from = p;
                 int next = m.HopTicks != null ? m.HopIndex + 1 : NextPoint(m, p);
                 for (int i = next; i < m.Path.Count; i++)
                 {
                     if (!_galaxy.TryFindSystem(m.Path[i], out int sys)) break;
                     var to = map.SystemScreen(sys);
-                    DrawDashedLine(from, to, faint, 1.3f, 3f);
+                    DrawDashedLine(from, to, faint, WayWidth, WayDash, true, true);
                     from = to;
                 }
             }
@@ -467,12 +647,6 @@ public partial class FleetLayer : Control
                 }
             }
             if (m.Count > 1) Badge(font, p, r, m.Count, col);
-            if (labels)
-            {
-                var pos = p + new Vector2(r + 4f + (m.Count > 1 ? 12f : 0f), 4f);
-                DrawStringOutline(font, pos, m.Label, HorizontalAlignment.Left, -1, 12, 4, new Color(0, 0, 0, 0.9f));
-                DrawString(font, pos, m.Label, HorizontalAlignment.Left, -1, 12, col);
-            }
         }
     }
 
@@ -519,5 +693,7 @@ public enum MoverKind { Leader, Mission, Regiment, Ship, Fighter, Facility, Hq }
 /// and DueDay as in a fleet transit. HopTicks null = only the total is known (a mission team): it is placed by length along the path over the
 /// days [DueDay - TotalTicks, DueDay]. Held = waiting at Path[HopIndex] (a delivery stopped by an enemy fleet or a lost destination).
 /// </summary>
+/// <remarks>Label is the whole sentence (the playtest reads it). On the map, Name is the short word shown when names show ("The Chair",
+/// "Espionage") and Point the words under the mouse ("The Chair · day 20"); both fall back to Label.</remarks>
 public sealed record Mover(MoverKind Kind, string Label, IReadOnlyList<string> Path, IReadOnlyList<int> HopTicks, int HopIndex, int DueDay,
-    int TotalTicks = 0, int Count = 1, bool Held = false);
+    int TotalTicks = 0, int Count = 1, bool Held = false, string Name = null, string Point = null);

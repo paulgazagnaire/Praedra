@@ -19,7 +19,10 @@ public partial class GameScreen
         // leaders travelling alone (between days the trip has started once System is cleared). rule: m5-characters-and-talent §Where it runs (slot 2)
         foreach (var c in S.MyCharacters)
             if (c.AttachedFleet == 0 && c.System == null && c.Transit is { } t && t.Path.Count > 1)
-                yield return new Mover(MoverKind.Leader, S.CharName(c.Id), t.Path, t.HopTicks, t.HopIndex, t.DueDay);
+            {
+                string who = S.CharName(c.Id);
+                yield return new Mover(MoverKind.Leader, who, t.Path, t.HopTicks, t.HopIndex, t.DueDay, Name: who, Point: $"{who} · day {GameSession.ArrivalDay(t)}");
+            }
 
         // mission teams on their way out or home; the core keeps only the trip's total days. rule: m5-missions §1 (A = K + total ticks)
         foreach (var m in S.Missions.Missions.Where(m => m.Side == me && m.Departed && m.TotalTicks > 0 && m.Path.Count > 1).OrderBy(m => m.Id))
@@ -29,7 +32,13 @@ public partial class GameScreen
             string label = m.Kind == MissionKind.Move ? $"{team} to {m.Path[^1]}, day {m.ArrivalDay}"
                 : m.Phase == MissionPhase.Outbound ? $"{GameSession.KindWords(m.Kind)}: {team} to {m.Target}, day {m.ArrivalDay}"
                 : $"{team} home to {m.Path[^1]}, day {m.ArrivalDay}";
-            yield return new Mover(m.Kind == MissionKind.Move ? MoverKind.Leader : MoverKind.Mission, label, m.Path, null, 0, m.ArrivalDay, m.TotalTicks);
+            // on the map: the kind of mission going out ("Espionage"), the team otherwise; under the mouse, who and the day
+            string name = m.Kind != MissionKind.Move && m.Phase == MissionPhase.Outbound ? GameSession.KindWords(m.Kind) : team;
+            string point = m.Kind == MissionKind.Move ? $"{team} · day {m.ArrivalDay}"
+                : m.Phase == MissionPhase.Outbound ? $"{GameSession.KindWords(m.Kind)}: {team} · day {m.ArrivalDay}"
+                : $"{team}, home · day {m.ArrivalDay}";
+            yield return new Mover(m.Kind == MissionKind.Move ? MoverKind.Leader : MoverKind.Mission, label, m.Path, null, 0, m.ArrivalDay, m.TotalTicks,
+                Name: name, Point: point);
         }
 
         // built units, buildings and lone regiments on their way: one marker for those flying together. rule: m2-construction §Completion and delivery
@@ -46,12 +55,13 @@ public partial class GameScreen
             int arrive = first.DueDay;
             for (int h = first.Index + 1; h < first.HopTicks.Count; h++) arrive += first.HopTicks[h];
             string label = first.Held ? $"{what} to {first.To}, held at {first.Path[first.Index]}" : $"{what} to {first.To}, day {arrive}";
-            yield return new Mover(g.Key.Kind, label, first.Path, first.HopTicks, first.Index, first.DueDay, Count: n, Held: first.Held);
+            string point = first.Held ? $"{what} · held at {first.Path[first.Index]}" : $"{what} · day {arrive}";
+            yield return new Mover(g.Key.Kind, label, first.Path, first.HopTicks, first.Index, first.DueDay, Count: n, Held: first.Held, Name: what, Point: point);
         }
 
         // the player's own HQ while it moves (the Collective's Hearth). rule: m5-fog-and-hq §F5
         if (S.OwnHq is { Status: Praedra.Core.Fog.HqStatus.InTransit } hq && hq.Path.Count > 1)
-            yield return new Mover(MoverKind.Hq, "HQ", hq.Path, hq.HopTicks, hq.HopIndex, hq.DueDay);
+            yield return new Mover(MoverKind.Hq, "HQ", hq.Path, hq.HopTicks, hq.HopIndex, hq.DueDay, Name: "HQ", Point: $"HQ · day {GameSession.HqArrivalDay(hq)}");
     }
 
     static MoverKind KindOf(EconObject o) => o?.Category switch

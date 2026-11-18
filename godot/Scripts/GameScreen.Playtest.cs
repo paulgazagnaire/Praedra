@@ -90,7 +90,7 @@ public partial class GameScreen
         foreach (var c in AllNodes(_pv)) if (c is CheckBox cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }
         return false;
     }
-    internal void PressKey(Key k, bool ctrl = false) { var e = new InputEventKey { Keycode = k, Pressed = true, CtrlPressed = ctrl }; _UnhandledKeyInput(e); }
+    internal void PressKey(Key k, bool ctrl = false, bool shift = false) { var e = new InputEventKey { Keycode = k, Pressed = true, CtrlPressed = ctrl, ShiftPressed = shift }; _UnhandledKeyInput(e); }
     internal bool ConfirmVisible => _confirmPanel.Visible;
     internal string ConfirmTitle => _confirmTitle.Text;
     internal string ConfirmText => _confirmBody.Text;
@@ -153,19 +153,14 @@ public partial class GameScreen
             return "a window dragged to the top would cover the bar's boxes";
         foreach (var l in new[] { _goalCaption, _rawCaption, _refinedCaption, _upkeepCaption, _sideLabel, _dayLabel })
             if (l.GetCombinedMinimumSize().X <= 0) return $"the bar's word \"{l.Text}\" has no width";
-        // an open drop-down pushes the short notes below it, and lets a dragged chip through to the window under it
+        // an open drop-down lets a dragged chip through to the window under it (the short notes are in the bottom-right corner, away from it)
         bool wasOpen = _layersCard.Visible;
         if (!wasOpen) ToggleLayers();
-        PlaceNotes();
-        float listBottom = _layersCard.GlobalPosition.Y - _noteLayer.GlobalPosition.Y + _layersCard.GetCombinedMinimumSize().Y;
-        bool below = _toastBox.OffsetTop >= listBottom;
         SyncNoteLayer(true);
         bool through = _layersCard.MouseBehaviorRecursive == MouseBehaviorRecursiveEnum.Disabled && _searchResults.MouseBehaviorRecursive == MouseBehaviorRecursiveEnum.Disabled;
         SyncNoteLayer(false);
         bool back = _layersCard.MouseBehaviorRecursive != MouseBehaviorRecursiveEnum.Disabled;
         if (!wasOpen) ToggleLayers();
-        PlaceNotes();
-        if (!below) return $"with the layers list open the notes start at {_toastBox.OffsetTop:0}, over the list (to {listBottom:0})";
         if (!through || !back) return "the drop-downs do not let a dragged chip through (or keep blocking it after)";
         // one drop-down at a time: they hang side by side and the results are wider than the search box
         if (_layersCard.Visible) ToggleLayers();
@@ -177,7 +172,6 @@ public partial class GameScreen
         ToggleLayers();
         CloseSearch();
         if (wasOpen) ToggleLayers();
-        PlaceNotes();
         if (!searchClosedLayers || !layersClosedSearch) return "the search results and the layers list can be open together, one over the other";
         // the drop-downs speak the bar's pixel words (Paul 2026-11-15, "Yes A"), and a hit reached with the arrow keys is lit
         foreach (var lb in _layerButtons.Append(_routesChip).Append(_deliveriesChip).Append(_legendButton))
@@ -384,7 +378,53 @@ public partial class GameScreen
     internal bool SelectionCardOpen => _selCard.Visible;
     internal string SelectionCardText => _selCard.Visible ? LabelsIn(_selCard) : "";
     internal string PillText => _pill.Visible ? _banner.Text : "";
-    internal string MessageCornerText => _msgCorner.Visible && _msgCard.Visible ? LabelsIn(_msgCard) : "";
+    // ---- the map declutter (Paul's All A, 2026-11-18)
+    internal void HoldAlt(bool down) => _Input(new InputEventKey { Keycode = Key.Alt, Pressed = down });
+    internal void LoseFocus() => _Notification((int)NotificationApplicationFocusOut);
+    internal bool AllNamesShown => _view.ShowAllNames;
+    internal string EnemyHqEntry => _enemyHqMenu.GetMeta(UiTest.FullName).AsString();
+    /// <summary>Does the map want this system's name now (the names rule, before any room is looked for)?</summary>
+    internal bool NameWanted(string system) => G.TryFindSystem(system, out int i) && _view.NameWanted(i);
+    /// <summary>The words on fleets and movers placed now.</summary>
+    internal IReadOnlyList<string> MapWords => _fleets.WordsShown();
+    /// <summary>Two of those words on each other, or one past the screen's edge: what, or null.</summary>
+    internal string MapWordsProblem()
+    {
+        var w = _fleets.WordsPlaced();
+        var view = new Rect2(Vector2.Zero, _view.Size);
+        foreach (var a in w) if (!view.Encloses(a.Box)) return $"\"{a.Text}\" runs past the screen's edge";
+        for (int i = 0; i < w.Count; i++)
+            for (int j = i + 1; j < w.Count; j++)
+                if (w[i].Box.Intersects(w[j].Box)) return $"\"{w[i].Text}\" and \"{w[j].Text}\" print over each other";
+        return null;
+    }
+    internal Vector2? FleetMarker(int id) => _fleets.MarkerOf(id);
+    /// <summary>How far above a system's centre its outermost ring reaches, in px on the map.</summary>
+    internal float RingTop(string system) => G.TryFindSystem(system, out int i) ? _view.SystemRadius + _view.RingOut(i) : 0;
+    internal Vector2 SystemOnScreen(string system) => G.TryFindSystem(system, out int i) ? _view.SystemScreen(i) : Vector2.Zero;
+    /// <summary>The hover card's words, set at once (shown or not).</summary>
+    internal string HoverWords => _hoverLabel.Text;
+    internal bool HoverCardShown => _hoverCard.Visible;
+    internal void RestHover(double seconds) => TickHover(seconds);
+    /// <summary>Would a message of this kind (and tag) pop up as a note?</summary>
+    internal static bool PopsUp(MsgKind kind, string tag = null) => ToastWorthy(new Message(1, "x", null, kind) { Tag = tag });
+    /// <summary>The short notes in the bottom-right corner, one line each, and no card left on the map from older news: or what is wrong.</summary>
+    internal string NotesCornerProblem()
+    {
+        if (_toastBox.AnchorLeft != 1 || _toastBox.AnchorTop != 1 || _toastBox.AnchorRight != 1 || _toastBox.AnchorBottom != 1)
+            return "the notes are not anchored to the bottom-right corner";
+        Toast(new string('w', 200) + " the end", MsgKind.Bad);
+        var card = _toasts[^1].Card;
+        var label = AllNodes(card).OfType<Label>().First();
+        string why = label.AutowrapMode != TextServer.AutowrapMode.Off ? "a note wraps onto more lines"
+            : label.GetCombinedMinimumSize().X > NoteMaxWidth + 1 ? $"a long note is {label.GetCombinedMinimumSize().X:0} px wide"
+            : string.IsNullOrEmpty(card.TooltipText) ? "a cut note does not say it all in its tooltip" : null;
+        card.QueueFree(); _toasts.RemoveAt(_toasts.Count - 1);
+        if (why != null) return why;
+        if (AllNodes(_mapHolder).OfType<Label>().Any(l => l.IsVisibleInTree() && l.Text.StartsWith("PRODUCTION ·", StringComparison.Ordinal)))
+            return "the old message card is still on the map";
+        return null;
+    }
     /// <summary>The sector the mouse finds when it points at this system's spot on the map (the real hit test).</summary>
     internal string SectorUnder(string system) =>
         G.TryFindSystem(system, out int i) ? _view.SectorName(_view.SectorAt(_view.SystemScreen(i))) : null;

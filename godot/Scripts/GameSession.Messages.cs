@@ -323,7 +323,7 @@ public sealed partial class GameSession
 
             // ---- construction
             case ProjectStarted p when p.Side == Player:
-                yield return new Message(d, $"Construction started at {p.System}: {p.Count} x {p.Class}.", p.System, MsgKind.Info);
+                yield return new Message(d, $"Construction started at {p.System}: {(p.Count == 1 ? p.Class : $"{p.Count} x {p.Class}")}.", p.System, MsgKind.Info);   // no "1 x" (map declutter 2026-11-18)
                 break;
             case ProjectCancelled p when p.Side == Player && p.Reason != "Replaced":
                 yield return new Message(d, $"Construction at {p.System} was cancelled ({(p.Reason == "SystemDestroyed" ? "the system was destroyed" : p.Reason)}).", p.System, MsgKind.Warn);

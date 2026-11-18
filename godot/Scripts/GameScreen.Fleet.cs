@@ -267,7 +267,7 @@ public partial class GameScreen
         if (ids.Count == 0) { Toast("Tick at least one ship first.", MsgKind.Warn); return; }
         S.TrackFleet(f.Id, Fm.SubmitSplitFleet(Me, f.Id, ids), $"Split {f.Name}");
         _splitSel.Clear();
-        Sent($"split {ids.Count} ship(s) off {f.Name}", f.At);
+        Sent($"split {Ui.Count(ids.Count, "ship", "ships")} off {f.Name}", f.At);
     }
 
     void Transfer(Fleet f, Fleet into)
@@ -276,7 +276,7 @@ public partial class GameScreen
         if (ids.Count == 0) { Toast("Tick at least one ship first.", MsgKind.Warn); return; }
         S.TrackFleet(f.Id, Fm.SubmitTransferShips(Me, ids, into.Id), $"Move ships from {f.Name} into {into.Name}");
         _splitSel.Clear();
-        Sent($"move {ids.Count} ship(s) from {f.Name} into {into.Name}", f.At);
+        Sent($"move {Ui.Count(ids.Count, "ship", "ships")} from {f.Name} into {into.Name}", f.At);
     }
 
     void Merge(Fleet f, Fleet into)

@@ -39,9 +39,9 @@ public partial class GameScreen
         if (_moveFighters != null) UpdateFighterPreview();
         if (_moveChar >= 0) UpdateCharPreview();
         if (_pickMission) UpdateMissionPreview();
+        // the card only over a dot (pick 8): over a sector's open space its outline, name and system names already say it all
         int h = _view.Hovered;
-        if (h >= 0 && !InMoveMode) ShowHover(HoverText(h));
-        else if (_view.HoveredSector >= 0 && !InMoveMode) ShowHover(SectorHoverText(_view.SectorName(_view.HoveredSector)));
+        if (h >= 0 && !InMoveMode) ShowHover(HoverText(h), h);
         else ShowHover(null);
 
         if (_view.Selected != _lastSelectedSystem || _view.SelectedFleet != _lastSelectedFleet)
@@ -61,40 +61,44 @@ public partial class GameScreen
         }
     }
 
-    /// <summary>Pointing at a sector: its name, how much of it is yours, and what a click does.</summary>
-    string SectorHoverText(string sector)
-    {
-        var sec = G.Sectors.FirstOrDefault(x => x.Name == sector);
-        if (sec == null) return null;
-        int mine = sec.Members.Count(m => S.OwnerOf(G.Systems[m].Name) == Me);
-        return $"{sector}: {mine} of {sec.Members.Count} systems yours\nClick to open it";
-    }
-
+    /// <summary>The hover card's one line (pick 8): the system, whose it is, then for yours its support and troops, for the others the
+    /// routes through it. The sector is on the map (its outline and name light up), the rest is one click away.</summary>
     string HoverText(int h)
     {
         string hn = G.Systems[h].Name;
         var (known, owner) = S.KnownOwnerOf(hn);
-        int? seen = S.LastSeenDay(hn);
-        string age = owner == Me || S.Sees(hn) || seen == null ? "" : $"  (last seen day {seen})";
-        string line1 = S.IsDestroyed(hn) ? $"{hn}  -  {S.DestroyedWords(hn).ToLowerInvariant()}"
-            : $"{hn}  -  {(!S.Explored(hn) && owner != Me ? "unexplored" : !known ? "owner unknown" : owner == null ? "neutral" : S.You(owner.Value))}{age}";
-        string sector = G.Systems[h].IsOutsideSectors ? "Outside the sectors" : G.Systems[h].Sector;
-        string extra = "";
-        if (owner == Me && !S.IsDestroyed(hn))
+        if (S.IsDestroyed(hn)) return $"{hn} · {S.DestroyedWords(hn).ToLowerInvariant()}";
+        if (owner == Me)
         {
             int have = S.Host.Support.RegimentCount(hn), need = S.Host.Support.RequiredGarrison(hn);
-            extra = $"\nSupport {S.Host.Economy.SupportOf(hn, Me)}%, troops {have} of {need} needed" + (S.Host.Support.IsUprising(hn) ? ", UPRISING" : "");
+            string troops = need > 0 ? $"troops {have} of {need}" : $"{Ui.Count(have, "troop", "troops")}, none needed";
+            return $"{hn} · yours · support {S.Host.Economy.SupportOf(hn, Me)}% · {troops}" + (S.Host.Support.IsUprising(hn) ? " · uprising" : "");
         }
-        return $"{line1}\n{sector}. {RouteWords(h)}{extra}";
+        int? seen = S.LastSeenDay(hn);
+        string whose = !S.Explored(hn) ? "unexplored" : !known ? "owner unknown" : owner == null ? "neutral" : S.You(owner.Value);
+        string age = S.Sees(hn) || seen == null ? "" : $" (seen day {seen})";
+        return $"{hn} · {whose}{age} · {RouteShort(h)}";
     }
 
-    /// <summary>The hyperspace routes through a system, for the hover line: named major routes, else "minor route", else open space.</summary>
+    /// <summary>The routes through a system in a few words, for the hover line: its named major routes, else "minor route", else none.</summary>
+    string RouteShort(int sys)
+    {
+        var links = G.NeighboursOf(sys);
+        if (links.Count == 0) return "no route here";
+        var named = RouteNames(links);
+        return named.Count == 0 ? "minor route" : $"{string.Join(", ", named)} (major route)";
+    }
+
+    static List<string> RouteNames(IEnumerable<Praedra.Core.Map.Neighbour> links) =>
+        links.SelectMany(nb => nb.Lane.Routes.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Distinct().OrderBy(r => r, StringComparer.Ordinal).ToList();
+
+    /// <summary>The hyperspace routes through a system, for the system window: named major routes, else "minor route", else open space.</summary>
     string RouteWords(int sys)
     {
         var links = G.NeighboursOf(sys);
         if (links.Count == 0) return "No route here: ships reach it by a free jump through open space";
-        var named = links.SelectMany(nb => nb.Lane.Routes.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Distinct().OrderBy(r => r, StringComparer.Ordinal).ToList();
+        var named = RouteNames(links);
         bool minor = links.Any(nb => nb.Lane.Tier != 1);
         if (named.Count == 0) return "Minor route (1.5x speed)";
         return $"{string.Join(", ", named)} (major route, 3x speed){(minor ? "; also minor routes (1.5x)" : "")}";

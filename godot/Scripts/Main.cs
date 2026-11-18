@@ -156,6 +156,7 @@ public partial class Main : Control
                 case "--sectorhover" when i + 1 < _args.Length: gs.ShotSectorHover(_args[i + 1]); break;
                 case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;
                 case "--deselect": gs.View.Select(-1); break;
+                case "--alt": gs.HoldAlt(true); break;   // every name and label, as while Alt is held
                 case "--mapclick" when i + 1 < _args.Length: if (g.TryFindSystem(_args[i + 1], out int mc)) gs.View.Select(mc); break;
                 case "--close": gs.ShotCloseWindow(); break;
                 case "--gamemenu": gs.ShotOpenMenu(); break;
