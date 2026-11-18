@@ -58,11 +58,11 @@ public partial class GameScreen
         v.AddChild(flow);
         _log = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, AutoHeight = false, FocusMode = FocusModeEnum.None, SameColumnWidth = true };
         _log.AddThemeFontSizeOverride("font_size", 14);
-        // the window look: no box round the list; the ladder of every window control: #7D8699 line under the mouse, #909EBD when chosen
+        // the window look: no box round the list; the ladder of every window control: #676767 line under the mouse, #BABABA when chosen
         var clear = new Color(0, 0, 0, 0);
         _log.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         _log.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-        _log.AddThemeStyleboxOverride("hovered", Ui.Box(clear, 0, Ui.WinText, 1, 0, 0));
+        _log.AddThemeStyleboxOverride("hovered", Ui.Box(clear, 0, Ui.WinHover, 1, 0, 0));
         _log.AddThemeStyleboxOverride("hovered_selected", Ui.Box(clear, 0, Ui.WinActive, 1, 0, 0));
         _log.AddThemeStyleboxOverride("selected", Ui.Box(clear, 0, Ui.WinActive, 1, 0, 0));
         _log.AddThemeStyleboxOverride("selected_focus", Ui.Box(clear, 0, Ui.WinActive, 1, 0, 0));

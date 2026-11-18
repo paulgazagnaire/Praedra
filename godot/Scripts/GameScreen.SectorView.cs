@@ -126,7 +126,7 @@ public partial class GameScreen
             it.MouseFilter = MouseFilterEnum.Ignore;
             mark.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             it.AddChild(mark);
-            var l = Ui.Label(word, null, Ui.Text3, Ui.Tiny, wrap: false);   // a small label: Space Grotesk 12, #7D8699
+            var l = Ui.Label(word, null, Ui.Text3, Ui.Tiny, wrap: false);   // a small label: Space Grotesk 12, #BABABA
             l.AddThemeFontOverride("font", Ui.Caps);
             l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             it.AddChild(l);

@@ -118,7 +118,7 @@ public partial class GameScreen
         LoreTab(n, harvested: true);
     }
 
-    /// <summary>A window's name: #7D8699 whoever holds the place, the darkest grey when your side never looked at it (Paul 2026-11-14).</summary>
+    /// <summary>A window's name: #BABABA whoever holds the place, the darkest grey when your side never looked at it (Paul 2026-11-14).</summary>
     Color NameInk(string n, bool mine) => !mine && !Scouted(n) ? Ui.Dimmed : Ui.Text2;
 
     void InfraLink(string n) => MgLinks(($"Infrastructure at {n}", () => OpenMgmt(MgKind.Infra, n), "Yards, what the planet builds, slots and buildings"));
@@ -223,7 +223,7 @@ public partial class GameScreen
             else if (d.Kind is 'R' or 'Q') DropOnto(d, f);
             else if (d.Kind == 'L') DropFleetPost(d, f, CharacterPost.None);
         });
-        // a row with a thin line; the one shown in a fleet window is outlined #909EBD (Paul 2026-11-14: blue only means "yours")
+        // a row with a thin line; the one shown in a fleet window is outlined #BABABA (Paul 2026-11-14: blue only means "yours")
         z.Box.SetMeta("look", selected ? "selected" : "row");
         z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(null, selected ? "selected" : "row"));
         z.Box.SetMeta("selected", selected);

@@ -192,7 +192,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A dialog's head, like a window's: the name in BitPotion capitals (48 px, 32 when long), #7D8699, an optional piece beside it, and ×
+    /// A dialog's head, like a window's: the name in BitPotion capitals (48 px, 32 when long), #BABABA, an optional piece beside it, and ×
     /// pinned right when the dialog can be closed (it does what Esc does). Returns the name, for dialogs that change it each time.
     /// </summary>
     Label DialogHead(VBoxContainer v, string name, int width, Action close, Control beside = null)

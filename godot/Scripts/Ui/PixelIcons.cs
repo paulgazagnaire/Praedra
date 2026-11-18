@@ -27,9 +27,13 @@ public static class PixelIcons
 
     /// <summary>The ramp of a UiKit meaning colour, or null when the colour has none (then the icon is drawn flat in that colour).</summary>
     public static Color[] RampOf(Color ink) =>
-        ink == Ui.You ? Ramp("you") : ink == Ui.Enemy ? Ramp("enemy") : ink == Ui.WinActive ? Ramp("name")
+        ink == Ui.You ? Ramp("you") : ink == Ui.Enemy ? Ramp("enemy") : ink == Look.Accent ? Ramp("name") : ink == Ui.WinActive ? WordsRamp
         : ink == Ui.Warn ? Ramp("idle") : ink == Ui.Danger ? Ramp("danger") : ink == Ui.Good ? Ramp("good") : ink == Ui.Gold ? Ramp("capital")
         : null;
+
+    static Color[] _words;
+    /// <summary>The windows' words grey (#BABABA) as four tones, for an icon beside a name.</summary>
+    static Color[] WordsRamp => _words ??= GreyRamp(Ui.WinActive);
 
     /// <summary>A grey ramp around a plain colour (the top bar's light grey icons): tone 2 is the colour, 1 darker, 3 lighter, 4 near white.</summary>
     public static Color[] GreyRamp(Color mid) => new[] { mid, mid.Darkened(0.45f), mid, mid.Lightened(0.45f), mid.Lightened(0.8f) };

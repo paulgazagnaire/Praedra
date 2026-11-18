@@ -221,7 +221,7 @@ public partial class GameScreen
         public void Dispose() => _a();
     }
 
-    /// <summary>The panel title: the name in the windows' pixel capitals (32 px, #7D8699), a line under it, and tags on the right.</summary>
+    /// <summary>The panel title: the name in the windows' pixel capitals (32 px, #BABABA), a line under it, and tags on the right.</summary>
     void Title(string name, string sub, params (string Text, Color Color)[] tags)
     {
         var h = Ui.HBox(8);
@@ -319,8 +319,8 @@ public partial class GameScreen
         stats.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
         stats.OffsetLeft = -120; stats.OffsetRight = -12; stats.OffsetTop = 9;
         b.AddChild(stats);
-        // the selected fleet: the window look's "chosen" line (#909EBD), kept under the mouse; no fill, the row's own padding
-        // (ui-inspo review 2026-11-14: one ladder everywhere, rest line, #7D8699 under the mouse, #909EBD chosen)
+        // the selected fleet: the window look's "chosen" line (#BABABA), kept under the mouse; no fill, the row's own padding
+        // (ui-inspo review 2026-11-14: one ladder everywhere, rest line, #676767 under the mouse, #BABABA chosen)
         if (_view.SelectedFleet == f.Id)
         {
             var sel = Ui.Box(new Color(0, 0, 0, 0), 0, Ui.WinActive, 1, 8, 3);

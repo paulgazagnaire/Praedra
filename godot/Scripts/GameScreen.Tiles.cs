@@ -103,7 +103,7 @@ public partial class GameScreen
         bool art = kind != null && avatar == null && UnitArt.Has(name); // a painted picture of the class (art/units/units.json)
         var p = art ? new ArtTile { Cls = name, TooltipText = name } : new PanelContainer();
         p.MouseFilter = MouseFilterEnum.Pass; p.CustomMinimumSize = new Vector2(TileW, TileH);
-        // no fill, a thin line: faint blue round what is yours and can move, #3A3A3A round the rest (Paul 2026-11-14)
+        // no fill, a thin line: faint blue round what is yours and can move, #2D2E32 round the rest (Paul 2026-11-14)
         var edge = accent == Ui.You ? new Color(Ui.You, ghost ? 0.22f : 0.3f) : Ui.WinLine;
         p.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, edge, 1, 4, 6));   // 84 px for the name: "Construction" fits
         var v = Ui.VBox(2);
@@ -142,7 +142,7 @@ public partial class GameScreen
         }
         if (count > 1)
         {
-            // the count: plain #909EBD words, no chip (Paul 2026-11-14)
+            // the count: plain #BABABA words, no chip (Paul 2026-11-14)
             var badge = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
             badge.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
             var bl = Ui.Label($"×{count}", null, Ui.Text, Ui.Tiny, wrap: false);
