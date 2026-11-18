@@ -178,7 +178,7 @@ public partial class GameScreen
         h.MouseFilter = MouseFilterEnum.Ignore;
         v.AddChild(h);
         var kind = fam switch { YardFamily.Shipyard => UnitIcon.Kind.Shipyard, YardFamily.Training => UnitIcon.Kind.Training, _ => UnitIcon.Kind.Construction };
-        var icon = UnitIcon.For(kind, Me == Side.Hand, idle ? Ui.Warn : Ui.You, 1, new Vector2(40, 28));
+        var icon = UnitIcon.For(kind, Me == Side.Hand, idle ? Ui.Warn : Ui.You, 1, new Vector2(34, 34));   // room for the 32 px pixel icon
         icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(icon);
         var name = Ui.Label(fam switch { YardFamily.Construction => "Construction", YardFamily.Training => "Training", _ => FamilyName(fam) }, null, Ui.Text, Ui.Small, wrap: false);
