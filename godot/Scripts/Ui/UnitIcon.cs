@@ -62,7 +62,11 @@ public partial class UnitIcon : Control
             case Kind.Fighter: Fighters(r); break;
             case Kind.Regiment: Squad(r); break;
             case Kind.Agent: Agent(r); break;
-            default: Building(r); break;
+            default:
+                // the pixel icon where one is drawn (Paul 2026-11-18, code only); a greyed-out one is flat in its grey
+                if (PixelIcons.Building(What) is { } grid && PixelIcons.DrawCentred(this, grid, r, Ink)) break;
+                Building(r);
+                break;
         }
     }
 
