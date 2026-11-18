@@ -63,31 +63,22 @@ The section "The game's 555 systems" is where Paul goes through every system and
 
 Where the looks live:
 - In the published page, each save is a record in the artifact's shared store, collection `systems` (doc id = the system's slug; `{name, kind, code, updatedAt}`, or `{name, reset: true}` when a look that is already in the game goes back to the lore sheet). Outside claude.ai they stay in that browser.
-- `system-overrides.json` (system name -> preset params) is the copy in the repo. `build.py` puts it into the page as `IN_GAME`; `loadSystem` uses a saved look before the lore sheet's preset, so `bake-thumbs.js` bakes the game's pictures from it with no other change.
+- `system-overrides.json` (system name -> preset params) is the copy in the repo. `build.py` puts it into the page as `IN_GAME`; `loadSystem` uses a saved look before the lore sheet's preset, so `export-game-params.js` writes the game's settings from it with no other change.
 
 To bring saved looks into the game (a Claude thread does this; Paul only presses Save): read every record of the `systems` collection into a JSON list, then
 ```
 python3 apply-saved.py saved.json > /tmp/changed.txt          # updates system-overrides.json, prints the changed systems
 python3 build.py planet-maker.src.html systems.json index.html
-mapfile -t names < /tmp/changed.txt; node bake-thumbs.js bake /tmp/planet-thumbs "${names[@]}"   # nothing changed: bakes nothing
-node bake-thumbs.js pack /tmp/planet-thumbs                    # unchanged pictures are copied from the current sheet
+node export-game-params.js                                     # every system's settings, for the game's live planets
 ```
-then republish the page (so its `IN_GAME` matches) and open the PR. A changed world kind changes the kind the sector window names, since the bake records the kind the page loads.
-
-## Pictures for the game
-The game's sector window shows every system's planet as the Planet Maker draws it, dithered (Grain, the planet's own colours), baked into one sheet with a see-through background (same method as Save image): `godot/art/planets/atlas.png` and `atlas.json` (system name -> cell and world kind). `bake-thumbs.js` makes them with the page itself in headless Chromium; rebuild after `systems.json` changes (about 10 s a picture in software GL, so split it in shards):
-```
-SHARD=0/3 node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs --all & SHARD=1/3 node ... --all & SHARD=2/3 node ... --all
-node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs
-```
-Then open the Godot project once (or `--import`) so it imports the new sheet.
+then republish the page (so its `IN_GAME` matches) and open the PR. Nothing is baked: the game draws each planet in code from those settings.
 
 ## Live planets in the game
-The sector window draws its planets live (Paul 2026-11-11: "the planets need to be animated, like in the planet maker tool, and following the parameters of each planets"), with this page's own shader, each in the thumbnails' style (96 dots, dither on, Grain, the planet's own colours, see-through sky, framed on the planet and its rings) and moving as the page moves it. Every other screen keeps the baked sheet above, and so does a sector tile of a system the player has never looked at. Two files come from this folder:
+The sector window draws its planets live (Paul 2026-11-11: "the planets need to be animated, like in the planet maker tool, and following the parameters of each planets"), with this page's own shader, each in the thumbnails' style (96 dots, dither on, Grain, the planet's own colours, see-through sky, framed on the planet and its rings) and moving as the page moves it. Since 2026-11-18 every planet in the game is drawn this way, unexplored and harvested ones included; no baked planet picture ships with the game (Paul: "planets illustrations are only drawn in code"). Two files come from this folder:
 - `godot/Scripts/Ui/PlanetLive.gdshader`, written by `port-godot-shader.py` from the shader in `planet-maker.src.html` (only what Godot's shading language needs is changed; the script lists each change and stops if the tool's shader no longer has a line it expects).
 - `godot/art/planets/planets-live.json`, every system's settings as the page loads them (`loadSystem`: a saved look, else the lore sheet's preset, with the moons the page fills in), written by `export-game-params.js`. The game (`godot/Scripts/Ui/PlanetLive.cs`) hands them to the shader exactly as `drawP()` does.
 
-**Updating the game planets** (whenever `systems.json`, `system-overrides.json` or the shader changes, with the bake above):
+**Updating the game planets** (whenever `systems.json`, `system-overrides.json` or the shader changes):
 ```
 python3 tools/planet-maker/port-godot-shader.py      # the shader, when planet-maker.src.html changed
 node tools/planet-maker/export-game-params.js        # every system's settings (a few minutes in headless Chromium)
@@ -98,7 +89,10 @@ To check the game against the page, `Godot --path godot -- --planet-shots DIR --
 
 **Show it harvested** (under the game's systems) draws what a harvester leaves of the current world: a small gutted core with one huge quarried bite (terraced like an open pit) and sliced faces, the heart still glowing where the bite reaches it, glowing cracks in the crust, big broken pieces drifting off, and a rubble belt. No air, clouds, lights, moons, orbital ring or elevator. It keeps the world's own seed and colours, and it is a view, never saved in a preset. Save image and Save video work on it too.
 
-The game's harvested tiles come from it: `HARVESTED=1 node bake-thumbs.js bake DIR --all` then `HARVESTED=1 node bake-thumbs.js pack DIR` writes `godot/art/planets/atlas-harvested.png`, with the same cells as `atlas.png`; `atlas.json` names it under `"harvested"`. Pack the main sheet first. Harvested pictures are drawn at no turn, so the bite faces the sun.
+The game draws its harvested worlds live with the same shader variant; nothing is baked.
+
+## Contact sheet (preview only)
+`bake-thumbs.js` draws one 96-dot picture of every system with the page itself and packs them into one sheet, to look over all 555 at once: `bake DIR --all`, then `pack DIR` (`HARVESTED=1` for the harvested view). It writes into DIR only, never into `godot/`.
 
 ## Using it in Godot
 The game's sector window runs this shader: see Live planets in the game. `port-godot-shader.py` does the port, so keep the shader GLSL ES 3.00 with no tricks: no global variable that changes except the ones the script knows (gPx, gPxC, gL, gFlat), every write of the colour in `main()` either an add or a `col = mix(col, x, a)` with a single number `a` (the game's see-through sky depends on it), and `gl_FragCoord` read only in `main()` and the dither.
