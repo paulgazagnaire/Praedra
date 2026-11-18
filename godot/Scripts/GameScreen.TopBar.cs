@@ -333,43 +333,23 @@ public partial class GameScreen
         value.TooltipText = cell.TooltipText;
     }
 
-    // ---- the frame's 16 px pixel icons, drawn one square per pixel ('#')
+    // ---- the top bar's 16 px pixel icons (tone grids from PixelIconData, Paul 2026-11-18: code only)
 
-    static readonly string[] RawIcon =
-    {
-        "                ", "                ", "      ##        ", "     #  ##      ", "    #     ##    ", "   #        #   ", "   #     # #    ", "  #  #  #   #   ",
-        "   #  ##   #    ", "    #    ##     ", "    #   #       ", "     # #        ", "      #         ", "                ", "                ", "                ",
-    };
-    static readonly string[] RefinedIcon =
-    {
-        "                ", "                ", "        ##      ", "       #  #     ", "      #    #    ", "     #      #   ", "    #      # #  ", "   #      #  #  ",
-        "  # #    #   #  ", "  #     #   #   ", "  #   ##   #    ", "   #   #  #     ", "    #    #      ", "     #  #       ", "      ##        ", "                ",
-    };
-    static readonly string[] UpkeepIcon =
-    {
-        "                ", "                ", "         ##     ", "        #       ", "        # #  #  ", "        # ## #  ", "       #     #  ", "      #   ###   ",
-        "   ###   #      ", "  #     #       ", "  # # ##        ", "     # #        ", "       #        ", "     ##         ", "                ", "                ",
-    };
-    static readonly string[] MagnifierIcon =
-    {
-        "                ", "                ", "                ", "     ###        ", "    #   #       ", "   #     #      ", "  #       #     ", "  #       #     ",
-        "  #       #     ", "   #     #      ", "    #   # #     ", "     ###   #    ", "            #   ", "             #  ", "                ", "                ",
-    };
-
-    /// <summary>The search's clear button: a pixel cross in the icons' style (the theme's own cross is a heavy one), white so the
-    /// field's clear-button colours tint it.</summary>
-    static readonly string[] ClearIcon =
-    {
-        "                ", "                ", "                ", "                ", "    #      #    ", "     #    #     ", "      #  #      ", "       ##       ",
-        "       ##       ", "      #  #      ", "     #    #     ", "    #      #    ", "                ", "                ", "                ", "                ",
-    };
+    static string[] RawIcon => PixelIconData.Bar["raw"];
+    static string[] RefinedIcon => PixelIconData.Bar["refined"];
+    static string[] UpkeepIcon => PixelIconData.Bar["upkeep"];
+    static string[] MagnifierIcon => PixelIconData.Bar["search"];
+    /// <summary>The search's clear button, white so the field's clear-button colours tint it.</summary>
+    static string[] ClearIcon => PixelIconData.Bar["clear"];
 
     static ImageTexture PixelTexture(string[] rows, Color color)
     {
+        // made in code from the tone grid, never loaded from a file (Paul 2026-11-18); tone 2 is the colour itself
+        var ramp = PixelIcons.GreyRamp(color);
         var img = Image.CreateEmpty(16, 16, false, Image.Format.Rgba8);
         for (int y = 0; y < 16; y++)
             for (int x = 0; x < 16; x++)
-                if (rows[y][x] == '#') img.SetPixel(x, y, color);
+                if (rows[y][x] is >= '1' and <= '4' and var t) img.SetPixel(x, y, ramp[t - '0']);
         return ImageTexture.CreateFromImage(img);
     }
 

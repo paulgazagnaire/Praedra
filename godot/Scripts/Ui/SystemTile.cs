@@ -165,56 +165,21 @@ public partial class SystemTile : Control
 
     void Icon(Rect2 r, string[] map, Color c) => Pixels(map, r.Position, c);
 
-    void Pixels(string[] map, Vector2 at, Color c)
-    {
-        for (int y = 0; y < map.Length; y++)
-            for (int x = 0; x < map[y].Length; x++)
-                if (map[y][x] == '#') DrawRect(new Rect2(at.X + x, at.Y + y, 1, 1), c);
-    }
+    // the pixel icons in four tones from the meaning colour's ramp, flat in a grey (Paul 2026-11-18: code only, PixelIconData)
+    void Pixels(string[] map, Vector2 at, Color c) => PixelIcons.Draw(this, map, at, 1, PixelIcons.RampOf(c), c);
 
     /// <summary>Draw one of the tile's icons anywhere (the legend uses it).</summary>
-    public static void DrawIcon(CanvasItem ci, string[] map, Vector2 at, Color c)
-    {
-        for (int y = 0; y < map.Length; y++)
-            for (int x = 0; x < map[y].Length; x++)
-                if (map[y][x] == '#') ci.DrawRect(new Rect2(at.X + x, at.Y + y, 1, 1), c);
-    }
+    public static void DrawIcon(CanvasItem ci, string[] map, Vector2 at, Color c) => PixelIcons.Draw(ci, map, at, 1, PixelIcons.RampOf(c), c);
 
-    // ---- the frame's icons, pixel for pixel (praedra/specs/ui/paper/system-info/svgs/)
-    public static readonly string[] ArrowRight = { "#..", "##.", "###", "##.", "#.." };
-    public static readonly string[] ArrowLeft = { "..#", ".##", "###", ".##", "..#" };
-
-    public static readonly string[] Infrastructure =
-    {
-        "................", "................", "................", "..........#..#..", ".....#....#..#..", "....##....#..#..",
-        "....##...##.##..", "...###########..", "...###########..", "...##...#######.", ".####...#######.", ".##############.",
-        ".##############.", "................", "................", "................",
-    };
-    public static readonly string[] Fleet =
-    {
-        "................", "................", "................", "...###..........", "...........#....", "..........###...",
-        "..........###...", ".........#####..", ".##############.", "..#############.", "...############.", "...###########..",
-        ".........###....", "................", "................", "................",
-    };
-    public static readonly string[] Military =
-    {
-        "................", "................", "................", ".....###........", "....#####....#..", "...###########..",
-        "...###########..", "...######.......", "....#####.......", ".....###........", ".....###........", "..########......",
-        ".##############.", "................", "................", "................",
-    };
-    public static readonly string[] Hand =
-    {
-        "................", "................", "........#.......", "......#.#.#.....", "......#.#.#.....", "....#.#.#.#.....",
-        "....#.#.#.#.#...", "....#.#.#.#.#...", "....#######.#...", "....#####...#...", "....#########...", "....#########...",
-        ".....#######....", "......#####.....", "................", "................",
-    };
-    /// <summary>The Collective's emblem (not in the frame yet: three braided strands, for its eight strands bound together).</summary>
-    public static readonly string[] Braid =
-    {
-        "................", "................", "...#...#...#....", "...#...#...#....", "....#.#.#.#.....", ".....#...#......",
-        "....#.#.#.#.....", "...#...#...#....", "...#...#...#....", "....#.#.#.#.....", ".....#...#......", "....#.#.#.#.....",
-        "...#...#...#....", "...#...#...#....", "................", "................",
-    };
+    // ---- the frame's icons (praedra/specs/ui/paper/system-info/svgs/), shaded by the pixel-icons thread
+    public static string[] ArrowRight => PixelIconData.Tile["arrow-right"];
+    public static string[] ArrowLeft => PixelIconData.Tile["arrow-left"];
+    public static string[] Infrastructure => PixelIconData.Tile["buildings"];
+    public static string[] Fleet => PixelIconData.Tile["fleets"];
+    public static string[] Military => PixelIconData.Tile["troops"];
+    public static string[] Hand => PixelIconData.Tile["seal-hand"];
+    /// <summary>The Collective's emblem: three braided strands, for its eight strands bound together.</summary>
+    public static string[] Braid => PixelIconData.Tile["seal-collective"];
 }
 
 /// <summary>A small drawn mark for the sector window's key: whatever <see cref="Paint"/> draws, nearest-filtered so pixels stay pixels.</summary>

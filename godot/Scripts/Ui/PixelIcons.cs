@@ -31,6 +31,9 @@ public static class PixelIcons
         : ink == Ui.Warn ? Ramp("idle") : ink == Ui.Danger ? Ramp("danger") : ink == Ui.Good ? Ramp("good") : ink == Ui.Gold ? Ramp("capital")
         : null;
 
+    /// <summary>A grey ramp around a plain colour (the top bar's light grey icons): tone 2 is the colour, 1 darker, 3 lighter, 4 near white.</summary>
+    public static Color[] GreyRamp(Color mid) => new[] { mid, mid.Darkened(0.45f), mid, mid.Lightened(0.45f), mid.Lightened(0.8f) };
+
     /// <summary>The largest allowed pixel size (1 or 2) at which a <paramref name="w"/> x <paramref name="h"/> grid fits in
     /// <paramref name="box"/>; 0 if not even 1 fits.</summary>
     public static int ScaleFor(Vector2 box, int w = Grid, int h = Grid) =>
@@ -64,6 +67,19 @@ public static class PixelIcons
         return true;
     }
 
+    /// <summary>The unit icon for a picture kind and side (ships by size class 0 small to 3 huge), or null.</summary>
+    public static string[] Unit(UnitIcon.Kind k, bool hand, int size4)
+    {
+        string side = hand ? "hand" : "collective";
+        string key = k switch
+        {
+            UnitIcon.Kind.Ship => $"ship-{side}-{(size4 switch { 0 => "small", 1 => "medium", 2 => "large", _ => "huge" })}",
+            UnitIcon.Kind.Fighter => $"fighter-{side}", UnitIcon.Kind.Regiment => $"regiment-{side}", UnitIcon.Kind.Agent => $"agent-{side}",
+            _ => null,
+        };
+        return key != null && PixelIconData.Units.TryGetValue(key, out var g) ? g : null;
+    }
+
     /// <summary>The building icon for a picture kind, or null when none is drawn yet.</summary>
     public static string[] Building(UnitIcon.Kind k)
     {
@@ -71,7 +87,7 @@ public static class PixelIcons
         {
             UnitIcon.Kind.Mine => "mine", UnitIcon.Kind.Refinery => "refinery", UnitIcon.Kind.Shipyard => "shipyard",
             UnitIcon.Kind.Training => "training", UnitIcon.Kind.Construction => "construction", UnitIcon.Kind.Shield => "shield",
-            UnitIcon.Kind.Battery => "battery", UnitIcon.Kind.Sensor => "sensor", _ => null,
+            UnitIcon.Kind.Battery => "battery", UnitIcon.Kind.Sensor => "sensor", UnitIcon.Kind.Building => "building", _ => null,
         };
         return key != null && PixelIconData.Buildings.TryGetValue(key, out var g) ? g : null;
     }

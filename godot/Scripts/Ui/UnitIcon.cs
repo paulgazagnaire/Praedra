@@ -56,17 +56,16 @@ public partial class UnitIcon : Control
     public override void _Draw()
     {
         var r = new Rect2(Vector2.Zero, Size);
+        // the pixel icon where one is drawn (Paul 2026-11-18, code only); a greyed-out one is flat in its grey. A spot too small for it
+        // keeps the drawn picture below.
+        if ((PixelIcons.Unit(What, Hand, Size4) ?? PixelIcons.Building(What)) is { } grid && PixelIcons.DrawCentred(this, grid, r, Ink)) return;
         switch (What)
         {
             case Kind.Ship: if (Hand) HandShip(r); else CollectiveShip(r); break;
             case Kind.Fighter: Fighters(r); break;
             case Kind.Regiment: Squad(r); break;
             case Kind.Agent: Agent(r); break;
-            default:
-                // the pixel icon where one is drawn (Paul 2026-11-18, code only); a greyed-out one is flat in its grey
-                if (PixelIcons.Building(What) is { } grid && PixelIcons.DrawCentred(this, grid, r, Ink)) break;
-                Building(r);
-                break;
+            default: Building(r); break;
         }
     }
 
