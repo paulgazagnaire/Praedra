@@ -1,13 +1,11 @@
 """Copy the looks Paul saved in the published Planet Maker ("Save for the game") into system-overrides.json.
 
 Input: a JSON list of the records in the artifact's "systems" collection, each {name, code} (code = a praedra-planet preset)
-or {name, reset: true} (back to the lore sheet). Prints the names whose look changed, one a line, for bake-thumbs.js.
+or {name, reset: true} (back to the lore sheet). Prints the names whose look changed, one a line.
 
     python3 apply-saved.py saved.json > /tmp/changed.txt
     python3 build.py planet-maker.src.html systems.json index.html
-    mapfile -t names < /tmp/changed.txt; node bake-thumbs.js bake /tmp/planet-thumbs "${names[@]}"
-    (one name a line, quoted: "Kaoyat" stays one name; unchanged pictures come from the current sheet)
-    node bake-thumbs.js pack /tmp/planet-thumbs
+    node export-game-params.js      (the game draws every planet in code from these settings; nothing is baked)
 """
 import json, os, sys
 

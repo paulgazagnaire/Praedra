@@ -1,20 +1,18 @@
-// Bakes one small picture of every system's planet, drawn by the Planet Maker itself, for the game's sector window, and packs them
-// into one sheet the game loads (godot/art/planets/atlas.png + atlas.json). The game cannot run the Planet Maker's WebGL shader, so it
-// shows these pictures instead. Rebuild them whenever systems.json (the Lore Master's presets) changes:
+// A contact sheet of every system's planet, drawn by the Planet Maker itself: one small picture a system, packed into one sheet, to look
+// over all 555 at once. PREVIEW ONLY. The game draws every planet live in code (godot/Scripts/Ui/PlanetLive.cs, from planets-live.json,
+// see the README), and no baked planet picture may ship with it (Paul 2026-11-18), so pack writes into DIR and never into godot/.
 //
 //   node tools/planet-maker/bake-thumbs.js bake /tmp/planet-thumbs --all  (about 10 s a picture in software GL; 555 systems)
-//   node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs        (writes godot/art/planets/atlas.png and atlas.json)
+//   node tools/planet-maker/bake-thumbs.js pack /tmp/planet-thumbs        (writes DIR/atlas.png and DIR/atlas.json)
 //
 // To share the bake between cores, run several at once: SHARD=0/3 node ... bake DIR --all & SHARD=1/3 ... & SHARD=2/3 ...
-// To redo a few systems only: node ... bake DIR Charter "The Thaw"; then pack again. Pictures missing from DIR are copied from the
-// current sheet, so a fresh DIR with only the redone systems is enough (apply-saved.py prints the names Paul's saved looks changed).
-// Each picture is SIZE (96) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot), so
-// the game shows it with nearest filtering at a whole number of screen pixels per dot. The camera frames the
-// planet and its rings; moons further out are cropped. The sky is see-through (alpha), so the game draws its own background. Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
+// To redo a few systems only: node ... bake DIR Charter "The Thaw"; then pack again.
+// Each picture is SIZE (96) dots square, drawn with the dither style on (Grain, the planet's own colours, one canvas pixel per dot):
+// the style the game's live planets copy. The camera frames the planet and its rings; moons further out are cropped. The sky is
+// see-through (alpha). Needs Node and Playwright with Chromium (preinstalled in cloud sessions).
 //
 // HARVESTED=1 bakes and packs what each system looks like after a harvest instead (the Planet Maker's "Show it harvested" view, drawn
-// at no turn so the bite faces the sun) into godot/art/planets/atlas-harvested.png: the same cells as atlas.png, so the game reads a
-// harvested system's tile from the same cell of the second sheet. atlas.json names it under "harvested". Use a separate DIR.
+// at no turn so the bite faces the sun) into DIR/atlas-harvested.png. Use a separate DIR.
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -79,8 +77,8 @@ async function pack(dir) {
   const kinds = JSON.parse(fs.readFileSync(path.join(dir, 'kinds.json'), 'utf8'));
   const names = Object.keys(kinds).sort();
   const cols = Math.ceil(Math.sqrt(names.length));
-  const out = path.resolve(__dirname, '..', '..', 'godot', 'art', 'planets');
-  // a picture not baked into DIR comes from its cell in the current sheet
+  const out = path.resolve(dir);     // never godot/: the game ships no baked planet pictures
+  // a picture not baked into DIR comes from its cell in the sheet already packed there
   let old = null;
   try { old = { idx: JSON.parse(fs.readFileSync(path.join(out, 'atlas.json'), 'utf8')), png: 'data:image/png;base64,' + fs.readFileSync(path.join(out, SHEET)).toString('base64') }; } catch (e) {}
   const missing = names.filter((n) => !fs.existsSync(path.join(dir, slug(n) + '.png')) && !(old && old.idx.size === SIZE && old.idx.systems[n]));
