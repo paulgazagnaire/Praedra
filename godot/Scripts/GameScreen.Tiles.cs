@@ -237,6 +237,7 @@ public partial class GameScreen
     /// <summary>A small menu on right-click (Classic's windows had one on every unit).</summary>
     void RightClickMenu(Control c, params (string Text, Action Do)[] items)
     {
+        _menus.AddOrUpdate(c, items);   // for the playtest: RunMenu
         c.GuiInput += e =>
         {
             if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }) return;
@@ -251,6 +252,8 @@ public partial class GameScreen
     }
 
     void MgRefreshSoon() { _mgDirty = true; _mgTimer = 0; }
+
+    readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, (string Text, Action Do)[]> _menus = new();
 }
 
 /// <summary>Slots as dots: filled for used, hollow for free (the sector tiles draw them the same way).</summary>

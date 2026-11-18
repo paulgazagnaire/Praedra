@@ -39,8 +39,9 @@ public partial class UnitIcon : Control
         if (n.Contains("Training", StringComparison.Ordinal)) return Kind.Training;
         if (n.Contains("Construction", StringComparison.Ordinal)) return Kind.Construction;
         if (n.Contains("Sensor", StringComparison.Ordinal)) return Kind.Sensor;
-        if (n.StartsWith("Covenant", StringComparison.Ordinal)) return Kind.Shield;
-        if (n.StartsWith("Escrow", StringComparison.Ordinal) || n.StartsWith("Lien", StringComparison.Ordinal)) return Kind.Battery;
+        // "Mordant Covenant I", "Lode Escrow II", "Mordant Lien-150" (the names were renamed with a first word: StartsWith missed them)
+        if (n.Contains("Covenant", StringComparison.Ordinal)) return Kind.Shield;
+        if (n.Contains("Escrow", StringComparison.Ordinal) || n.Contains("Lien", StringComparison.Ordinal)) return Kind.Battery;
         return Kind.Building;
     }
 

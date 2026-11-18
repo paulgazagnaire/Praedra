@@ -253,7 +253,10 @@ public partial class Main
 
         // ---------------------------------------------------------------- the sector tile opens them
         gs.TileClick(sys, "infra"); gs.PlayRefresh();
-        Expect(gs.MgmtKeys.Contains($"Infra {sys}") && gs.MgText($"Infra {sys}").Contains("Energy slots"), "a click on a tile's dots opens its Infrastructure window");
+        Expect(gs.MgmtKeys.Contains($"Infra {sys}") && gs.MgText($"Infra {sys}").Contains(s.OwnerOf(sys) == me ? "System energy" : "Energy slots"), "a click on a tile's dots opens its Infrastructure window");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        PlaytestInfra(gs, sys);
+        gs.TileClick(sys, "infra"); gs.PlayRefresh();
         gs.TileClick(sys, "fleets"); gs.PlayRefresh();
         Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the fleet windows");
         gs.TileClick(sys, "ground"); gs.PlayRefresh();
@@ -265,7 +268,7 @@ public partial class Main
         string cap = Praedra.Core.Control.ControlModule.CapitalSystem;
         if (me == Praedra.Core.Clock.Side.Hand && s.OwnerOf(cap) == Praedra.Core.Clock.Side.Hand)
         {
-            gs.OpenMgmt(GameScreen.MgKind.Infra, cap); gs.PlayRefresh(); gs.Click("Troops"); gs.PlayRefresh();
+            gs.OpenMgmt(GameScreen.MgKind.Infra, cap); gs.PlayRefresh(); gs.Click($"Yard {cap} Training"); gs.PlayRefresh();
             string troops = gs.MgText($"Infra {cap}"); // rebuilds the window as the next frame would, so the Troops tab's cards exist
             Expect(UiTest.Find<Button>(gs, "Build Lictors") is ArtButton, "the Lictors' build card shows their picture and its hover card: " + troops.Replace("\n", " / "));
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);

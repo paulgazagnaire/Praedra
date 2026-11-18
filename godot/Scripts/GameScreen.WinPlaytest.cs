@@ -41,6 +41,31 @@ public partial class GameScreen
         return null;
     }
 
+    /// <summary>The words of the right-click menu on the button named <paramref name="fullName"/>, or none.</summary>
+    internal IReadOnlyList<string> MenuOf(string fullName) =>
+        UiTest.Find<BaseButton>(this, fullName) is { } b && _menus.TryGetValue(b, out var items) ? items.Select(i => i.Text).ToList() : new List<string>();
+
+    /// <summary>Right-click the button named <paramref name="fullName"/> and pick the menu line starting with <paramref name="item"/>.</summary>
+    internal bool RunMenu(string fullName, string item)
+    {
+        if (UiTest.Find<BaseButton>(this, fullName) is not { } b || !_menus.TryGetValue(b, out var items)) return false;
+        foreach (var (text, act) in items) if (text.StartsWith(item, StringComparison.Ordinal)) { act(); return true; }
+        return false;
+    }
+
+    /// <summary>The words a yard cell shows under its name, and those it shows while the mouse is on it (null: the same).</summary>
+    internal (string Normal, string Hover) CellWords(string fullName) =>
+        UiTest.Find<BaseButton>(this, fullName) is HoverWordsButton h ? (h.Normal ?? h.Target?.Text, h.Hover) : (null, null);
+
+    /// <summary>The Infrastructure window's open cell and page, the build cards it shows, and how wide its content wants to be.</summary>
+    internal (string Cell, int Page, List<(string Name, bool Usable)> Cards, float Want, float Width)? InfraState(string system)
+    {
+        if (_mgWins.FirstOrDefault(w => w.Kind == MgKind.Infra && w.System == system) is not { } w) return null;
+        RebuildMg(w);
+        return (w.Shows?.ToString(), w.Page, _shownBuildRows.Select(b => (b.Row.Name, b.Usable)).ToList(),
+            Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
+    }
+
     internal bool MgHasZone(string zoneKey) => _zones.Any(x => x.Key == zoneKey && IsInstanceValid(x.Box));
 
     internal string MgText(string key)
