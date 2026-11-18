@@ -466,8 +466,21 @@ public partial class GameScreen
         if (kind.ToLowerInvariant() is "infra" or "build")
         {
             // "Charter" or "Charter:Troops": the build tab to show (Facilities, Ships, Fighters, Troops)
-            if (what.Contains(':')) { _buildSection = what[(what.IndexOf(':') + 1)..]; what = what[..what.IndexOf(':')]; }
+            // or a cell of your own planet's window: "Charter:Mines" (Construction, Shipyard, Training, Mines, Refineries, Defences)
+            InfraTab? cell = null;
+            if (what.Contains(':'))
+            {
+                string sec = what[(what.IndexOf(':') + 1)..];
+                if (Enum.TryParse<InfraTab>(sec, out var t)) cell = t; else _buildSection = sec;
+                what = what[..what.IndexOf(':')];
+            }
+            if (what == "HQ") what = S.MyHqSystem ?? what;
             OpenMgmt(MgKind.Infra, what.Replace('_', ' '));
+            if (cell is InfraTab c && _mgWins.FirstOrDefault(x => x.Kind == MgKind.Infra && x.System == what.Replace('_', ' ')) is { } iw)
+            {
+                iw.Shows = c; iw.Page = (int)c / CellsPerPage;
+                RebuildMg(iw);
+            }
             return;
         }
         string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", "lore" => "Lore", _ => "Leaders" };

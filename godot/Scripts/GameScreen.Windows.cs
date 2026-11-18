@@ -43,7 +43,11 @@ public partial class GameScreen
         public bool Min;        // folded to its head
         public bool Wide;       // two columns wide: your planet's Infrastructure (Paul 2026-11-14: two columns, no scrolling)
         public PanelContainer Panel;
+        public MarginContainer HeadPad, BodyPad;
         public VBoxContainer Head, Body;
+        public bool NewLook;    // Paul's Paper design (2026-11-18): your planet's Infrastructure window for now
+        public InfraTab? Shows; // the Infrastructure window's open cell (the yard strip)
+        public int Page;        // the yard strip's page: the yards, or the mines, refineries and defences
         public ScrollContainer Scroll;
         public readonly Dictionary<string, (Control Page, Button Tab)> Pages = new(StringComparer.Ordinal);
         public string Key => Kind == MgKind.Fleet ? $"Fleet {Fleet}" : $"{Kind} {System}";
@@ -131,6 +135,7 @@ public partial class GameScreen
         if (w == null)
         {
             w = new MgWin { Kind = kind, System = system, Fleet = fleet, Tab = tab };
+            if (kind == MgKind.Infra) w.Shows = TabOfSection(_buildSection);   // the yard last opened
             w.Wide = WantsWide(w);
             BuildMgWin(w);
             _mgWins.Add(w);
@@ -149,6 +154,7 @@ public partial class GameScreen
     {
         _mgWins.Remove(w);
         _zones.RemoveAll(z => w.Panel.IsAncestorOf(z.Box));
+        w.Panel.Visible = false;   // gone at once: until the frame ends a freed window still stood in the tree, buttons and all
         w.Panel.QueueFree();
     }
 
@@ -183,7 +189,7 @@ public partial class GameScreen
         w.Panel.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true } && _mgWins.Count > 0 && _mgWins[^1] != w) Front(w); };
         var v = Ui.VBox(0);
         w.Panel.AddChild(v);
-        var headPad = Pad(WinPad, WinPad, WinPad, WinGap);   // the 24 px under the head is outside the scroll, so a scrolled page never touches it
+        var headPad = w.HeadPad = Pad(WinPad, WinPad, WinPad, WinGap);   // the 24 px under the head is outside the scroll, so a scrolled page never touches it
         w.Head = Ui.VBox(WinGap);
         headPad.AddChild(w.Head);
         v.AddChild(headPad);
@@ -203,7 +209,7 @@ public partial class GameScreen
         // no line under the head: the tab's underline closes it (Paul's "styles" frame)
         w.Scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(w.Scroll);
-        var bodyPad = Pad(WinPad, WinPad, 0, WinPad);
+        var bodyPad = w.BodyPad = Pad(WinPad, WinPad, 0, WinPad);
         bodyPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         w.Scroll.AddChild(bodyPad);
         w.Body = Ui.VBox(Ui.Block);
@@ -211,6 +217,40 @@ public partial class GameScreen
         bodyPad.AddChild(w.Body);
         _mgLayer.AddChild(w.Panel);
         _mgLayer.MoveChild(_dragHint, _mgLayer.GetChildCount() - 1);
+        ApplyLook(w);
+    }
+
+    /// <summary>Your planet's Infrastructure window has Paul's Paper design (2026-11-18): its head and its yard strip run to the window's
+    /// edges on the darker surface, the part under them on the lighter one with 16 px all round and 24 px between its parts. The other
+    /// windows keep the "styles" look until the new colours reach them (Paul 2026-11-19: a pull request of its own).</summary>
+    void ApplyLook(MgWin w)
+    {
+        bool look = w.Kind == MgKind.Infra && w.Wide;
+        if (look == w.NewLook && w.Panel.HasThemeStyleboxOverride("panel")) return;
+        w.NewLook = look;
+        void Margins(MarginContainer m, int l, int r, int t, int b)
+        {
+            m.AddThemeConstantOverride("margin_left", l); m.AddThemeConstantOverride("margin_right", r);
+            m.AddThemeConstantOverride("margin_top", t); m.AddThemeConstantOverride("margin_bottom", b);
+        }
+        if (look)
+        {
+            Margins(w.HeadPad, 0, 0, 0, 0);
+            Margins(w.BodyPad, WinPad, WinPad, WinPad, WinPad);
+            w.Head.AddThemeConstantOverride("separation", 0);
+            w.Body.AddThemeConstantOverride("separation", WinGap);
+            var box = Look.Box(Look.Band, Ui.WinEdge, 1, 1, 1, 1);
+            box.ContentMarginLeft = box.ContentMarginRight = box.ContentMarginTop = box.ContentMarginBottom = 1;
+            w.Panel.AddThemeStyleboxOverride("panel", box);
+        }
+        else
+        {
+            Margins(w.HeadPad, WinPad, WinPad, WinPad, WinGap);
+            Margins(w.BodyPad, WinPad, WinPad, 0, WinPad);
+            w.Head.AddThemeConstantOverride("separation", WinGap);
+            w.Body.AddThemeConstantOverride("separation", Ui.Block);
+            w.Panel.AddThemeStyleboxOverride("panel", Ui.WindowBox());
+        }
     }
 
     /// <summary>The page's width: the window less its edges and margins, and 4 px spare for the scroll grabber, so a long page never widens it.</summary>
@@ -296,7 +336,7 @@ public partial class GameScreen
         {
             if (!IsInstanceValid(w.Panel)) return;
             float head = w.Head.GetParent<Control>().GetCombinedMinimumSize().Y + 2; // the edge, top and bottom
-            float h = w.Min ? head - WinGap + WinPad : Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - BottomClear);
+            float h = w.Min ? (w.NewLook ? head : head - WinGap + WinPad) : Math.Min(SlotHeight, _mgLayer.Size.Y - w.Panel.Position.Y - BottomClear);
             w.Panel.Size = new Vector2(WidthOf(w), Math.Max(w.Min ? 0 : 160, h));
             if (keepScroll >= 0) w.Scroll.ScrollVertical = (int)keepScroll;
         }
@@ -353,6 +393,7 @@ public partial class GameScreen
             w.Body.CustomMinimumSize = new Vector2(BodyWidth(w), 0);
             w.Panel.Position = ClampWin(w.Panel.Position, new Vector2(WidthOf(w), 200));
         }
+        ApplyLook(w);
         _zones.RemoveAll(z => w.Panel.IsAncestorOf(z.Box));
         Ui.Clear(w.Head);
         Ui.Clear(w.Body);
@@ -463,19 +504,7 @@ public partial class GameScreen
 
         var row = Ui.HBox(NameGap);
         row.MouseFilter = MouseFilterEnum.Ignore;
-        var buttons = Ui.HBox(4);
-        buttons.MouseFilter = MouseFilterEnum.Ignore;
-        buttons.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        grip ??= MoveGrip();
-        buttons.AddChild(grip);
-        var fold = Ui.Button(w.Min ? "+" : "–", () => ToggleMin(w), w.Min ? "Unfold (or double-click the title)" : "Fold to the title (or double-click it)", "Clock");
-        fold.SetMeta(UiTest.FullName, "Fold " + w.Key);
-        fold.CustomMinimumSize = new Vector2(WinButton, WinButton);
-        buttons.AddChild(fold);
-        var close = Ui.Button("×", () => CloseMgmt(w), "Close (Esc)", "Clock");
-        close.SetMeta(UiTest.FullName, "Close " + w.Key);
-        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
-        buttons.AddChild(close);
+        var buttons = WinButtons(w, grip);
 
         // the name: BitPotion 48 px, or 32 px when it does not fit beside the buttons (Paul 2026-11-14)
         string upper = title.ToUpperInvariant();
@@ -495,6 +524,25 @@ public partial class GameScreen
         if (sub != null) { var sl = Ui.Label(sub, null, Ui.Text2, Ui.Small); sl.MouseFilter = MouseFilterEnum.Ignore; block.AddChild(sl); }
         if (badge != null) { badge.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; block.AddChild(badge); }
         w.Head.AddChild(block);
+    }
+
+    /// <summary>The window buttons ⋮⋮ – ×, 24 px each and 4 px apart, pinned to the right of the head.</summary>
+    HBoxContainer WinButtons(MgWin w, Control grip = null)
+    {
+        var buttons = Ui.HBox(4);
+        buttons.MouseFilter = MouseFilterEnum.Ignore;
+        buttons.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        grip ??= MoveGrip();
+        buttons.AddChild(grip);
+        var fold = Ui.Button(w.Min ? "+" : "–", () => ToggleMin(w), w.Min ? "Unfold (or double-click the title)" : "Fold to the title (or double-click it)", "Clock");
+        fold.SetMeta(UiTest.FullName, "Fold " + w.Key);
+        fold.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        buttons.AddChild(fold);
+        var close = Ui.Button("×", () => CloseMgmt(w), "Close (Esc)", "Clock");
+        close.SetMeta(UiTest.FullName, "Close " + w.Key);
+        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        buttons.AddChild(close);
+        return buttons;
     }
 
     /// <summary>⋮⋮ on a planet's window: the handle that moves it to another column (Paul 2026-11-14). The events pass on to the head, which

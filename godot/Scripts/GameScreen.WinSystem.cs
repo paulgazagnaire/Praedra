@@ -130,10 +130,10 @@ public partial class GameScreen
         string n = w.System;
         if (S.IsDestroyed(n)) { HarvestedWin(w, n); return; } // already open when the harvester struck: no dead slots (Ponytail on #241)
         bool mine = S.OwnerOf(n) == Me;
-        var eco = S.Host.Economy;
-        MgHead(w, $"Infrastructure · {RegionOf(n)}", n, NameInk(n, mine),
-            mine ? $"{eco.EnergyUsed(n)} of {eco.SlotsOf(n).Energy} energy slots used · {Ui.Count(eco.OfKindAt(n, FacilityKind.Mine), "mine", "mines")} · {Ui.Count(eco.OfKindAt(n, FacilityKind.Refinery), "refinery", "refineries")}" : null);
-        if (mine) BuildTab(n, BodyWidth(w)); else { PaneBuildings(n); GroundLink(n); }   // your own planet's link sits in its left column
+        if (mine) { InfraOwnWin(w); return; }   // Paul's Paper design (2026-11-18): GameScreen.WinBuild.cs
+        MgHead(w, $"Infrastructure · {RegionOf(n)}", n, NameInk(n, mine));
+        PaneBuildings(n);
+        GroundLink(n);
     }
 
     void GroundLink(string n) => MgLinks(($"Ground at {n}", () => OpenMgmt(MgKind.Ground, n), "Leaders, troops and fighters on the planet, and the fleets in orbit"));

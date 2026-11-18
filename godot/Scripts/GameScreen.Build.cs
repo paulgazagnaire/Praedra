@@ -297,16 +297,17 @@ public partial class GameScreen
     /// rule: m5-research §Facility income, §Mission income, §The level check (points come from finished yards of that kind and from Research missions).</summary>
     /// <summary>The research level and what it unlocks next; <paramref name="greyNote"/>: the build tiles above include grey ones, which carry
     /// no "not researched" line of their own (so four rows fit the Infrastructure window), so this line says what grey means.</summary>
-    void ResearchLine(ResearchKind kind, bool greyNote = false)
+    Label ResearchLine(ResearchKind kind, bool greyNote = false)
     {
         var r = S.Host.Research;
         string track = kind switch { ResearchKind.Ship => "ship design", ResearchKind.Troop => "troop training", _ => "facility design" };
-        string text = (greyNote ? "A grey tile with no note is not researched yet. " : "") + (r.NextRung(Me, kind) is { } next
+        string text = (greyNote ? "A grey card with no note is not researched yet. " : "") + (r.NextRung(Me, kind) is { } next
             ? $"Research ({track}): level {r.Level(Me, kind)}. Next: {next.Class}, {r.Points(Me, kind)} of {next.Cost} points."
             : $"Research ({track}): level {r.Level(Me, kind)}, everything researched.");
         var l = Add(Ui.Label(text, "Hint"));
         l.TooltipText = Ui.Wrap("Every finished yard of this kind adds a point now and then; a Research mission by a skilled leader adds far more. Each level unlocks the next item in the list.");
         l.MouseFilter = MouseFilterEnum.Stop;
+        return l;
     }
 
     void SubmitBuild(string system, YardFamily fam, CostRow row, int count)
