@@ -175,7 +175,7 @@ public class CampaignSoakTests
 
     // ---------------------------------------------------------------- the settings reach the modules through the host
 
-    // m2-uprisings-and-garrison §Garrison G and the check: Granero holds 2 Hand Fleet Regiments for a requirement of 2.
+    // m2-uprisings-and-garrison §Garrison G and the check: Tiryal holds 2 Hand Fleet Regiments for a requirement of 2.
     // Classic counts 1.0 each (enough); New weighs them 0.6 each (1.2 < 2: an uprising on the first day).
     [Fact]
     public void RulesetSettingChangesTheOutcomeAtGranero()
@@ -184,7 +184,7 @@ public class CampaignSoakTests
         {
             var c = TestCampaign.New(1, CampaignHarness.Settings(r));
             c.Step();
-            return c.Host.Support.IsUprising("Granero");
+            return c.Host.Support.IsUprising("Tiryal");
         }
         Assert.False(Rises(GarrisonRuleset.Classic));
         Assert.True(Rises(GarrisonRuleset.New));
@@ -200,13 +200,13 @@ public class CampaignSoakTests
         var asNew = TestCampaign.Load(c.Host.Save(), CampaignHarness.Settings(GarrisonRuleset.New));
         Assert.Equal(GarrisonRuleset.New, asNew.Host.Support.Ruleset);
         asNew.Step();
-        Assert.True(asNew.Host.Support.IsUprising("Granero"));
+        Assert.True(asNew.Host.Support.IsUprising("Tiryal"));
         var asClassic = TestCampaign.Load(c.Host.Save());
         asClassic.Step();
-        Assert.False(asClassic.Host.Support.IsUprising("Granero"));
+        Assert.False(asClassic.Host.Support.IsUprising("Tiryal"));
     }
 
-    // m4-battle-classic §1: the relief fleet arriving at Tierra Larga on day 300 meets the Hand's interdiction fleet and the contact is a real
+    // m4-battle-classic §1: the relief fleet arriving at Annavori on day 300 meets the Hand's interdiction fleet and the contact is a real
     // Classic battle (invariants stay green on every day of the checked run). The Interdictor's gravity well forbids a retreat.
     // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the relief fleet's way from Caminus is longer (24 days,
     // was 21), so the battle is on day 324, and on seed 1 the Classic row's battle goes the other way (the Hand retreats, its Decree lost
@@ -233,7 +233,7 @@ public class CampaignSoakTests
             // four hits' picks and dice), so on this ruleset the game generator reaches the day-313 battle in another state and the same forces fight
             // another battle: the Hand retreats (its Decree is lost to NoHyperdrive) and the Collective holds the field. Before B7 the
             // Collective was Annihilated after a GravityWell refusal, as in the Classic row above (which still shows the gravity well).
-            // v6 re-pin 2026-10-24: on the spiral map the seeded game reaches the Tierra Larga battle in another state again, and it is the battle this test
+            // v6 re-pin 2026-10-24: on the spiral map the seeded game reaches the Annavori battle in another state again, and it is the battle this test
             // was written for: the Interdictor's gravity well refuses the Collective's retreat, the Collective is Annihilated, the Hand holds the field.
             Assert.Equal((Praedra.Core.Battle.BattleOutcome.Annihilated, Praedra.Core.Battle.BattleOutcome.Victorious), (end.Result.Collective, end.Result.Hand));
             Assert.Contains(run.Events.OfType<Praedra.Core.Battle.RetreatRefused>(), x => x.Reason == Praedra.Core.Battle.RetreatRefusal.GravityWell);
@@ -241,7 +241,7 @@ public class CampaignSoakTests
     }
 
     // m4-battle-classic §1 (the gravity-well half of the test above, New ruleset): with the five B7 bombardment switches off the day-200 bombardment
-    // draws as before B7, so the day-324 (day 321 before the sector spread of 2026-11-12) Tierra Larga battle is the one this test was written for: the Interdictor's gravity well refuses the Collective's
+    // draws as before B7, so the day-324 (day 321 before the sector spread of 2026-11-12) Annavori battle is the one this test was written for: the Interdictor's gravity well refuses the Collective's
     // retreat and it is Annihilated. Keeps that check on the New ruleset after B7 re-routed the seeded game (Dev lead, 2026-10-19).
     [Fact]
     public void TierraLargaContactNewRulesetGravityWellWithPreB7Bombardment()

@@ -421,6 +421,13 @@ public partial class GameScreen
         if (_routesChip != null) _routesChip.SetPressedNoSignal(on);
     }
 
+    internal void SetDeliveriesShown(bool on)
+    {
+        UiSettings.ShowDeliveries = on; UiSettings.Save();
+        _fleets.ShowDeliveries = on;
+        if (_deliveriesChip != null) _deliveriesChip.SetPressedNoSignal(on);
+    }
+
     void ToggleLegend()
     {
         _legendCard.Visible = !_legendCard.Visible;
@@ -453,6 +460,13 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
         Item(new Glyph(Glyph.Kind.Triangle, Colors.White, 11, Ui.You), "Your fleet (a number = several here)");
         Item(new Glyph(Glyph.Kind.TriangleDown, Ui.Enemy, 11), "Enemy fleet you see now");
+        Item(new Glyph(Glyph.Kind.Diamond, Ui.You, 11), "Your leader travelling alone");
+        Item(new Glyph(Glyph.Kind.DiamondRing, Ui.You, 13), "Your mission team travelling");
+        if (S.Player == Side.Collective) Item(new Glyph(Glyph.Kind.Dot, Ui.Gold, 11), "Your HQ on the move");
+        v.AddChild(Ui.Label("On the way from the yard (Layers > Deliveries):", null, Ui.Text3, Ui.Small, wrap: false));
+        Item(new Glyph(Glyph.Kind.Square, Ui.You, 10), "Troops");
+        Item(new Glyph(Glyph.Kind.Hexagon, Ui.You, 11), "A building");
+        Item(new Glyph(Glyph.Kind.Triangle, Ui.You, 11, Ui.MapBg), "A ship or fighter");
         Item(new Glyph(Glyph.Kind.Bar, new Color(0.72f, 0.75f, 0.80f), 16), "Major route: 3x speed");
         Item(new Glyph(Glyph.Kind.Bar, new Color(Ui.Text3, 0.7f), 16), "Minor route: 1.5x speed");
         v.AddChild(Ui.Label("Off the routes, ships jump through open space at normal speed. A move preview is solid on a route and dashed off it; red rings mark a known trap. Each sector is drawn a little tighter than it is, so the sectors stand apart: the arrival day in a move preview is the real distance.", "Hint", size: Ui.Tiny));

@@ -1,28 +1,28 @@
 name,sector,group,map_x,map_y,origin,tier,affiliation,chokepoint,lane_count,on_route,major_routes,best_lane_tier
 Feldspar,Feldspar Sector,midreach,303,420,roster,,,1,2,1,Salt Lane,major
-Umoya,Highfall Sector,farreach,476,792,roster,,,0,2,1,Long Haul,major
-Seven Keys,Ciénaga Sector,farreach,399,254,roster,,,0,0,0,,
-Second Spring,Pulau Hijau Sector,farreach,408,123,roster,,,0,0,0,,
-Truce Moor,Rauchtal Sector,farreach,273,78,roster,,,0,0,0,,
-Westerholm,Rauchtal Sector,farreach,298,115,roster,,,1,3,1,,minor
-Erg Lahmar,Rauchtal Sector,farreach,280,92,roster,,,0,0,0,,
-Highmere,Pulau Hijau Sector,farreach,365,88,roster,,,1,2,1,,minor
-Shiree,Pulau Hijau Sector,farreach,388,142,roster,,,0,0,0,,
-Broadacre,Pulau Hijau Sector,farreach,353,139,roster,,,0,0,0,,
-Undergrowth,Mata Alta Sector,farreach,620,803,roster,,,1,3,1,Trunk Line,major
+Everwind,Highfall Sector,farreach,476,792,roster,,,0,2,1,Long Haul,major
+Seven Keys,Kelmeer Sector,farreach,399,254,roster,,,0,0,0,,
+Second Spring,Kichaar Sector,farreach,408,123,roster,,,0,0,0,,
+Truce Moor,The Valves Sector,farreach,273,78,roster,,,0,0,0,,
+Westerholm,The Valves Sector,farreach,298,115,roster,,,1,3,1,,minor
+Remlaar,The Valves Sector,farreach,280,92,roster,,,0,0,0,,
+Highmere,Kichaar Sector,farreach,365,88,roster,,,1,2,1,,minor
+Sanjaan,Kichaar Sector,farreach,388,142,roster,,,0,0,0,,
+Broadacre,Kichaar Sector,farreach,353,139,roster,,,0,0,0,,
+Undergrowth,Jadwey Sector,farreach,620,803,roster,,,1,3,1,Trunk Line,major
 The Stumps,Drift Harbour Sector,farreach,689,872,roster,,,0,0,0,,
-Longgrass,Ilanga Sector,farreach,603,845,roster,,,0,0,0,,
-Ashgarden,Zlatna Sector,farreach,646,747,roster,,,0,2,1,Trunk Line,major
+Longgrass,Ilt Sector,farreach,603,845,roster,,,0,0,0,,
+Ashgarden,Hardcoin Sector,farreach,646,747,roster,,,0,2,1,Trunk Line,major
 The Ladle,Drift Harbour Sector,farreach,679,850,roster,,,0,0,0,,
-Whetstone,Mata Alta Sector,farreach,610,761,roster,,,0,0,0,,
+Whetstone,Jadwey Sector,farreach,610,761,roster,,,0,0,0,,
 Rigwater,Longwire Sector,farreach,937,364,roster,,,1,2,1,,minor
-Redveld,Vinograd Sector,midreach,684,542,roster,,,0,1,1,,minor
+Redveld,Aubrine Sector,midreach,684,542,roster,,,0,1,1,,minor
 Ventstown,Lantern Sector,farreach,32,391,roster,,,0,1,1,,minor
-Kelpfast,Mata Alta Sector,farreach,633,776,roster,,,0,2,1,Trunk Line,major
+Kelpfast,Jadwey Sector,farreach,633,776,roster,,,0,2,1,Trunk Line,major
 Hundred Lakes,Hundred Lakes Sector,farreach,87,315,roster,,,0,1,1,,minor
-Sweetsea,Nebbia Sector,farreach,417,225,roster,,,0,0,0,,
+Sweetsea,Dhunreen Sector,farreach,417,225,roster,,,0,0,0,,
 Holdfast,Fallout Sector,farreach,123,178,roster,,,0,0,0,,
-Mata Alta,Mata Alta Sector,farreach,595,785,roster,,,0,0,0,,
+Jadwey,Jadwey Sector,farreach,595,785,roster,,,0,0,0,,
 Awlbridge,Hundred Lakes Sector,farreach,175,248,roster,,,0,0,0,,
 The Lantern,Lantern Sector,farreach,29,475,roster,,,0,0,0,,
 Stewpot,Hundred Lakes Sector,farreach,114,317,roster,,,0,0,0,,
@@ -35,67 +35,67 @@ Drift Harbour,Drift Harbour Sector,farreach,688,931,roster,,,0,0,0,,
 Weirholm,Fairhaven Sector,farreach,924,627,roster,,,0,0,0,,
 Mudlark,Ironbeach Sector,farreach,579,937,roster,,,0,0,0,,
 The Thaw,Thaw Sector,farreach,763,883,roster,,,0,0,0,,
-Kamenitsa,Mechane Sector,midreach,447,654,roster,,,1,2,1,,minor
-Verdemar,Ashfall Sector,midreach,337,659,roster,,,1,2,1,Salt Lane,major
+Kaplet,Mechane Sector,midreach,447,654,roster,,,1,2,1,,minor
+Osyal,Ashfall Sector,midreach,337,659,roster,,,1,2,1,Salt Lane,major
 Hardscrabble,Shelter Sector,farreach,387,701,roster,,,1,3,1,Salt Lane,major
-Tyomny Les,Fairhaven Sector,farreach,926,602,roster,,,0,0,0,,
+Longsleep,Fairhaven Sector,farreach,926,602,roster,,,0,0,0,,
 Porphyry,Mechane Sector,midreach,527,600,roster,,,1,3,1,,minor
 Classis,Classis Sector,midreach,467,428,roster,,,1,3,1,,minor
 Magnetite III,Ommata Sector,heartland,543,462,roster,,,0,2,1,Trunk Line,major
 Hiberna,Ommata Sector,heartland,530,474,roster,,,0,0,0,,
 Beryl,Classis Sector,midreach,567,441,roster,,,0,0,0,,
 Marmor,Classis Sector,midreach,538,432,roster,,,1,2,1,,minor
-Bina Minor,Ommata Sector,heartland,522,463,roster,,,0,2,1,Trunk Line,major
-Bina Major,Castra Sector,heartland,503,471,roster,,,1,3,1,Trunk Line,major
+Gemina Minor,Ommata Sector,heartland,522,463,roster,,,0,2,1,Trunk Line,major
+Gemina Major,Castra Sector,heartland,503,471,roster,,,1,3,1,Trunk Line,major
 Loess,Classis Sector,midreach,483,427,roster,,,1,2,1,,minor
 Nutrix,Ommata Sector,heartland,554,469,roster,,,1,4,1,Long Haul;Trunk Line,major
 Tarrow,Tarrow Sector,heartland,482,551,roster,,,1,2,1,,minor
-Serra Alta,Tarrow Sector,heartland,450,561,roster,,,1,2,1,,minor
-Valle Hondo,Charter Sector,heartland,502,550,roster,,,0,0,0,,
-Seafold,Ilanga Sector,farreach,599,828,roster,,,1,3,1,Trunk Line,major
-Kilele,Caminus Sector,farreach,755,114,roster,,,0,1,1,,minor
-Belmare,Charter Sector,heartland,488,538,roster,,,1,2,1,,minor
+Kaoyat,Tarrow Sector,heartland,450,561,roster,,,1,2,1,,minor
+Ghatow,Charter Sector,heartland,502,550,roster,,,0,0,0,,
+Seafold,Ilt Sector,farreach,599,828,roster,,,1,3,1,Trunk Line,major
+Drover's Peak,Caminus Sector,farreach,755,114,roster,,,0,1,1,,minor
+Hal Lumet,Charter Sector,heartland,488,538,roster,,,1,2,1,,minor
 Stibium,Excubia Sector,heartland,456,538,roster,,,1,3,1,Charter Road,major
 Corundum,Thesauros Sector,farreach,236,420,roster,,,0,0,0,,
-Kloof,Salitre Sector,farreach,472,824,roster,,,1,3,1,Long Haul,major
+Old Barracks,Coppertoll Sector,farreach,472,824,roster,,,1,3,1,Long Haul,major
 Saltwood,Excubia Sector,heartland,432,519,roster,,,1,2,1,,minor
 Semeion,Semeion Sector,midreach,666,677,roster,,,0,1,1,,minor
-Ostwerk,Nebbia Sector,farreach,431,178,roster,,,1,2,1,,minor
-Clanmoor,Rauchtal Sector,farreach,257,134,roster,,,1,2,1,,minor
-Khamsin,Nebbia Sector,farreach,395,204,roster,,,1,4,1,Charter Road,major
+Dumraan,Dhunreen Sector,farreach,431,178,roster,,,1,2,1,,minor
+Clanmoor,The Valves Sector,farreach,257,134,roster,,,1,2,1,,minor
+Gramav,Dhunreen Sector,farreach,395,204,roster,,,1,4,1,Charter Road,major
 Fairhaven,Fairhaven Sector,farreach,990,563,roster,,,0,0,0,,
 Stopgap,Bellwether Sector,midreach,667,628,roster,,,0,2,1,Trunk Line,major
-Pale Ridge,Zlatna Sector,farreach,666,770,roster,,,1,2,1,,minor
-Hutan Raya,Bauxite IV Sector,farreach,355,806,roster,,,0,0,0,,
-Castellum,Lesnaya Sector,midreach,394,509,roster,,,0,0,0,,
-Nyika,Thesauros Sector,farreach,172,359,roster,,,0,0,0,,
+Pale Ridge,Hardcoin Sector,farreach,666,770,roster,,,1,2,1,,minor
+Hal Taru,Bauxite IV Sector,farreach,355,806,roster,,,0,0,0,,
+Castellum,Taruval Sector,midreach,394,509,roster,,,0,0,0,,
+Moorun,Thesauros Sector,farreach,172,359,roster,,,0,0,0,,
 Halite,Bauxite IV Sector,farreach,356,715,roster,,,0,1,1,,minor
-Cristalina,Caza Real Sector,midreach,630,350,roster,,,1,3,1,Long Haul,major
-Vinograd,Vinograd Sector,midreach,738,510,roster,,,1,2,1,Salt Lane,major
+Kanchesh,Qessar Sector,midreach,630,350,roster,,,1,3,1,Long Haul,major
+Aubrine,Aubrine Sector,midreach,738,510,roster,,,1,2,1,Salt Lane,major
 Custodia,Ferraria Sector,midreach,350,411,roster,,,1,3,1,Charter Road,major
 Tranquilla,Longtide Sector,midreach,629,562,roster,,,0,0,0,,
 Arithmos,Excubia Sector,heartland,465,527,roster,,,0,2,1,,minor
 Ardlinn,Excubia Sector,heartland,418,523,roster,,,1,3,1,Charter Road,major
 Whitmark,Three Lamps Sector,midreach,684,411,roster,,,0,1,1,,minor
-Puerto Ceniza,Tarrow Sector,heartland,527,572,roster,,,0,0,0,,
+Ashport,Tarrow Sector,heartland,527,572,roster,,,0,0,0,,
 Disciplina,Excubia Sector,heartland,453,504,roster,,,0,1,1,,minor
 Ferraria,Ferraria Sector,midreach,400,437,roster,,,1,2,1,,minor
-Mirabel,Mirabel Sector,midreach,562,497,roster,,,1,2,1,,minor
+Unbought,Unbought Sector,midreach,562,497,roster,,,1,2,1,,minor
 Sevenwells,Tarrow Sector,heartland,467,553,roster,,,1,2,1,,minor
-Bela Voda,Excubia Sector,heartland,429,551,roster,,,1,2,1,,minor
-Horasis,Bosque Alto Sector,midreach,592,496,roster,,,0,1,1,,minor
-Tierra Larga,Bosque Alto Sector,midreach,614,494,roster,,,1,3,1,Trunk Line,major
+Greenthaw,Excubia Sector,heartland,429,551,roster,,,1,2,1,,minor
+Horasis,Ilo Vanna Sector,midreach,592,496,roster,,,0,1,1,,minor
+Annavori,Ilo Vanna Sector,midreach,614,494,roster,,,1,3,1,Trunk Line,major
 Horsemarch,Tarrow Sector,heartland,468,578,roster,,,0,0,0,,
-Pulau Hijau,Pulau Hijau Sector,farreach,371,128,roster,,,0,0,0,,
-Granero,Lesnaya Sector,midreach,411,513,roster,,,1,3,1,Charter Road,major
-Tinderland,Ulaan Tal Sector,farreach,776,641,roster,,,0,0,0,,
+Kichaar,Kichaar Sector,farreach,371,128,roster,,,0,0,0,,
+Tiryal,Taruval Sector,midreach,411,513,roster,,,1,3,1,Charter Road,major
+Tinderland,Eolande Sector,farreach,776,641,roster,,,0,0,0,,
 Vinculum,Vinculum Sector,midreach,553,354,roster,,,0,0,0,,
-Isbrand,Vinculum Sector,midreach,565,400,roster,,,0,1,1,,minor
-Lockout,Varmdal Sector,farreach,793,255,roster,,,0,0,0,,
+Qistan,Vinculum Sector,midreach,565,400,roster,,,0,1,1,,minor
+Lockout,Ushmari Sector,farreach,793,255,roster,,,0,0,0,,
 Birchholm,Vinculum Sector,midreach,526,328,roster,,,0,1,1,,minor
-Bare Acre,Vinograd Sector,midreach,744,613,roster,,,0,0,0,,
+Bare Acre,Aubrine Sector,midreach,744,613,roster,,,0,0,0,,
 Alabaster,Incus Sector,midreach,415,391,roster,,,1,2,1,,minor
-Pescadora,Muster Rock Sector,farreach,235,264,roster,,,0,0,0,,
+Tal Reesh,Muster Rock Sector,farreach,235,264,roster,,,0,0,0,,
 Treaty Wood,Semeion Sector,midreach,730,641,roster,,,0,0,0,,
 Otium,Vinculum Sector,midreach,489,374,roster,,,0,0,0,,
 Craterhold,Incus Sector,midreach,347,404,roster,,,0,1,1,,minor
@@ -106,100 +106,100 @@ Vexillum,Thesauros Sector,farreach,184,419,roster,,,0,0,0,,
 Brannock,Solacia Sector,farreach,484,144,roster,,,0,0,0,,
 Bluefathom,Thesauros Sector,farreach,195,405,roster,,,0,0,0,,
 Skerrholm,Thesauros Sector,farreach,210,363,roster,,,0,0,0,,
-Retentio,Lagoa Funda Sector,midreach,401,334,roster,,,0,0,0,,
-Meseta,Feldspar Sector,midreach,290,477,roster,,,1,2,1,Salt Lane;Yard Road,major
-Silberberg,Thesauros Sector,farreach,203,464,roster,,,0,0,0,,
-Krasny Yar,Rio Lodo Sector,farreach,544,9,roster,,,0,0,0,,
+Retentio,Talveen Sector,midreach,401,334,roster,,,0,0,0,,
+Neverdown,Feldspar Sector,midreach,290,477,roster,,,1,2,1,Salt Lane;Yard Road,major
+Silvun,Thesauros Sector,farreach,203,464,roster,,,0,0,0,,
+Bandukh,Diyaar Sector,farreach,544,9,roster,,,0,0,0,,
 Morrowfield,Akousma Sector,midreach,551,680,roster,,,0,1,1,,minor
-Ribeira,Lenitas Sector,midreach,372,483,roster,,,1,2,1,Charter Road,major
+Nalivol,Lenitas Sector,midreach,372,483,roster,,,1,2,1,Charter Road,major
 Four Lamps,Akousma Sector,midreach,553,697,roster,,,0,1,1,,minor
 The Notch,Lantern Sector,farreach,88,480,roster,,,1,2,1,Yard Road,major
-Vrijhaven,Nebbia Sector,farreach,376,196,roster,,,0,0,0,,
+Fryx,Dhunreen Sector,farreach,376,196,roster,,,0,0,0,,
 Mirrorfield,Fallout Sector,farreach,163,156,roster,,,0,0,0,,
 Viridia,Quieta Sector,midreach,560,254,roster,,,0,1,1,,minor
-Rio Turvo,Thesauros Sector,farreach,225,436,roster,,,0,0,0,,
-Brennhof,Tarrow Sector,heartland,515,579,roster,,,0,2,1,Long Haul,major
+Turncoat,Thesauros Sector,farreach,225,436,roster,,,0,0,0,,
+Wyburn,Tarrow Sector,heartland,515,579,roster,,,0,2,1,Long Haul,major
 Skylark,Caminus Sector,farreach,771,185,roster,,,1,2,1,Long Haul,major
 Warmwell,Quieta Sector,midreach,480,274,roster,,,0,0,0,,
-Opsis,Kranholm Sector,farreach,628,97,roster,,,0,0,0,,
-Sedova,Tormentum Sector,midreach,570,612,roster,,,1,3,1,,minor
-Fallow,Mata Alta Sector,farreach,606,801,roster,,,0,0,0,,
-Kairos,Varmdal Sector,farreach,782,291,roster,,,0,0,0,,
-Ilhas Fundas,Kranholm Sector,farreach,689,159,roster,,,0,1,1,,minor
-Lesnaya,Lesnaya Sector,midreach,350,519,roster,,,1,2,1,Yard Road,major
-Dar Sukun,Varmdal Sector,farreach,855,239,roster,,,1,2,1,,minor
-Nordlys,Greenfever Sector,farreach,110,812,roster,,,0,0,0,,
-Solheim,Laterite Sector,farreach,350,41,roster,,,0,0,0,,
+Opsis,Kesh Krata Sector,farreach,628,97,roster,,,0,0,0,,
+Umbrow,Tormentum Sector,midreach,570,612,roster,,,1,3,1,,minor
+Fallow,Jadwey Sector,farreach,606,801,roster,,,0,0,0,,
+Kairos,Ushmari Sector,farreach,782,291,roster,,,0,0,0,,
+Qoravi,Kesh Krata Sector,farreach,689,159,roster,,,0,1,1,,minor
+Taruval,Taruval Sector,midreach,350,519,roster,,,1,2,1,Yard Road,major
+Shallori,Ushmari Sector,farreach,855,239,roster,,,1,2,1,,minor
+Deadlight,Greenfever Sector,farreach,110,812,roster,,,0,0,0,,
+Singseam,Laterite Sector,farreach,350,41,roster,,,0,0,0,,
 Marl,Mechane Sector,midreach,531,625,roster,,,1,2,1,,minor
 Ferrymoor,Drift Harbour Sector,farreach,677,907,roster,,,0,0,0,,
 Scoria,Charter Sector,heartland,504,531,roster,,,1,2,1,,minor
-Fyrholm,Fyrholm Sector,farreach,806,800,roster,,,0,1,1,,minor
-Ferrite IV,Lesnaya Sector,midreach,359,541,roster,,,0,1,1,,minor
+Lampkeep,Lampkeep Sector,farreach,806,800,roster,,,0,1,1,,minor
+Ferrite IV,Taruval Sector,midreach,359,541,roster,,,0,1,1,,minor
 Farrow,Hundred Lakes Sector,farreach,50,288,roster,,,0,0,0,,
 Agmen,Quieta Sector,midreach,584,277,roster,,,0,0,0,,
 Fernhollow,Fallout Sector,farreach,212,98,roster,,,0,0,0,,
 Bitterwell,Greenfever Sector,farreach,210,751,roster,,,0,0,0,,
 Hollenvale,Thaw Sector,farreach,759,848,roster,,,1,2,1,,minor
-Nueva Pradera,Caza Real Sector,midreach,593,411,roster,,,1,2,1,Long Haul,major
+Ellisori,Qessar Sector,midreach,593,411,roster,,,1,2,1,Long Haul,major
 Oionos,Mechane Sector,midreach,509,595,roster,,,1,3,1,Long Haul,major
 Wrenfield,Ferraria Sector,midreach,425,445,roster,,,0,0,0,,
-Alvorada,Cohors Sector,farreach,148,848,roster,,,0,0,0,,
+Melyal,Cohors Sector,farreach,148,848,roster,,,0,0,0,,
 Consolatio,Castra Sector,heartland,487,468,roster,,,1,2,1,,minor
 Dulcia,Incus Sector,midreach,415,366,roster,,,0,1,1,,minor
-Altamesa,Classis Sector,midreach,563,420,roster,,,1,2,1,,minor
+Kesh Talo,Classis Sector,midreach,563,420,roster,,,1,2,1,,minor
 Laterite,Laterite Sector,farreach,409,42,roster,,,0,0,0,,
-Amargura,Pulau Hijau Sector,farreach,430,96,roster,,,1,2,1,,minor
+Murreen,Kichaar Sector,farreach,430,96,roster,,,1,2,1,,minor
 Shelter,Shelter Sector,farreach,423,763,roster,,,1,2,1,,minor
 Deadfall,Bauxite IV Sector,farreach,306,752,roster,,,1,2,1,,minor
 Redfen,Highfall Sector,farreach,454,777,roster,,,0,0,0,,
 Stonebrake,Castra Sector,heartland,452,465,roster,,,0,0,0,,
 Last Tank,Slate Hill Sector,farreach,479,907,roster,,,0,2,1,Long Haul,major
 Snowmouth,Lantern Sector,farreach,59,465,roster,,,1,3,1,Yard Road,major
-Groza,Slate Hill Sector,farreach,495,909,roster,,,0,0,0,,
-Kalmoor,Bosque Alto Sector,midreach,634,469,roster,,,1,2,1,,minor
-Longshore,Salitre Sector,farreach,425,836,roster,,,0,0,0,,
-Feudgrass,Salitre Sector,farreach,474,860,roster,,,0,2,1,Long Haul,major
+Podek,Slate Hill Sector,farreach,495,909,roster,,,0,0,0,,
+Kalmoor,Ilo Vanna Sector,midreach,634,469,roster,,,1,2,1,,minor
+Longshore,Coppertoll Sector,farreach,425,836,roster,,,0,0,0,,
+Feudgrass,Coppertoll Sector,farreach,474,860,roster,,,0,2,1,Long Haul,major
 Three Lamps,Three Lamps Sector,midreach,752,419,roster,,,0,0,0,,
 Tormentum,Tormentum Sector,midreach,539,589,roster,,,0,1,1,,minor
-Las Presas,Caminus Sector,farreach,717,104,roster,,,0,0,0,,
+Qedrun,Caminus Sector,farreach,717,104,roster,,,0,0,0,,
 Lenitas,Lenitas Sector,midreach,412,477,roster,,,1,2,1,,minor
-Waymeet,Caza Real Sector,midreach,603,393,roster,,,1,2,1,Long Haul,major
+Waymeet,Qessar Sector,midreach,603,393,roster,,,1,2,1,Long Haul,major
 Charter,Charter Sector,heartland,500,500,roster,,,0,2,1,Charter Road;Trunk Line,major
 Mollis,Incus Sector,midreach,383,384,roster,,,0,0,0,,
-Hoshimachi,Rio Lodo Sector,farreach,531,46,roster,,,1,2,1,Charter Road,major
-Mossgarden,Eldingar Sector,farreach,707,74,roster,,,0,0,0,,
-Lindenfall,Fyrholm Sector,farreach,783,714,roster,,,1,2,1,,minor
+Mindworks,Diyaar Sector,farreach,531,46,roster,,,1,2,1,Charter Road,major
+Mossgarden,Khelask Sector,farreach,707,74,roster,,,0,0,0,,
+Lindenfall,Lampkeep Sector,farreach,783,714,roster,,,1,2,1,,minor
 Akousma,Akousma Sector,midreach,554,711,roster,,,1,3,1,Salt Lane,major
-Gemelos,Three Lamps Sector,midreach,742,376,roster,,,0,0,0,,
+Twinlight,Three Lamps Sector,midreach,742,376,roster,,,0,0,0,,
 The Moorings,Moorings Sector,farreach,28,593,roster,,,0,0,0,,
-Havdal,Caminus Sector,farreach,873,219,roster,,,0,1,1,,minor
+Seaborn,Caminus Sector,farreach,873,219,roster,,,0,1,1,,minor
 Statio,Akousma Sector,midreach,593,699,roster,,,0,2,1,Salt Lane,major
-Hlubina,Sendero Sector,farreach,607,174,roster,,,0,1,1,,minor
+Qolash,Khojaar Sector,farreach,607,174,roster,,,0,1,1,,minor
 Longwire,Longwire Sector,farreach,922,322,roster,,,1,2,1,,minor
-Kranholm,Kranholm Sector,farreach,690,135,roster,,,0,0,0,,
+Kesh Krata,Kesh Krata Sector,farreach,690,135,roster,,,0,0,0,,
 Caminus,Caminus Sector,farreach,763,193,roster,,,1,3,1,Long Haul,major
 Voluptas,Lenitas Sector,midreach,351,480,roster,,,0,1,1,,minor
-Caza Real,Caza Real Sector,midreach,607,387,roster,,,1,2,1,Long Haul,major
+Qessar,Qessar Sector,midreach,607,387,roster,,,1,2,1,Long Haul,major
 Side Gate,Shelter Sector,farreach,407,737,roster,,,0,0,0,,
 Opifex,Ashfall Sector,midreach,314,670,roster,,,0,0,0,,
-Ostrog,Highfall Sector,farreach,456,795,roster,,,0,0,0,,
+Tekolt,Highfall Sector,farreach,456,795,roster,,,0,0,0,,
 Longtide,Longtide Sector,midreach,662,576,roster,,,1,3,1,Trunk Line,major
-Kaskela,Ashfall Sector,midreach,302,626,roster,,,0,1,1,,minor
-Glassfield,Altofen Sector,midreach,334,344,roster,,,0,1,1,,minor
+Ollyon,Ashfall Sector,midreach,302,626,roster,,,0,1,1,,minor
+Glassfield,Atuun Sector,midreach,334,344,roster,,,0,1,1,,minor
 Specula,Three Lamps Sector,midreach,700,383,roster,,,0,0,0,,
-Folio,Altofen Sector,midreach,314,405,roster,,,1,2,1,,minor
+Folio,Atuun Sector,midreach,314,405,roster,,,1,2,1,,minor
 The Shoal,Greenfever Sector,farreach,247,737,roster,,,0,1,1,,minor
 Paydirt,Longtide Sector,midreach,649,581,roster,,,1,2,1,,minor
 Ironbeach,Ironbeach Sector,farreach,546,953,roster,,,0,0,0,,
-Barro Rojo,Rio Lodo Sector,farreach,552,28,roster,,,0,1,1,Charter Road,major
+Headcount,Diyaar Sector,farreach,552,28,roster,,,0,1,1,Charter Road,major
 Ardlow,Slate Hill Sector,farreach,404,947,roster,,,0,0,0,,
 Sawtooth,Longtide Sector,midreach,643,564,roster,,,0,0,0,,
-Rosenbach,Clearholm Sector,farreach,312,917,roster,,,0,0,0,,
+Gulot,Clearholm Sector,farreach,312,917,roster,,,0,0,0,,
 Theorema,Cohors Sector,farreach,259,925,roster,,,0,0,0,,
 Silica Minor,Bauxite IV Sector,farreach,348,863,roster,,,0,0,0,,
 Nascentia,Bauxite IV Sector,farreach,340,820,roster,,,0,0,0,,
 Fallout,Fallout Sector,farreach,137,202,roster,,,0,0,0,,
-Navalia,Lesnaya Sector,midreach,401,523,roster,,,0,1,1,Yard Road,major
+Navalia,Taruval Sector,midreach,401,523,roster,,,0,1,1,Yard Road,major
 Incus,Incus Sector,midreach,400,362,roster,,,0,0,0,,
 Castra,Castra Sector,heartland,500,450,roster,,,0,0,0,,
 Tutela,Lenitas Sector,midreach,442,452,roster,,,1,2,1,,minor
@@ -207,32 +207,32 @@ Fusoria,Dunmere Sector,farreach,229,507,roster,,,1,3,1,Yard Road,major
 Fiscus,Classis Sector,midreach,512,423,roster,,,1,2,1,,minor
 Mechane,Mechane Sector,midreach,505,614,roster,,,0,2,1,Long Haul,major
 Salus,Incus Sector,midreach,349,373,roster,,,0,0,0,,
-Kronholm,Longtide Sector,midreach,627,544,roster,,,0,0,0,,
+Aurest,Longtide Sector,midreach,627,544,roster,,,0,0,0,,
 Kalium II,Quieta Sector,midreach,517,302,roster,,,0,1,1,,minor
 Solacia,Solacia Sector,farreach,584,155,roster,,,0,0,0,,
-Wellhead,Altofen Sector,midreach,300,396,roster,,,0,1,1,,minor
-Nebbia,Nebbia Sector,farreach,397,225,roster,,,0,0,0,,
-Lagoa Funda,Lagoa Funda Sector,midreach,422,327,roster,,,0,0,0,,
-Deep Wells,Ulaan Tal Sector,farreach,768,589,roster,,,0,0,0,,
-Ulaan Tal,Ulaan Tal Sector,farreach,797,637,roster,,,0,0,0,,
-Bosque Alto,Bosque Alto Sector,midreach,620,461,roster,,,1,2,1,,minor
-Mwezi,Quieta Sector,midreach,544,296,roster,,,1,3,1,,minor
+Wellhead,Atuun Sector,midreach,300,396,roster,,,0,1,1,,minor
+Dhunreen,Dhunreen Sector,farreach,397,225,roster,,,0,0,0,,
+Talveen,Talveen Sector,midreach,422,327,roster,,,0,0,0,,
+Deep Wells,Eolande Sector,farreach,768,589,roster,,,0,0,0,,
+Eolande,Eolande Sector,farreach,797,637,roster,,,0,0,0,,
+Ilo Vanna,Ilo Vanna Sector,midreach,620,461,roster,,,1,2,1,,minor
+Empty Reef,Quieta Sector,midreach,544,296,roster,,,1,3,1,,minor
 Overgrowth,Longtide Sector,midreach,656,559,roster,,,0,2,1,Trunk Line,major
 Blackmire,Mechane Sector,midreach,495,665,roster,,,0,2,1,Long Haul,major
 Natron,Vinculum Sector,midreach,506,372,roster,,,0,0,0,,
 Saffron Downs,Ferraria Sector,midreach,439,416,roster,,,0,0,0,,
 Hundred Falls,Lenitas Sector,midreach,423,457,roster,,,1,2,1,,minor
-Rimeglass,Fyrholm Sector,farreach,794,780,roster,,,0,0,0,,
-Zlatna,Zlatna Sector,farreach,686,775,roster,,,1,2,1,,minor
+Rimeglass,Lampkeep Sector,farreach,794,780,roster,,,0,0,0,,
+Hardcoin,Hardcoin Sector,farreach,686,775,roster,,,1,2,1,,minor
 Slate Hill,Slate Hill Sector,farreach,409,931,roster,,,1,2,1,,minor
-Last Platform,Varmdal Sector,farreach,772,262,roster,,,0,0,0,,
-Hoogstad,Muster Rock Sector,farreach,279,246,roster,,,0,0,0,,
-Sendero,Sendero Sector,farreach,493,214,roster,,,0,0,0,,
-Ciénaga,Ciénaga Sector,farreach,356,276,roster,,,1,3,1,Charter Road,major
+Last Platform,Ushmari Sector,farreach,772,262,roster,,,0,0,0,,
+Hyx,Muster Rock Sector,farreach,279,246,roster,,,0,0,0,,
+Khojaar,Khojaar Sector,farreach,493,214,roster,,,0,0,0,,
+Kelmeer,Kelmeer Sector,farreach,356,276,roster,,,1,3,1,Charter Road,major
 Saltreach,Caminus Sector,farreach,729,127,roster,,,1,2,1,,minor
 Greenfever,Greenfever Sector,farreach,130,767,roster,,,1,2,1,,minor
 Cohors,Cohors Sector,farreach,291,819,roster,,,0,1,1,,minor
-Llano Grande,Altofen Sector,midreach,345,395,roster,,,1,3,1,Charter Road,major
+Raloon,Atuun Sector,midreach,345,395,roster,,,1,3,1,Charter Road,major
 Dry Reef,Lantern Sector,farreach,75,480,roster,,,1,2,1,Yard Road,major
 Saltgreen,Feldspar Sector,midreach,295,447,roster,,,1,2,1,Salt Lane,major
 Kanon,Solacia Sector,farreach,569,118,roster,,,0,0,0,,
@@ -244,195 +244,195 @@ Breakyard,Greenfever Sector,farreach,184,759,roster,,,0,0,0,,
 Coldhearth,Greenfever Sector,farreach,195,798,roster,,,0,1,1,,minor
 Stormfen,Greenfever Sector,farreach,176,733,roster,,,0,0,0,,
 Blackglass,Longwire Sector,farreach,975,418,roster,,,0,0,0,,
-Eldingar,Eldingar Sector,farreach,693,55,roster,,,0,0,0,,
-Oldwatch,Fyrholm Sector,farreach,769,821,roster,,,1,2,1,,minor
+Khelask,Khelask Sector,farreach,693,55,roster,,,0,0,0,,
+Oldwatch,Lampkeep Sector,farreach,769,821,roster,,,1,2,1,,minor
 Ridgefold,Highfall Sector,farreach,476,773,roster,,,0,2,1,Long Haul,major
 Barewood,Muster Rock Sector,farreach,243,240,roster,,,0,0,0,,
-Varmdal,Varmdal Sector,farreach,861,315,roster,,,1,2,1,,minor
+Ushmari,Ushmari Sector,farreach,861,315,roster,,,1,2,1,,minor
 Kept Faith,Moorings Sector,farreach,100,592,roster,,,0,1,1,,minor
-Needlepeak,Ciénaga Sector,farreach,413,273,wave2,A,Collective-friendly,0,0,0,,
+Needlepeak,Kelmeer Sector,farreach,413,273,wave2,A,Collective-friendly,0,0,0,,
 Benigna,Dunmere Sector,farreach,271,668,wave2,B,Hand,0,0,0,,
-Salitre,Salitre Sector,farreach,473,851,wave2,B,Hand,0,2,1,Long Haul,major
+Coppertoll,Coppertoll Sector,farreach,473,851,wave2,B,Hand,0,2,1,Long Haul,major
 Excubia,Excubia Sector,heartland,425,500,wave2,B,Hand,1,2,1,,minor
-Hulkfield,Vinograd Sector,midreach,673,529,wave2,B,Hand,1,3,1,,minor
+Hulkfield,Aubrine Sector,midreach,673,529,wave2,B,Hand,1,3,1,,minor
 Praesidium,Ferraria Sector,midreach,415,432,wave2,B,unknown,1,2,1,,minor
 Steeplewater,Vinculum Sector,midreach,509,400,wave2,B,Hand,0,1,1,,minor
-Neuwerft,Vinograd Sector,midreach,683,513,wave2,A,Hand,0,1,1,,minor
-Morelle,Three Lamps Sector,midreach,701,441,wave2,A,neutral,1,2,1,,minor
-Mesa Roja,Fairhaven Sector,farreach,936,506,wave2,B,Hand,0,0,0,,
+Envarre,Aubrine Sector,midreach,683,513,wave2,A,Hand,0,1,1,,minor
+Kunavari,Three Lamps Sector,midreach,701,441,wave2,A,neutral,1,2,1,,minor
+Kinwall,Fairhaven Sector,farreach,936,506,wave2,B,Hand,0,0,0,,
 Gnomon,Excubia Sector,heartland,473,516,wave2,B,Hand,0,2,1,,minor
-Imani Falls,Caza Real Sector,midreach,631,430,wave2,B,neutral,0,1,1,,minor
-Aozora,Mata Alta Sector,farreach,557,803,wave2,A,unknown,0,0,0,,
-Weitfeld,Ironbeach Sector,farreach,602,976,wave2,B,neutral,0,0,0,,
+Liari Falls,Qessar Sector,midreach,631,430,wave2,B,neutral,0,1,1,,minor
+Yewen,Jadwey Sector,farreach,557,803,wave2,A,unknown,0,0,0,,
+Burnfield,Ironbeach Sector,farreach,602,976,wave2,B,neutral,0,0,0,,
 Highbarrow,Longtide Sector,midreach,651,539,wave2,A,Hand,1,3,1,Trunk Line,major
-Isfjell,Ilanga Sector,farreach,595,882,wave2,B,neutral,0,0,0,,
+Lekrok,Ilt Sector,farreach,595,882,wave2,B,neutral,0,0,0,,
 Bauxite IV,Bauxite IV Sector,farreach,341,734,wave2,A,Hand,0,0,0,,
-Vinterby,Clearholm Sector,farreach,350,942,wave2,A,neutral,0,0,0,,
+Paskit,Clearholm Sector,farreach,350,942,wave2,A,neutral,0,0,0,,
 Seldwyn,Longtide Sector,midreach,636,525,wave2,B,neutral,0,2,1,Trunk Line,major
 Vallum,Classis Sector,midreach,551,428,wave2,B,Collective-friendly,1,2,1,,minor
-Fiducia,Lesnaya Sector,midreach,384,522,wave2,B,Hand,1,2,1,Yard Road,major
-Grauburg,Classis Sector,midreach,526,419,wave2,A,unknown,1,2,1,,minor
+Fiducia,Taruval Sector,midreach,384,522,wave2,B,Hand,1,2,1,Yard Road,major
+Huqar,Classis Sector,midreach,526,419,wave2,A,unknown,1,2,1,,minor
 Ommata,Ommata Sector,heartland,539,444,wave2,A,Hand,0,0,0,,
-Ilha Verde,Ferraria Sector,midreach,355,443,wave2,A,unknown,1,3,1,Charter Road,major
+Jaroo,Ferraria Sector,midreach,355,443,wave2,A,unknown,1,3,1,Charter Road,major
 Lowlight,Lenitas Sector,midreach,363,458,wave2,B,neutral,1,3,1,Charter Road,major
-Lowmarket,Bosque Alto Sector,midreach,600,481,wave2,B,Collective-friendly,0,2,1,Trunk Line,major
+Lowmarket,Ilo Vanna Sector,midreach,600,481,wave2,B,Collective-friendly,0,2,1,Trunk Line,major
 Vigilia,Ommata Sector,heartland,543,496,wave2,B,unknown,0,3,1,Long Haul,major
 Sigillum,Castra Sector,heartland,472,469,wave2,A,Hand,0,1,1,,minor
 Old Cairn,Ommata Sector,heartland,527,495,wave2,A,neutral,0,2,1,,minor
 Ninefold,Bellwether Sector,midreach,648,650,wave2,A,unknown,0,1,1,,minor
-Tessera,Mirabel Sector,midreach,553,547,wave2,B,criminal,0,1,1,,minor
-Stabilis,Bosque Alto Sector,midreach,592,458,wave2,A,criminal,0,1,1,,minor
-Agua Mansa,Mechane Sector,midreach,457,628,wave2,B,Collective-friendly,1,3,1,,minor
+Tessera,Unbought Sector,midreach,553,547,wave2,B,criminal,0,1,1,,minor
+Stabilis,Ilo Vanna Sector,midreach,592,458,wave2,A,criminal,0,1,1,,minor
+Owalma,Mechane Sector,midreach,457,628,wave2,B,Collective-friendly,1,3,1,,minor
 Port Sorrel,Tormentum Sector,midreach,597,603,wave2,B,Hand,0,0,0,,
 Highrime,Tormentum Sector,midreach,527,650,wave2,B,Hand,1,2,1,,minor
 Archeion,Incus Sector,midreach,416,345,wave2,B,Hand,0,0,0,,
 Quieta,Quieta Sector,midreach,488,317,wave2,B,Hand,0,0,0,,
 Delicia,Incus Sector,midreach,369,399,wave2,A,Hand,0,0,0,,
-Mercado Alto,Lenitas Sector,midreach,398,499,wave2,B,Collective-friendly,0,1,1,,minor
+Mandoo,Lenitas Sector,midreach,398,499,wave2,B,Collective-friendly,0,1,1,,minor
 Stannum,Tormentum Sector,midreach,583,631,wave2,B,Hand,0,0,0,,
 Officina,Clearholm Sector,farreach,351,909,wave2,A,Hand,1,2,1,,minor
 Murkhaven,Cohors Sector,farreach,213,840,wave2,B,neutral,1,2,1,,minor
-Plage Blanche,Nebbia Sector,farreach,359,198,wave2,A,Hand,0,0,0,,
+Sufeen,Dhunreen Sector,farreach,359,198,wave2,A,Hand,0,0,0,,
 Riftwood,Moorings Sector,farreach,144,542,wave2,A,Hand,1,3,1,,minor
 Ebbeholm,Shelter Sector,farreach,430,782,wave2,A,Hand,0,0,0,,
 Brimstone,Greenfever Sector,farreach,159,741,wave2,B,criminal,0,0,0,,
 Bellglass,Lantern Sector,farreach,126,356,wave2,B,Hand,0,0,0,,
-Pronoia,Ilanga Sector,farreach,586,849,wave2,A,Hand,0,2,1,Trunk Line,major
+Pronoia,Ilt Sector,farreach,586,849,wave2,A,Hand,0,2,1,Trunk Line,major
 Ghostlight,Cohors Sector,farreach,284,844,wave2,A,neutral,1,2,1,,minor
 Firmitas,Muster Rock Sector,farreach,313,264,wave2,B,Hand,0,0,0,,
 Felsite III,Clearholm Sector,farreach,370,912,wave2,A,Hand,1,2,1,,minor
-Wadi Sabr,Cohors Sector,farreach,201,806,wave2,B,neutral,1,3,1,,minor
-Oranjeveld,Hundred Lakes Sector,farreach,198,288,wave2,B,Hand,0,0,0,,
+Hal Teka,Cohors Sector,farreach,201,806,wave2,B,neutral,1,3,1,,minor
+Dhoolun,Hundred Lakes Sector,farreach,198,288,wave2,B,Hand,0,0,0,,
 Long Winter,Slate Hill Sector,farreach,418,982,wave2,B,neutral,0,0,0,,
-Teloneum,Lagoa Funda Sector,midreach,344,312,wave2,B,Hand,1,3,1,Charter Road,major
-Motu Ahi,Salitre Sector,farreach,426,866,wave2,B,Hand,0,0,0,,
-Kaltwasser,Salitre Sector,farreach,505,842,wave2,A,Hand,0,0,0,,
-Belavista,Thesauros Sector,farreach,151,506,wave2,B,neutral,1,3,1,Yard Road,major
-Cunabula,Varmdal Sector,farreach,769,323,wave2,A,Hand,0,0,0,,
-Loomhollow,Eldingar Sector,farreach,679,24,wave2,A,Hand,0,0,0,,
-Quebrada Honda,Eldingar Sector,farreach,657,41,wave2,A,Hand,0,0,0,,
-Ninegates,Lesnaya Sector,midreach,370,554,wave2,A,Hand,1,2,1,,minor
-Veenhoven,Kranholm Sector,farreach,605,124,wave2,B,Hand,0,0,0,,
-Pedregal,Ashfall Sector,midreach,367,627,wave2,B,Hand,0,0,0,,
-Regrowth,Eldingar Sector,farreach,663,19,wave2,B,Collective-friendly,0,0,0,,
-Yukihama,Quieta Sector,midreach,496,242,wave2,B,Hand,0,0,0,,
-Mbuga,Sendero Sector,farreach,595,199,wave2,B,Hand,0,0,0,,
-Feriae,Sendero Sector,farreach,510,180,wave2,A,Hand,1,2,1,,minor
-Skalna,Solacia Sector,farreach,510,96,wave2,B,Hand,1,2,1,,minor
-Kinoko,Eldingar Sector,farreach,634,65,wave2,A,Hand,1,2,1,,minor
+Teloneum,Talveen Sector,midreach,344,312,wave2,B,Hand,1,3,1,Charter Road,major
+Huotak,Coppertoll Sector,farreach,426,866,wave2,B,Hand,0,0,0,,
+Yskow,Coppertoll Sector,farreach,505,842,wave2,A,Hand,0,0,0,,
+Amaraveli,Thesauros Sector,farreach,151,506,wave2,B,neutral,1,3,1,Yard Road,major
+Cunabula,Ushmari Sector,farreach,769,323,wave2,A,Hand,0,0,0,,
+Loomhollow,Khelask Sector,farreach,679,24,wave2,A,Hand,0,0,0,,
+Darrakh,Khelask Sector,farreach,657,41,wave2,A,Hand,0,0,0,,
+Ninegates,Taruval Sector,midreach,370,554,wave2,A,Hand,1,2,1,,minor
+Turvash,Kesh Krata Sector,farreach,605,124,wave2,B,Hand,0,0,0,,
+Wellshare,Ashfall Sector,midreach,367,627,wave2,B,Hand,0,0,0,,
+Regrowth,Khelask Sector,farreach,663,19,wave2,B,Collective-friendly,0,0,0,,
+Snowbeach,Quieta Sector,midreach,496,242,wave2,B,Hand,0,0,0,,
+Fenceline,Khojaar Sector,farreach,595,199,wave2,B,Hand,0,0,0,,
+Feriae,Khojaar Sector,farreach,510,180,wave2,A,Hand,1,2,1,,minor
+Khadda,Solacia Sector,farreach,510,96,wave2,B,Hand,1,2,1,,minor
+Qubbet,Khelask Sector,farreach,634,65,wave2,A,Hand,1,2,1,,minor
 Tidewall,Ashfall Sector,midreach,299,607,wave2,B,Hand,1,3,1,Salt Lane,major
 Halfpenny,Feldspar Sector,midreach,345,414,wave2,B,unknown,0,1,1,,minor
-Fallen Keel,Sendero Sector,farreach,526,213,wave2,B,neutral,0,0,0,,
+Fallen Keel,Khojaar Sector,farreach,526,213,wave2,B,neutral,0,0,0,,
 Ashfall,Ashfall Sector,midreach,388,614,wave2,B,Hand,1,2,1,,minor
-Ashenmark,Sendero Sector,farreach,561,196,wave2,B,unknown,0,0,0,,
+Ashenmark,Khojaar Sector,farreach,561,196,wave2,B,unknown,0,0,0,,
 Clinker,Ashfall Sector,midreach,318,637,wave2,B,neutral,1,2,1,Salt Lane,major
-Ergon,Pulau Hijau Sector,farreach,446,121,wave2,A,Hand,1,2,1,Charter Road,major
+Ergon,Kichaar Sector,farreach,446,121,wave2,A,Hand,1,2,1,Charter Road,major
 Probatio,Laterite Sector,farreach,363,50,wave2,A,Hand,0,0,0,,
 Grandmother,Laterite Sector,farreach,378,53,wave2,A,Hand,0,0,0,,
-Kaldvik,Highfall Sector,farreach,480,702,wave2,A,Hand,0,2,1,Long Haul,major
+Winterberth,Highfall Sector,farreach,480,702,wave2,A,Hand,0,2,1,Long Haul,major
 Signum,Solacia Sector,farreach,464,100,wave2,B,Hand,1,3,1,Charter Road,major
-Kvitberg,Rauchtal Sector,farreach,279,63,wave2,A,Hand,0,0,0,,
-Coldwell,Rio Lodo Sector,farreach,564,82,wave2,B,Hand,1,3,1,,minor
-Skarholm,Rio Lodo Sector,farreach,481,45,wave2,A,Collective-friendly,0,0,0,,
-Kolokol,Semeion Sector,midreach,686,633,wave2,A,Hand,1,4,1,Salt Lane,major
+Sakolt,The Valves Sector,farreach,279,63,wave2,A,Hand,0,0,0,,
+Coldwell,Diyaar Sector,farreach,564,82,wave2,B,Hand,1,3,1,,minor
+Scuttlebay,Diyaar Sector,farreach,481,45,wave2,A,Collective-friendly,0,0,0,,
+Audinne,Semeion Sector,midreach,686,633,wave2,A,Hand,1,4,1,Salt Lane,major
 First Morning,Hundred Lakes Sector,farreach,156,261,wave2,A,Hand,0,0,0,,
 Emberhold,Muster Rock Sector,farreach,265,301,wave2,B,criminal,0,0,0,,
 Suavis,Shelter Sector,farreach,424,713,wave2,A,criminal,1,2,1,Salt Lane,major
 The Flats,Fallout Sector,farreach,168,210,wave2,B,Collective-friendly,1,2,1,,minor
 Muster Rock,Muster Rock Sector,farreach,306,242,wave2,A,criminal,0,1,1,,minor
-Rauchtal,Rauchtal Sector,farreach,292,160,wave2,B,criminal,0,0,0,,
-The Cuts,Sendero Sector,farreach,546,186,wave2,A,unknown,1,2,1,,minor
-Las Eras,Nebbia Sector,farreach,374,244,wave2,A,Hand,1,2,1,Charter Road,major
+The Valves,The Valves Sector,farreach,292,160,wave2,B,criminal,0,0,0,,
+The Cuts,Khojaar Sector,farreach,546,186,wave2,A,unknown,1,2,1,,minor
+Nahreen,Dhunreen Sector,farreach,374,244,wave2,A,Hand,1,2,1,Charter Road,major
 Stepstone,Semeion Sector,midreach,682,619,wave2,A,unknown,0,1,1,,minor
-Hartsease,Vinograd Sector,midreach,723,590,wave2,B,criminal,1,2,1,Salt Lane,major
+Hartsease,Aubrine Sector,midreach,723,590,wave2,B,criminal,1,2,1,Salt Lane,major
 Willowmere,Quieta Sector,midreach,529,253,wave2,A,unknown,0,0,0,,
-Bilokray,Laterite Sector,farreach,394,54,wave2,A,unknown,0,0,0,,
-Los Pozos,Ulaan Tal Sector,farreach,812,691,wave2,A,neutral,1,2,1,,minor
-Cendrine,Ironbeach Sector,farreach,559,982,wave2,A,Hand,0,0,0,,
-Dry House,Zlatna Sector,farreach,676,747,wave2,B,Hand,0,0,0,,
+Icefair,Laterite Sector,farreach,394,54,wave2,A,unknown,0,0,0,,
+Euvain,Eolande Sector,farreach,812,691,wave2,A,neutral,1,2,1,,minor
+Yrendow,Ironbeach Sector,farreach,559,982,wave2,A,Hand,0,0,0,,
+Dry House,Hardcoin Sector,farreach,676,747,wave2,B,Hand,0,0,0,,
 The Rafts,Thaw Sector,farreach,694,823,wave2,A,Collective-friendly,0,0,0,,
-Zubets,Fairhaven Sector,farreach,855,626,wave2,A,neutral,0,1,1,,minor
-Plainsong,Fyrholm Sector,farreach,742,819,wave2,A,Hand,0,0,0,,
+Ouskel,Fairhaven Sector,farreach,855,626,wave2,A,neutral,0,1,1,,minor
+Plainsong,Lampkeep Sector,farreach,742,819,wave2,A,Hand,0,0,0,,
 Endline,Slate Hill Sector,farreach,485,945,wave2,B,unknown,0,1,1,Long Haul,major
-Hirschwald,Thaw Sector,farreach,713,865,wave2,A,Hand,0,0,0,,
+Deerkeep,Thaw Sector,farreach,713,865,wave2,A,Hand,0,0,0,,
 Midden,Drift Harbour Sector,farreach,652,927,wave2,A,neutral,0,0,0,,
 Brokengate,Bellwether Sector,midreach,663,690,wave2,B,Hand,1,3,1,Trunk Line,major
 Long Strand,Lantern Sector,farreach,16,441,roster,,,0,1,1,Yard Road,major
 Rockclaim,Hundred Lakes Sector,farreach,152,298,roster,,,0,0,0,,
 Glasswood,Outside any sector,,53,711,loner,,,0,0,0,,
 Frostholm,Outside any sector,,38,675,loner,,,0,0,0,,
-Halvmark,Laterite Sector,farreach,439,57,wave3,B,unknown,0,0,0,,
-Las Mieses,Charter Sector,heartland,530,531,wave3,A,Hand,1,3,1,Long Haul,major
-Sonnfeld,Moorings Sector,farreach,128,576,wave3,B,unknown,1,2,1,,minor
-Dormilona,Sendero Sector,farreach,550,229,wave3,A,criminal,0,0,0,,
+Hundy,Laterite Sector,farreach,439,57,wave3,B,unknown,0,0,0,,
+Lode's Acre,Charter Sector,heartland,530,531,wave3,A,Hand,1,3,1,Long Haul,major
+Coyn,Moorings Sector,farreach,128,576,wave3,B,unknown,1,2,1,,minor
+Nidresh,Khojaar Sector,farreach,550,229,wave3,A,criminal,0,0,0,,
 Limes,Tarrow Sector,heartland,451,581,wave3,B,neutral,0,0,0,,
-Tierra Seca,Laterite Sector,farreach,405,71,wave3,B,criminal,1,2,1,,minor
+Kaidaan,Laterite Sector,farreach,405,71,wave3,B,criminal,1,2,1,,minor
 Medela,Tormentum Sector,midreach,538,621,wave3,B,Hand,1,2,1,,minor
-Nadezhda,Thaw Sector,farreach,732,935,wave3,B,unknown,0,0,0,,
-Marisol,Bellwether Sector,midreach,630,596,wave3,B,neutral,0,0,0,,
+Esprann,Thaw Sector,farreach,732,935,wave3,B,unknown,0,0,0,,
+Aerisse,Bellwether Sector,midreach,630,596,wave3,B,neutral,0,0,0,,
 Perpetua,Clearholm Sector,farreach,373,932,wave3,B,Hand,0,0,0,,
-Novy Rynek,Ashfall Sector,midreach,288,581,wave3,B,unknown,1,2,1,Salt Lane,major
-Sierra Seca,Semeion Sector,midreach,701,608,wave3,B,unknown,1,2,1,Salt Lane,major
+Endevar,Ashfall Sector,midreach,288,581,wave3,B,unknown,1,2,1,Salt Lane,major
+Ossaine,Semeion Sector,midreach,701,608,wave3,B,unknown,1,2,1,Salt Lane,major
 Remedium,Castra Sector,heartland,478,491,wave3,B,unknown,0,0,0,,
-Gypsum Minor,Lesnaya Sector,midreach,412,564,wave3,B,unknown,0,1,1,,minor
-Portelle,Kranholm Sector,farreach,672,109,wave3,B,unknown,0,1,1,,minor
+Gypsum Minor,Taruval Sector,midreach,412,564,wave3,B,unknown,0,1,1,,minor
+Portelle,Kesh Krata Sector,farreach,672,109,wave3,B,unknown,0,1,1,,minor
 Tourmaline,Ommata Sector,heartland,562,454,wave3,A,Collective-friendly,1,3,1,Long Haul,major
 Dunmere,Dunmere Sector,farreach,204,666,wave3,B,neutral,0,0,0,,
-Subsidia,Mirabel Sector,midreach,563,530,wave3,B,unknown,0,0,0,,
-Seedbank,Rauchtal Sector,farreach,284,187,wave3,B,Hand,0,0,0,,
+Subsidia,Unbought Sector,midreach,563,530,wave3,B,unknown,0,0,0,,
+Seedbank,The Valves Sector,farreach,284,187,wave3,B,Hand,0,0,0,,
 Mica,Three Lamps Sector,midreach,797,380,wave3,A,Hand,0,0,0,,
-Vidrio,Nebbia Sector,farreach,369,221,wave3,B,neutral,1,2,1,,minor
+Zujaar,Dhunreen Sector,farreach,369,221,wave3,B,neutral,1,2,1,,minor
 Two Crowns,Akousma Sector,midreach,614,680,wave3,B,neutral,1,3,1,Salt Lane,major
-Penhallow,Lagoa Funda Sector,midreach,401,319,wave3,B,unknown,0,0,0,,
-Pennygate,Bosque Alto Sector,midreach,638,484,wave3,B,unknown,1,2,1,,minor
-Supper Hill,Ciénaga Sector,farreach,339,281,wave3,B,unknown,0,0,0,,
+Penhallow,Talveen Sector,midreach,401,319,wave3,B,unknown,0,0,0,,
+Pennygate,Ilo Vanna Sector,midreach,638,484,wave3,B,unknown,1,2,1,,minor
+Supper Hill,Kelmeer Sector,farreach,339,281,wave3,B,unknown,0,0,0,,
 Natalis,Feldspar Sector,midreach,348,486,wave3,B,unknown,0,1,1,,minor
-Campo Alto,Fairhaven Sector,farreach,860,526,wave3,B,neutral,0,0,0,,
+Wheatrise,Fairhaven Sector,farreach,860,526,wave3,B,neutral,0,0,0,,
 Sinkwater,Caminus Sector,farreach,771,93,wave3,B,neutral,0,0,0,,
-Whitecairn,Rio Lodo Sector,farreach,584,45,wave3,B,criminal,0,0,0,,
-Mittelfeld,Longwire Sector,farreach,856,413,wave3,A,Collective-friendly,0,0,0,,
+Whitecairn,Diyaar Sector,farreach,584,45,wave3,B,criminal,0,0,0,,
+The Thirds,Longwire Sector,farreach,856,413,wave3,A,Collective-friendly,0,0,0,,
 Flarewater,Solacia Sector,farreach,558,167,wave3,B,unknown,1,2,1,,minor
-Groenveld,Bellwether Sector,midreach,667,661,wave3,B,Collective-friendly,1,4,1,Salt Lane;Trunk Line,major
-Sabkha,Mirabel Sector,midreach,572,483,wave3,B,unknown,1,2,1,,minor
+Ouvaren,Bellwether Sector,midreach,667,661,wave3,B,Collective-friendly,1,4,1,Salt Lane;Trunk Line,major
+Trackless,Unbought Sector,midreach,572,483,wave3,B,unknown,1,2,1,,minor
 Cinnabar,Classis Sector,midreach,581,442,wave3,B,Hand,1,2,1,Long Haul,major
 Old Lens,Laterite Sector,farreach,404,24,wave3,B,criminal,0,0,0,,
-Mokra,Altofen Sector,midreach,285,347,wave3,B,unknown,0,0,0,,
-Belle Rive,Ilanga Sector,farreach,565,859,wave3,B,unknown,0,0,0,,
-Campus,Kranholm Sector,farreach,668,137,wave3,A,Hand,0,0,0,,
+Nakloom,Atuun Sector,midreach,285,347,wave3,B,unknown,0,0,0,,
+Wend Avo,Ilt Sector,farreach,565,859,wave3,B,unknown,0,0,0,,
+Campus,Kesh Krata Sector,farreach,668,137,wave3,A,Hand,0,0,0,,
 Organon,Bauxite IV Sector,farreach,331,798,wave3,B,Hand,1,3,1,,minor
-Port Isolde,Mata Alta Sector,farreach,565,778,wave3,B,unknown,0,0,0,,
-Nacar,Vinculum Sector,midreach,537,402,wave3,B,Hand,1,2,1,,minor
-Azzurra,Ferraria Sector,midreach,385,444,wave3,B,unknown,0,1,1,,minor
-Longquay,Varmdal Sector,farreach,724,249,wave3,B,unknown,1,2,1,Long Haul,major
+Port Isolde,Jadwey Sector,farreach,565,778,wave3,B,unknown,0,0,0,,
+Motesh,Vinculum Sector,midreach,537,402,wave3,B,Hand,1,2,1,,minor
+Nuumi,Ferraria Sector,midreach,385,444,wave3,B,unknown,0,1,1,,minor
+Longquay,Ushmari Sector,farreach,724,249,wave3,B,unknown,1,2,1,Long Haul,major
 Brandt's Giant,Highfall Sector,farreach,518,745,wave3,B,neutral,0,0,0,,
-Lunaria,Ciénaga Sector,farreach,395,283,wave3,B,unknown,0,0,0,,
-Laetitia,Zlatna Sector,farreach,647,705,wave3,A,criminal,1,2,1,,minor
-Tres Rios,Akousma Sector,midreach,623,702,wave3,B,neutral,0,1,1,,minor
+Lunaria,Kelmeer Sector,farreach,395,283,wave3,B,unknown,0,0,0,,
+Laetitia,Hardcoin Sector,farreach,647,705,wave3,A,criminal,1,2,1,,minor
+Trewey,Akousma Sector,midreach,623,702,wave3,B,neutral,0,1,1,,minor
 Hardwood,Slate Hill Sector,farreach,514,956,wave3,B,unknown,0,0,0,,
 Sunderby,Longtide Sector,midreach,664,527,wave3,B,unknown,1,2,1,,minor
 Timberline,Longwire Sector,farreach,833,472,wave3,B,Hand,0,0,0,,
-Isvik,Cohors Sector,farreach,191,887,wave3,B,unknown,0,0,0,,
+Pantok,Cohors Sector,farreach,191,887,wave3,B,unknown,0,0,0,,
 Backwater,Slate Hill Sector,farreach,447,925,wave3,B,criminal,1,2,1,,minor
 Resin Moon,Clearholm Sector,farreach,363,972,wave3,B,unknown,0,0,0,,
 Hardpan,Longwire Sector,farreach,973,375,wave3,B,neutral,0,1,1,,minor
-Vysoka,Fyrholm Sector,farreach,730,717,wave3,B,Hand,0,0,0,,
-Severitas,Varmdal Sector,farreach,832,333,wave3,B,unknown,0,0,0,,
+Escrine,Lampkeep Sector,farreach,730,717,wave3,B,Hand,0,0,0,,
+Severitas,Ushmari Sector,farreach,832,333,wave3,B,unknown,0,0,0,,
 Cutbank,Lenitas Sector,midreach,381,468,wave3,B,neutral,0,0,0,,
-Graustadt,Moorings Sector,farreach,167,662,wave3,A,Hand,0,0,0,,
-Shirakaba,Fallout Sector,farreach,142,172,wave3,B,unknown,0,0,0,,
-Junkhold,Altofen Sector,midreach,320,336,wave3,B,criminal,0,0,0,,
+Halfwarm,Moorings Sector,farreach,167,662,wave3,A,Hand,0,0,0,,
+Birthwood,Fallout Sector,farreach,142,172,wave3,B,unknown,0,0,0,,
+Junkhold,Atuun Sector,midreach,320,336,wave3,B,criminal,0,0,0,,
 Prognosis,Feldspar Sector,midreach,348,429,wave3,B,Hand,1,2,1,,minor
-Waymark,Zlatna Sector,farreach,667,710,wave3,B,unknown,0,0,0,,
-Terracotta,Nebbia Sector,farreach,396,243,wave3,B,neutral,0,0,0,,
-Kesari,Solacia Sector,farreach,547,151,wave3,B,criminal,0,0,0,,
-Rosvik,Charter Sector,heartland,525,546,wave3,C,unknown,1,3,1,Long Haul,major
-Goldcloud,Zlatna Sector,farreach,661,732,wave3,A,unknown,0,0,0,,
-Selvagem,Mirabel Sector,midreach,579,544,wave3,B,unknown,0,0,0,,
-Cinco Lunas,Muster Rock Sector,farreach,289,292,wave3,B,criminal,0,0,0,,
-Brushfield,Bosque Alto Sector,midreach,604,468,wave3,B,neutral,0,0,0,,
+Waymark,Hardcoin Sector,farreach,667,710,wave3,B,unknown,0,0,0,,
+Terracotta,Dhunreen Sector,farreach,396,243,wave3,B,neutral,0,0,0,,
+Kesh Ranga,Solacia Sector,farreach,547,151,wave3,B,criminal,0,0,0,,
+Allhome,Charter Sector,heartland,525,546,wave3,C,unknown,1,3,1,Long Haul,major
+Goldcloud,Hardcoin Sector,farreach,661,732,wave3,A,unknown,0,0,0,,
+Auvessa,Unbought Sector,midreach,579,544,wave3,B,unknown,0,0,0,,
+Gemshaft,Muster Rock Sector,farreach,289,292,wave3,B,criminal,0,0,0,,
+Brushfield,Ilo Vanna Sector,midreach,604,468,wave3,B,neutral,0,0,0,,
 Sourwater,Charter Sector,heartland,513,505,wave3,B,neutral,0,3,1,Long Haul,major
-Mill Hollow,Ulaan Tal Sector,farreach,791,618,wave3,B,neutral,0,0,0,,
-Dongyu,Tormentum Sector,midreach,551,649,wave3,B,Hand,1,2,1,,minor
+Mill Hollow,Eolande Sector,farreach,791,618,wave3,B,neutral,0,0,0,,
+Dowyth,Tormentum Sector,midreach,551,649,wave3,B,Hand,1,2,1,,minor
 Old Salvage,Longwire Sector,farreach,889,437,wave3,B,Hand,0,0,0,,
 Fathom,Thaw Sector,farreach,791,893,wave3,B,unknown,0,0,0,,
 Lastwell,Highfall Sector,farreach,477,738,wave3,B,neutral,0,3,1,Long Haul;Salt Lane,major
@@ -440,117 +440,117 @@ Stonebarrow,Fairhaven Sector,farreach,884,549,wave3,C,unknown,0,0,0,,
 The Kiln,Ironbeach Sector,farreach,561,967,wave3,B,Hand,0,0,0,,
 Stochos,Dunmere Sector,farreach,232,647,wave3,B,Hand,1,2,1,,minor
 Seven Gates,Ironbeach Sector,farreach,581,911,wave3,C,unknown,0,0,0,,
-Fuego Alto,Ciénaga Sector,farreach,384,305,wave3,B,unknown,0,1,1,,minor
-Hammada,Semeion Sector,midreach,708,630,wave3,B,criminal,0,1,1,,minor
+Agnaar,Kelmeer Sector,farreach,384,305,wave3,B,unknown,0,1,1,,minor
+Noonglass,Semeion Sector,midreach,708,630,wave3,B,criminal,0,1,1,,minor
 Requies,Cohors Sector,farreach,230,904,wave3,B,neutral,0,0,0,,
 Bread Street,Bauxite IV Sector,farreach,340,836,wave3,B,unknown,0,0,0,,
 Gumwater,Ironbeach Sector,farreach,579,975,wave3,B,neutral,0,0,0,,
 Cambium,Castra Sector,heartland,460,482,wave3,B,neutral,0,0,0,,
 Vaultrock,Drift Harbour Sector,farreach,661,972,wave3,B,neutral,0,0,0,,
-Nowhere,Zlatna Sector,farreach,686,790,wave3,B,Hand,0,0,0,,
+Nowhere,Hardcoin Sector,farreach,686,790,wave3,B,Hand,0,0,0,,
 Waypost,Muster Rock Sector,farreach,266,254,wave3,B,criminal,0,0,0,,
-Halfsky,Fyrholm Sector,farreach,840,754,wave3,B,unknown,0,0,0,,
-Montefosco,Caminus Sector,farreach,735,222,wave3,B,unknown,1,2,1,Long Haul,major
-Plenty,Salitre Sector,farreach,425,821,wave3,B,Hand,0,1,1,,minor
-Ilanga,Ilanga Sector,farreach,554,841,wave3,B,Hand,0,1,1,,minor
-Stopped Line,Salitre Sector,farreach,446,868,wave3,B,Hand,0,0,0,,
+Halfsky,Lampkeep Sector,farreach,840,754,wave3,B,unknown,0,0,0,,
+Old Credit,Caminus Sector,farreach,735,222,wave3,B,unknown,1,2,1,Long Haul,major
+Plenty,Coppertoll Sector,farreach,425,821,wave3,B,Hand,0,1,1,,minor
+Ilt,Ilt Sector,farreach,554,841,wave3,B,Hand,0,1,1,,minor
+Stopped Line,Coppertoll Sector,farreach,446,868,wave3,B,Hand,0,0,0,,
 Tallow Mesa,Bauxite IV Sector,farreach,294,848,wave3,B,criminal,1,2,1,,minor
-Holmvik,Kranholm Sector,farreach,589,96,wave3,B,neutral,0,1,1,,minor
-Cafetal,Fyrholm Sector,farreach,739,764,wave3,B,unknown,1,2,1,,minor
-Ellerbeck,Caza Real Sector,midreach,638,338,wave3,A,Hand,1,2,1,Long Haul,major
+Oldby,Kesh Krata Sector,farreach,589,96,wave3,B,neutral,0,1,1,,minor
+Kavey,Lampkeep Sector,farreach,739,764,wave3,B,unknown,1,2,1,,minor
+Ellerbeck,Qessar Sector,midreach,638,338,wave3,A,Hand,1,2,1,Long Haul,major
 Pyrite,Charter Sector,heartland,507,517,wave3,C,unknown,1,4,1,Charter Road;Long Haul,major
-Stepwell,Fyrholm Sector,farreach,772,791,wave3,B,unknown,0,0,0,,
-Kizil Dala,Clearholm Sector,farreach,330,948,wave3,B,Hand,0,0,0,,
+Stepwell,Lampkeep Sector,farreach,772,791,wave3,B,unknown,0,0,0,,
+Rustgrass,Clearholm Sector,farreach,330,948,wave3,B,Hand,0,0,0,,
 Wolfram II,Dunmere Sector,farreach,261,656,wave3,A,Hand,0,1,1,,minor
-Tinplate,Vinograd Sector,midreach,733,556,wave3,B,unknown,1,3,1,Salt Lane,major
-San Teodor,Fallout Sector,farreach,207,166,wave3,B,criminal,0,0,0,,
-Blind Eye,Varmdal Sector,farreach,903,297,wave3,C,unknown,1,2,1,,minor
-Deepcut,Eldingar Sector,farreach,673,75,wave3,B,unknown,1,2,1,,minor
+Tinplate,Aubrine Sector,midreach,733,556,wave3,B,unknown,1,3,1,Salt Lane,major
+Tapeer,Fallout Sector,farreach,207,166,wave3,B,criminal,0,0,0,,
+Blind Eye,Ushmari Sector,farreach,903,297,wave3,C,unknown,1,2,1,,minor
+Deepcut,Khelask Sector,farreach,673,75,wave3,B,unknown,1,2,1,,minor
 Standstill,Drift Harbour Sector,farreach,655,948,wave3,C,unknown,0,0,0,,
 Partus,Clearholm Sector,farreach,342,966,wave3,B,Hand,0,0,0,,
-Bastide,Mirabel Sector,midreach,534,507,wave3,B,unknown,1,2,1,,minor
-Metsola,Eldingar Sector,farreach,643,34,wave3,B,unknown,0,0,0,,
-Greysand,Salitre Sector,farreach,425,882,wave3,B,neutral,0,0,0,,
+Icehouse,Unbought Sector,midreach,534,507,wave3,B,unknown,1,2,1,,minor
+Ralqi,Khelask Sector,farreach,643,34,wave3,B,unknown,0,0,0,,
+Greysand,Coppertoll Sector,farreach,425,882,wave3,B,neutral,0,0,0,,
 Hollowstone,Feldspar Sector,midreach,318,409,wave3,B,neutral,1,2,1,,minor
-Clove,Ilanga Sector,farreach,553,891,wave3,B,unknown,0,2,1,Trunk Line,major
+Clove,Ilt Sector,farreach,553,891,wave3,B,unknown,0,2,1,Trunk Line,major
 Naphtha,Solacia Sector,farreach,473,162,wave3,B,neutral,0,0,0,,
 Galeholm,Bellwether Sector,midreach,665,608,wave3,B,neutral,0,2,1,Trunk Line,major
-Cairnfell,Mata Alta Sector,farreach,572,806,wave3,B,Hand,0,0,0,,
+Cairnfell,Jadwey Sector,farreach,572,806,wave3,B,Hand,0,0,0,,
 The Wall,Moorings Sector,farreach,96,628,wave3,B,unknown,0,0,0,,
 Steading,Bellwether Sector,midreach,633,659,wave3,B,Hand,1,2,1,,minor
-Lowmoor,Ciénaga Sector,farreach,409,286,wave3,B,Hand,0,0,0,,
-Uhrwald,Drift Harbour Sector,farreach,691,912,wave3,B,unknown,0,0,0,,
+Lowmoor,Kelmeer Sector,farreach,409,286,wave3,B,Hand,0,0,0,,
+Hathwy,Drift Harbour Sector,farreach,691,912,wave3,B,unknown,0,0,0,,
 Glasshold,Akousma Sector,midreach,635,677,wave3,B,neutral,0,2,1,Salt Lane,major
-Limonite III,Caza Real Sector,midreach,585,428,wave3,B,Hand,1,2,1,Long Haul,major
+Limonite III,Qessar Sector,midreach,585,428,wave3,B,Hand,1,2,1,Long Haul,major
 Grimsholt,Thaw Sector,farreach,709,846,wave3,B,unknown,0,0,0,,
-Kruispunt,Feldspar Sector,midreach,348,458,wave3,C,unknown,0,0,0,,
+Fourways,Feldspar Sector,midreach,348,458,wave3,C,unknown,0,0,0,,
 Quies,Castra Sector,heartland,472,445,wave3,B,Hand,0,1,1,,minor
 Shingle,Semeion Sector,midreach,728,665,wave3,B,unknown,0,0,0,,
 Milestone Nine,Ironbeach Sector,farreach,525,918,wave3,B,unknown,0,2,1,Trunk Line,major
-Stonecrop,Altofen Sector,midreach,295,325,wave3,B,Hand,0,0,0,,
+Stonecrop,Atuun Sector,midreach,295,325,wave3,B,Hand,0,0,0,,
 Bluesand,Semeion Sector,midreach,709,664,wave3,B,unknown,0,0,0,,
-Nueve Lunas,Lagoa Funda Sector,midreach,340,341,wave3,B,Hand,1,3,1,Charter Road,major
+Nine Moons,Talveen Sector,midreach,340,341,wave3,B,Hand,1,3,1,Charter Road,major
 Old Amber,Ferraria Sector,midreach,405,455,wave3,B,neutral,0,1,1,,minor
-Tamarisk,Mirabel Sector,midreach,539,527,wave3,B,Hand,0,0,0,,
-Thornveld,Mirabel Sector,midreach,561,516,wave3,B,Hand,1,2,1,,minor
-Altofen,Altofen Sector,midreach,336,381,wave3,B,Hand,0,1,1,,minor
-Kalinov,Lagoa Funda Sector,midreach,383,339,wave3,B,neutral,0,0,0,,
+Tamarisk,Unbought Sector,midreach,539,527,wave3,B,Hand,0,0,0,,
+Thornveld,Unbought Sector,midreach,561,516,wave3,B,Hand,1,2,1,,minor
+Atuun,Atuun Sector,midreach,336,381,wave3,B,Hand,0,1,1,,minor
+Stormring,Talveen Sector,midreach,383,339,wave3,B,neutral,0,0,0,,
 Blackfen,Thaw Sector,farreach,714,916,wave3,B,neutral,0,0,0,,
 Alumen,Ommata Sector,heartland,512,491,wave3,B,unknown,0,2,1,,minor
 Permit Hill,Moorings Sector,farreach,132,703,wave3,B,unknown,0,1,1,,minor
-Kreuzweg,Highfall Sector,farreach,479,713,wave3,B,neutral,1,4,1,Long Haul;Salt Lane,major
+Krox,Highfall Sector,farreach,479,713,wave3,B,neutral,1,4,1,Long Haul;Salt Lane,major
 Commonhold,Dunmere Sector,farreach,267,512,wave3,B,unknown,1,3,1,Salt Lane;Yard Road,major
 Ochre Wells,Ironbeach Sector,farreach,562,919,wave3,B,neutral,0,0,0,,
-Puerto Hierro,Three Lamps Sector,midreach,733,456,wave3,B,neutral,1,2,1,Salt Lane,major
+Ilo Lohari,Three Lamps Sector,midreach,733,456,wave3,B,neutral,1,2,1,Salt Lane,major
 Techne,Incus Sector,midreach,400,345,wave3,A,Collective-friendly,0,0,0,,
-Lignite,Ilanga Sector,farreach,584,870,wave3,B,unknown,0,0,0,,
-Kaukomaa,Bellwether Sector,midreach,647,671,wave3,B,unknown,1,3,1,Salt Lane,major
-Ashgrove,Caza Real Sector,midreach,591,346,wave3,A,criminal,1,2,1,,minor
-Haverland,Vinograd Sector,midreach,690,564,wave3,B,Hand,0,0,0,,
+Lignite,Ilt Sector,farreach,584,870,wave3,B,unknown,0,0,0,,
+Vorsa,Bellwether Sector,midreach,647,671,wave3,B,unknown,1,3,1,Salt Lane,major
+Ashgrove,Qessar Sector,midreach,591,346,wave3,A,criminal,1,2,1,,minor
+Haverland,Aubrine Sector,midreach,690,564,wave3,B,Hand,0,0,0,,
 Buyback,Ferraria Sector,midreach,369,428,wave3,B,unknown,0,0,0,,
 Malleus,Lenitas Sector,midreach,432,489,wave3,B,Hand,1,3,1,,minor
-Wadi Noor,Fairhaven Sector,farreach,875,587,wave3,C,unknown,0,0,0,,
+Adnor,Fairhaven Sector,farreach,875,587,wave3,C,unknown,0,0,0,,
 Hartwell,Charter Sector,heartland,494,513,wave3,A,Collective-friendly,1,3,1,Charter Road,major
 Hollow Fork,Dunmere Sector,farreach,193,650,wave3,B,Hand,0,0,0,,
-Unlisted,Rio Lodo Sector,farreach,565,43,wave3,B,unknown,0,0,0,,
+Unlisted,Diyaar Sector,farreach,565,43,wave3,B,unknown,0,0,0,,
 Kestrel Downs,Feldspar Sector,midreach,332,461,wave3,B,neutral,0,0,0,,
-Velika Ravan,Mechane Sector,midreach,500,636,wave3,A,Hand,1,3,1,Long Haul,major
+Earlytoll,Mechane Sector,midreach,500,636,wave3,A,Hand,1,3,1,Long Haul,major
 Highfall,Highfall Sector,farreach,496,771,wave3,B,Hand,0,0,0,,
 Scaldwell,Fallout Sector,farreach,209,184,wave3,B,unknown,1,2,1,,minor
-Constantia,Lagoa Funda Sector,midreach,354,322,wave3,B,Hand,1,2,1,,minor
+Constantia,Talveen Sector,midreach,354,322,wave3,B,Hand,1,2,1,,minor
 Hortensia,Moorings Sector,farreach,147,695,wave3,A,Hand,0,0,0,,
 Pinehallow,Shelter Sector,farreach,419,680,wave3,B,neutral,0,1,1,,minor
 Clearholm,Clearholm Sector,farreach,338,926,wave3,B,criminal,0,0,0,,
-Mudhaven,Kranholm Sector,farreach,645,115,wave3,B,criminal,0,0,0,,
+Mudhaven,Kesh Krata Sector,farreach,645,115,wave3,B,criminal,0,0,0,,
 Skopia,Castra Sector,heartland,494,485,wave3,B,Hand,0,0,0,,
-Spindle,Ciénaga Sector,farreach,420,255,wave3,B,criminal,0,0,0,,
+Spindle,Kelmeer Sector,farreach,420,255,wave3,B,criminal,0,0,0,,
 Thousand Mouths,Akousma Sector,midreach,630,735,wave3,A,criminal,0,0,0,,
-Uzun Su,Mechane Sector,midreach,451,602,wave3,B,neutral,1,2,1,,minor
-Kovarna,Shelter Sector,farreach,395,679,wave3,B,unknown,1,2,1,,minor
-Chert,Pulau Hijau Sector,farreach,404,142,wave3,B,Hand,0,0,0,,
+Tazgut,Mechane Sector,midreach,451,602,wave3,B,neutral,1,2,1,,minor
+Tankot,Shelter Sector,farreach,395,679,wave3,B,unknown,1,2,1,,minor
+Chert,Kichaar Sector,farreach,404,142,wave3,B,Hand,0,0,0,,
 Mirevale,Dunmere Sector,farreach,215,600,wave3,B,unknown,1,2,1,,minor
-Landfall,Ulaan Tal Sector,farreach,829,676,wave3,B,Hand,1,2,1,,minor
-Grimwall,Ulaan Tal Sector,farreach,810,583,wave3,A,Hand,0,0,0,,
+Landfall,Eolande Sector,farreach,829,676,wave3,B,Hand,1,2,1,,minor
+Grimwall,Eolande Sector,farreach,810,583,wave3,A,Hand,0,0,0,,
 Bellwether,Bellwether Sector,midreach,650,588,wave3,B,neutral,0,1,1,,minor
-Rio Lodo,Rio Lodo Sector,farreach,489,24,wave3,B,unknown,0,0,0,,
-Amoena,Lagoa Funda Sector,midreach,368,324,wave3,B,unknown,0,1,1,,minor
-Old Bench,Mata Alta Sector,farreach,546,792,wave3,B,unknown,0,0,0,,
-Sunscald,Ciénaga Sector,farreach,375,269,wave3,B,criminal,0,0,0,,
-Ain Tamra,Ulaan Tal Sector,farreach,791,672,wave3,B,unknown,0,0,0,,
-Rietmoor,Quieta Sector,midreach,594,246,wave3,B,neutral,0,0,0,,
+Diyaar,Diyaar Sector,farreach,489,24,wave3,B,unknown,0,0,0,,
+Amoena,Talveen Sector,midreach,368,324,wave3,B,unknown,0,1,1,,minor
+Old Bench,Jadwey Sector,farreach,546,792,wave3,B,unknown,0,0,0,,
+Sunscald,Kelmeer Sector,farreach,375,269,wave3,B,criminal,0,0,0,,
+Edduin,Eolande Sector,farreach,791,672,wave3,B,unknown,0,0,0,,
+Evenmarsh,Quieta Sector,midreach,594,246,wave3,B,neutral,0,0,0,,
 Cidermoor,Fairhaven Sector,farreach,890,573,wave3,B,unknown,0,0,0,,
 Halfwinter,Vinculum Sector,midreach,575,373,wave3,B,Hand,1,2,1,,minor
-Towline,Zlatna Sector,farreach,655,716,wave3,B,neutral,1,3,1,Trunk Line,major
+Towline,Hardcoin Sector,farreach,655,716,wave3,B,neutral,1,3,1,Trunk Line,major
 Black Teeth,Muster Rock Sector,farreach,257,234,wave3,B,criminal,0,0,0,,
-Sankt Odile,Semeion Sector,midreach,703,682,wave3,B,neutral,0,0,0,,
-Long Noon,Ulaan Tal Sector,farreach,769,542,wave3,B,neutral,0,1,1,,minor
+Ashef,Semeion Sector,midreach,703,682,wave3,B,neutral,0,0,0,,
+Long Noon,Eolande Sector,farreach,769,542,wave3,B,neutral,0,1,1,,minor
 Lowenna,Tormentum Sector,midreach,577,673,wave3,B,unknown,0,1,1,,minor
 Icetap,Slate Hill Sector,farreach,505,927,wave3,B,unknown,1,4,1,Long Haul;Trunk Line,major
-Haematite,Kranholm Sector,farreach,702,148,wave3,B,unknown,0,0,0,,
-Mar Seco,Drift Harbour Sector,farreach,673,878,wave3,B,neutral,0,0,0,,
-Nordhaven,Bosque Alto Sector,midreach,588,474,wave3,B,neutral,0,2,1,Trunk Line,major
+Haematite,Kesh Krata Sector,farreach,702,148,wave3,B,unknown,0,0,0,,
+Seafloor,Drift Harbour Sector,farreach,673,878,wave3,B,neutral,0,0,0,,
+Grey Harbour,Ilo Vanna Sector,midreach,588,474,wave3,B,neutral,0,2,1,Trunk Line,major
 Codicil,Tarrow Sector,heartland,433,566,wave3,B,unknown,1,2,1,,minor
-Stillwater,Pulau Hijau Sector,farreach,429,144,wave3,C,unknown,1,2,1,Charter Road,major
+Stillwater,Kichaar Sector,farreach,429,144,wave3,C,unknown,1,2,1,Charter Road,major
 Placida,Three Lamps Sector,midreach,773,390,wave3,C,unknown,0,0,0,,
 Fabrica,Ashfall Sector,midreach,366,590,wave3,C,unknown,1,2,1,,minor
-Hagelfeld,Rauchtal Sector,farreach,320,82,wave3,C,unknown,0,1,1,,minor
+Stonerain,The Valves Sector,farreach,320,82,wave3,C,unknown,0,1,1,,minor

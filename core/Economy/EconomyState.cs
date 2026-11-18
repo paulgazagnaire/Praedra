@@ -55,6 +55,9 @@ public sealed class EconObject
     public int Due { get; set; }
     /// <summary>A refinery waiting in its side's raw line.</summary>
     public bool InLine { get; set; }
+    /// <summary>A unit in training the side's advisor ordered: it may be redirected; cleared when it is finished. Omitted from the save while false. rule: m2-construction §Redirect training.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ByAdvisor { get; set; }
     // ---- the Classic processing state (B5b §1-3). Omitted from the save while default.
     /// <summary>
     /// Mine or refinery: the side it is working for (WAITING or PROCESSING); null = IDLE (stopped: not completed, neutral system, or suspended by

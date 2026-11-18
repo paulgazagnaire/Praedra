@@ -37,12 +37,12 @@ internal static class DerivedCapture
 
 /// <summary>
 /// A full <see cref="GameHost"/> on the real galaxy with the derived control rule (the DEFAULT), debug orders on, incidents off and autoscrap out of
-/// reach. The Classis Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated Midreach worlds (Grauburg, Classis,
-/// Beryl, Fiscus, Vallum, Cinnabar, Altamesa, Marmor, Loess); Hiberna and Bina Major moved to other sectors, so Beryl and Altamesa take their parts.
+/// reach. The Classis Sector is the stage. v6 re-pin 2026-10-24: on the spiral map it holds 9 populated Midreach worlds (Huqar, Classis,
+/// Beryl, Fiscus, Vallum, Cinnabar, Kesh Talo, Marmor, Loess); Hiberna and Gemina Major moved to other sectors, so Beryl and Kesh Talo take their parts.
 /// </summary>
 internal sealed class DerivedWorld
 {
-    public const string Classis = "Classis", Beryl = "Beryl", Altamesa = "Altamesa", Loess = "Loess", Marmor = "Marmor";
+    public const string Classis = "Classis", Beryl = "Beryl", KeshTalo = "Kesh Talo", Loess = "Loess", Marmor = "Marmor";
     public const string ImpArmy = "Tranches", RebArmy = "Militia";
     public const int Foreman = 834, Varo = 898;
 
@@ -94,7 +94,7 @@ internal sealed class DerivedWorld
 // decided with it (HarvesterFallout Classic, the strike-2 revolt under derived control) and the AI's last-regiment guard.
 public class B5aControlTests
 {
-    private const string C = DerivedWorld.Classis, D = DerivedWorld.Beryl, T = DerivedWorld.Altamesa, V = DerivedWorld.Loess;
+    private const string C = DerivedWorld.Classis, D = DerivedWorld.Beryl, T = DerivedWorld.KeshTalo, V = DerivedWorld.Loess;
 
     // B5a-1 (sections 1, 6): a neutral world with no regiments at Collective support 59; one support change of +1 makes it Collective in the same call,
     // cause Support; the sector step gives +1 to the Collective in every ever-held populated system of the sector, the world itself included.
@@ -114,7 +114,7 @@ public class B5aControlTests
         var evs = w.Game.Events.ToList();
         int iSup = evs.FindIndex(e => e is SupportChanged s && s.System == C && s.Cause == SupportCause.Diplomacy);
         Assert.Equal(iSup + 1, evs.IndexOf(cap)); // inside the support change
-        Assert.Equal(new[] { (T, 71), (D, 31), (C, 61) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
+        Assert.Equal(new[] { (D, 31), (C, 61), (T, 71) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
         Assert.Equal(50, w.A(V));
     }
 
@@ -353,7 +353,7 @@ public class B5aControlTests
     [Fact]
     public void B5a8c_HqFleeingAtDayEndOverAOneDayHopLands()
     {
-        const string From = "Bina Minor", To = "Bina Major";
+        const string From = "Gemina Minor", To = "Gemina Major";
         var w = new DerivedWorld();
         w.Hold(From, Side.Collective, 60);
         w.Hold(To, Side.Collective, 90);
@@ -475,13 +475,13 @@ public class B5aControlTests
         w.Step();
         Assert.Equal(new[] { C, D }, w.Events<SystemCaptured>().Where(e => e.To == null && e.Cause == CaptureCause.Support).Select(e => e.System).ToArray());
         // Classis's step only (Beryl is still at 70 when it comes; its own flip in the same tick gives none). Steps come in name order:
-        // Praedra names 2026-10-25: Altamesa (T), Beryl (D), Classis (C), Loess (V), Marmor (S).
-        Assert.Equal(new[] { (T, 69), (D, 69), (C, 57), (V, 69), (S, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
+        // Praedra names 2026-10-25: Kesh Talo (T), Beryl (D), Classis (C), Loess (V), Marmor (S).
+        Assert.Equal(new[] { (D, 69), (C, 57), (T, 69), (V, 69), (S, 69) }, w.SectorSteps().Select(s => (s.System, s.New)).ToArray());
         Assert.Equal(57, w.A(D));
         w.InSlot("6.2", ctx => w.H.Support.ChangeSupport(ctx, T, Side.Collective, -12, SupportCause.Other, dampen: false));
         w.Step();
         Assert.Null(w.Ctl.HolderOf(T));
-        Assert.Equal(new[] { (T, 56), (D, 56), (C, 56), (V, 68), (S, 68) }, w.SectorSteps().Skip(5).Select(s => (s.System, s.New)).ToArray());
+        Assert.Equal(new[] { (D, 56), (C, 56), (T, 56), (V, 68), (S, 68) }, w.SectorSteps().Skip(5).Select(s => (s.System, s.New)).ToArray());
         int before = w.SectorSteps().Count;
         w.Ctl.SubmitDebugSetSupport(Side.Collective, V, 58);
         w.InSlot("6.2", ctx => w.H.Support.ChangeSupport(ctx, S, Side.Collective, -12, SupportCause.Other, dampen: false));

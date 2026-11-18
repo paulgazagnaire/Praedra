@@ -18,6 +18,7 @@ public enum Side { Hand = 0, Collective = 1 }
 [JsonDerivedType(typeof(DebugSetTroopsOrder), "DebugSetTroops")]
 [JsonDerivedType(typeof(BuildOrder), "Build")]
 [JsonDerivedType(typeof(StopBuildOrder), "StopBuild")]
+[JsonDerivedType(typeof(RedirectTrainingOrder), "RedirectTraining")]
 [JsonDerivedType(typeof(CreateFleetOrder), "CreateFleet")]
 [JsonDerivedType(typeof(SplitFleetOrder), "SplitFleet")]
 [JsonDerivedType(typeof(TransferShipsOrder), "TransferShips")]
@@ -87,11 +88,21 @@ public sealed record DebugSetTroopsOrder(long Sequence, Side Side, string System
 /// own system (a facility needs one). Checked in step 1. rule: m2-construction §Build order. The handler lives in
 /// Praedra.Core.Construction.ConstructionModule. Item is a class name of unit-and-facility-costs.csv (DEFAULT: the sheet says (kind, id)).
 /// </summary>
-public sealed record BuildOrder(long Sequence, Side Side, string System, YardFamily Family, string Class, int Count, string? Destination)
+/// <para><paramref name="ByAdvisor"/>: the side's advisor gave the order, so its units may later be redirected (m2-construction §Redirect training);
+/// left out of the save and hash while false. Only the advisor (SimpleAi in advisor mode) may set it: the core does not check who sent the order,
+/// so a screen must never set it, or the player's own regiments could be redirected.</para>
+public sealed record BuildOrder(long Sequence, Side Side, string System, YardFamily Family, string Class, int Count, string? Destination,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ByAdvisor = false)
     : Order(Sequence, Side);
 
 /// <summary>Cancel the project of one (system, family) without a new order. rule: m2-construction §Projects and queues.</summary>
 public sealed record StopBuildOrder(long Sequence, Side Side, string System, YardFamily Family) : Order(Sequence, Side);
+
+/// <summary>
+/// Send the advisor's regiments still in training at a system's training facility (the leading ones of the current order, at most
+/// <paramref name="Count"/>) to another held system. rule: m2-construction §Redirect training (New, Paul 2026-11-16).
+/// </summary>
+public sealed record RedirectTrainingOrder(long Sequence, Side Side, string System, int Count, string Destination) : Order(Sequence, Side);
 
 // ---- fleet orders. rule: m3-fleets §Orders (all step 1, immediate, in order sequence; rejection changes nothing).
 // Id lists are plain lists so a queued order saves and loads.
@@ -177,6 +188,8 @@ public static class RejectReason
     public const string NotOnRoute = "NotOnRoute";
     public const string UnknownItem = "UnknownItem";
     public const string NoProject = "NoProject";
+    /// <summary>RedirectTraining on a project whose current unit the advisor did not order. rule: m2-construction §Redirect training.</summary>
+    public const string NotAdvisorUnits = "NotAdvisorUnits";
     // rule: m3-fleets §Orders (fleet order rejections), m3-ships-and-fighters §Tests S13. DuplicateSquadron and EmptySelection (for
     // TransferShips) are DEFAULT names the sheets lack; DebugDisabled is shared with DebugSetHolder.
     public const string UnknownShip = "UnknownShip";

@@ -61,6 +61,33 @@ public sealed record SimpleAiParams
     public int GarrisonShortPerTrainingFacility { get; init; } = 20;
     /// <summary>GarrisonsFirst: most training facilities the side wants. DEFAULT.</summary>
     public int MaxTrainingFacilities { get; init; } = 12;
+    // ---- the player's advisor (Sibyl). rule: m6-advisor-sibyl (Paul 2026-11-16: "Both", "aggressively develop infrastructure"). DEFAULT values.
+    /// <summary>A calm world keeps the garrison of its support minus this many points (one more regiment within 5 of a step). rule: m6-advisor-sibyl §Manage Garrisons 2.</summary>
+    public int AdvisorBufferSupport { get; init; } = 5;
+    /// <summary>
+    /// Free upkeep room every advisor order leaves (regiments, uprisings included, and yards): two mine and refinery pairs of capacity, so one
+    /// capacity loss does not start the autoscrap on the player's yards (QA-106). rule: m6-advisor-sibyl §Manage Garrisons 6, §Manage Production 1a.
+    /// </summary>
+    public int AdvisorUpkeepMargin { get; init; } = 100;
+    /// <summary>
+    /// Below this much free upkeep room, with Manage Production on, an idle construction yard builds a mine or refinery before a training
+    /// facility or a construction yard, so lost capacity comes back before more upkeep is added (QA-107). rule: m6-advisor-sibyl §Manage Production 0.
+    /// </summary>
+    public int AdvisorRebuildRoom { get; init; } = 200;
+    /// <summary>
+    /// Construction yards come before more training facilities (m6-advisor-sibyl §Manage Production 1a) only while at least this much upkeep room
+    /// is free and a training facility is finished; below it the garrisons' training facilities come first (QA-109). DEFAULT.
+    /// </summary>
+    public int AdvisorYardsFirstRoom { get; init; } = 300;
+    /// <summary>Most training facilities the advisor builds to. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    public int AdvisorMaxTrainingFacilities { get; init; } = 12;
+    /// <summary>One more training facility per this many regiments still short. rule: m6-advisor-sibyl §Manage Garrisons 9.</summary>
+    public int AdvisorShortPerTrainingFacility { get; init; } = 8;
+    /// <summary>Most construction yards the advisor builds to. rule: m6-advisor-sibyl §Manage Production 1a.</summary>
+    public int AdvisorMaxConstructionYards { get; init; } = 12;
+    /// <summary>One construction yard wanted per this many populated held worlds (plus one). rule: m6-advisor-sibyl §Manage Production 1a.</summary>
+    public int AdvisorWorldsPerConstructionYard { get; init; } = 4;
+
     /// <summary>Regiments (aboard or waiting at the rally system, or queued for it) the AI keeps ready to invade. DEFAULT.</summary>
     public int InvasionRegimentTarget { get; init; } = 10;
     /// <summary>Troop slots the AI wants on its ships. DEFAULT.</summary>
@@ -250,7 +277,7 @@ public sealed record SimpleAiParams
     /// FogUnknownDefenders (FogUnknownWinDefenders on the winning system) as if never seen. Only espionage, an assault or holding the system
     /// shows group D (m5-fog-and-hq §F1), so an old count is never refreshed by a fleet passing by, and with the staleness margin it only grew.
     /// An assault on a wrong guess shows the true garrison, so a bad guess corrects itself. AI trainer 2026-10-17 (QA-5): in seed 8 Hard the
-    /// Hand, holding 375-449 systems, never took Two Crowns and Hutan Raya (0 regiments each from day 2400) because it still believed the 6
+    /// Hand, holding 375-449 systems, never took Two Crowns and Hal Taru (0 regiments each from day 2400) because it still believed the 6
     /// regiments it saw there around day 1250 (9 with the margin, so 18 regiments asked aboard). 0 = never forget (the AI of before).
     /// </summary>
     public int FogGroundForgetDays { get; init; } = 365;

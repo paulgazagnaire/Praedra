@@ -126,8 +126,8 @@ phrase,Crix Madine,Sister Wake
 phrase,Jan Dodonna,Old Debt
 phrase,Tura Raftican,Static
 phrase,Borsk Fey'lya,Day After
-phrase,Carlist Rieekan,June Halvorsen
-phrase,Bren Derlin,Rowan Achterberg
+phrase,Carlist Rieekan,June Halvey
+phrase,Bren Derlin,Rowan Furrow
 phrase,Wedge Antilles,Forty-One
 phrase,Lando Calrissian,Foreman
 phrase,Imperial Probe Droids,Speculators
@@ -202,12 +202,12 @@ word,Mothma,Abara
 word,Veers,EightyEight
 word,Chewbacca,Oti
 word,Madine,Wake
-word,Drayson,Sobel
-word,Afyon,Petrenko
+word,Drayson,Keel
+word,Afyon,Gantry
 word,Dodonna,OldDebt
 word,Borsk,DayAfter
-word,Rieekan,Halvorsen
-word,Derlin,Achterberg
+word,Rieekan,Halvey
+word,Derlin,Furrow
 word,Rix,Doran
 word,Garaint,Vance
 word,Coruscant,Charter
@@ -218,11 +218,11 @@ word,Ilum,Glasswood
 word,Sullust,Caminus
 word,Corellia,Classis
 word,Bespin,DriftHarbour
-word,Dagobah,Eldingar
+word,Dagobah,Khelask
 word,Vagran,Loess
 word,Selonia,Marmor
 word,Tralus,BinaMajor
-word,Poderis,Altamesa
+word,Poderis,Kesh Talo
 word,Duros,Hiberna
 word,Drall,Beryl
 word,Rhinnal,Remedium
@@ -234,10 +234,10 @@ word,Jelucan,Felsite
 word,Epikonia,Ellerbeck
 word,Contruum,PuertoHierro
 word,Azbian,Kaolin
-word,Taanab,Granero
+word,Taanab,Tiryal
 word,Csilla,Frostholm
-word,Endor,Fyrholm
-word,Tatooine,Amargura
+word,Endor,Lampkeep
+word,Tatooine,Murreen
 word,Kashyyyk,Longtide
 word,Isds,Mandates
 word,Isd,Mandate

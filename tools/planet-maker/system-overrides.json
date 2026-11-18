@@ -214,7 +214,7 @@
   "kind": "locked",
   "name": "Arithmos"
  },
- "Bela Voda": {
+ "Greenthaw": {
   "seed": 3026,
   "sea": 0.28,
   "mount": 0.5,
@@ -301,9 +301,9 @@
   ],
   "hazeCol": "#b0d0ec",
   "kind": "ice",
-  "name": "Bela Voda"
+  "name": "Greenthaw"
  },
- "Belmare": {
+ "Hal Lumet": {
   "seed": 852,
   "sea": 0.9,
   "mount": 0.35,
@@ -445,9 +445,9 @@
   ],
   "hazeCol": "#80d0f0",
   "kind": "ocean",
-  "name": "Belmare"
+  "name": "Hal Lumet"
  },
- "Brennhof": {
+ "Wyburn": {
   "seed": 1118,
   "sea": 0.1,
   "mount": 0.25,
@@ -534,7 +534,7 @@
   ],
   "hazeCol": "#b08a5a",
   "kind": "city",
-  "name": "Brennhof"
+  "name": "Wyburn"
  },
  "Cambium": {
   "seed": 7372,
@@ -1560,7 +1560,7 @@
   "kind": "gas",
   "name": "Hundred Falls"
  },
- "Las Mieses": {
+ "Lode's Acre": {
   "seed": 772,
   "sea": 0.45,
   "mount": 0.15,
@@ -1647,7 +1647,7 @@
   ],
   "hazeCol": "#9ab8e4",
   "kind": "terran",
-  "name": "Las Mieses"
+  "name": "Lode's Acre"
  },
  "Malleus": {
   "seed": 5451,
@@ -1738,7 +1738,7 @@
   "kind": "lava",
   "name": "Malleus"
  },
- "Puerto Ceniza": {
+ "Ashport": {
   "seed": 4901,
   "sea": 0,
   "mount": 0.55,
@@ -1825,7 +1825,7 @@
   ],
   "hazeCol": "#b8a090",
   "kind": "lava",
-  "name": "Puerto Ceniza"
+  "name": "Ashport"
  },
  "Pyrite": {
   "seed": 4169,
@@ -2079,7 +2079,7 @@
   "kind": "ice",
   "name": "Remedium"
  },
- "Rosvik": {
+ "Allhome": {
   "seed": 7352,
   "sea": 0.85,
   "mount": 0.6,
@@ -2166,7 +2166,7 @@
   ],
   "hazeCol": "#a8bcd0",
   "kind": "ocean",
-  "name": "Rosvik"
+  "name": "Allhome"
  },
  "Saltwood": {
   "seed": 7421,
@@ -2257,7 +2257,7 @@
   "kind": "ocean",
   "name": "Saltwood"
  },
- "Serra Alta": {
+ "Kaoyat": {
   "seed": 7683,
   "sea": 0.55,
   "mount": 0.78,
@@ -2381,7 +2381,7 @@
   ],
   "hazeCol": "#a8c4e0",
   "kind": "gas",
-  "name": "Serra Alta"
+  "name": "Kaoyat"
  },
  "Sevenwells": {
   "seed": 2732,
@@ -3061,7 +3061,7 @@
   "kind": "ring",
   "name": "Tutela"
  },
- "Valle Hondo": {
+ "Ghatow": {
   "seed": 3376,
   "sea": 0.55,
   "mount": 0.7,
@@ -3148,7 +3148,7 @@
   ],
   "hazeCol": "#90bcec",
   "kind": "terran",
-  "name": "Valle Hondo"
+  "name": "Ghatow"
  },
  "Vigilia": {
   "seed": 5063,

@@ -11,12 +11,12 @@ public class MovementTests
     private const string Mandate = "Mandate";
     // Free travel with routes (Paul 2026-10-16): Charter to The Thaw at speed 80 rides the routes (m1-travel T9).
     // v6 re-pin 2026-10-24: on the spiral map it leaves along the Trunk Line and reaches The Thaw (off every route) from Hollenvale, day 45.
-    // QA-40 re-pin 2026-10-25 (the Trunk Line now runs through Nutrix; Lowmarket is on the Nordhaven link): same 45 days
-    // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the Fyrholm Sector (Oldwatch) moved further out than
-    // the Zlatna and Thaw sectors, so Zlatna-Oldwatch-Hollenvale-The Thaw (94 / 5 = 18 -> 14, minor 28 -> 3, 35 / 5 = 7 -> 5: 22 days) now loses
-    // to the free jump Zlatna-The Thaw (132 / 5 = 26, 26 * 80 / 100 = 20); Nordhaven moved too (Nutrix-Nordhaven 34 units, 2 days, was 1). Day 50.
-    private static readonly string[] CharterThaw = { "Charter", "Sourwater", "Vigilia", "Nutrix", "Nordhaven", "Lowmarket", "Tierra Larga", "Seldwyn", "Highbarrow", "Overgrowth",
-        "Longtide", "Galeholm", "Stopgap", "Groenveld", "Brokengate", "Towline", "Ashgarden", "Pale Ridge", "Zlatna", "The Thaw" };
+    // QA-40 re-pin 2026-10-25 (the Trunk Line now runs through Nutrix; Lowmarket is on the Grey Harbour link): same 45 days
+    // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): the Lampkeep Sector (Oldwatch) moved further out than
+    // the Hardcoin and Thaw sectors, so Hardcoin-Oldwatch-Hollenvale-The Thaw (94 / 5 = 18 -> 14, minor 28 -> 3, 35 / 5 = 7 -> 5: 22 days) now loses
+    // to the free jump Hardcoin-The Thaw (132 / 5 = 26, 26 * 80 / 100 = 20); Grey Harbour moved too (Nutrix-Grey Harbour 34 units, 2 days, was 1). Day 50.
+    private static readonly string[] CharterThaw = { "Charter", "Sourwater", "Vigilia", "Nutrix", "Grey Harbour", "Lowmarket", "Annavori", "Seldwyn", "Highbarrow", "Overgrowth",
+        "Longtide", "Galeholm", "Stopgap", "Ouvaren", "Brokengate", "Towline", "Ashgarden", "Pale Ridge", "Hardcoin", "The Thaw" };
     // Route stops re-pin 2026-11-12 (Paul, "Add the stops"): out by Sourwater, now a Long Haul stop (was Pyrite), and the Trunk Line stops at
     // Highbarrow between Seldwyn and Overgrowth (Seldwyn-Overgrowth was 2 days, now 1 + 1). Same days to The Thaw.
     private static readonly int[] CharterThawHops = { 1, 2, 2, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 2, 1, 2, 4, 2, 20 };
@@ -76,14 +76,14 @@ public class MovementTests
         Assert.Equal(50, acc.ArrivalDay);
         var passes = new List<(int, string)>(); int day = 0;
         for (int k = 0; k < CharterThawHops.Length - 1; k++) { day += CharterThawHops[k]; passes.Add((day, CharterThaw[k + 1])); }
-        Assert.Equal((30, "Zlatna"), passes[^1]); // sector spread re-pin 2026-11-12 (v6 day 40, Hollenvale; was day 27, Seven Gates)
+        Assert.Equal((30, "Hardcoin"), passes[^1]); // sector spread re-pin 2026-11-12 (v6 day 40, Hollenvale; was day 27, Seven Gates)
         Assert.Equal(passes, w.Events<FleetPassed>().Select(e => (e.Day, e.System)));
         var arr = Assert.Single(w.Events<FleetArrived>());
         Assert.Equal((50, "The Thaw"), (arr.Day, arr.System));
         Assert.Empty(w.Events<ForcedStop>());
     }
 
-    [Fact] // m1-clock-and-orders K5 (sector spread re-pin 2026-11-12: the last leg is Zlatna to The Thaw, days 30 to 50; v6 Hollenvale, 40 to 45; was 27 to 32)
+    [Fact] // m1-clock-and-orders K5 (sector spread re-pin 2026-11-12: the last leg is Hardcoin to The Thaw, days 30 to 50; v6 Hollenvale, 40 to 45; was 27 to 32)
     public void K5_after_30_steps_on_the_last_leg_after_50_arrived()
     {
         var w = Real();
@@ -92,9 +92,9 @@ public class MovementTests
         w.Run(30);
         var t = w.Fleet(f).Transit!;
         Assert.Null(w.Fleet(f).At);
-        Assert.Equal(("Zlatna", "The Thaw"), (t.Path[t.HopIndex], t.Path[t.HopIndex + 1]));
+        Assert.Equal(("Hardcoin", "The Thaw"), (t.Path[t.HopIndex], t.Path[t.HopIndex + 1]));
         Assert.Equal(50, t.DueDay);
-        Assert.Equal("Zlatna", w.Fleet(f).PreviousSystem);
+        Assert.Equal("Hardcoin", w.Fleet(f).PreviousSystem);
         w.Run(19);
         Assert.Null(w.Fleet(f).At);
         w.Run(1);
@@ -186,7 +186,7 @@ public class MovementTests
         for (int d = fromDay; d < toDay; d++)
         {
             if (d == 0) w.Move(Side.Hand, 1, "The Thaw");
-            if (d == 22) w.Move(Side.Hand, 1, "The Thaw"); // after the stop at Tierra Larga (day 9 since the sector spread; day 8 on the v6 map; was day 20)
+            if (d == 22) w.Move(Side.Hand, 1, "The Thaw"); // after the stop at Annavori (day 9 since the sector spread; day 8 on the v6 map; was day 20)
             w.Game.Step();
         }
     }
@@ -195,8 +195,8 @@ public class MovementTests
     {
         var w = Real(seed: seed);
         w.Add(Side.Hand, "Red", "Charter", Mandate);                       // fleet 1
-        w.Add(Side.Collective, "Picket", "Tierra Larga", "Snare");      // fleet 2: gravity-well ship on the route, pulls the mover out
-        w.Fleets.SetOwner("Tierra Larga", Side.Collective);
+        w.Add(Side.Collective, "Picket", "Annavori", "Snare");      // fleet 2: gravity-well ship on the route, pulls the mover out
+        w.Fleets.SetOwner("Annavori", Side.Collective);
         w.Fleets.SetOwner("The Thaw", Side.Collective); // the mover ends up alone at a Collective system: Classic blockade
         return w;
     }
@@ -233,8 +233,8 @@ public class MovementTests
         var first = ScenarioWorld(5); Scenario(first, 0, 7);
         Assert.Equal(7, first.Game.Day);
         var mid = first.Fleet(1);
-        Assert.Null(mid.At); // mid-leg (sector spread re-pin 2026-11-12: Nordhaven to Lowmarket, days 7 to 8; QA-40: Lowmarket to Tierra Larga; v6: Nordhaven to Tierra Larga)
-        Assert.Equal(("Nordhaven", "Lowmarket"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
+        Assert.Null(mid.At); // mid-leg (sector spread re-pin 2026-11-12: Grey Harbour to Lowmarket, days 7 to 8; QA-40: Lowmarket to Annavori; v6: Grey Harbour to Annavori)
+        Assert.Equal(("Grey Harbour", "Lowmarket"), (mid.Transit!.Path[mid.Transit.HopIndex], mid.Transit.Path[mid.Transit.HopIndex + 1]));
 
         string json = GameSave.Save(first.Game);
         var loaded = new World(GameSave.Load(json), TestData.RealGalaxy);
@@ -247,7 +247,7 @@ public class MovementTests
         // Events are not saved: the loaded game only has the events of the continued days (and counts its indexes from 0).
         Assert.Equal(whole.Game.Events.Skip(first.Game.Events.Count).Select(e => e with { Index = 0 }),
                      loaded.Game.Events.Select(e => e with { Index = 0 }));
-        Assert.Contains(loaded.Events<ForcedStop>(), e => e.System == "Tierra Larga");
+        Assert.Contains(loaded.Events<ForcedStop>(), e => e.System == "Annavori");
     }
 
     [Fact] // m1-clock-and-orders K13

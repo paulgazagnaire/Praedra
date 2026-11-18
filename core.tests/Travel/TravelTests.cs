@@ -25,7 +25,7 @@ public class TravelTests
         // v6 re-pin 2026-10-24: Charter-Classis is no longer a link; Charter's great-route links are 18 and 29 units, too short
         // to show the rounding, so the leg is the longest great-route link, Ellerbeck-Longquay (Long Haul, 111 units).
         // Sector spread re-pin 2026-11-12 (Paul: "distribute some sectors a bit differently"): Ellerbeck (638,338), Longquay (724,249):
-        // 86^2 + 89^2 = 15317, isqrt 123; still the longest great-route link (next: Commonhold-Lesnaya, 83).
+        // 86^2 + 89^2 = 15317, isqrt 123; still the longest great-route link (next: Commonhold-Taruval, 83).
         Assert.Equal(1, G.FindLane("Ellerbeck", "Longquay")!.Tier);
         Assert.Equal(123, MapDist(G, "Ellerbeck", "Longquay"));
         Assert.Equal(new[] { 8, 7, 5, 4 }, new[] { 100, 80, 60, 50 }.Select(s => Leg("Ellerbeck", "Longquay", s))); // 8.2, 6.56, 4.92, 4.1
@@ -44,21 +44,21 @@ public class TravelTests
     [Fact]
     public void T3_ShortMajorLeg() // m1-travel T3
     {
-        // v6 re-pin 2026-10-24: Classis-Hiberna is no longer a link; Kaolin-Puerto Hierro is a 25-unit great-route link.
-        Assert.Equal(1, G.FindLane("Kaolin", "Puerto Hierro")!.Tier);
-        Assert.Equal(25, MapDist(G, "Kaolin", "Puerto Hierro"));
-        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Kaolin", "Puerto Hierro", s))); // 1.67, 1.33, 0.83 raised to 1
+        // v6 re-pin 2026-10-24: Classis-Hiberna is no longer a link; Kaolin-Ilo Lohari is a 25-unit great-route link.
+        Assert.Equal(1, G.FindLane("Kaolin", "Ilo Lohari")!.Tier);
+        Assert.Equal(25, MapDist(G, "Kaolin", "Ilo Lohari"));
+        Assert.Equal(new[] { 2, 1, 1 }, new[] { 100, 80, 50 }.Select(s => Leg("Kaolin", "Ilo Lohari", s))); // 1.67, 1.33, 0.83 raised to 1
     }
 
     [Fact]
     public void T4_MinorRouteNearCharter() // m1-travel T4: factor 150
     {
         // v6 re-pin 2026-10-24: Charter's minor link is Hartwell (was Tutela). Route thinning 2026-11-11: Charter has no minor link left;
-        // Bina Major's, one great-route hop out, takes its place.
-        int d = MapDist(G, "Consolatio", "Bina Major");
-        Assert.Equal(150, G.FindLane("Consolatio", "Bina Major")!.FactorPercent);
-        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Consolatio", "Bina Major", 100));
-        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Consolatio", "Bina Major", 80));
+        // Gemina Major's, one great-route hop out, takes its place.
+        int d = MapDist(G, "Consolatio", "Gemina Major");
+        Assert.Equal(150, G.FindLane("Consolatio", "Gemina Major")!.FactorPercent);
+        Assert.Equal((d * 100 * 2 + 750) / 1500, Leg("Consolatio", "Gemina Major", 100));
+        Assert.Equal(Math.Max(1, (d * 80 * 2 + 750) / 1500), Leg("Consolatio", "Gemina Major", 80));
     }
 
     [Theory]
@@ -113,7 +113,7 @@ public class TravelTests
         var r = new Pathfinder(G).Find("Charter", "The Thaw", 80);
         Assert.True(r.Ok);
         // v6 re-pin 2026-10-24 (was 32): The Thaw is 432 units out on the spiral rim. Sector spread re-pin 2026-11-12 (was 45): The Thaw
-        // (763,883) is 464 units out; the last leg is now the free jump Zlatna-The Thaw, 132 / 5 = 26, 26 * 80 / 100 = 20 (MovementTests K4).
+        // (763,883) is 464 units out; the last leg is now the free jump Hardcoin-The Thaw, 132 / 5 = 26, 26 * 80 / 100 = 20 (MovementTests K4).
         Assert.Equal(50, r.TotalTicks);
         var names = r.Names(G);
         Assert.Equal(new[] { "Charter", "Sourwater", "Vigilia" }, names.Take(3)); // route stops re-pin 2026-11-12: a short jump to Sourwater, now a Long Haul stop, then the Long Haul (was Pyrite; QA-40: the Charter Road; v6: the Trunk Line)
@@ -234,7 +234,7 @@ public class TravelTests
     [Fact]
     public void T21_SameInputsGiveIdenticalPaths() // m1-travel T21
     {
-        var names = new[] { "Charter", "The Thaw", "Opifex", "Greenfever", "Drift Harbour", "The Lantern", "Amargura" };
+        var names = new[] { "Charter", "The Thaw", "Opifex", "Greenfever", "Drift Harbour", "The Lantern", "Murreen" };
         List<string> Run()
         {
             var pf = new Pathfinder(TestData.RealGalaxy);

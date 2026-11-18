@@ -110,7 +110,9 @@ public class SimpleAiAgentsTests
         // game changes; the AI code does not. Previous pin e7b86ea4...0b83.
         // Route stops re-pin 2026-11-12 (Paul, decision card "Add the stops", and Yard Road Fusoria-Commonhold): 8 great-route links now stop at
         // the system they were drawn through, so some paths change and the game changes; the AI code does not. Previous pin 8636bbfc...f01d.
-        Assert.Equal("8f68c3b59b20dda2d45295a44551706cba022d00eff7671241bf8e445c975732", h.StateHash());
+        // Accent-free names re-pin 2026-11-15 (Paul: the pixel font has no é; Lore Master: Ciénaga -> Kelmeer): systems are ordered by name, so
+        // Kelmeer now sorts before Gemshaft and seed 1 plays another game; the AI code does not change. Previous pin 8f68c3b5...5732.
+        Assert.Equal("79c342d32a011143e40eefc5d77f22aae18bac9bf5035c200a4593dcad3c2a4d", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -658,9 +660,9 @@ public class SimpleAiAgentsTests
         Assert.Equal(8, AiLevels.For(AiLevel.Medium).AfterCharterDiplomats);
     }
     // m5-fog-and-hq §N6b + SimpleAiParams.HarvesterYardValue (Paul 2026-10-27: spies spot a harvester being built, Spike teams go at that yard; m5-harvester §5 SpikeInYard)
-    private static int YardSpikes(int value, out bool seen, int? floor = null, int goneDay = -1, int countFrom = 0)
+    private static int YardSpikes(int value, out bool seen, int? floor = null, int goneDay = -1, int countFrom = 0, int seed = 1)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
         var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value, BurnTheBooks = false }; // Burn the Books off: it would take the free Sabotage-capable agents this test counts
         if (floor is int f) p = p with { HarvesterYardMinOddsPercent = f };
         var m = new AiMatch(h, null, p, passive: Side.Hand);
@@ -704,7 +706,8 @@ public class SimpleAiAgentsTests
     [Fact]
     public void HarvesterYardGone_StopsTheSpikesAtThatYard()
     {
-        int kept = YardSpikes(2000, out _, countFrom: 25), gone = YardSpikes(2000, out bool seen, goneDay: 20, countFrom: 25);
+        // seed 4: old-tongue names 2026-11-16 reordered the systems, and seed 1's Collective no longer sends a second Spike after day 1
+        int kept = YardSpikes(2000, out _, countFrom: 25, seed: 4), gone = YardSpikes(2000, out bool seen, goneDay: 20, countFrom: 25, seed: 4);
         Assert.True(seen); // the picture still shows the build: only the note voids it
         Assert.True(kept > 0, $"kept {kept}");
         Assert.Equal(0, gone);

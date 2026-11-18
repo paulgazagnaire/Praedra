@@ -589,7 +589,12 @@ public partial class Main
             Expect(gs.VictoryVisible, "game already ended and the end screen shows");
             if (!playerWins) return;
             Expect(gs.VictoryText.Contains(s.Winner == me ? "VICTORY" : "DEFEAT"), "end screen text: " + gs.VictoryText.Replace("\n", " "));
-            return;
+            if (s.Winner == me) return;
+            // the AI won the long run first (after the 2026-11-16 renames, the Hand wins the Collective run on day 434):
+            // the player's victory screen is checked on a fresh game, so it is never skipped
+            ShowMenu();
+            UiTest.Click(_screen, me.ToString()); UiTest.Click(_screen, "New Game");
+            gs = Gs; s = gs.S;
         }
         s.Host.Control.DebugOrdersEnabled = true; // test-only path: the core's debug order, off in the real game
         Side winner = playerWins ? me : s.Enemy;

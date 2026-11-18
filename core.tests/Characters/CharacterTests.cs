@@ -284,7 +284,7 @@ public class CharacterTests
         int f = w.Fleet(Side.Collective, Shoal);
         int moving = w.Fleet(Side.Collective, Shoal);
         int imp = w.Fleet(Side.Hand, Shoal, Mandate);
-        w.Add(Keth, Shoal); w.Add(Wake, Shoal); w.Add(Oti, Shoal); w.Add(Petrenko, Shoal); w.Add(OldDebt, Shoal);
+        w.Add(Keth, Shoal); w.Add(Wake, Shoal); w.Add(Oti, Shoal); w.Add(Gantry, Shoal); w.Add(OldDebt, Shoal);
         w.Add(FortyOne, Thaw);
         w.Ch.IsOnMission = id => id == OldDebt;
         long Attach(Side s, int c, int fleet, CharacterPost p) => w.Submit(seq => new AttachCharacterOrder(seq, s, c, fleet, p));
@@ -297,7 +297,7 @@ public class CharacterTests
         long a5 = Attach(Side.Collective, Wake, f, CharacterPost.Admiral);
         long a6 = Attach(Side.Collective, OldDebt, f, CharacterPost.None);
         long ok = Attach(Side.Collective, Keth, f, CharacterPost.Admiral);
-        long a7 = Attach(Side.Collective, Petrenko, f, CharacterPost.Admiral);
+        long a7 = Attach(Side.Collective, Gantry, f, CharacterPost.Admiral);
         long a8 = Attach(Side.Collective, Keth, f, CharacterPost.None);
         long chewie = Attach(Side.Collective, Oti, f, CharacterPost.None);
         w.Game.Step();
@@ -314,7 +314,7 @@ public class CharacterTests
         Assert.Null(w.Reason(chewie));
         Assert.Equal((f, CharacterPost.None), (w.C(Oti).AttachedFleet, w.C(Oti).Post));
         Assert.Equal((f, CharacterPost.Admiral), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
-        foreach (var id in new[] { Wake, Petrenko, OldDebt, FortyOne }) Assert.Equal(0, w.C(id).AttachedFleet);
+        foreach (var id in new[] { Wake, Gantry, OldDebt, FortyOne }) Assert.Equal(0, w.C(id).AttachedFleet);
     }
 
     // m5-characters-and-talent CH12
@@ -498,22 +498,22 @@ public class CharacterTests
     public void CH19_HarvesterRollOnMinors()
     {
         var w = new CharWorld();
-        w.Add(Sobel, Thaw); w.Add(DayAfter, Thaw); var c = w.Add(Tura, Shoal); w.Add(Ravilla, Thaw);
+        w.Add(Keel, Thaw); w.Add(DayAfter, Thaw); var c = w.Add(Tura, Shoal); w.Add(Ravilla, Thaw);
         w.StepWith("5.1", ctx => w.Ch.Capture(ctx, c, Side.Hand, Thaw, CharacterCause.Debug));
         int before = w.Stub!.Requests.Count, ev = w.Game.Events.Count;
         // The die is rand(1..100), hit at 50 or less (m5-harvester §2 effect 3); the same chance as the characters sheet's rand(0..99) < 50, shifted by one: 50 hits, 51 misses, 11 hits.
         w.Stub.Expect(1, 100, 50, 51, 11);
         w.StepWith("5.1", ctx => w.Ch.HarvesterStrike(ctx, Thaw, Side.Hand));
         // B2e moved: the hit on a free minor is the Hurt roll (unqueued draws answer 0: hit, sizes 0 and 0, then the minor's death draw 0 < 25),
-        // so Admiral Marta Sobel dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
+        // so Admiral Mara Keel dies of the injury and the kill is not needed; the prisoner Tura is killed without it. 3 + 4 draws.
         Assert.Equal(7, w.Stub.Requests.Count - before);
-        Assert.Equal(CharacterStatus.Dead, w.C(Sobel).Status);
+        Assert.Equal(CharacterStatus.Dead, w.C(Keel).Status);
         Assert.Equal(CharacterStatus.Free, w.C(DayAfter).Status);
         Assert.Equal(CharacterStatus.Dead, w.C(Tura).Status);
         Assert.Equal(CharacterStatus.Free, w.C(Ravilla).Status);
         var order = w.Game.Events.Skip(ev).Where(e => e is CharacterInjured or CharacterKilled)
             .Select(e => (e.Kind, e is CharacterInjured i ? i.Character : ((CharacterKilled)e).Character)).ToList();
-        Assert.Equal(new[] { ("CharacterInjured", Sobel), ("CharacterKilled", Sobel), ("CharacterKilled", Tura) }, order);
+        Assert.Equal(new[] { ("CharacterInjured", Keel), ("CharacterKilled", Keel), ("CharacterKilled", Tura) }, order);
     }
 
     // ------------------------------------------------------------------ the state machine (§Capture, injury, death, freeing)
@@ -644,7 +644,7 @@ public class CharacterTests
         var w = new CharWorld();
         w.Hold(Thaw, Side.Collective);
         int f = w.Fleet(Side.Collective, Thaw);
-        w.Add(FortyOne, Thaw); w.Add(Oti, Thaw); w.Add(Sobel, Thaw); w.Ch.PlaceInFleet(Sobel, f); // attached ones count
+        w.Add(FortyOne, Thaw); w.Add(Oti, Thaw); w.Add(Keel, Thaw); w.Ch.PlaceInFleet(Keel, f); // attached ones count
         w.Add(Nobody, Shoal); // elsewhere
         w.Add(Varo, Thaw); // other side
         var ledger = w.Add(Ledger, Shoal);
@@ -717,12 +717,12 @@ public class CharacterTests
     {
         var w = new CharWorld();
         int into = w.Fleet(Side.Collective, Shoal), from = w.Fleet(Side.Collective, Shoal);
-        w.Add(Keth, Shoal); w.Add(Petrenko, Shoal);
+        w.Add(Keth, Shoal); w.Add(Gantry, Shoal);
         w.Ch.SetPost(Keth, into, CharacterPost.Admiral);
-        w.Ch.SetPost(Petrenko, from, CharacterPost.Admiral);
+        w.Ch.SetPost(Gantry, from, CharacterPost.Admiral);
         Assert.Null(w.Try(seq => new MergeFleetsOrder(seq, Side.Collective, from, into)));
         Assert.Equal((into, CharacterPost.Admiral), (w.C(Keth).AttachedFleet, w.C(Keth).Post));
-        Assert.Equal((into, CharacterPost.None), (w.C(Petrenko).AttachedFleet, w.C(Petrenko).Post));
+        Assert.Equal((into, CharacterPost.None), (w.C(Gantry).AttachedFleet, w.C(Gantry).Post));
         Assert.Equal(CharacterCause.Merged, Assert.Single(w.Events<PostVacated>()).Cause);
     }
 
@@ -779,7 +779,7 @@ public class CharacterTests
         var data = GameData.Default.Characters;
         var v = data.AddedHeroLimitViolations();
         Assert.Contains(v, x => x.Name == "Captain Sunday" && x.Rule == 6);
-        foreach (var name in new[] { "Clementia Noll", "Mateus Kale", "Usura", "Mora", "Damnum", "Director Pythia Kallos", "Ushe" })
+        foreach (var name in new[] { "Clementia Noll", "Mat Thistle", "Usura", "Mora", "Damnum", "Director Pythia Kallos", "Ushe" })
             Assert.Contains(v, x => x.Name == name && x.Rule == 2);
         Assert.All(v, x => Assert.True(data.Get(x.Character).Added)); // the original 60 pass (exempt)
         Assert.DoesNotContain(v, x => x.Rule is 1 or 3 or 4 or 7);
@@ -862,9 +862,9 @@ public class CharacterTests
         Assert.Equal(RejectReason.InTransit, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, Charter)));
         Assert.Equal(CharacterReject.NotAtSystem, w.Try(seq => new AttachCharacterOrder(seq, Side.Collective, FortyOne, f, CharacterPost.None)));
         Assert.Single(w.Events<CharacterDeparted>());
-        var dead = w.Add(Sobel, Shoal);
+        var dead = w.Add(Keel, Shoal);
         w.StepWith("5.2", ctx => w.Ch.Kill(ctx, dead, CharacterCause.Debug));
-        Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Sobel, Thaw)));
+        Assert.Equal(CharacterReject.NotFree, w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, Keel, Thaw)));
     }
 
     // m5-characters-and-talent §Defaults for undecided items: GameSettings null = the module's defaults, each the sheet's DEFAULT

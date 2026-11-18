@@ -30,7 +30,14 @@ public partial class FleetLayer : Control
     public Func<(IReadOnlyList<string> Path, int HopIndex, int ArrivalDay)?> HqRoute { get; set; }
     /// <summary>The player's own characters travelling alone (label, path, the hop they are on), including trips that start next day.</summary>
     public Func<IEnumerable<(string Label, IReadOnlyList<string> Path, int HopIndex)>> CharacterRoutes { get; set; }
+    /// <summary>The player's own things travelling that are not fleets (leaders alone, mission teams, built units and buildings on the way,
+    /// regiments sent alone, the moving HQ). Own side only: fog hides the enemy's (rule: m5-fog-and-hq §F3).</summary>
+    public Func<IEnumerable<Mover>> Movers { get; set; }
+    /// <summary>Draw deliveries (units and buildings on their way from the yard, troops sent alone)? Layers > Deliveries.</summary>
+    public bool ShowDeliveries { get; set; } = true;
+    static bool IsDelivery(MoverKind k) => k is MoverKind.Regiment or MoverKind.Ship or MoverKind.Fighter or MoverKind.Facility;
     const float PickRadiusPx = 13f;
+    const float MoverR = 5.5f;
     const float LabelZoom = 2.0f;
 
     Game _game;
@@ -138,6 +145,57 @@ public partial class FleetLayer : Control
     /// <summary>The fleets drawn now from the core's fleet state (only own fleets with fog on), by id (for the playtest).</summary>
     public IReadOnlyList<int> DrawnFleetIds() => _game == null ? Array.Empty<int>() : Layout().Own.Select(o => o.f.Id).ToList();
 
+    /// <summary>The movers with their screen position and heading (unit vector). A held one sits just below its system.</summary>
+    List<(Mover m, Vector2 pos, Vector2 heading)> PlacedMovers()
+    {
+        var list = new List<(Mover, Vector2, Vector2)>();
+        if (Movers == null) return list;
+        foreach (var m in Movers())
+            if ((ShowDeliveries || !IsDelivery(m.Kind)) && PlaceMover(m, out var p, out var h)) list.Add((m, p, h));
+        return list;
+    }
+
+    bool PlaceMover(Mover m, out Vector2 pos, out Vector2 heading)
+    {
+        pos = Vector2.Zero; heading = Vector2.Right;
+        var map = Map;
+        var pts = new List<Vector2>(m.Path.Count);
+        foreach (var n in m.Path) { if (!_galaxy.TryFindSystem(n, out int i)) return false; pts.Add(map.SystemScreen(i)); }
+        if (pts.Count == 0) return false;
+        int hop = Math.Clamp(m.HopIndex, 0, pts.Count - 1);
+        if (m.Held || pts.Count < 2 || hop >= pts.Count - 1) { pos = pts[hop] + new Vector2(9f, 9f); return true; }
+        if (m.HopTicks != null)
+        {
+            // as a fleet: days flown in this hop, plus the real-time part of the current day
+            int ticks = Math.Max(1, m.HopTicks[hop]);
+            float k = Mathf.Clamp((ticks - (m.DueDay - _game.Day) + DayFraction) / ticks, 0f, 1f);
+            pos = pts[hop].Lerp(pts[hop + 1], k);
+            var d = pts[hop + 1] - pts[hop];
+            if (d.LengthSquared() > 0.01f) heading = d.Normalized();
+            return true;
+        }
+        // only the trip's total is known (a mission team): spread it over the path by length
+        float total = 0f;
+        for (int i = 0; i + 1 < pts.Count; i++) total += pts[i].DistanceTo(pts[i + 1]);
+        int all = Math.Max(1, m.TotalTicks);
+        float want = Mathf.Clamp((all - (m.DueDay - _game.Day) + DayFraction) / all, 0f, 1f) * total;
+        for (int i = 0; i + 1 < pts.Count; i++)
+        {
+            float len = pts[i].DistanceTo(pts[i + 1]);
+            if (want <= len || i + 2 == pts.Count)
+            {
+                pos = pts[i].Lerp(pts[i + 1], len > 0.01f ? Mathf.Clamp(want / len, 0f, 1f) : 1f);
+                if (len > 0.01f) heading = (pts[i + 1] - pts[i]) / len;
+                return true;
+            }
+            want -= len;
+        }
+        pos = pts[^1]; return true;
+    }
+
+    /// <summary>The labels of the movers drawn now (for the playtest).</summary>
+    public IReadOnlyList<string> MoverLabels() => _game == null ? Array.Empty<string>() : PlacedMovers().Select(x => x.m.Label).ToList();
+
     /// <summary>Screen rectangles of the fleet markers and their names, so the map keeps system names off them.</summary>
     public IEnumerable<Rect2> Obstacles()
     {
@@ -157,6 +215,11 @@ public partial class FleetLayer : Control
             const float r = 8.5f;
             yield return new Rect2(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
             if (map.Zoom >= LabelZoom) yield return NameBox(font, p, r, EnemyText(pic));
+        }
+        foreach (var (m, p, _) in PlacedMovers())
+        {
+            yield return new Rect2(p - new Vector2(MoverR + 1, MoverR + 1), new Vector2(2 * MoverR + 2, 2 * MoverR + 2));
+            if (map.Zoom >= LabelZoom) yield return NameBox(font, p, MoverR, m.Label);
         }
     }
 
@@ -283,6 +346,8 @@ public partial class FleetLayer : Control
                 DrawDestination(font, from, $"{hit.f.Name} arrives day {plan.ArrivalDay}", white, map.SelectedFleet == kv.Key || map.Zoom >= LabelZoom);
             }
 
+        DrawMovers(font);
+
         var drawnStacks = new HashSet<string>(StringComparer.Ordinal); // membership only
         foreach (var (f, p, h) in placed.OrderBy(x => map.SelectedFleet == x.f.Id ? 0 : 1).ThenBy(x => x.f.Id))
         {
@@ -332,6 +397,108 @@ public partial class FleetLayer : Control
         }
     }
 
+    /// <summary>
+    /// The player's own movers: a small glyph per kind (leader diamond, mission team diamond in a ring, regiment square, building hexagon, ship or
+    /// fighter hollow triangle, HQ gold disc), moving like a fleet; the rest of the route as a faint dashed line; the label only when zoomed in.
+    /// </summary>
+    void DrawMovers(Font font)
+    {
+        var map = Map;
+        bool labels = map.Zoom >= LabelZoom;
+        foreach (var (m, p, h) in PlacedMovers())
+        {
+            var col = m.Kind == MoverKind.Hq ? new Color(1f, 0.95f, 0.5f) : ColorOf(Player ?? Side.Hand);
+            var edge = new Color(1, 1, 1, 0.9f);
+            // the route still ahead (a lone leader, with its hop times, and the HQ already have their own route line; a Move group does not)
+            bool ownLine = m.Kind == MoverKind.Hq || (m.Kind == MoverKind.Leader && m.HopTicks != null);
+            if (!m.Held && !ownLine && m.Path.Count > 1)
+            {
+                var faint = col; faint.A = 0.45f;
+                var from = p;
+                int next = m.HopTicks != null ? m.HopIndex + 1 : NextPoint(m, p);
+                for (int i = next; i < m.Path.Count; i++)
+                {
+                    if (!_galaxy.TryFindSystem(m.Path[i], out int sys)) break;
+                    var to = map.SystemScreen(sys);
+                    DrawDashedLine(from, to, faint, 1.3f, 3f);
+                    from = to;
+                }
+            }
+            float r = MoverR;
+            switch (m.Kind)
+            {
+                case MoverKind.Leader:
+                case MoverKind.Mission:
+                {
+                    var d = new[] { p + new Vector2(0, -r), p + new Vector2(r, 0), p + new Vector2(0, r), p + new Vector2(-r, 0) };
+                    DrawColoredPolygon(d, col);
+                    DrawPolyline(new[] { d[0], d[1], d[2], d[3], d[0] }, edge, 1.2f, true);
+                    if (m.Kind == MoverKind.Mission) DrawArc(p, r + 3f, 0, Mathf.Tau, 20, col, 1.3f, true);
+                    break;
+                }
+                case MoverKind.Regiment:
+                {
+                    var q = new[] { p + new Vector2(-r * 0.8f, -r * 0.8f), p + new Vector2(r * 0.8f, -r * 0.8f), p + new Vector2(r * 0.8f, r * 0.8f), p + new Vector2(-r * 0.8f, r * 0.8f) };
+                    DrawColoredPolygon(q, col);
+                    DrawPolyline(new[] { q[0], q[1], q[2], q[3], q[0] }, edge, 1.2f, true);
+                    break;
+                }
+                case MoverKind.Facility:
+                {
+                    var hex = new Vector2[7];
+                    for (int i = 0; i < 6; i++) hex[i] = p + Vector2.FromAngle(Mathf.Pi / 6f + i * Mathf.Pi / 3f) * r;
+                    hex[6] = hex[0];
+                    DrawColoredPolygon(hex[..6], col);
+                    DrawPolyline(hex, edge, 1.2f, true);
+                    break;
+                }
+                case MoverKind.Hq:
+                    DrawCircle(p, r + 0.5f, col);
+                    DrawArc(p, r + 0.5f, 0, Mathf.Tau, 20, new Color(0, 0, 0, 0.85f), 1.2f, true);
+                    break;
+                default: // ships and fighters flying alone: a hollow triangle, smaller for fighters
+                {
+                    float rr = m.Kind == MoverKind.Fighter ? r * 0.85f : r * 1.1f;
+                    var perp = new Vector2(-h.Y, h.X);
+                    var tri = new[] { p + h * rr, p - h * rr * 0.7f + perp * rr * 0.7f, p - h * rr * 0.7f - perp * rr * 0.7f, p + h * rr };
+                    DrawColoredPolygon(tri[..3], Ui.MapBg);
+                    DrawPolyline(tri, col, 1.6f, true);
+                    break;
+                }
+            }
+            if (m.Count > 1) Badge(font, p, r, m.Count, col);
+            if (labels)
+            {
+                var pos = p + new Vector2(r + 4f + (m.Count > 1 ? 12f : 0f), 4f);
+                DrawStringOutline(font, pos, m.Label, HorizontalAlignment.Left, -1, 12, 4, new Color(0, 0, 0, 0.9f));
+                DrawString(font, pos, m.Label, HorizontalAlignment.Left, -1, 12, col);
+            }
+        }
+    }
+
+    /// <summary>For a mover placed by length: the index of the first path system still ahead of it.</summary>
+    int NextPoint(Mover m, Vector2 p)
+    {
+        var map = Map;
+        float best = float.MaxValue; int at = 1;
+        for (int i = 0; i + 1 < m.Path.Count; i++)
+        {
+            if (!_galaxy.TryFindSystem(m.Path[i], out int a) || !_galaxy.TryFindSystem(m.Path[i + 1], out int b)) break;
+            var pa = map.SystemScreen(a); var pb = map.SystemScreen(b);
+            float d = DistToSegment(p, pa, pb);
+            if (d < best - 0.01f) { best = d; at = i + 1; }
+        }
+        return at;
+    }
+
+    static float DistToSegment(Vector2 p, Vector2 a, Vector2 b)
+    {
+        var ab = b - a; float l2 = ab.LengthSquared();
+        if (l2 < 0.0001f) return p.DistanceTo(a);
+        float t = Mathf.Clamp((p - a).Dot(ab) / l2, 0f, 1f);
+        return p.DistanceTo(a + ab * t);
+    }
+
     /// <summary>The number of fleets in a stacked marker, in a small dark disc at its top right.</summary>
     void Badge(Font font, Vector2 p, float r, int count, Color col)
     {
@@ -343,3 +510,14 @@ public partial class FleetLayer : Control
         DrawString(font, at + new Vector2(-size.X / 2f, font.GetAscent(11) / 2f - 1f), t, HorizontalAlignment.Left, -1, 11, Colors.White);
     }
 }
+
+/// <summary>What a mover on the map is; picks its glyph.</summary>
+public enum MoverKind { Leader, Mission, Regiment, Ship, Fighter, Facility, Hq }
+
+/// <summary>
+/// One of the player's own things travelling that is not a fleet, as the map draws it. Path is the whole trip (system names); HopTicks, HopIndex
+/// and DueDay as in a fleet transit. HopTicks null = only the total is known (a mission team): it is placed by length along the path over the
+/// days [DueDay - TotalTicks, DueDay]. Held = waiting at Path[HopIndex] (a delivery stopped by an enemy fleet or a lost destination).
+/// </summary>
+public sealed record Mover(MoverKind Kind, string Label, IReadOnlyList<string> Path, IReadOnlyList<int> HopTicks, int HopIndex, int DueDay,
+    int TotalTicks = 0, int Count = 1, bool Held = false);

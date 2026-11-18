@@ -19,6 +19,8 @@ public static class UiSettings
     // the core's pauses
     public static bool PauseBattle = true, PauseCapture = true, PauseInvasion = true, PauseHarvest = true;
     // pauses the player can add
+    /// <summary>Map: draw your units and buildings on their way from the yard and troops sent alone (Layers > Deliveries; Paul 2026-11-17).</summary>
+    public static bool ShowDeliveries = true;
     public static bool PauseEnemyAtMine, PauseUprising, PauseSensors, PauseCompleted, PauseMission;
 
     public static void Load()
@@ -35,6 +37,7 @@ public static class UiSettings
         PauseSensors = (bool)c.GetValue("pause", "sensors", false);
         PauseCompleted = (bool)c.GetValue("pause", "completed", false);
         PauseMission = (bool)c.GetValue("pause", "mission", false);
+        ShowDeliveries = (bool)c.GetValue("map", "deliveries", true);
     }
 
     public static void Save()
@@ -50,6 +53,7 @@ public static class UiSettings
         c.SetValue("pause", "sensors", PauseSensors);
         c.SetValue("pause", "completed", PauseCompleted);
         c.SetValue("pause", "mission", PauseMission);
+        c.SetValue("map", "deliveries", ShowDeliveries);
         var err = c.Save(Path);
         if (err != Error.Ok) GD.PrintErr($"Could not save the settings: {err}");
     }

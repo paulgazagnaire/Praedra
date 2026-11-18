@@ -61,6 +61,19 @@ public sealed partial class GameSession
     public AiLevel Level { get; }
     public Side Enemy => Player == Side.Hand ? Side.Collective : Side.Hand;
     public SimpleAi Opponent { get; }
+    /// <summary>Sibyl, the Hand player's advisor: her two switches are game state; she plans before the opponent each day. rule: m6-advisor-sibyl.</summary>
+    public Sibyl Advisor { get; }
+    /// <summary>Does the player's side have an advisor in the game screen (the Collective's is still to be designed, Paul 2026-11-16).</summary>
+    public bool HasAdvisor => Player == Side.Hand;
+    // Switches the player set today: sent as one order each when the day runs (a marker can change once per day), so a box clicked on and
+    // off again in one day sends nothing.
+    readonly Dictionary<SibylJob, bool> _sibylWanted = new();
+    /// <summary>The day Sibyl last said she has no upkeep room for a world's uprising (screen state only: she says it again after 30 days).</summary>
+    readonly Dictionary<string, int> _sibylUnpaidSaid = new(StringComparer.Ordinal);
+    const int SibylRepeatDays = 30;
+    /// <summary>Is the job on, counting a switch the player set today (it takes effect when the day runs).</summary>
+    public bool SibylOn(SibylJob job) => _sibylWanted.TryGetValue(job, out var v) ? v : Advisor.IsOn(job);
+    public void SetSibyl(SibylJob job, bool on) => _sibylWanted[job] = on;
     /// <summary>Test only (the headless playtest): the computer side plans nothing, so a test fleet it would scrap or move stays put.</summary>
     public bool OpponentIdle { get; set; }
     public List<Message> Messages { get; } = new();
@@ -95,6 +108,7 @@ public sealed partial class GameSession
     {
         Host = host; Player = player; Level = level;
         Opponent = GameBoot.CreateOpponent(host, player == Side.Hand ? Side.Collective : Side.Hand, level);
+        Advisor = new Sibyl(host, player);
         _printed = host.Fog.EventsFor(player).Count;
         Snapshot();
     }
@@ -268,9 +282,36 @@ public sealed partial class GameSession
     public StepOutcome StepDay()
     {
         Snapshot();
+        int day = Game.Day;
+        var switched = new List<string>();
+        foreach (var (job, on) in _sibylWanted.OrderBy(kv => kv.Key))
+            if (on != Advisor.IsOn(job)) { Advisor.Submit(job, on); switched.Add(on ? $"Sibyl will {SibylJobWords(job)} from tomorrow." : $"Sibyl stops {SibylJobWords(job, ing: true)}."); }
+        _sibylWanted.Clear();
+        var advised = HasAdvisor ? Advisor.PlanDay() : Array.Empty<SubmittedOrder>(); // after the player's orders, before the opponent's
+        foreach (var x in advised) _pending[x.Sequence] = "Sibyl's order (" + SibylWords(x.Detail).Text + ")";
         if (!OpponentIdle) Opponent.PlanDay();
         Game.Step();
         var outcome = new StepOutcome();
+        foreach (var t in switched)
+        {
+            var m = new Message(day, t, null, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
+            Messages.Add(m); outcome.New.Add(m);
+        }
+        var accepted = Game.Events.OfType<OrderAccepted>().Select(e => e.Sequence).ToHashSet();
+        foreach (var x in advised.Where(x => accepted.Contains(x.Sequence))) // a refused one shows as "Order refused" only (ReadEvents)
+        {
+            var (text, place) = SibylWords(x.Detail);
+            var m = new Message(day, "Sibyl: " + text + ".", place, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
+            Messages.Add(m); outcome.New.Add(m);
+        }
+        // rule: m6-advisor-sibyl §Messages: an uprising she leaves unpaid because she keeps her upkeep margin, once a month per world
+        foreach (var rising in HasAdvisor ? Advisor.UnpaidUprisings : Array.Empty<string>())
+        {
+            if (_sibylUnpaidSaid.TryGetValue(rising, out int said) && day - said < SibylRepeatDays) continue;
+            _sibylUnpaidSaid[rising] = day;
+            var m = new Message(day, $"Sibyl: no upkeep room to send regiments to {rising} (uprising). Free some upkeep, or order them yourself.", rising, MsgKind.Warn) { Cat = MsgCat.Orders, Tag = "Sibyl" };
+            Messages.Add(m); outcome.New.Add(m);
+        }
         ReadEvents(outcome);
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
         _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null; _hqSeq = -1;
@@ -283,6 +324,28 @@ public sealed partial class GameSession
             outcome.PauseReason = outcome.PauseReason ?? "victory";
         }
         return outcome;
+    }
+
+    /// <summary>
+    /// Sibyl's order in plain words and the world it is for: "3 x Tranches at Charter for Remedium" becomes "3 Tranches ordered at Charter for
+    /// Remedium"; "Mine at Tamarisk from Charter" becomes "a Mine ordered at Charter for Tamarisk"; a redirect names the uprising world. rule: m6-advisor-sibyl §Messages.
+    /// </summary>
+    static string SibylJobWords(SibylJob job, bool ing = false) => job == SibylJob.ManageGarrisons
+        ? (ing ? "managing your garrisons" : "manage your garrisons")
+        : (ing ? "managing your production" : "manage your production");
+
+    static (string Text, string Place) SibylWords(string detail)
+    {
+        var moved = System.Text.RegularExpressions.Regex.Match(detail, @"^(\d+) x (.+) in training at (.+) redirected from (.+) to (.+)$");
+        if (moved.Success)
+            return ($"{moved.Groups[1].Value} {moved.Groups[2].Value} in training at {moved.Groups[3].Value} now go to {moved.Groups[5].Value} (uprising) instead of {moved.Groups[4].Value}", moved.Groups[5].Value);
+        var troops = System.Text.RegularExpressions.Regex.Match(detail, @"^(\d+) x (.+) at (.+) for (.+)$");
+        if (troops.Success)
+            return ($"{troops.Groups[1].Value} {troops.Groups[2].Value} ordered at {troops.Groups[3].Value} for {troops.Groups[4].Value}", troops.Groups[4].Value);
+        var build = System.Text.RegularExpressions.Regex.Match(detail, @"^(.+) at (.+) from (.+)$");
+        if (build.Success)
+            return ($"a {build.Groups[1].Value} ordered at {build.Groups[3].Value} for {build.Groups[2].Value}", build.Groups[2].Value);
+        return (detail, null);
     }
 
     void Snapshot()

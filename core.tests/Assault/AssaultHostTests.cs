@@ -81,7 +81,7 @@ public class AssaultHostTests
         Assert.Contains(l.Game.Queue, o => o is AssaultOrder { System: "Fiducia", Side: Side.Hand });
     }
 
-    // the test campaign's one scripted assault (day 250, the interdiction fleet lands on Tierra Larga), with every daily invariant green
+    // the test campaign's one scripted assault (day 250, the interdiction fleet lands on Annavori), with every daily invariant green
     [Fact]
     public void CampaignScriptedAssaultResolvesOnItsDay()
     {

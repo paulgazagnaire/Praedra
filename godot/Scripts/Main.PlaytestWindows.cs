@@ -202,6 +202,12 @@ public partial class Main
                 Expect(gs.MgText($"Ground {held}").Contains("on the way"), "the system window shows it on the way");
                 gs.PlayDay();
                 Expect(cons.Deliveries.Any(d => d.Object == lone.Id && d.To == held), $"next day it travels alone to {held}");
+                Expect(gs.MoverLabels().Any(l => l.Contains($"to {held}")), $"the map shows the regiment on its way to {held}: {string.Join(" | ", gs.MoverLabels())}");
+                // Layers > Deliveries hides it and shows it again (Paul 2026-11-17)
+                bool lit = gs.PressDeliveries();
+                Expect(!lit && !gs.MoverLabels().Any(l => l.Contains($"to {held}")), "Layers > Deliveries off hides the regiment on its way");
+                lit = gs.PressDeliveries();
+                Expect(lit && gs.MoverLabels().Any(l => l.Contains($"to {held}")), "Layers > Deliveries on shows it again");
             }
             var other = s.Game.State.Economy.Objects.Values.Where(o => o.Side == me && o.Category == ObjectCategory.Regiment && o.Completed && o.System != null && o.AboardShip == 0)
                 .OrderBy(o => o.Id).FirstOrDefault();
