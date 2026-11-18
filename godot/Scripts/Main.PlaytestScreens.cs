@@ -167,13 +167,15 @@ public partial class Main
         var td = gs.SectorTileData(home);
         Expect(td != null && td.You == Ui.You && td.Enemy == Ui.Enemy && td.NameColor == Ui.You,
             "the sector tile draws you blue and the enemy orange, like the map (Paul 2026-11-11)");
-        Expect(PlanetArt.Of(home) != null && PlanetArt.KindOf(home) != null, $"{home} has its Planet Maker picture and a world kind ({PlanetArt.KindOf(home)})");
-        Expect(gs.G.Systems.All(x => PlanetArt.Of(x.Name) != null), "every system of the map has a planet picture");
-        Expect(gs.G.Systems.All(x => PlanetArt.HarvestedOf(x.Name) != null), "every system of the map has a harvested remnant picture");
+        Expect(gs.G.Systems.All(x => PlanetLook.Of(x.Name) != null), "every system of the map has its Planet Maker settings, so its planet is drawn live");
+        Expect(td.Planet is ViewportTexture, $"{home}'s tile shows its planet drawn live by the Planet Maker shader, not a baked picture");
+        Expect(!ResourceLoader.Exists("res://art/planets/atlas.png") && !ResourceLoader.Exists("res://art/planets/atlas-harvested.png"), "no baked planet pictures ship with the game (Paul 2026-11-18)");
         Expect(gs.G.Systems.All(x => SystemLore.Of(x.Name) != null), "every system of the map has its lore (data/design/system-lore.csv)");
         var unseen = cards.FirstOrDefault(c => !s.Explored(c) && s.OwnerOf(c) != me);
         if (unseen != null) Expect(gs.SectorCardText(unseen).Trim() == unseen && gs.SectorCardTip(unseen).Contains("unexplored") && !gs.SectorCardTip(unseen).Contains("Loyalty"),
             $"an unexplored tile ({unseen}) shows its name and planet only");
+        if (unseen != null && gs.SectorTileData(unseen) is { } ud)
+            Expect(ud.Planet is ViewportTexture && ud.PlanetTint != Colors.White, $"an unexplored tile ({unseen}) shows its planet drawn live but still and greyed");
         gs.PressKey(Key.Right);
         Expect(gs.SectorViewOpen && gs.SectorViewName != homeSec, "the Right arrow steps to the next sector: " + gs.SectorViewName);
         gs.PressKey(Key.Left);

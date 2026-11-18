@@ -9,15 +9,18 @@ namespace PraedraViewer;
 /// One planet drawn live by the Planet Maker's own shader (PlanetLive.gdshader, generated from the tool by
 /// tools/planet-maker/port-godot-shader.py), for the sector window's tiles (Paul 2026-11-11: "in the sector window. the planets need to
 /// be animated, like in the planet maker tool, and following the parameters of each planets"). It is a small buffer the size of the
-/// baked thumbnail (96 x 96 dots, one pixel per dot), drawn in the thumbnails' style (dither on, Grain, the planet's own colours,
-/// see-through sky, framed on the planet and its rings: tools/planet-maker/bake-thumbs.js), so the tile shows it exactly as it showed the
-/// baked picture: nearest filtering, a whole number of screen pixels per dot. The shader therefore runs on 9,216 pixels per planet,
-/// whatever the screen. <see cref="Advance"/> moves the clock and asks for one new frame; with no call, nothing is drawn.
+/// tool's thumbnail (96 x 96 dots, one pixel per dot), drawn in the thumbnails' style (dither on, Grain, the planet's own colours,
+/// see-through sky, framed on the planet and its rings: tools/planet-maker/bake-thumbs.js), so the tile shows it exactly as the tool's
+/// thumbnail: nearest filtering, a whole number of screen pixels per dot. The shader therefore runs on 9,216 pixels per planet,
+/// whatever the screen. <see cref="Advance"/> moves the clock and asks for one new frame; the first frame is drawn on its own, and with no call it stays still.
 /// Every number handed to the shader is worked out as the tool's drawP() does (planet-maker.src.html), line for line.
 /// Drawing only: nothing here reads or changes the game.
 /// </summary>
 public partial class PlanetLive : SubViewport
 {
+    /// <summary>The side of a planet picture in dots: the Planet Maker's thumbnail size (tools/planet-maker/bake-thumbs.js), one pixel
+    /// per dot. Every planet in the game is drawn live by the shader below; there are no baked planet pictures (Paul 2026-11-18).</summary>
+    public const int Dots = 96;
     const double D = Math.PI / 180;
     const int MaxMoons = 8;                 // MAX_MOONS: the shader's moon arrays hold this many
     const string BaseLCol = "#ff9e47";      // BASE.lCol: warm sodium city lights
@@ -348,20 +351,22 @@ public partial class PlanetLive : SubViewport
 public partial class PlanetLiveSet : Control
 {
     readonly Dictionary<string, PlanetLive> _live = new(StringComparer.Ordinal);
+    readonly HashSet<string> _still = new(StringComparer.Ordinal);
     bool _focused = true;
 
     public PlanetLiveSet() { MouseFilter = MouseFilterEnum.Ignore; Size = Vector2.Zero; }
 
     /// <summary>The live picture of a system's planet (its harvested remnant when <paramref name="harvested"/>), or null when there are no
-    /// settings for it (the caller keeps the baked picture).</summary>
-    public Texture2D Of(string system, bool harvested)
+    /// settings for it. A <paramref name="still"/> planet is drawn once and never moves (a system your side never looked at).</summary>
+    public Texture2D Of(string system, bool harvested, bool still = false)
     {
-        string key = (harvested ? "x:" : "") + system;
+        string key = Key(system, harvested, still);
         if (_live.TryGetValue(key, out var pl)) return pl.GetTexture();
         var look = PlanetLook.Of(system);
         if (look == null) return null;
-        pl = new PlanetLive(look, harvested, PlanetArt.Dots);
+        pl = new PlanetLive(look, harvested, PlanetLive.Dots);   // draws its first frame on its own
         _live[key] = pl;
+        if (still) _still.Add(key);
         AddChild(pl);
         return pl.GetTexture();
     }
@@ -374,10 +379,11 @@ public partial class PlanetLiveSet : Control
         {
             _live[k].QueueFree();
             _live.Remove(k);
+            _still.Remove(k);
         }
     }
 
-    public static string Key(string system, bool harvested) => (harvested ? "x:" : "") + system;
+    public static string Key(string system, bool harvested, bool still = false) => (still ? "s:" : "") + (harvested ? "x:" : "") + system;
 
     // redrawn at most 30 times a second, as the galaxy backdrop (GalaxyBackdrop.FrameSeconds): a 120 Hz screen would otherwise run the full
     // Planet Maker shader for every tile 120 times a second (Ponytail on #286)
@@ -389,7 +395,7 @@ public partial class PlanetLiveSet : Control
         if (!_focused || !IsVisibleInTree()) return;
         _sinceFrame += delta;
         if (_sinceFrame < FrameSeconds) return;
-        foreach (var pl in _live.Values) pl.Advance(_sinceFrame);   // the whole time since the last frame, so the speeds stay the tool's
+        foreach (var (k, pl) in _live) if (!_still.Contains(k)) pl.Advance(_sinceFrame);   // the whole time since the last frame, so the speeds stay the tool's
         _sinceFrame = 0;
     }
 
