@@ -54,7 +54,7 @@ public sealed class PlanetLook
 
     static Dictionary<string, PlanetLook> _all;
 
-    /// <summary>The settings of a system's planet, or null if the file has none (the tile then keeps its baked picture).</summary>
+    /// <summary>The settings of a system's planet, or null if the file has none (the tile then shows no planet).</summary>
     public static PlanetLook Of(string system)
     {
         Load();
@@ -66,7 +66,7 @@ public sealed class PlanetLook
         if (_all != null) return;
         _all = new Dictionary<string, PlanetLook>(StringComparer.Ordinal);
         using var f = FileAccess.Open(Path, FileAccess.ModeFlags.Read);
-        if (f == null) { GD.PushWarning($"{Path}: {FileAccess.GetOpenError()}; the sector window shows the baked planet pictures"); return; }
+        if (f == null) { GD.PushWarning($"{Path}: {FileAccess.GetOpenError()}; the sector window shows no planets"); return; }
         try
         {
             var root = JsonNode.Parse(f.GetAsText())!.AsObject();
@@ -81,7 +81,7 @@ public sealed class PlanetLook
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or NullReferenceException or FormatException)
         {
-            GD.PushWarning($"{Path}: {e.Message}; the sector window shows the baked planet pictures");
+            GD.PushWarning($"{Path}: {e.Message}; the sector window shows no planets");
             _all.Clear();
         }
     }

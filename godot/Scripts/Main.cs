@@ -186,7 +186,7 @@ public partial class Main : Control
             if (look == null) { GD.PrintErr("no live planet settings for " + n); continue; }
             foreach (bool harv in new[] { false, true })
             {
-                var pl = new PlanetLive(look, harv, PlanetArt.Dots);
+                var pl = new PlanetLive(look, harv, PlanetLive.Dots);
                 AddChild(pl);
                 for (double done = 0; done < at - 1e-9; done += 0.1) pl.Advance(Math.Min(0.1, at - done));
                 shots.Add(($"{dir}/{n.ToLowerInvariant().Replace(' ', '-')}{(harv ? "-harvested" : "")}.png", pl));

@@ -115,7 +115,7 @@ public partial class Main
             Expect(inf.Contains("HARVESTED") && !inf.Contains("energy slots") && !inf.Contains("Ground at"), "the open Infrastructure window turns into the harvested card: " + inf.Replace("\n", " / "));
         }
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
-        Expect(PlanetArt.HarvestedOf(target) != null && PlanetArt.HarvestedOf(target) != PlanetArt.Of(target), $"{target} has its harvested remnant picture");
+        Expect(PlanetLook.Of(target) != null, $"{target} has Planet Maker settings, so its harvested remnant is drawn live");
         // the harvested world's tile opens one plain card: no tabs, no Infrastructure window (Paul 2026-11-04)
         gs.TileClick(target, "infra"); gs.PlayRefresh();
         string card = gs.MgText($"Ground {target}");

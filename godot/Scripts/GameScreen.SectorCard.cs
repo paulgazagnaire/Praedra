@@ -54,17 +54,13 @@ public partial class GameScreen
         d.Enemy = Ui.Enemy;
         d.Faint = new Color(Ui.Text3, 0.28f);
         d.NameColor = dead ? Ui.Danger : !explored ? Ui.Dimmed : (known || mine) && holder is Side hs ? Ui.OwnerColor(hs, Me) : Ui.Text2;
-        d.Planet = dead ? PlanetArt.HarvestedOf(n) ?? PlanetArt.Of(n) : PlanetArt.Of(n);
         // the planet drawn live by the Planet Maker's shader, turning with its own settings (Paul 2026-11-11: "the planets need to be
         // animated, like in the planet maker tool"); a harvested system shows the tool's harvested view live. A system never looked at
-        // keeps its still, greyed picture (the fog is unchanged).
-        if ((explored || dead) && _secPlanets.Of(n, dead) is Texture2D live)
-        {
-            d.Planet = live;
-            _secPlanetKeys.Add(PlanetLiveSet.Key(n, dead));
-        }
-        else if (dead && PlanetArt.HarvestedOf(n) == null) d.PlanetTint = new Color(0.6f, 0.22f, 0.2f, 0.55f); // no remnant picture: tint the old one
-        else if (!explored) d.PlanetTint = new Color(0.7f, 0.72f, 0.78f, 0.8f);
+        // shows its planet still and greyed (the fog is unchanged). Every planet is drawn in code: no baked pictures (Paul 2026-11-18).
+        bool still = !explored && !dead;
+        d.Planet = _secPlanets.Of(n, dead, still);
+        if (d.Planet != null) _secPlanetKeys.Add(PlanetLiveSet.Key(n, dead, still));
+        if (still) d.PlanetTint = new Color(0.7f, 0.72f, 0.78f, 0.8f);
         var alarms = Alarms(n, mine);
         d.Ring = alarms.Any(a => a.Item2 == Ui.Danger && a.Item1 != "ENEMY FLEET");
         d.Gauges = explored && !dead;

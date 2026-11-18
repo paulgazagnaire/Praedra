@@ -101,9 +101,16 @@ public partial class GameScreen
     void HarvestedWin(MgWin w, string n)
     {
         MgHead(w, $"Harvested · {RegionOf(n)}", n, Ui.Danger, S.DestroyedWords(n), Ui.Tag("HARVESTED", Ui.Danger, true));
-        if (PlanetArt.HarvestedOf(n) is Texture2D rem)
-            Add(new TextureRect { Texture = rem, TextureFilter = TextureFilterEnum.Nearest, CustomMinimumSize = new Vector2(PlanetArt.Dots, PlanetArt.Dots),
+        // what is left of the planet, drawn live by the Planet Maker's shader (no baked pictures, Paul 2026-11-18)
+        var planets = new PlanetLiveSet();
+        if (planets.Of(n, true) is Texture2D rem)
+        {
+            var pic = Add(new TextureRect { Texture = rem, TextureFilter = TextureFilterEnum.Nearest, CustomMinimumSize = new Vector2(PlanetLive.Dots, PlanetLive.Dots),
                 ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, SizeFlagsHorizontal = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            pic.SetMeta(UiTest.FullName, "Harvested planet " + n);
+            pic.AddChild(planets);
+        }
+        else planets.QueueFree();
         Line("The planet and everything on it are gone for good: no people, buildings or troops. Nobody holds it, and nobody can build, invade or send missions here.", Ui.Text2, Ui.Small);
         Line("It stays on the map as a field of debris. Fleets can still pass through it and stop here.", Ui.Text3, Ui.Small);
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
