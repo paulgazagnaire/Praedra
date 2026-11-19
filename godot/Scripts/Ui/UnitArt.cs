@@ -87,10 +87,3 @@ public partial class ArtTile : PanelContainer
     public string Cls;
     public override Control _MakeCustomTooltip(string forText) => UnitArt.Card(Cls, forText);
 }
-
-/// <summary>A build card button that shows a class's whole painted picture as its hover card. Screens only.</summary>
-public partial class ArtButton : Button
-{
-    public string Cls;
-    public override Control _MakeCustomTooltip(string forText) => UnitArt.Card(Cls, forText);
-}
