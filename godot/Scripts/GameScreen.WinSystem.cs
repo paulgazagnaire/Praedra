@@ -173,19 +173,20 @@ public partial class GameScreen
         if (regs.Count == 0) rz.Flow.AddChild(EmptySlot("No regiments"));
         Add(rz.Box);
         // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's window they go there (a Move mission)
-        Section("Special forces", null, "Agents never ride fleets. Drag one onto another system's Troops tab to send it there.");
+        Section("Special forces", null, "Agents never ride fleets. Right-click one to send it on a mission; drag it onto another system's Troops tab to move it there.");
         var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
         foreach (var o in sf)
         {
             Drag? d = SfReady(o) ? new Drag('F', o.Id) : null;
             if (d is { } dd && _moved.ContainsKey(dd.Key)) continue;
             var t = Tile(UnitIcon.Kind.Agent, Me == Side.Hand, 1, S.SpecialForceName(o.Id), SpecialForceState(o), 1, d == null ? Ui.Text3 : Ui.You);
-            t.TooltipText = Ui.Wrap(S.SpecialForceName(o.Id) + (d != null ? "\nDrag it onto another system to send it there." : ""));
-            if (d is { } drag) { t.SetMeta(UiTest.FullName, drag.Key); MakeDraggable(t, new List<Drag> { drag }, S.SpecialForceName(o.Id)); }
+            t.TooltipText = Ui.Wrap(S.SpecialForceName(o.Id) + (d != null ? "\nRight-click to send it on a mission. Drag it onto another system to move it there." : ""));
+            if (d is { } drag) { t.SetMeta(UiTest.FullName, drag.Key); MakeDraggable(t, new List<Drag> { drag }, S.SpecialForceName(o.Id)); MissionMenu(t, n, null, o.Id); }
             sz.Flow.AddChild(t);
         }
         if (sf.Count == 0) sz.Flow.AddChild(EmptySlot("No special forces"));
         Add(sz.Box);
+        if (sf.Any(SfReady)) MgLinks(("Send a mission...", () => { CloseSectorView(); OpenPlanner(n); }, "Pick a team standing here, the kind of mission and the target."));
     }
 
     void FightersTab(string n, List<EconObject> based)

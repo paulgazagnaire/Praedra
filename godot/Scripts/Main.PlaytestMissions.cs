@@ -103,6 +103,11 @@ public partial class Main
                 .Concat(gs.G.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == null))
                 .Where(n => n != spy.System && Ticks(spy.System, n) < int.MaxValue).OrderBy(n => Ticks(spy.System, n)).ThenBy(n => n, StringComparer.Ordinal).First();
             GD.Print($"  {name} at {spy.System}: espionage on {target}");
+            // the leader's card in the system window: right-click lists the missions they can do (Paul 2026-11-19)
+            gs.ShotWindow("ground", spy.System); gs.PlayRefresh();
+            var lmenu = gs.MenuOf("Leader " + name);
+            Expect(lmenu.Contains("Espionage..."), $"right-click {name}'s card: the missions they can do: {string.Join(" | ", lmenu)}");
+            gs.MgCloseAll(); gs.PlayRefresh();
             gs.ClickViaMenu("Leaders"); gs.PlayRefresh();
             Expect(gs.Has($"Send {name} on a mission..."), $"the Characters list offers Send {name} on a mission...");
             // the result is checked later (FinishMissions), so the rest of the playtest keeps its usual days
@@ -145,6 +150,31 @@ public partial class Main
             $"{uname} can spy, and Diplomacy is greyed with the unit named: " + string.Join(" | ", texts.Where(t => t.StartsWith("Espionage") || t.StartsWith("Diplomacy"))));
         Expect(gs.Click("Close without sending") && !gs.PlannerOpen, "close the planner");
         gs.View.Select(-1); gs.PlayRefresh();
+
+        // the unit's own card (Paul 2026-11-19: "a right click option to select the mission type and destination"): right-click it in the
+        // system window's Troops tab, pick Espionage, click the target on the map, send
+        gs.ShotWindow("ground", yard); gs.PlayRefresh();
+        Expect(gs.Click($"Tab Ground {yard} Troops"), "open the Troops tab of the system window");
+        gs.PlayRefresh();
+        string card = $"F:{unit.Id}";
+        var menu = gs.MenuOf(card);
+        Expect(menu.Contains("Espionage...") && !menu.Contains("Diplomacy..."), $"right-click {uname}: the missions it can do, and only those: {string.Join(" | ", menu)}");
+        Expect(gs.RunMenu(card, "Espionage...") && gs.PlannerOpen && gs.Banner.Contains("Espionage: click the target system"), "pick Espionage: the planner opens and the map waits for the target: " + gs.Banner);
+        gs.PlayRefresh();
+        var mm = s.Missions;
+        string target = s.Game.State.SystemOwners.Where(kv => kv.Value == s.Enemy).Select(kv => kv.Key).Concat(gs.G.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == null))
+            .Where(n => n != yard && mm.CheckStart(new StartMissionOrder(0, me, MissionKind.Espionage, new(), new() { unit.Id }, new(), n)).Reason == null)
+            .OrderBy(n => s.Host.Fleets.FindPath(yard, n, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue).ThenBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+        Expect(target != null, $"{uname} can spy somewhere");
+        if (target == null) { gs.Click("Close without sending"); return; }
+        gs.HoverTextFor(target);
+        Expect(gs.Banner.Contains($"Espionage on {target}") && (gs.Banner.Contains("arrives day") || gs.Banner.Contains("already there")), "the map shows the route and the arrival day: " + gs.Banner);
+        gs.PickSystem(target); gs.PlayRefresh();
+        Expect(gs.PanelText().Contains($"Target: {target}") && gs.Click($"Send: Espionage on {target}"), $"click {target}, then Send");
+        gs.PlayRefresh();
+        gs.PlayDay();
+        Expect(s.MyMissions.Any(x => x.Kind == MissionKind.Espionage && x.Target == target && x.SpecialForces.Contains(unit.Id)), $"{uname} left on Espionage to {target}");
+        gs.MgCloseAll(); gs.View.Select(-1); gs.PlayRefresh();
     }
 
     /// <summary>Espionage through the planner, then its result in Messages within the expected days (and the facilities shown on success).</summary>
