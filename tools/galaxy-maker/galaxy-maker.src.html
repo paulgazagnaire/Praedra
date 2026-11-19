@@ -112,6 +112,11 @@ textarea { width: 100%; font: 12px var(--font-mono); color: var(--fg); backgroun
     <details class="sec" open><summary>Movement</summary><div id="ctlMove"></div>
       <p class="note">Nothing turns. Overall pace speeds or slows everything at once (0 stops it); each line below is one kind of movement with its own amount.</p>
     </details>
+    <details class="sec" open><summary>Space around</summary><div id="ctlSky"></div>
+      <div class="sub">Shapes, how often each comes up</div><div id="ctlSkyShapes"></div>
+      <button id="btnSkyShuffle" type="button">Shuffle the galaxies</button>
+      <p class="note">Far-off galaxies and haze behind the disc, to fill the empty space when you zoom out. All off by default. Galaxies at 0 and Haze at 0 draw exactly what you had before.</p>
+    </details>
     <details class="sec"><summary>Depth</summary><div id="ctlDepth"></div>
       <p class="note">Parallax only shows when you drag or zoom. Relief, contour lines and the mesh are drawn from the galaxy's height: the core is the peak, the arms are ridges.</p>
     </details>
@@ -301,6 +306,100 @@ float heightAt(vec2 q, float upp) {
   return bulge * 0.6 + disc + armLight * (0.45 + 1.1 * (clumps * 0.6 + streams * 0.4));
 }
 
+// The space around the galaxy: far-off galaxies of several shapes, smaller ones further still, and a faint haze, all on one layer
+// far behind the disc. Nothing here is drawn while Galaxies and Haze are both 0.
+uniform vec4 uSkyA;    // x galaxies (brightness; 0 = none), y how many, z size, w how far behind the disc (0 on it, 0.95 very far)
+uniform vec4 uSkyB;    // x haze, y haze size, z clear zone round the galaxy (in disc radii), w spin
+uniform vec4 uSkyW0;   // how often each shape comes up: x spiral, y barred spiral, z elliptical, w edge-on
+uniform vec4 uSkyW1;   // x ring, y irregular, z tiny far galaxies, w arrangement (seed)
+uniform vec3 uCSkyA, uCSkyB, uCHaze;   // old stars (cores, ellipticals), young stars (arms, irregulars), haze
+// One galaxy's light. p: position in the galaxy's own frame, its radius = 1, squashed by the tilt; po: the same before the squash.
+// det: 0 when it is only a few dots across (then it is a soft blob), 1 when it is big enough for its shape to show.
+float skyGalaxy(int kind, vec2 p, vec2 po, float h, float spin, float det) {
+  float r = length(p);
+  float blob = exp(-r * r / 0.12);
+  if (det <= 0.0) return blob;
+  float th = atan(p.y, p.x);
+  float v;
+  if (kind <= 1) {
+    // spiral (two or three arms) and barred spiral (two arms from the ends of a bar)
+    float nArm = kind == 0 && h > 0.6 ? 3.0 : 2.0;
+    float wind = 2.0 + 2.5 * fract(h * 7.31);
+    float d = th - wind * log(max(r, 0.04) / 0.3) - spin;
+    float arm = pow(0.5 + 0.5 * cos(nArm * d), 3.0) * smoothstep(kind == 1 ? 0.2 : 0.05, kind == 1 ? 0.42 : 0.2, r);
+    float clump = 0.55 + 0.9 * noise2(p * 6.0 + h * 91.0);
+    v = exp(-r / 0.3) * (0.22 + 1.2 * arm * clump) + 1.2 * exp(-pow(length(po) / 0.06, 0.9));
+    if (kind == 1) { vec2 b = vec2(cos(spin) * p.x + sin(spin) * p.y, -sin(spin) * p.x + cos(spin) * p.y); v += 0.8 * exp(-pow(b.x / 0.3, 2.0) - pow(b.y / 0.07, 2.0)); }
+  } else if (kind == 2) {
+    // elliptical: smooth, bright in the middle, no arms
+    v = 1.5 * exp(-pow(r / 0.2, 0.7));
+  } else if (kind == 3) {
+    // edge-on disc: a thin bright needle with a round core and a dark dust lane along it
+    v = exp(-pow(r / 0.35, 0.9)) + 0.9 * exp(-pow(length(po) / 0.09, 0.9));
+    v *= 1.0 - 0.8 * exp(-pow(p.y / 0.18, 2.0)) * smoothstep(0.05, 0.25, abs(p.x));
+  } else if (kind == 4) {
+    // ring: a bright clumpy ring round a small core
+    v = exp(-pow((r - 0.62) / 0.1, 2.0)) * (0.5 + 0.9 * noise2(vec2(th * 3.0 + spin * 3.0, h * 37.0))) + 1.0 * exp(-r / 0.06);
+  } else {
+    // irregular: a ragged cloud of star-forming knots
+    float n = noise2(p * 3.0 + h * 53.0) * 0.6 + noise2(p * 7.0 - h * 29.0) * 0.4;
+    v = smoothstep(0.4, 0.8, n + 0.35 - 0.45 * r) * 1.1 + 0.2 * exp(-r / 0.2);
+  }
+  v *= 1.0 - smoothstep(0.75, 1.15, r);
+  return mix(blob, v, det);
+}
+// all the galaxies on one grid: cells of 'cell' galaxy units, at most one galaxy a cell, kept inside its cell so a cell needs no neighbours
+vec3 skyField(vec2 s, float upp, float cell, float sizeMax, float bright, bool tiny) {
+  vec2 g = s / cell + uSkyW1.w * 13.7 + (tiny ? 71.3 : 0.0);
+  vec2 id = floor(g);
+  float h0 = hash12(id + 3.1), h1 = hash12(id + 8.7), h2 = hash12(id + 15.2), h3 = hash12(id + 22.9);
+  if (h0 > 0.8) return vec3(0.0);                        // one cell in five stays empty, so the spacing is not a grid
+  float rad = sizeMax * mix(0.25, 1.0, h1 * h1 * h1);   // most are small, a few are big
+  vec2 at = id + 0.5 + (hash22(id + 4.4) - 0.5) * (1.0 - 2.4 * rad);
+  vec2 d = (g - at) / rad;
+  if (dot(d, d) > 1.45) return vec3(0.0);
+  int kind = 2;
+  if (!tiny) {
+    float wsum = uSkyW0.x + uSkyW0.y + uSkyW0.z + uSkyW0.w + uSkyW1.x + uSkyW1.y;
+    if (wsum <= 0.0) return vec3(0.0);
+    float pick = h2 * wsum;
+    kind = pick < uSkyW0.x ? 0 : pick < uSkyW0.x + uSkyW0.y ? 1 : pick < uSkyW0.x + uSkyW0.y + uSkyW0.z ? 2
+         : pick < uSkyW0.x + uSkyW0.y + uSkyW0.z + uSkyW0.w ? 3 : pick < wsum - uSkyW1.y ? 4 : 5;
+  }
+  float ang = hash12(id + 31.7) * 6.2832;
+  float tilt = kind == 3 ? mix(0.1, 0.2, h3) : kind == 5 ? mix(0.6, 1.0, h3) : mix(0.3, 1.0, h3);
+  vec2 po = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
+  vec2 p = vec2(po.x, po.y / tilt);
+  float px = rad * cell / upp;                            // the galaxy's radius in dots
+  float det = smoothstep(3.0, 10.0, px);
+  float spin = uTime * uSkyB.w * 0.03 * (0.4 + hash12(id + 2.2)) * (h3 > 0.5 ? 1.0 : -1.0);
+  float v = skyGalaxy(kind, p, po, h2, spin, det) * mix(0.3, 1.0, hash12(id + 41.3)) * bright;
+  float warm = kind == 2 ? 0.85 : kind == 5 ? 0.1 : clamp(1.4 * exp(-length(po) / 0.12), 0.0, 1.0) * 0.8 + 0.1 * h0;
+  return mix(uCSkyB, uCSkyA, warm) * v;
+}
+vec3 spaceAround(vec2 off, float upp, float r) {
+  // its own layer far behind the disc: it slides and zooms less than the galaxy when the view moves
+  float z = pow(uZoom, 0.6 * uSkyA.w);
+  vec2 s = uCenter * (1.0 - uSkyA.w) + off * z;
+  float su = upp * z;
+  vec3 c = vec3(0.0);
+  if (uSkyA.x > 0.0) {
+    float cell = 1.0 / sqrt(uSkyA.y);
+    c += skyField(s, su, cell, 0.38 * uSkyA.z, uSkyA.x * 0.35, false);
+    if (uSkyW1.z > 0.0) c += skyField(s * 1.0 + 5.0, su, cell * 0.3, 0.3, uSkyA.x * uSkyW1.z * 0.22, true);
+  }
+  if (uSkyB.x > 0.0) {
+    // haze: very faint clouds of gas between the galaxies, drifting very slowly
+    vec2 hp = s / uSkyB.y + uSkyW1.w * 3.1 + vec2(uTime * 0.004, 0.0);
+    float n = fbm2(hp * 1.3, su / uSkyB.y, 5);
+    float n2 = fbm2(hp * 3.1 + 7.0, su / uSkyB.y, 4);
+    c += mix(uCHaze, uCSkyB, n2 * 0.5) * smoothstep(0.42, 0.85, n * 0.8 + n2 * 0.35) * uSkyB.x * 0.11;
+  }
+  // the clear zone: the space background fades out towards the galaxy, so it never sits on the disc
+  float rim = uSkyB.z * uShape.x;
+  return c * smoothstep(rim * 0.85, rim * 0.85 + 0.3, r);
+}
+
 #ifdef GM_DITHER
 uniform vec4 uDiA;          // x pattern (0 fine grid, 1 coarse grid, 2 halftone, 3 grain), y colours in the palette (0: own colours), z contrast, w brightness
 uniform float uDiLv;
@@ -474,6 +573,7 @@ void main() {
   vec3 lit = vec3(1.0) - exp(-col * 1.3);
   vec3 glow = uDust.w * (lit * uStar.w + st * 0.45);
   if (uDepth.z > 0.0) { lq = layerQ(off, 1.4, upp, lu); glow += motes(lq) * uDepth.z * 0.22; }
+  if (uSkyA.x > 0.0 || uSkyB.x > 0.0) glow += spaceAround(off, upp, r);
   if (tall) {
     // contour lines: one line per step of height, about a dot wide; they fade out where they would crowd together
     float lvl = sqrt(max(hgt, 0.0)) * uRelief.w;
@@ -522,7 +622,11 @@ const DEF = {
   // added 2026-11: everything below is off (or neutral) by default, so older settings draw exactly as before
   pace: 1, waves: 0, wavePace: 1, pulse: 0, cap: 1,
   par: 0, far: 0, motes: 0, moteSize: 0.6, relief: 0, sun: 225, contour: 0, contourN: 12, mesh: 0, meshN: 24, lift: 0.6,
+  // added 2026-11-19, the space around the galaxy: off by default
+  sky: 0, skyN: 2, skySize: 0.7, skyDepth: 0.7, tiny: 0, haze: 0, hazeSize: 1, clear: 1.1, skySpin: 0.3,
+  wSpiral: 1, wBar: 0.6, wEll: 0.8, wEdge: 0.5, wRing: 0.2, wIrr: 0.4, skySeed: 1,
   cBulge: '#ffd69e', cDisc: '#f5e6d1', cArm: '#99b8ff', cKnot: '#ff7594', cDust: '#4d3d38', cBg: '#111214', cLine: '#7ac6ff',
+  cSkyA: '#ffb27a', cSkyB: '#8cc2ff', cHaze: '#24406e',
 };
 const CTL = [
   ['Shape', 'phase', 'Arm start', 0, 360, 1, (v) => v + '°'],
@@ -555,6 +659,22 @@ const CTL = [
   ['Move', 'waves', 'Arm waves', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
   ['Move', 'wavePace', 'Wave pace', 0.1, 3, 0.01, (v) => v < 0.5 ? 'very slow' : v < 1.2 ? 'slow' : v < 2 ? 'steady' : 'quick'],
   ['Move', 'pulse', 'Core pulse', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Sky', 'sky', 'Galaxies', 0, 3, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Sky', 'skyN', 'How many', 0.3, 8, 0.01, (v) => v < 1 ? 'few' : v < 3 ? 'some' : v < 5.5 ? 'many' : 'crowded'],
+  ['Sky', 'skySize', 'Size', 0.2, 1, 0.01, (v) => v < 0.4 ? 'small' : v < 0.75 ? 'medium' : 'large'],
+  ['Sky', 'tiny', 'Tiny far galaxies', 0, 2, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Sky', 'skyDepth', 'Distance', 0, 0.95, 0.01, (v) => v < 0.05 ? 'on the disc' : v < 0.5 ? 'near' : v < 0.8 ? 'far' : 'very far'],
+  ['Sky', 'skySpin', 'Spin', 0, 3, 0.01, (v) => v < 0.01 ? 'still' : v < 0.6 ? 'very slow' : v < 1.5 ? 'slow' : 'quick'],
+  ['Sky', 'haze', 'Haze', 0, 3, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
+  ['Sky', 'hazeSize', 'Haze size', 0.3, 3, 0.01],
+  ['Sky', 'clear', 'Clear round the galaxy', 0.8, 2, 0.01, (v) => Math.round(v * 100) + '% of the disc'],
+  ['SkyShapes', 'wSpiral', 'Spiral', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['SkyShapes', 'wBar', 'Barred spiral', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['SkyShapes', 'wEll', 'Elliptical', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['SkyShapes', 'wEdge', 'Edge-on', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['SkyShapes', 'wRing', 'Ring', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['SkyShapes', 'wIrr', 'Irregular', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+  ['SkyShapes', 'skySeed', 'Arrangement', 1, 999, 1],
   ['Depth', 'par', 'Parallax', 0, 1, 0.01, (v) => v < 0.01 ? 'flat' : Math.round(v * 100) + '%'],
   ['Depth', 'far', 'Distant stars', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
   ['Depth', 'motes', 'Drifting motes', 0, 1.5, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
@@ -567,13 +687,14 @@ const CTL = [
   ['Depth', 'meshN', 'Mesh squares', 6, 60, 1],
   ['Depth', 'lift', 'Mesh height', 0, 1.5, 0.01],
 ];
-const SEC_HOST = { Shape: 'ctlShape', Light: 'ctlLight', Dust: 'ctlDust', Stars: 'ctlStars', Move: 'ctlMove', Depth: 'ctlDepth' };
-const SWATCHES = [['cBulge', 'Core'], ['cDisc', 'Disc'], ['cArm', 'Arms'], ['cKnot', 'Nebulae'], ['cDust', 'Dust'], ['cBg', 'Space'], ['cLine', 'Lines']];
+const SEC_HOST = { Shape: 'ctlShape', Light: 'ctlLight', Dust: 'ctlDust', Stars: 'ctlStars', Move: 'ctlMove', Depth: 'ctlDepth', Sky: 'ctlSky', SkyShapes: 'ctlSkyShapes' };
+const SWATCHES = [['cBulge', 'Core'], ['cDisc', 'Disc'], ['cArm', 'Arms'], ['cKnot', 'Nebulae'], ['cDust', 'Dust'], ['cBg', 'Space'], ['cLine', 'Lines'], ['cSkyA', 'Far cores'], ['cSkyB', 'Far arms'], ['cHaze', 'Haze']];
 // starting points; the first is exactly what the game draws today
 const GAME_P = GAME ? GAME.params : {}, GAME_DI = GAME ? GAME.dither : {};
 const LOOKS = [
   { id: 'game', label: 'Game today', sub: 'the map backdrop now', p: GAME_P, di: GAME_DI },
   { id: 'new', label: 'Depth and glitch', sub: 'game today, new parts on', p: Object.assign({}, GAME_P, { par: 0.6, far: 0.5, motes: 0.6, relief: 0.8, contour: 0.35, waves: 0.6, pulse: 0.5 }), di: Object.assign({}, GAME_DI, { on: true, gOn: true }) },
+  { id: 'space', label: 'Deep space', sub: 'game today, galaxies around it', p: Object.assign({}, GAME_P, { sky: 1.2, skyN: 3.5, tiny: 1.3, haze: 1 }), di: GAME_DI },
   { id: 'deep', label: 'Deep and quiet', sub: 'darker, fewer stars', p: { bright: 0.75, dim: 0.24, field: 0.3, stars: 0.8, knots: 0.6, twinkle: 0.3, twShare: 0.08 } },
   { id: 'rich', label: 'Rich', sub: 'brighter arms, more nebulae', p: { bright: 1.35, dim: 0.42, arms: 1.4, knots: 2.4, clouds: 1.2, stars: 1.3, starDens: 1.4 } },
   { id: 'ink', label: 'Ink', sub: 'black and white dots', p: { bright: 1.5, dim: 0.5, cBg: '#000000' }, di: { on: true, pat: 'grain', pal: 'mono', dot: 2, contrast: 1.3, bright: -0.05 } },
@@ -757,6 +878,11 @@ function draw(w, h, tm) {
   gl.uniform4f(loc.uMesh, P.mesh, P.meshN, P.lift, P.cap);
   gl.uniform4f(loc.uLive, P.waves, P.wavePace, P.pulse, 0);
   gl.uniform3fv(loc.uCLine, hex2rgb(P.cLine));
+  gl.uniform4f(loc.uSkyA, P.sky, P.skyN, P.skySize, P.skyDepth);
+  gl.uniform4f(loc.uSkyB, P.haze, P.hazeSize, P.clear, P.skySpin);
+  gl.uniform4f(loc.uSkyW0, P.wSpiral, P.wBar, P.wEll, P.wEdge);
+  gl.uniform4f(loc.uSkyW1, P.wRing, P.wIrr, P.tiny, P.skySeed);
+  gl.uniform3fv(loc.uCSkyA, hex2rgb(P.cSkyA)); gl.uniform3fv(loc.uCSkyB, hex2rgb(P.cSkyB)); gl.uniform3fv(loc.uCHaze, hex2rgb(P.cHaze));
   gl.uniform3fv(loc.uCBulge, hex2rgb(P.cBulge)); gl.uniform3fv(loc.uCDisc, hex2rgb(P.cDisc)); gl.uniform3fv(loc.uCArm, hex2rgb(P.cArm));
   gl.uniform3fv(loc.uCKnot, hex2rgb(P.cKnot)); gl.uniform3fv(loc.uCDust, hex2rgb(P.cDust)); gl.uniform3fv(loc.uCBg, hex2rgb(P.cBg));
   if (DI.on) {
@@ -856,6 +982,7 @@ function buildControls() {
   for (const c of GL_CTL) if (c[1]) slider('ctlGlitch', 'gl_' + c[0], c[1], c[2], c[3], c[4], (v) => { DI[c[0]] = v; changed(); });
   $('diOn').addEventListener('change', () => { DI.on = $('diOn').checked; changed(); });
   $('glOn').addEventListener('change', () => { DI.gOn = $('glOn').checked; changed(); });
+  $('btnSkyShuffle').addEventListener('click', () => { P.skySeed = (P.skySeed * 37 + 101) % 999 + 1; changed(); });
   $('btnShuffle').addEventListener('click', () => { DI.gSeed = (DI.gSeed * 37 + 101) % 1000; changed(); });
   // the glitch lives in the dither, so the button on the picture turns the dither on with it
   let glitchLitDither = false;
