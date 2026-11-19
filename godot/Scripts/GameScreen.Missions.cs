@@ -136,6 +136,41 @@ public partial class GameScreen
         ShowTab(DrawerTab.Missions);
     }
 
+    /// <summary>The right-click menu of a special force's or a leader's card: one line per mission it can do alone from where it stands. Picking
+    /// one opens the planner with it on the team and that kind chosen, then waits for the target click on the map, where the route and the
+    /// arrival day show (Paul 2026-11-19: "a right click option to select the mission type and destination"). Classic's unit windows had it.</summary>
+    void MissionMenu(Control card, string home, int? character, int? unit)
+    {
+        if (home == null) return;
+        // worked out at the click: no planner checks on every rebuild, and never stale under a held hover card
+        RightClickMenu(card, () => MissionKindsFor(home, character, unit)
+            .Select(k => ($"{GameSession.KindWords(k)}...", (Action)(() => QuickMission(home, character, unit, k)))).ToArray());
+    }
+
+    /// <summary>The kinds the planner would open for a team of just this one at <paramref name="home"/> (same filter and checks as the planner).</summary>
+    List<MissionKind> MissionKindsFor(string home, int? character, int? unit)
+    {
+        var keep = _plan;
+        _plan = new MissionPlan { Home = home };
+        if (character is int c) _plan.Chars.Add(c);
+        if (unit is int u) _plan.Sfs.Add(u);
+        try
+        {
+            return OfferedKinds.Where(k => Mm.Data.TryGet(k, out var rec) && !rec.Hidden && rec.AvailableTo(Me)
+                && (k != MissionKind.BurnTheBooks || S.BooksOffered) && KindRefusal(k) == null).ToList();
+        }
+        finally { _plan = keep; }
+    }
+
+    void QuickMission(string home, int? character, int? unit, MissionKind k)
+    {
+        if (_pickMission) CancelMove();
+        CloseSectorView();
+        OpenPlanner(home, character, unit);
+        ChooseKind(k);
+        if (k != MissionKind.Rescue) StartMissionPick();   // Rescue picks a prisoner in the planner, not a system
+    }
+
     void ClosePlanner()
     {
         if (_pickMission) CancelMove();

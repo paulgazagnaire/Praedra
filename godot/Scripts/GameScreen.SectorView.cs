@@ -285,7 +285,8 @@ public partial class GameScreen
         if (InMoveMode) { CloseSectorView(); return; } // a move picks its target on the map
         _secTimer -= delta;
         // not while a mouse button is held: a click pressed before a new day would land on a card that no longer exists
-        if (_secDirty && _secTimer <= 0 && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
+        if (_secDirty && _secTimer <= 0 && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right)
+            && !ReadingTip(_secWin))
         { _secDirty = false; _secTimer = 0.25; RebuildSectorView(); }
     }
 
