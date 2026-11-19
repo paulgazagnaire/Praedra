@@ -142,6 +142,7 @@ public partial class Main : Control
                 case "--characters": gs.ShotCharacters(); break;
                 case "--click" when i + 1 < _args.Length: gs.ShotClick(_args[i + 1]); break;
                 case "--infocard" when i + 1 < _args.Length: gs.ShotInfoCard(_args[i + 1]); break;
+                case "--pickunits" when i + 1 < _args.Length: gs.ShotPick(int.Parse(_args[i + 1], CultureInfo.InvariantCulture)); break;
                 case "--pick" when i + 1 < _args.Length: gs.PickSystem(_args[i + 1]); break;
                 case "--search" when i + 1 < _args.Length: gs.SetSearch(_args[i + 1]); break;
                 case "--hover" when i + 1 < _args.Length: gs.HoverTextFor(_args[i + 1]); break;

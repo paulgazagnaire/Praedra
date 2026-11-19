@@ -298,6 +298,7 @@ public partial class GameScreen : Control
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
         if (_layersCard.Visible) { ToggleLayers(); return; }
+        if (ClearPicks()) return;   // Escape first lets picked units go, then closes windows
         if (CloseTopMgmt()) return;
         if (SectorViewOpen) { CloseSectorView(); return; }
         if (InMoveMode) { CancelMove(); return; }
