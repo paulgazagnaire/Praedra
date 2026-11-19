@@ -452,12 +452,13 @@ public partial class GameScreen
         }
         if (kind.Equals("fleet", StringComparison.OrdinalIgnoreCase)) 
         {
-            // a fleet id, or a system name: then your first fleet standing there
+            // a fleet id, or a system name: then your first fleet standing there; "any": your first fleet standing anywhere
             // "3" or "Charter", optionally ":Ships" for the tab
             string ftab = what.Contains(':') ? what[(what.IndexOf(':') + 1)..] : null;
             if (ftab != null) what = what[..what.IndexOf(':')];
-            int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values.Where(f => f.Side == S.Player && f.At == what.Replace('_', ' ') && f.Transit == null)
-                .OrderBy(f => f.Id).Select(f => f.Id).FirstOrDefault();
+            int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values
+                .Where(f => f.Side == S.Player && f.At != null && f.Transit == null && (what == "any" || f.At == what.Replace('_', ' ')))
+                .OrderByDescending(f => f.Ships.Count).ThenBy(f => f.Id).Select(f => f.Id).FirstOrDefault();
             if (id > 0) OpenMgmt(MgKind.Fleet, fleet: id, tab: ftab);
             return;
         }

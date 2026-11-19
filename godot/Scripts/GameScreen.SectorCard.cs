@@ -39,7 +39,7 @@ public partial class GameScreen
         var tile = new PanelContainer { CustomMinimumSize = new Vector2(TileWidth, TileHeight), MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
         tile.SetMeta(UiTest.FullName, "Sector card " + n);
         // hover: a thin grey outline, no fill (the window look has no fills; impeccable critique 2026-11-14)
-        StyleBoxFlat Style(bool hover) => Ui.Box(SystemTile.Ground, 0, hover ? Ui.WinText : new Color(0, 0, 0, 0), 1, 0, 0);
+        StyleBoxFlat Style(bool hover) => Ui.Box(SystemTile.Ground, 0, hover ? Ui.WinHover : new Color(0, 0, 0, 0), 1, 0, 0);
         tile.AddThemeStyleboxOverride("panel", Style(false));
         // a tile rebuilt under a still mouse (a new day) keeps its hover look
         Callable.From(() => { if (IsInstanceValid(tile) && tile.IsVisibleInTree() && tile.GetGlobalRect().HasPoint(tile.GetGlobalMousePosition())) tile.AddThemeStyleboxOverride("panel", Style(true)); }).CallDeferred();

@@ -5,7 +5,8 @@ namespace PraedraViewer;
 
 /// <summary>
 /// The colours of Paul's Paper design for the Infrastructure window (2026-11-18, "CHARTER: INFRASTRUCTURE", Paper file "Praedra",
-/// frame WYD-0). Paul 2026-11-19: the other windows take them too, in a pull request of their own. Screens only.
+/// frame WYD-0). Paul 2026-11-19: every window takes them; the window tokens in <see cref="Ui"/> (WinActive, WinText, WinDim, WinLine,
+/// WindowBox) point here. Screens only.
 /// </summary>
 public static class Look
 {

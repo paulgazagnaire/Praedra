@@ -222,7 +222,7 @@ public partial class GameScreen
 
     /// <summary>Your planet's Infrastructure window has Paul's Paper design (2026-11-18): its head and its yard strip run to the window's
     /// edges on the darker surface, the part under them on the lighter one with 16 px all round and 24 px between its parts. The other
-    /// windows keep the "styles" look until the new colours reach them (Paul 2026-11-19: a pull request of its own).</summary>
+    /// windows keep the "styles" layout, in the design's colours (Paul 2026-11-19).</summary>
     void ApplyLook(MgWin w)
     {
         bool look = w.Kind == MgKind.Infra && w.Wide;
@@ -485,7 +485,7 @@ public partial class GameScreen
 
     /// <summary>
     /// The head of a window (Paul's "styles" frame): on the left the line saying where it is, the name in pixel capitals and a line of key
-    /// numbers under it (Paul kept both lines, 2026-11-14); on the right, pinned to the edge, the window buttons ⋮⋮ – ×. The name is #7D8699
+    /// numbers under it (Paul kept both lines, 2026-11-14); on the right, pinned to the edge, the window buttons ⋮⋮ – ×. The name is #BABABA
     /// whoever's it is, red when harvested, darkest grey when unexplored (the caller says which). <paramref name="grip"/> is the fleet's own
     /// ⋮⋮ (drag it to merge); any other window gets a ⋮⋮ that moves the window (Paul 2026-11-14), as its whole head does.
     /// </summary>
@@ -559,7 +559,7 @@ public partial class GameScreen
     /// <summary>A window button's glyph as a plain label (the grips): 24 x 24, JetBrains Mono 24 px, #909EBD.</summary>
     static Label WindowGlyph(string glyph)
     {
-        var g = Ui.Label(glyph, null, Ui.WinActive, 24, wrap: false);
+        var g = Ui.Label(glyph, null, Ui.WinButtonInk, 24, wrap: false);
         g.AddThemeFontOverride("font", Ui.GripFont);
         g.CustomMinimumSize = new Vector2(WinButton, WinButton);
         g.HorizontalAlignment = HorizontalAlignment.Center; g.VerticalAlignment = VerticalAlignment.Center;

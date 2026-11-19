@@ -35,8 +35,9 @@ public partial class SystemTile : Control
 
     public Data D = new();
 
-    // the frame's colours (praedra/specs/ui/paper/system-info/notes.md §Colours)
-    public static readonly Color Ground = new("0b0b0d");
+    // the frame's colours (praedra/specs/ui/paper/system-info/notes.md §Colours); the ground is the window's own surface, so a tile still
+    // sits flush on it now that the windows take #141416 (Paul 2026-11-19, the Infrastructure design's colours in every window)
+    public static readonly Color Ground = Look.Bg;
     public static readonly Color Panel = new(0, 0, 0, 0.6f);
     public static readonly Color Empty = new(0x55 / 255f, 0x55 / 255f, 0x55 / 255f, 0.6f);
     public static readonly Color BracketTop = new(0x55 / 255f, 0x55 / 255f, 0x55 / 255f, 0.7f);

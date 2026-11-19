@@ -30,13 +30,13 @@ public static class Ui
     // inside a window (see Window() below) the same names give the window's greys, so every helper draws the window look there
     public static Color Line => InWindow ? WinLine : _line;
     public static Color LineHi => InWindow ? WinLine : _lineHi;
-    /// <summary>Names and values (off-white; in a window #909EBD).</summary>
+    /// <summary>Names and values (off-white; in a window #BABABA).</summary>
     public static Color Text => InWindow ? WinActive : _text;
-    /// <summary>Text you read (light grey; in a window #7D8699).</summary>
+    /// <summary>Text you read (light grey; in a window #BABABA).</summary>
     public static Color Text2 => InWindow ? WinText : _text2;
-    /// <summary>Quiet text (mid grey; in a window #7D8699 too: it stays readable).</summary>
+    /// <summary>Quiet text (mid grey; in a window #BABABA too: it stays readable).</summary>
     public static Color Text3 => InWindow ? WinText : _text3;
-    /// <summary>Greyed out: what you can't use or don't know yet (in a window #4A4F5B, Paul 2026-11-14).</summary>
+    /// <summary>Greyed out: what you can't use or don't know yet (in a window #454545, Paul 2026-11-19).</summary>
     public static Color Dimmed => InWindow ? WinDim : _text3;
     public static readonly Color You = new("5aa9f0");
     public static readonly Color YouDeep = new("1b3149");
@@ -62,14 +62,18 @@ public static class Ui
 
     // ---------------------------------------------------------------- the window look
     // Paul's Paper frame "styles" (2026-11-11) and his answers of 2026-11-14 ("All A", "Apply the KISS principle. Make the ui as simple and
-    // as clean/clear as possible"): inside a window, one text face (Space Grotesk), four greys and the meaning colours above. No fills, no
-    // rounded corners, no divider lines.
-    public static readonly Color WinActive = new("909ebd"); // names, values, the chosen tab, the window buttons, links
-    public static readonly Color WinText = new("7d8699");   // every other line you read, small labels, the other tabs, the window's name
-    public static readonly Color WinDim = new("4a4f5b");    // greyed out: unexplored, not researched, placeholders like "Empty"
-    public static readonly Color WinLine = new("3a3a3a");   // the outline of tiles, bar tracks, empty slots
-    /// <summary>The edge of a window and of the pieces on the map: one step lighter than the frame's #3A3A3A, so a window stands off the map
-    /// (Paul 2026-11-14 chose a lighter edge; #606060 is 3.1:1 on the window).</summary>
+    // as clean/clear as possible"): inside a window, one text face (Space Grotesk), a few greys and the meaning colours above. No fills, no
+    // rounded corners, no divider lines. The greys are those of his Infrastructure design (Paper, 2026-11-18; see Look), which Paul gave
+    // to every window (2026-11-19, answer 10): one grey for the words you read, as the design has, and the bluish #909EBD only for the
+    // window buttons.
+    public static readonly Color WinActive = Look.Text;     // #BABABA names, values, the chosen tab, links, the window's name
+    public static readonly Color WinText = Look.Text;       // #BABABA every other line you read, small labels, the other tabs
+    public static readonly Color WinHover = Look.Soft;      // #676767 the outline under the mouse (a button: #2D2E32, hover, then #BABABA pressed)
+    public static readonly Color WinButtonInk = Look.Accent; // #909EBD the window buttons ⋮⋮ – × ‹ ›
+    public static readonly Color WinDim = Look.Dim;         // #454545 greyed out: unexplored, not researched, placeholders like "Empty"
+    public static readonly Color WinLine = Look.Edge;       // #2D2E32 the outline of tiles, bar tracks, empty slots
+    /// <summary>The edge of a window and of the pieces on the map: lighter than the lines inside, so a window stands off the map
+    /// (Paul 2026-11-14 chose a lighter edge; #606060 is 2.9:1 on the window's #141416).</summary>
     public static readonly Color WinEdge = new("606060");
 
     static int _inWindow;
@@ -419,8 +423,8 @@ public static class Ui
 
     /// <summary>
     /// The theme a window sets on itself (the management windows, the sector window): it wins over the screens' theme for everything in the
-    /// window. Paul's "styles" frame: Space Grotesk, #909EBD for what is active, #7D8699 for what you read, #4A4F5B greyed out, thin #3A3A3A
-    /// lines, no fills. Godot takes an item from the nearest theme that has it for the type or any type it is based on, so every button and
+    /// window. Paul's "styles" frame with the greys of his Infrastructure design: Space Grotesk, #BABABA for what you read, #454545 greyed
+    /// out, thin #2D2E32 lines, #909EBD window buttons, no fills. Godot takes an item from the nearest theme that has it for the type or any type it is based on, so every button and
     /// label type the screens' theme styles is styled here too, or it would keep the plain look.
     /// </summary>
     public static Theme WindowTheme
@@ -439,7 +443,7 @@ public static class Ui
         var clear = new Color(0, 0, 0, 0);
         var t = new Theme { DefaultFont = Grotesk, DefaultFontSize = Body };
 
-        // text: names and values #909EBD unless a line says otherwise; the label types of the screens' theme, in the window's face and greys
+        // text: #BABABA unless a line says otherwise; the label types of the screens' theme, in the window's face and greys
         t.SetColor("font_color", "Label", WinActive);
         t.SetColor("font_outline_color", "Label", new Color(0, 0, 0, 0.9f));
         foreach (var (type, font, size, color) in new (string, Font, int, Color)[]
@@ -461,7 +465,7 @@ public static class Ui
         void Outlined(string type, Color edge, Color ink, int size, int padX = 8, int padY = 3)
         {
             t.SetStylebox("normal", type, Box(clear, 0, edge, 1, padX, padY));
-            t.SetStylebox("hover", type, Box(clear, 0, WinText, 1, padX, padY));
+            t.SetStylebox("hover", type, Box(clear, 0, WinHover, 1, padX, padY));
             t.SetStylebox("pressed", type, Box(clear, 0, WinActive, 1, padX, padY));
             t.SetStylebox("hover_pressed", type, Box(clear, 0, WinActive, 1, padX, padY));
             t.SetStylebox("disabled", type, Box(clear, 0, WinLine, 1, padX, padY));
@@ -506,14 +510,15 @@ public static class Ui
         t.SetConstant("underline_spacing", "LinkButton", 1);
         // the window buttons (⋮⋮ – × ‹ ›): glyphs only, 24 x 24, #909EBD
         t.SetTypeVariation("Clock", "Button");
-        Plain("Clock", WinActive, 24, GlyphFont);
-        t.SetStylebox("hover", "Clock", Box(clear, 0, WinText, 1, 0, 0));   // under the mouse: a thin #7D8699 square round the glyph, as on every button
-        t.SetStylebox("hover_pressed", "Clock", Box(clear, 0, WinText, 1, 0, 0));
-        // a tab (the frame's tab row): words only, a 3 px #909EBD line under the chosen one; the others #7D8699 (Paul chose them readable)
+        Plain("Clock", WinButtonInk, 24, GlyphFont);
+        t.SetStylebox("hover", "Clock", Box(clear, 0, WinHover, 1, 0, 0));   // under the mouse: a thin #676767 square round the glyph, as on every button
+        t.SetStylebox("hover_pressed", "Clock", Box(clear, 0, WinHover, 1, 0, 0));
+        // a tab (the frame's tab row): words only, a 3 px #BABABA line under the chosen one, a #676767 one under the mouse; every tab's
+        // words #BABABA (Paul chose them readable; his Infrastructure design has one grey for words)
         t.SetTypeVariation("TabChip", "Button");
         StyleBoxFlat Under(Color c) { var s = new StyleBoxFlat { BgColor = clear, BorderColor = c, BorderWidthBottom = 3 }; s.ContentMarginLeft = s.ContentMarginRight = 0; s.ContentMarginTop = 0; s.ContentMarginBottom = 8; return s; }
         t.SetStylebox("normal", "TabChip", Under(clear));
-        t.SetStylebox("hover", "TabChip", Under(clear));
+        t.SetStylebox("hover", "TabChip", Under(WinHover));
         t.SetStylebox("pressed", "TabChip", Under(WinActive));
         t.SetStylebox("hover_pressed", "TabChip", Under(WinActive));
         t.SetStylebox("disabled", "TabChip", Under(clear));
@@ -523,7 +528,7 @@ public static class Ui
         t.SetColor("font_pressed_color", "TabChip", WinActive);
         t.SetColor("font_hover_pressed_color", "TabChip", WinActive);
 
-        // bars: square, on a #3A3A3A track
+        // bars: square, on a #2D2E32 track
         t.SetStylebox("background", "ProgressBar", Box(WinLine, 0, null, 0, 0, 0));
         t.SetStylebox("fill", "ProgressBar", Box(You, 0, null, 0, 0, 0));
         t.SetColor("font_color", "ProgressBar", clear);
@@ -532,18 +537,18 @@ public static class Ui
         t.SetStylebox("separator", "VSeparator", new StyleBoxEmpty());
         foreach (var sb in new[] { "VScrollBar", "HScrollBar" })
         {
-            // a 4 px #3A3A3A grabber on the window's right edge, shown only when the page is longer than the window
+            // a 4 px #2D2E32 grabber on the window's right edge, shown only when the page is longer than the window
             var track = new StyleBoxEmpty { ContentMarginLeft = 2, ContentMarginRight = 2, ContentMarginTop = 2, ContentMarginBottom = 2 };
             t.SetStylebox("scroll", sb, track);
             t.SetStylebox("grabber", sb, Box(WinLine, 0, null, 0, 3, 3));
-            t.SetStylebox("grabber_highlight", sb, Box(WinText, 0, null, 0, 3, 3));
+            t.SetStylebox("grabber_highlight", sb, Box(WinHover, 0, null, 0, 3, 3));
             t.SetStylebox("grabber_pressed", sb, Box(WinActive, 0, null, 0, 3, 3));
         }
         foreach (var cb in new[] { "CheckBox", "CheckButton" })
         {
             // their own boxes, or they take the window's Button box: every row of a settings list framed (impeccable pass, 2026-11-14)
             t.SetStylebox("normal", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("pressed", cb, Box(clear, 0, null, 0, 6, 4));
-            t.SetStylebox("hover", cb, Box(clear, 0, WinText, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinText, 1, 6, 4));
+            t.SetStylebox("hover", cb, Box(clear, 0, WinHover, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinHover, 1, 6, 4));
             t.SetStylebox("disabled", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("focus", cb, new StyleBoxEmpty());
             t.SetFont("font", cb, Grotesk);
             t.SetColor("font_color", cb, WinActive); t.SetColor("font_hover_color", cb, WinActive); t.SetColor("font_pressed_color", cb, WinActive);
@@ -557,10 +562,11 @@ public static class Ui
         return t;
     }
 
-    /// <summary>The look of a window and of the pieces on the map: #0B0B0D, a thin lighter edge, square, no shadow.</summary>
-    public static StyleBoxFlat WindowBox(int padX = 1, int padY = 1) => Box(Chrome, 0, WinEdge, 1, padX, padY);
+    /// <summary>The look of a window, a dialog and a tooltip: #141416 (Paul's Infrastructure design, 2026-11-18), a thin lighter edge,
+    /// square, no shadow.</summary>
+    public static StyleBoxFlat WindowBox(int padX = 1, int padY = 1) => Box(Look.Bg, 0, WinEdge, 1, padX, padY);
 
-    /// <summary>The frame of a slot nobody fills yet: a dashed #3A3A3A line (Paul's "styles" answers, 2026-11-14).</summary>
+    /// <summary>The frame of a slot nobody fills yet: a dashed #2D2E32 line (Paul's "styles" answers, 2026-11-14).</summary>
     public static StyleBox Dashed(int padX = 8, int padY = 6)
     {
         var s = new DashedBox();
@@ -687,7 +693,7 @@ public static class Ui
         return p;
     }
 
-    /// <summary>A framed group. In a window: no fill, a thin #3A3A3A line (a line in a meaning colour stays).</summary>
+    /// <summary>A framed group. In a window: no fill, a thin #2D2E32 line (a line in a meaning colour stays).</summary>
     public static PanelContainer Card(Color? bg = null, Color? border = null, int pad = 12, int radius = 8)
     {
         var p = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };

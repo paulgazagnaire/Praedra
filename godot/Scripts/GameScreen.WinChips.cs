@@ -103,7 +103,7 @@ public partial class GameScreen
 
     /// <summary>
     /// A zone's look (Paul 2026-11-14, kept simple): a plain zone draws nothing, only what stands in it; a fleet's row has a thin line, the
-    /// row shown in a fleet window a #909EBD one; a slot for a new fleet is dashed. While a chip is dragged, the zones it can go to are
+    /// row shown in a fleet window a #BABABA one; a slot for a new fleet is dashed. While a chip is dragged, the zones it can go to are
     /// outlined blue, and the ones it can't are dimmed.
     /// </summary>
     static StyleBox ZoneStyle(bool? ok, string look)
