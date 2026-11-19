@@ -142,9 +142,9 @@ public partial class GameScreen
     void MissionMenu(Control card, string home, int? character, int? unit)
     {
         if (home == null) return;
-        var items = MissionKindsFor(home, character, unit)
-            .Select(k => ($"{GameSession.KindWords(k)}...", (Action)(() => QuickMission(home, character, unit, k)))).ToArray();
-        if (items.Length > 0) RightClickMenu(card, items);
+        // worked out at the click: no planner checks on every rebuild, and never stale under a held hover card
+        RightClickMenu(card, () => MissionKindsFor(home, character, unit)
+            .Select(k => ($"{GameSession.KindWords(k)}...", (Action)(() => QuickMission(home, character, unit, k)))).ToArray());
     }
 
     /// <summary>The kinds the planner would open for a team of just this one at <paramref name="home"/> (same filter and checks as the planner).</summary>

@@ -43,29 +43,29 @@ public partial class GameScreen
 
     /// <summary>The words of the right-click menu on the button named <paramref name="fullName"/>, or none.</summary>
     internal IReadOnlyList<string> MenuOf(string fullName) =>
-        MenuCard(fullName) is { } b && _menus.TryGetValue(b, out var items) ? items.Select(i => i.Text).ToList() : new List<string>();
+        MenuCard(fullName) is { } b && _menus.TryGetValue(b, out var items) ? items().Select(i => i.Text).ToList() : new List<string>();
 
-    /// <summary>The card with a right-click menu named <paramref name="fullName"/>: a button, or a unit card (a panel) carrying the full-name meta.</summary>
+    /// <summary>The card with a right-click menu named <paramref name="fullName"/>: first a card whose full name is exactly that (unit cards are
+    /// panels: "F:1" must not find "F:12"), else the first button whose words start with it.</summary>
     Control MenuCard(string fullName)
     {
-        if (UiTest.Find<BaseButton>(this, fullName) is { } b) return b;
         static Control Walk(Node n, string name)
         {
             foreach (var c in n.GetChildren())
             {
-                if (c is Control k && k.IsVisibleInTree() && k.HasMeta(UiTest.FullName) && k.GetMeta(UiTest.FullName).AsString().StartsWith(name, StringComparison.Ordinal)) return k;
+                if (c is Control k && k.IsVisibleInTree() && k.HasMeta(UiTest.FullName) && k.GetMeta(UiTest.FullName).AsString() == name) return k;
                 if (Walk(c, name) is { } r) return r;
             }
             return null;
         }
-        return Walk(this, fullName);
+        return Walk(this, fullName) ?? UiTest.Find<BaseButton>(this, fullName);
     }
 
     /// <summary>Right-click the button named <paramref name="fullName"/> and pick the menu line starting with <paramref name="item"/>.</summary>
     internal bool RunMenu(string fullName, string item)
     {
-        if (MenuCard(fullName) is not { } b || !_menus.TryGetValue(b, out var items)) return false;
-        foreach (var (text, act) in items) if (text.StartsWith(item, StringComparison.Ordinal)) { act(); return true; }
+        if (MenuCard(fullName) is not { } b || !_menus.TryGetValue(b, out var lines)) return false;
+        foreach (var (text, act) in lines()) if (text.StartsWith(item, StringComparison.Ordinal)) { act(); return true; }
         return false;
     }
 

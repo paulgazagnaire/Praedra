@@ -249,12 +249,17 @@ public partial class GameScreen
         string.Join(", ", all.GroupBy(o => o.Class).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} x {g.Key}"));
 
     /// <summary>A small menu on right-click (Classic's windows had one on every unit).</summary>
-    void RightClickMenu(Control c, params (string Text, Action Do)[] items)
+    void RightClickMenu(Control c, params (string Text, Action Do)[] items) => RightClickMenu(c, () => items);
+
+    /// <summary>A right-click menu whose lines are worked out at the click, so they are never stale (an empty list shows no menu).</summary>
+    void RightClickMenu(Control c, Func<(string Text, Action Do)[]> lines)
     {
-        _menus.AddOrUpdate(c, items);   // for the playtest: RunMenu
+        _menus.AddOrUpdate(c, lines);   // for the playtest: RunMenu
         c.GuiInput += e =>
         {
             if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }) return;
+            var items = lines();
+            if (items.Length == 0) return;
             var pm = new PopupMenu();
             for (int i = 0; i < items.Length; i++) pm.AddItem(items[i].Text, i);
             pm.IdPressed += id => items[(int)id].Do();
@@ -267,7 +272,7 @@ public partial class GameScreen
 
     void MgRefreshSoon() { _mgDirty = true; _mgTimer = 0; }
 
-    readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, (string Text, Action Do)[]> _menus = new();
+    readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, Func<(string Text, Action Do)[]>> _menus = new();
 }
 
 /// <summary>Slots as dots: filled for used, hollow for free (the sector tiles draw them the same way).</summary>
