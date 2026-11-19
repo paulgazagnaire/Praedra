@@ -27,7 +27,13 @@ public sealed class GalaxyLook
         ("pace", 0, 3, 1), ("waves", 0, 1.5f, 0), ("wavePace", 0.1f, 3, 1), ("pulse", 0, 1.5f, 0), ("cap", 0.15f, 1, 1),
         ("par", 0, 1, 0), ("far", 0, 1.5f, 0), ("motes", 0, 1.5f, 0), ("moteSize", 0.3f, 1, 0.6f), ("relief", 0, 1.5f, 0),
         ("sun", 0, 360, 225), ("contour", 0, 1, 0), ("contourN", 3, 30, 12), ("mesh", 0, 1, 0), ("meshN", 6, 60, 24), ("lift", 0, 1.5f, 0.6f),
+        // added to the Galaxy Maker 2026-11-19 (PR #335), the space around the galaxy: off by default (Galaxies and Haze 0)
+        ("sky", 0, 3, 0), ("skyN", 0.3f, 8, 2), ("skySize", 0.2f, 1, 0.7f), ("tiny", 0, 2, 0), ("skyDepth", 0, 0.95f, 0.7f),
+        ("skySpin", 0, 3, 0.3f), ("haze", 0, 3, 0), ("hazeSize", 0.3f, 3, 1), ("clear", 0.8f, 2, 1.1f),
+        ("wSpiral", 0, 1, 1), ("wBar", 0, 1, 0.6f), ("wEll", 0, 1, 0.8f), ("wEdge", 0, 1, 0.5f), ("wRing", 0, 1, 0.2f), ("wIrr", 0, 1, 0.4f),
     };
+    // whole-step numbers (step 1): rounded before clamping, as the Galaxy Maker's clean() does since PR #335
+    static readonly (string Key, float Min, float Max, float Def)[] WholeNumbers = { ("skySeed", 1, 999, 1) };
     // the dither's glitch (GL_CTL): key, lowest, highest, default, step (a whole step rounds to it, as the Galaxy Maker's cleanDi does)
     static readonly (string Key, float Min, float Max, float Def, float Step)[] GlitchNumbers =
     {
@@ -35,7 +41,8 @@ public sealed class GalaxyLook
         ("gVar", 1, 8, 8, 1), ("gFlat", 0, 1, 0.35f, 0), ("gPace", 0, 3, 0.4f, 0), ("gSeed", 0, 999, 1, 1),
     };
     static readonly (string Key, string Def)[] Colours =
-        { ("cBulge", "#ffd69e"), ("cDisc", "#f5e6d1"), ("cArm", "#99b8ff"), ("cKnot", "#ff7594"), ("cDust", "#4d3d38"), ("cBg", "#111214"), ("cLine", "#7ac6ff") };
+        { ("cBulge", "#ffd69e"), ("cDisc", "#f5e6d1"), ("cArm", "#99b8ff"), ("cKnot", "#ff7594"), ("cDust", "#4d3d38"), ("cBg", "#111214"), ("cLine", "#7ac6ff"),
+          ("cSkyA", "#ffb27a"), ("cSkyB", "#8cc2ff"), ("cHaze", "#24406e") };
     static readonly string[] Patterns = { "fine", "coarse", "halftone", "grain" };
     static readonly Dictionary<string, string[]> Palettes = new()
     {
@@ -68,11 +75,12 @@ public sealed class GalaxyLook
     /// <summary>Any of the movement is on, so the backdrop is redrawn over time and not only when the view moves. Overall pace 0 stops
     /// everything (the Galaxy Maker's clock runs at pace times real time).</summary>
     public bool Moves => _n["pace"] > 0 && (_n["drift"] > 0 || _n["breathe"] > 0 || (_n["twinkle"] > 0 && _n["twShare"] > 0)
-        || _n["waves"] > 0 || _n["pulse"] > 0 || _n["motes"] > 0 || GlitchMoves);
+        || _n["waves"] > 0 || _n["pulse"] > 0 || _n["motes"] > 0 || (_n["sky"] > 0 && _n["skySpin"] > 0) || _n["haze"] > 0 || GlitchMoves);
 
     GalaxyLook()
     {
         foreach (var (k, _, _, d) in Numbers) _n[k] = d;
+        foreach (var (k, _, _, d) in WholeNumbers) _n[k] = d;
         foreach (var (k, d) in Colours) _c[k] = Rgb(d);
         foreach (var (k, _, _, d, _) in GlitchNumbers) _g[k] = d;
     }
@@ -95,6 +103,8 @@ public sealed class GalaxyLook
         {
             foreach (var (k, min, max, _) in Numbers)
                 if (p.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number) _n[k] = Math.Clamp(v.GetSingle(), min, max);
+            foreach (var (k, min, max, _) in WholeNumbers)
+                if (p.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number) _n[k] = Math.Clamp(MathF.Floor(v.GetSingle() + 0.5f), min, max); // JavaScript Math.round
             foreach (var (k, _) in Colours)
                 if (p.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String && IsHex(v.GetString()!)) _c[k] = Rgb(v.GetString()!);
         }

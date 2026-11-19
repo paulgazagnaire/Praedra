@@ -65,7 +65,13 @@ public partial class GalaxyBackdrop : Control
         _material.SetShaderParameter("relief_mix", new Vector4(l["relief"], Mathf.DegToRad(l["sun"]), l["contour"], l["contourN"]));
         _material.SetShaderParameter("mesh_mix", new Vector4(l["mesh"], l["meshN"], l["lift"], l["cap"]));
         _material.SetShaderParameter("live_mix", new Vector4(l["waves"], l["wavePace"], l["pulse"], 0f));
-        foreach (var (key, uniform) in new[] { ("cBulge", "c_bulge"), ("cDisc", "c_disc"), ("cArm", "c_arm"), ("cKnot", "c_knot"), ("cDust", "c_dust"), ("cBg", "c_bg"), ("cLine", "c_line") })
+        // the space around the galaxy (Galaxy Maker PR #335): far galaxies and haze, nothing drawn while both are 0
+        _material.SetShaderParameter("sky_a", new Vector4(l["sky"], l["skyN"], l["skySize"], l["skyDepth"]));
+        _material.SetShaderParameter("sky_b", new Vector4(l["haze"], l["hazeSize"], l["clear"], l["skySpin"]));
+        _material.SetShaderParameter("sky_w0", new Vector4(l["wSpiral"], l["wBar"], l["wEll"], l["wEdge"]));
+        _material.SetShaderParameter("sky_w1", new Vector4(l["wRing"], l["wIrr"], l["tiny"], l["skySeed"]));
+        foreach (var (key, uniform) in new[] { ("cBulge", "c_bulge"), ("cDisc", "c_disc"), ("cArm", "c_arm"), ("cKnot", "c_knot"), ("cDust", "c_dust"), ("cBg", "c_bg"), ("cLine", "c_line"),
+                     ("cSkyA", "c_sky_a"), ("cSkyB", "c_sky_b"), ("cHaze", "c_haze") })
             _material.SetShaderParameter(uniform, l.Colour(key));
         _material.SetShaderParameter("dither_on", l.DitherOn);
         if (!l.DitherOn) return;
