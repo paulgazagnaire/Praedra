@@ -47,6 +47,7 @@ public partial class GameScreen
         public VBoxContainer Head, Body;
         public bool NewLook;    // Paul's Paper design (2026-11-18): your planet's Infrastructure window for now
         public InfraTab? Shows; // the Infrastructure window's open cell (the yard strip)
+        public bool Stale;      // to be rebuilt, held while its hover card is being read (GameScreen.TipHold)
         public int Page;        // the yard strip's page: the yards, or the mines, refineries and defences
         public ScrollContainer Scroll;
         public readonly Dictionary<string, (Control Page, Button Tab)> Pages = new(StringComparer.Ordinal);
@@ -378,8 +379,12 @@ public partial class GameScreen
         if (_mgDirty && _mgTimer <= 0 && !dragging && !Input.IsMouseButtonPressed(MouseButton.Left))
         {
             _mgDirty = false; _mgTimer = 0.25;
-            foreach (var w in _mgWins.ToList()) RebuildMg(w);
+            foreach (var w in _mgWins) w.Stale = true;
         }
+        // a window whose hover card is being read waits (Paul 2026-11-19); the others are rebuilt now, it catches up when the card goes
+        if (!dragging && !Input.IsMouseButtonPressed(MouseButton.Left))
+            foreach (var w in _mgWins.ToList())
+                if (w.Stale && _mgWins.Contains(w) && !ReadingTip(w.Panel)) RebuildMg(w);
     }
 
     // ================================================================== content
@@ -387,6 +392,7 @@ public partial class GameScreen
     void RebuildMg(MgWin w)
     {
         using var look = Ui.Window();   // everything built here has the window look
+        w.Stale = false;
         NewDay();
         if (w.Kind == MgKind.Fleet && (!S.Game.State.Fleets.TryGetValue(w.Fleet, out var gone) || gone.Side != Me)) { CloseMgmt(w); return; } // merged away or lost
         float keep = w.Scroll.ScrollVertical;

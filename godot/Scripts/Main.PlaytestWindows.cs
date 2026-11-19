@@ -51,6 +51,9 @@ public partial class Main
         Expect(gs.Click($"Open {fleet.Name}"), $"the Fleets tab's Open button opens {fleet.Name}");
         gs.PlayRefresh();
         Expect(gs.MgmtCount == 2 && gs.MgHasZone($"Fleet {fid} Admiral") && gs.MgHasZone($"Fleet {fid} Passengers"), "the fleet window opens beside it, with its posts and passengers");
+        // a hover card stays while you read it when a day passes (Paul 2026-11-19), and the window catches up once the mouse moves off
+        var (tipHeld, tipCaught, tipText) = gs.PlayTipHold($"Ground {sys}");
+        Expect(tipHeld && tipCaught, $"a hover card in the system window stays up when a day passes, and the window updates after (held {tipHeld}, caught up {tipCaught}, card \"{tipText?.Split('\n')[0]}\")");
         string noteWhy = gs.NoteOverWindowsProblem("Test note", sys);
         Expect(noteWhy == null, "a short note is drawn over the open windows, and one that names a system takes the click there, not the window under it"
             + $" (story W9, QA-104){(noteWhy == null ? "" : ": " + noteWhy)}");

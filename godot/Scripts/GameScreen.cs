@@ -196,6 +196,7 @@ public partial class GameScreen : Control
         _fleets.DayFraction = _playing ? (float)Math.Min(_acc, 0.999) : 0f;
 
         TickToasts(delta);
+        TickTip();
         TickHover(delta);
         TickSectorView(delta);
         TickMgmt(delta);
@@ -212,7 +213,7 @@ public partial class GameScreen : Control
 
         _panelTimer -= delta;
         if (_attentionDirty && _panelTimer <= 0) { _attentionDirty = false; RefreshAttention(); }
-        if (_panelDirty && _panelTimer <= 0) { _panelDirty = false; _panelTimer = 0.2; RebuildPanel(); RefreshTop(); }
+        if (_panelDirty && _panelTimer <= 0 && !ReadingTip(_pv)) { _panelDirty = false; _panelTimer = 0.2; RebuildPanel(); RefreshTop(); }
         if (_fleetListDirty) { _fleetListDirty = false; if (_tab == DrawerTab.Fleets) _panelDirty = true; }
 
         if (ShotPath != null && ++_frame >= ShotFrames)
@@ -242,6 +243,7 @@ public partial class GameScreen : Control
     public override void _Input(InputEvent e)
     {
         if (e is InputEventKey { Keycode: Key.Alt } k && _view != null) _view.ShowAllNames = k.Pressed;
+        TrackTip(e);
     }
 
     public override void _Notification(int what)
