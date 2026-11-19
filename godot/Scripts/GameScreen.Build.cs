@@ -181,28 +181,55 @@ public partial class GameScreen
         return list.OrderBy(b => b.Usable ? 0 : 1).ThenBy(b => Prio(b.Row)).ThenBy(b => b.Row.Cost).ThenBy(b => b.Row.Name, StringComparer.Ordinal).ToList();
     }
 
+    /// <summary>A construction yard that can build for a planet with none: where it is, the trip in days, and about how many days its
+    /// work in hand (the project and orders waiting for the clock) keeps it busy.</summary>
+    sealed record Supplier(string Yard, int Trip, int Busy);
+
     /// <summary>
-    /// The construction yards that build for a planet of yours with none: your planet with a finished construction yard that can deliver
-    /// there, idle yards first, then the shortest trip, then by name. Null when none can. rule: m2-construction §Build order (a facility's
-    /// destination is any system the side controls), §Completion and delivery. Paul 2026-11-19: "we're missing a way to build
-    /// infrastructure for other systems".
+    /// The construction yards that can build for a planet of yours with none: your planets with a finished construction yard that can
+    /// deliver there, soonest first (busy days + trip, then by name). rule: m2-construction §Build order (a facility's destination is any
+    /// system the side controls), §Completion and delivery. Paul 2026-11-19: "we're missing a way to build infrastructure for other
+    /// systems"; he picks the yard ("Let me pick"), the soonest is picked first. Worked out once a day per planet (and when orders change).
     /// </summary>
-    (string Yard, int Days)? SupplierFor(string dest)
+    List<Supplier> SuppliersFor(string dest)
     {
         var cons = S.Host.Construction; var eco = S.Host.Economy;
+        // a cancel and a new order on the same day keep the count: at worst one stale busy figure until the next day, which is fine
+        var stamp = (S.Game.Day, S.Game.Queue.Count);
+        if (_suppliers.TryGetValue(dest, out var hit) && hit.Stamp == stamp) return hit.List;
         int speed = cons.Params.UnratedDeliverySpeed;
-        var best = ((string Yard, int Days)?)null; bool bestIdle = false;
+        int Cost(string cls) => eco.Costs.TryGet(cls, out var r) ? r.Cost : 0;
+        var list = new List<Supplier>();
         foreach (var sys in eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System != null && o.System != dest)
                      .Select(o => o.System).Distinct().OrderBy(x => x, StringComparer.Ordinal))
         {
             if (!HasYard(sys, YardFamily.Construction) || S.OwnerOf(sys) != Me || eco.IsDestroyed(sys)) continue;
             var path = S.Host.Fleets.FindPath(sys, dest, speed);
             if (!path.Ok) continue;
-            bool idle = cons.ProjectAt(sys, YardFamily.Construction) is not { Units.Count: > 0 } && QueuedBuilds(sys, YardFamily.Construction).Count == 0;
-            if (best == null || (idle && !bestIdle) || (idle == bestIdle && path.TotalTicks < best.Value.Days))
-            { best = (sys, path.TotalTicks); bestIdle = idle; }
+            // the points still to build: the project's units (less the current one's progress), its queue, then the orders not yet judged
+            long points = 0;
+            if (cons.ProjectAt(sys, YardFamily.Construction) is { } p)
+            {
+                foreach (var id in p.Units.Concat(p.Next?.SelectMany(q => q.Units) ?? Enumerable.Empty<int>()))
+                    if (eco.Find(id) is { } o) points += Cost(o.Class);
+                points = Math.Max(0, points - p.Progress);
+            }
+            foreach (var o in QueuedBuilds(sys, YardFamily.Construction)) points += (long)Cost(o.Class) * o.Count;
+            list.Add(new Supplier(sys, path.TotalTicks, BuildDaysAt(sys, YardFamily.Construction, (int)Math.Min(int.MaxValue, points))));
         }
-        return best;
+        list = list.OrderBy(x => x.Busy + x.Trip).ThenBy(x => x.Yard, StringComparer.Ordinal).ToList();
+        _suppliers[dest] = (stamp, list);
+        return list;
+    }
+
+    readonly Dictionary<string, ((int, int) Stamp, List<Supplier> List)> _suppliers = new(StringComparer.Ordinal);
+    /// <summary>The yard the player picked to build for a planet (by planet); the soonest when none or when it can no longer.</summary>
+    readonly Dictionary<string, string> _supplierPick = new(StringComparer.Ordinal);
+
+    Supplier PickedSupplier(string dest)
+    {
+        var all = SuppliersFor(dest);
+        return _supplierPick.TryGetValue(dest, out var y) && all.Find(x => x.Yard == y) is { } picked ? picked : all.FirstOrDefault();
     }
 
     List<BuildRow> _shownBuildRows = new(); // the rows the Build tab shows now (read by the playtest)
@@ -342,7 +369,7 @@ public partial class GameScreen
         int n = Math.Max(1, count);
         string dest = row.Category == ObjectCategory.Facility ? deliverTo ?? system : null;
         long seq = S.Host.Construction.SubmitBuild(Me, system, fam, row.Name, n, dest);
-        string what = dest != null && dest != system ? $"build {n} x {row.Name} at {dest} (from {system})" : $"build {n} x {row.Name} at {system}";
+        string what = dest != null && dest != system ? $"build {n} x {row.Name} for {dest}, built at {system}" : $"build {n} x {row.Name} at {system}";
         S.Track(seq, char.ToUpper(what[0]) + what[1..]);
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);

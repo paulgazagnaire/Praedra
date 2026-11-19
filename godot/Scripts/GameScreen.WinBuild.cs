@@ -475,25 +475,20 @@ public partial class GameScreen
         head.AddChild(StepButton("+", "One more (up to 20)", () => { _buildQty = Math.Min(20, _buildQty + 1); MgRefreshSoon(); }));
         sec.AddChild(head);
 
-        // a planet with no construction yard gets its buildings from your nearest one, delivered (Paul 2026-11-19)
-        var supply = fam == YardFamily.Construction && !HasYard(n, fam) ? SupplierFor(n) : null;
+        // a planet with no construction yard gets its buildings from one of your yards, which you pick (Paul 2026-11-19)
+        var supply = fam == YardFamily.Construction && !HasYard(n, fam) ? PickedSupplier(n) : null;
         string yardAt = supply?.Yard;
         List<BuildRow> rows = tab switch
         {
-            InfraTab.Construction => BuildRowsFor(n, "Facilities", yardAt, supply?.Days ?? 0),
+            InfraTab.Construction => BuildRowsFor(n, "Facilities", yardAt, supply == null ? 0 : supply.Busy + supply.Trip),
             InfraTab.Training => BuildRowsFor(n, "Troops"),
             // ships, then fighters, both from the shipyards; what can be ordered first (OrderBy keeps the order within each)
             InfraTab.Shipyard => BuildRowsFor(n, "Ships").Concat(BuildRowsFor(n, "Fighters")).OrderBy(b => b.Usable ? 0 : 1).ToList(),
-            _ => BuildRowsFor(n, "Facilities", yardAt, supply?.Days ?? 0).Where(b => InTab(b.Row.Name, tab)).ToList(),
+            _ => BuildRowsFor(n, "Facilities", yardAt, supply == null ? 0 : supply.Busy + supply.Trip).Where(b => InTab(b.Row.Name, tab)).ToList(),
         };
         bool canBuild = HasYard(n, fam) || yardAt != null;
         _shownBuildRows = canBuild ? rows : new();   // the cards shown (read by the playtest)
-        if (yardAt != null)
-        {
-            var from = Look.Words($"No construction yard here: {yardAt} builds it and sends it here ({supply.Value.Days} days on the way, counted in the days below).", 12, Look.Soft);
-            from.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            sec.AddChild(from);
-        }
+        if (yardAt != null) sec.AddChild(SupplierRow(n, supply));
         if (!canBuild)
         {
             var why = Look.Words($"This planet has no {FamilyName(fam).ToLowerInvariant()}. "
@@ -524,6 +519,44 @@ public partial class GameScreen
         Add(sec);
     }
 
+    /// <summary>"No construction yard here. Built at:" and one chip per yard that can build for this planet, soonest first, the picked one
+    /// lit: its name, the trip, and how long its work in hand keeps it busy (Paul 2026-11-19, "Let me pick").</summary>
+    Control SupplierRow(string n, Supplier picked)
+    {
+        var box = Boxed(new VBoxContainer(), 6);
+        var words = Look.Words("No construction yard here. Built at (the days on the cards count the yard's work in hand and the trip):", 12, Look.Soft);
+        words.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        box.AddChild(words);
+        var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+        flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
+        // the four soonest, and the picked one if it is further down
+        var shown = SuppliersFor(n).Take(4).ToList();
+        if (!shown.Contains(picked)) shown.Add(picked);
+        foreach (var x in shown)
+        {
+            bool on = x.Yard == picked.Yard;
+            string busy = x.Busy == 0 ? "free now" : $"busy about {x.Busy} days";
+            var b = new Button { Text = $"{x.Yard} · {x.Trip} days away · {busy}", FocusMode = FocusModeEnum.None, ToggleMode = true, ButtonPressed = on,
+                MouseDefaultCursorShape = CursorShape.PointingHand,
+                TooltipText = Ui.Wrap($"Build here from the construction yards at {x.Yard}: {x.Trip} days on the way" + (x.Busy > 0 ? $", after about {x.Busy} days of work they already have." : ", and they are free now.")) };
+            var clear = new Color(0, 0, 0, 0);
+            b.AddThemeStyleboxOverride("normal", Look.Box(clear, on ? Look.Accent : Look.Line, 1, 1, 1, 1));
+            b.AddThemeStyleboxOverride("hover", Look.Box(clear, Look.Dim, 1, 1, 1, 1));
+            b.AddThemeStyleboxOverride("pressed", Look.Box(clear, Look.Accent, 1, 1, 1, 1));
+            b.AddThemeStyleboxOverride("hover_pressed", Look.Box(clear, Look.Accent, 1, 1, 1, 1));
+            b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+            b.AddThemeFontOverride("font", Ui.Grotesk);
+            b.AddThemeFontSizeOverride("font_size", 12);
+            foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color" }) b.AddThemeColorOverride(c, on ? Look.Text : Look.Soft);
+            b.SetMeta(UiTest.FullName, $"Built at {x.Yard} for {n}");
+            string yard = x.Yard;
+            b.Pressed += () => { _supplierPick[n] = yard; MgRefreshSoon(); };
+            flow.AddChild(b);
+        }
+        box.AddChild(flow);
+        return box;
+    }
+
     static Button StepButton(string glyph, string tip, Action act)
     {
         var b = new Button { Text = glyph, FocusMode = FocusModeEnum.None, TooltipText = tip, CustomMinimumSize = new Vector2(24, 24),
@@ -549,7 +582,7 @@ public partial class GameScreen
     {
         var r = b.Row;
         string tip =
-            $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit {(yardAt != null ? $"(built at {yardAt}, then sent here)" : "here")} once the refined is there." +
+            $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days {(yardAt != null ? $"for the first one (built at {yardAt}, then sent here; each one travels as soon as it is done)" : "per unit here")} once the refined is there." +
             (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : "");
         // the hover card: what it is, its role, its stats and its picture (Paul 2026-11-19); the plain tip stays as the fallback text
         var kind = KindOf(r.Category, r.Name);

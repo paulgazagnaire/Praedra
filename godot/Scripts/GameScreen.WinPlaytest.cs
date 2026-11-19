@@ -82,6 +82,9 @@ public partial class GameScreen
             Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
     }
 
+    /// <summary>The yards that can build for a planet with no construction yard, soonest first, and the one picked.</summary>
+    internal (List<string> Yards, string Picked) InfraSuppliers(string dest) => (SuppliersFor(dest).Select(x => x.Yard).ToList(), PickedSupplier(dest)?.Yard);
+
     internal bool MgHasZone(string zoneKey) => _zones.Any(x => x.Key == zoneKey && IsInstanceValid(x.Box));
 
     internal string MgText(string key)

@@ -141,15 +141,33 @@ public partial class Main
         string bt = gs.MgText(bkey);
         var bst = gs.InfraState(bare);
         string card = bst?.Cards.FirstOrDefault(c => c.Usable).Name;
-        Expect(bt.Contains("builds it and sends it here") && card != null, $"{bare} has no construction yard, yet its window offers facilities built elsewhere and sent there: {string.Join(", ", bst?.Cards.Select(c => c.Name) ?? Enumerable.Empty<string>())}");
+        Expect(bt.Contains("No construction yard here. Built at") && card != null, $"{bare} has no construction yard, yet its window offers facilities built elsewhere and sent there: {string.Join(", ", bst?.Cards.Select(c => c.Name) ?? Enumerable.Empty<string>())}");
         if (card == null) { while (gs.MgmtCount > 0) gs.PressKey(Key.Escape); return; }
+        // the yards that can build for it, soonest first; the soonest is picked, and a click picks another (Paul 2026-11-19: "Let me pick")
+        if (gs.InfraSuppliers(bare).Yards.Count < 2)
+        {
+            // a second yard to pick from (test only, as the windows test plants a Training facility)
+            string other = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => n != bare && s.OwnerOf(n) == s.Player && !s.IsDestroyed(n) && !HasAt(n, YardFamily.Construction) && eco.FreeEnergy(n) > 0)
+                .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+            GD.Print($"  a second construction yard for the pick: {other ?? "(no room)"}");
+            if (other != null) { eco.AddFacility(other, FacilityKind.ConstructionYard); gs.PlayDay(); gs.MgText(bkey); }   // the screens read yards once a day
+        }
+        var (supply, picked) = gs.InfraSuppliers(bare);
+        Expect(supply.Count > 0 && picked == supply[0] && gs.Has($"Built at {picked} for {bare}"), $"the window lists the yards that can build for {bare}, the soonest picked: {string.Join(", ", supply)}");
+        string want = supply.Count > 1 ? supply[1] : picked;
+        if (supply.Count > 1)
+        {
+            Expect(gs.Click($"Built at {want} for {bare}"), $"click {want} to build there instead");
+            gs.MgText(bkey);
+            Expect(gs.InfraSuppliers(bare).Picked == want, $"{want} is now the yard that builds for {bare}");
+        }
         int q0 = s.QueuedOrders;
         Expect(gs.Click($"Build {card}") && s.QueuedOrders == q0 + 1, $"a click on {card} orders it for {bare}");
         gs.PlayDay();
         bool Bound(Praedra.Core.Construction.Project p) => p != null && (p.Destination == bare || (p.Next?.Any(x => x.Destination == bare) ?? false));
         var yards = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => HasAt(n, YardFamily.Construction)).ToList();
         string by = yards.FirstOrDefault(n => Bound(cons.ProjectAt(n, YardFamily.Construction)));
-        Expect(by != null && by != bare, $"the core took it: the construction yard at {by ?? "(none)"} builds {card} for {bare}");
+        Expect(by == want, $"the core took it: the construction yard at {by ?? "(none)"} builds {card} for {bare} (picked: {want})");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }
 }
