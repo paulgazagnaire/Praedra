@@ -52,9 +52,19 @@ public partial class GameScreen
 {
     /// <summary>Where a mouse can click now: only the dialog on top while one is open (the veil blocks the rest), else the whole screen.</summary>
     Node ClickRoot => _modalStack.Count > 0 ? _modalStack[^1] : this;
-    internal bool Has(string prefix) => UiTest.Has(ClickRoot, prefix) || (_menuPopup.Visible && UiTest.Has(_menuPopup, prefix));
-    internal bool Enabled(string prefix) => (UiTest.Find<BaseButton>(MenuFirst, prefix) ?? UiTest.Find<BaseButton>(ClickRoot, prefix)) is { Disabled: false };
-    internal bool Click(string prefix) => (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix);
+    internal bool Has(string prefix) { Dismiss(prefix); return UiTest.Has(ClickRoot, prefix) || (_menuPopup.Visible && UiTest.Has(_menuPopup, prefix)); }
+    internal bool Enabled(string prefix) { Dismiss(prefix); return (UiTest.Find<BaseButton>(MenuFirst, prefix) ?? UiTest.Find<BaseButton>(ClickRoot, prefix)) is { Disabled: false }; }
+    internal bool Click(string prefix) { Dismiss(prefix); return (_menuPopup.Visible && _modalStack.Count == 0 && UiTest.Click(_menuPopup, prefix)) || UiTest.Click(ClickRoot, prefix); }
+
+    /// <summary>A report that opened by itself on a day (a battle, a capture) and is not what the next step looks for is closed first, as a
+    /// player closes it before clicking elsewhere. A step that looks at the report itself (Close, Go there) still finds it open. The enemy's
+    /// bigger fights since the Hand's bigger start (2026-11-19) open such reports in the middle of steps that are about something else.</summary>
+    void Dismiss(string prefix)
+    {
+        if (_modalStack.Count == 0 || _modalStack[^1] != _reportPanel || UiTest.Has(_reportPanel, prefix)) return;
+        GD.Print($"  (day {S.Game.Day}: closed the report \"{_reportTitle.Text}\" to reach '{prefix}')");
+        HideModal(_reportPanel);
+    }
 
     /// <summary>What a player does for a window that is not open: open the menu and click it there (the menu closes itself).
     /// Kept apart from Click so a button dropped from the screen still fails its check.</summary>
