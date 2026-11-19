@@ -155,7 +155,9 @@ public partial class GameScreen
     sealed record BuildRow(CostRow Row, YardFamily Family, bool Usable, string Why, int Days);
     const string NotResearched = "not researched";
 
-    List<BuildRow> BuildRowsFor(string system, string section)
+    /// <param name="yardAt">The system whose yards build it, when it is not <paramref name="system"/> (a facility delivered from elsewhere).</param>
+    /// <param name="onTheWay">Days the delivery travels, added to the build days.</param>
+    List<BuildRow> BuildRowsFor(string system, string section, string yardAt = null, int onTheWay = 0)
     {
         var eco = S.Host.Economy; var cons = S.Host.Construction;
         long refined = eco.Refined(Me);
@@ -173,10 +175,34 @@ public partial class GameScreen
             else if ((long)r.Maintenance * _buildQty > cap - dealt) why = "no upkeep room";
             bool usable = why == null;
             if (usable && r.Cost > refined) why = "waits for refined";
-            list.Add(new BuildRow(r, fam, usable, why, BuildDaysAt(system, fam, r.Cost)));
+            list.Add(new BuildRow(r, fam, usable, why, BuildDaysAt(yardAt ?? system, fam, r.Cost) + onTheWay));
         }
         int Prio(CostRow r) { int i = Array.IndexOf(FacilityPriority, r.Name); return r.Category == ObjectCategory.Facility ? (i >= 0 ? i : 50) : 0; }
         return list.OrderBy(b => b.Usable ? 0 : 1).ThenBy(b => Prio(b.Row)).ThenBy(b => b.Row.Cost).ThenBy(b => b.Row.Name, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// The construction yards that build for a planet of yours with none: your planet with a finished construction yard that can deliver
+    /// there, idle yards first, then the shortest trip, then by name. Null when none can. rule: m2-construction §Build order (a facility's
+    /// destination is any system the side controls), §Completion and delivery. Paul 2026-11-19: "we're missing a way to build
+    /// infrastructure for other systems".
+    /// </summary>
+    (string Yard, int Days)? SupplierFor(string dest)
+    {
+        var cons = S.Host.Construction; var eco = S.Host.Economy;
+        int speed = cons.Params.UnratedDeliverySpeed;
+        var best = ((string Yard, int Days)?)null; bool bestIdle = false;
+        foreach (var sys in eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System != null && o.System != dest)
+                     .Select(o => o.System).Distinct().OrderBy(x => x, StringComparer.Ordinal))
+        {
+            if (!HasYard(sys, YardFamily.Construction) || S.OwnerOf(sys) != Me || eco.IsDestroyed(sys)) continue;
+            var path = S.Host.Fleets.FindPath(sys, dest, speed);
+            if (!path.Ok) continue;
+            bool idle = cons.ProjectAt(sys, YardFamily.Construction) is not { Units.Count: > 0 } && QueuedBuilds(sys, YardFamily.Construction).Count == 0;
+            if (best == null || (idle && !bestIdle) || (idle == bestIdle && path.TotalTicks < best.Value.Days))
+            { best = (sys, path.TotalTicks); bestIdle = idle; }
+        }
+        return best;
     }
 
     List<BuildRow> _shownBuildRows = new(); // the rows the Build tab shows now (read by the playtest)
@@ -310,12 +336,13 @@ public partial class GameScreen
         return l;
     }
 
-    void SubmitBuild(string system, YardFamily fam, CostRow row, int count)
+    /// <param name="deliverTo">For a facility built by the yards of <paramref name="system"/> for another of your systems (null: here).</param>
+    void SubmitBuild(string system, YardFamily fam, CostRow row, int count, string deliverTo = null)
     {
         int n = Math.Max(1, count);
-        string dest = row.Category == ObjectCategory.Facility ? system : null;
+        string dest = row.Category == ObjectCategory.Facility ? deliverTo ?? system : null;
         long seq = S.Host.Construction.SubmitBuild(Me, system, fam, row.Name, n, dest);
-        string what = $"build {n} x {row.Name} at {system}";
+        string what = dest != null && dest != system ? $"build {n} x {row.Name} at {dest} (from {system})" : $"build {n} x {row.Name} at {system}";
         S.Track(seq, char.ToUpper(what[0]) + what[1..]);
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);

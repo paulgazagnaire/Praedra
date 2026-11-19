@@ -475,19 +475,29 @@ public partial class GameScreen
         head.AddChild(StepButton("+", "One more (up to 20)", () => { _buildQty = Math.Min(20, _buildQty + 1); MgRefreshSoon(); }));
         sec.AddChild(head);
 
+        // a planet with no construction yard gets its buildings from your nearest one, delivered (Paul 2026-11-19)
+        var supply = fam == YardFamily.Construction && !HasYard(n, fam) ? SupplierFor(n) : null;
+        string yardAt = supply?.Yard;
         List<BuildRow> rows = tab switch
         {
-            InfraTab.Construction => BuildRowsFor(n, "Facilities"),
+            InfraTab.Construction => BuildRowsFor(n, "Facilities", yardAt, supply?.Days ?? 0),
             InfraTab.Training => BuildRowsFor(n, "Troops"),
             // ships, then fighters, both from the shipyards; what can be ordered first (OrderBy keeps the order within each)
             InfraTab.Shipyard => BuildRowsFor(n, "Ships").Concat(BuildRowsFor(n, "Fighters")).OrderBy(b => b.Usable ? 0 : 1).ToList(),
-            _ => BuildRowsFor(n, "Facilities").Where(b => InTab(b.Row.Name, tab)).ToList(),
+            _ => BuildRowsFor(n, "Facilities", yardAt, supply?.Days ?? 0).Where(b => InTab(b.Row.Name, tab)).ToList(),
         };
-        _shownBuildRows = HasYard(n, fam) ? rows : new();   // the cards shown (read by the playtest)
-        if (!HasYard(n, fam))
+        bool canBuild = HasYard(n, fam) || yardAt != null;
+        _shownBuildRows = canBuild ? rows : new();   // the cards shown (read by the playtest)
+        if (yardAt != null)
+        {
+            var from = Look.Words($"No construction yard here: {yardAt} builds it and sends it here ({supply.Value.Days} days on the way, counted in the days below).", 12, Look.Soft);
+            from.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            sec.AddChild(from);
+        }
+        if (!canBuild)
         {
             var why = Look.Words($"This planet has no {FamilyName(fam).ToLowerInvariant()}. "
-                + (fam == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one under Construction yards first."), 12, Look.Soft);
+                + (fam == YardFamily.Construction ? "None of your construction yards can reach it." : "Build one under Construction yards first."), 12, Look.Soft);
             why.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             sec.AddChild(why);
         }
@@ -497,7 +507,7 @@ public partial class GameScreen
             grid.AddThemeConstantOverride("h_separation", 1); grid.AddThemeConstantOverride("v_separation", 1);
             float cardW = MathF.Floor((BodyWidth(w) - 3) / 4f);
             bool hand = Me == Side.Hand;
-            foreach (var b in rows) grid.AddChild(BuildCard(n, b, hand, cardW));
+            foreach (var b in rows) grid.AddChild(BuildCard(n, b, hand, cardW, yardAt));
             sec.AddChild(grid);
         }
         var prev = _into;
@@ -535,11 +545,11 @@ public partial class GameScreen
     /// A thing the yards here can build, as a card (Paul's design): its icon, its name, and at the foot its refined cost and the days one
     /// takes here. Grey when it can't be ordered; the reason, when it is not "not researched", in a line of its own. Click: order "How many".
     /// </summary>
-    Control BuildCard(string n, BuildRow b, bool hand, float width)
+    Control BuildCard(string n, BuildRow b, bool hand, float width, string yardAt = null)
     {
         var r = b.Row;
         string tip =
-            $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit here once the refined is there." +
+            $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit {(yardAt != null ? $"(built at {yardAt}, then sent here)" : "here")} once the refined is there." +
             (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : "");
         // the hover card: what it is, its role, its stats and its picture (Paul 2026-11-19); the plain tip stays as the fallback text
         var kind = KindOf(r.Category, r.Name);
@@ -583,7 +593,7 @@ public partial class GameScreen
         foot.AddChild(Amount(b.Days.ToString(), PixelIconData.Bar["days"], ink, !b.Usable));
         v.AddChild(foot);
         Fill(btn, v, 16, 16, new Vector2(width, CardHeight));
-        btn.Pressed += () => { SubmitBuild(n, b.Family, r, _buildQty); MgRefreshSoon(); };
+        btn.Pressed += () => { if (yardAt != null) SubmitBuild(yardAt, b.Family, r, _buildQty, n); else SubmitBuild(n, b.Family, r, _buildQty); MgRefreshSoon(); };
         return btn;
     }
 
