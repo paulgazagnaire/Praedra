@@ -87,13 +87,13 @@ public partial class GameScreen
         var zone = new Zone(key, box, flow, refuse, drop, verb);
         _zones.Add(zone);
         box.SetDragForwarding(new Callable(),
-            Callable.From((Func<Vector2, Variant, bool>)((_, data) => Drag.Parse(data) is { } d && Judge(zone, d) == null)),
+            Callable.From((Func<Vector2, Variant, bool>)((_, data) => Drag.ParseAll(data).Any(d => Judge(zone, d) == null))),
             Callable.From((Action<Vector2, Variant>)((_, data) =>
             {
                 // a stack drops unit by unit, each judged after the ones before it (room fills up)
                 bool any = false;
                 foreach (var d in Drag.ParseAll(data)) if (Judge(zone, d) == null) { RunDrop(() => drop(d)); any = true; }
-                if (any) { RefreshMgmt(); RefreshSectorView(); }
+                if (any) { _picked.Clear(); RefreshMgmt(); RefreshSectorView(); }   // what was picked has gone where it was dropped
             })));
         return (box, flow);
     }
@@ -152,18 +152,35 @@ public partial class GameScreen
     {
         if (ds.Count == 0) return;
         c.MouseDefaultCursorShape = CursorShape.Drag;
+        var self = ds[0];
+        if (Pickable(self))
+        {
+            // a click picks it, Shift+click adds it to the pick or takes it out (Paul 2026-11-19); a drag is not a click
+            if (IsPicked(self) && c is PanelContainer pc) pc.AddThemeStyleboxOverride("panel", PickedLook());
+            Vector2? down = null;
+            c.GuiInput += e =>
+            {
+                if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left } mb) return;
+                if (mb.Pressed) { down = mb.Position; return; }
+                if (down is Vector2 at && at.DistanceTo(mb.Position) < 6) { PickClick(self, mb.ShiftPressed); c.AcceptEvent(); }
+                down = null;
+            };
+        }
         c.SetDragForwarding(Callable.From((Func<Vector2, Variant>)(_ =>
         {
-            var take = Input.IsKeyPressed(Key.Shift) ? ds : ds.Take(1).ToList();
+            // a picked card carries every picked unit (itself first); else Shift takes the identical units beside it, as before
+            var take = TakeFor(ds, Input.IsKeyPressed(Key.Shift), out bool picked);
+            bool mixed = take.Select(ThingName).Distinct().Count() > 1;
             _dragging = take[0];
             _dragCount = take.Count;
+            _dragMixed = mixed;
             using var look = Ui.Window();   // the tile under the mouse looks like the one in the window
-            var prev = DragTile(take[0], take.Count > 1 ? "all of them" : null, take.Count, ghost: false);
+            var prev = DragTile(take[0], take.Count > 1 ? (picked ? $"{take.Count} picked" : "all of them") : null, take.Count, ghost: false);
             prev.Theme = Ui.WindowTheme;
             prev.Modulate = new Color(1, 1, 1, 0.9f);
             prev.Rotation = -0.03f;
             c.SetDragPreview(prev);
-            return $"{take[0].Kind}:{string.Join(",", take.Select(x => x.Id))}";
+            return Payload(take);
         })), new Callable(), new Callable());
     }
 
@@ -182,7 +199,9 @@ public partial class GameScreen
         _dragHint.Position = ClampWin(mouse + new Vector2(18, 22), _dragHint.Size) with { Y = Math.Min(mouse.Y + 22, _mgLayer.Size.Y - 40) };
     }
 
-    string DropWords(Drag d, Zone z) => $"Drop to {z.Verb}: {(_dragCount > 1 ? $"{_dragCount} × " : "")}{ThingName(d)}";
+    string DropWords(Drag d, Zone z) => $"Drop to {z.Verb}: " + (_dragMixed ? $"{_dragCount} units" : $"{(_dragCount > 1 ? $"{_dragCount} × " : "")}{ThingName(d)}");
+
+    bool _dragMixed;   // the drag carries picked units of more than one class
 
     string ThingName(Drag d) => d.Kind switch
     {

@@ -219,6 +219,7 @@ public partial class GameScreen
                     tile.SetMeta(UiTest.FullName, own.Key);
                     MakeDraggable(tile, drags, cls);
                     tip += n > 1 ? $"Drag it to another window; hold Shift as you start the drag to move all {n} {cls} here." : "Drag it to another window.";
+                    tip += "\nClick to pick it; Shift+click to pick several, then drag or right-click any picked one to act on all of them.";
                 }
                 if (system != null && u.O.Side == Me && Scrappable(u.O))
                 {
@@ -226,6 +227,12 @@ public partial class GameScreen
                     var one = u.O;
                     var items = new List<(string, Action)> { ("Scrap this one...", () => AskScrap(new[] { one }, $"one {cls}", system)) };
                     if (scrapAll.Count > 1) items.Add(($"Scrap all {scrapAll.Count} {cls}...", () => AskScrap(scrapAll, $"{scrapAll.Count} x {cls}", system)));
+                    // right-click on a picked card acts on every picked unit (Paul 2026-11-19)
+                    if (u.D is { } pd && IsPicked(pd) && LivePicks() is { Count: > 1 } picks)
+                    {
+                        var all = picks.Select(x => S.Host.Economy.Find(x.Id)).Where(o => o != null && o.Side == Me && Scrappable(o)).ToList();
+                        if (all.Count > 1) items.Insert(0, ($"Scrap the {all.Count} picked...", () => AskScrap(all, PickedWords(all), system)));
+                    }
                     RightClickMenu(tile, items.ToArray());
                 }
                 tile.TooltipText = Ui.Wrap(tip.Trim());
@@ -233,6 +240,10 @@ public partial class GameScreen
             }
         }
     }
+
+    /// <summary>"3 x Pacifiers, 1 x Tranches": what a pick holds, by class.</summary>
+    static string PickedWords(IEnumerable<EconObject> all) =>
+        string.Join(", ", all.GroupBy(o => o.Class).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} x {g.Key}"));
 
     /// <summary>A small menu on right-click (Classic's windows had one on every unit).</summary>
     void RightClickMenu(Control c, params (string Text, Action Do)[] items)

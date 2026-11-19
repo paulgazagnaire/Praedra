@@ -36,6 +36,7 @@ public partial class GameScreen
         string why = Judge(z, all[0]);
         if (why != null) return why == "" ? "already there" : why;
         foreach (var d in all) if (Judge(z, d) == null) RunDrop(() => z.Drop(d));
+        _picked.Clear();   // as the mouse's drop: what was picked has gone where it was dropped
         RefreshMgmt();
         foreach (var w in _mgWins.ToList()) RebuildMg(w);
         return null;
