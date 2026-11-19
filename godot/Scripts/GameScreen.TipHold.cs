@@ -8,7 +8,8 @@ namespace PraedraViewer;
 /// A hover card stays while you read it (Paul 2026-11-19: "the units tooltip disappear when a new day pass, that's a bug"). The windows,
 /// the side panel and the sector window are rebuilt when a day passes, which frees the control under the mouse and with it its card.
 /// While the mouse rests on a control with a card, long enough for the card to show and with no click since it got there, the part
-/// of the screen holding that control waits to be rebuilt; it catches up as soon as the mouse moves off or clicks. Drawing only.
+/// of the screen holding that control waits to be rebuilt; it catches up as soon as the mouse moves off or clicks, and at the latest
+/// MaxHoldMs after the card showed, so a mouse parked on a card never freezes a window for days. Drawing only.
 /// </summary>
 public partial class GameScreen
 {
@@ -17,6 +18,9 @@ public partial class GameScreen
     ulong _lastClick;         // the last mouse button press or release (ms): a click hides the card, so nothing is held after one
     /// <summary>Playtest: pretend the mouse is resting on this control with its card showing (null: the real mouse).</summary>
     Control _shotTip;
+    /// <summary>The longest a card holds its part of the screen once it shows: long enough to read it, short enough that a parked mouse
+    /// leaves a window stale for about one day at normal speed (1 day = 8 s at 1x).</summary>
+    const ulong MaxHoldMs = 10_000;
 
     void TrackTip(InputEvent e)
     {
@@ -38,7 +42,9 @@ public partial class GameScreen
         if (c == null || !IsInstanceValid(c) || !c.IsVisibleInTree() || (c != root && !root.IsAncestorOf(c))) return false;
         if (_lastClick >= _tipSince) return false;
         double delay = (double)ProjectSettings.GetSetting("gui/timers/tooltip_delay_sec", 0.5);
-        if (Time.GetTicksMsec() - _tipSince < (ulong)(delay * 1000)) return false;   // its card is not up yet
+        ulong shown = (ulong)(delay * 1000), held = Time.GetTicksMsec() - _tipSince;
+        if (held < shown) return false;                // its card is not up yet
+        if (held > shown + MaxHoldMs) return false;    // read long enough: catch up, even with the mouse still there
         for (var n = c; n != null; n = n.GetParent() as Control)
         {
             if (!string.IsNullOrEmpty(n.TooltipText)) return true;
