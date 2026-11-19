@@ -55,7 +55,7 @@ public partial class IconPic : Control
 
     public static IconPic Of(string[] grid, int scale, Color ink, bool flat = false)
     {
-        var i = new IconPic { _grid = grid, _scale = Math.Clamp(scale, 1, 2), _ink = ink, _flat = flat, MouseFilter = MouseFilterEnum.Ignore };
+        var i = new IconPic { _grid = grid, _scale = Math.Clamp(scale, 1, 6), _ink = ink, _flat = flat, MouseFilter = MouseFilterEnum.Ignore };
         int w = grid is { Length: > 0 } ? grid[0].Length : 0, h = grid?.Length ?? 0;
         i.CustomMinimumSize = new Vector2(w * i._scale, h * i._scale);
         return i;

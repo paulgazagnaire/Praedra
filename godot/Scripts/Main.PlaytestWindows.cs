@@ -270,7 +270,21 @@ public partial class Main
         {
             gs.OpenMgmt(GameScreen.MgKind.Infra, cap); gs.PlayRefresh(); gs.Click($"Yard {cap} Training"); gs.PlayRefresh();
             string troops = gs.MgText($"Infra {cap}"); // rebuilds the window as the next frame would, so the Troops tab's cards exist
-            Expect(UiTest.Find<Button>(gs, "Build Lictors") is ArtButton, "the Lictors' build card shows their picture and its hover card: " + troops.Replace("\n", " / "));
+            var lictors = UiTest.Find<Button>(gs, "Build Lictors") as InfoButton;
+            string lcard = CardText(lictors?.Make?.Invoke());
+            Expect(lcard.Contains("Lictors") && lcard.Contains("Attack") && lcard.Contains("Defence") && lcard.Contains("Refined cost"),
+                "the Lictors' build card hover shows their painted picture, role, description and stats (Paul 2026-11-19): " + lcard.Replace("\n", " / ") + " | " + troops.Replace("\n", " / "));
+            // a ship's card, as the shipyard's build card makes it (Charter itself has no shipyard)
+            var bondRow = s.Host.Economy.Costs.Rows.First(r => r.Name == "Bond");
+            string bcard = CardText(UnitInfo.Card("Bond", "Bond", PixelIcons.Building(UnitIcon.Kind.Building), Ui.You, gs.ClassStats(bondRow, 40, out _), ""));
+            Expect(bcard.Contains("Hull") && bcard.Contains("Regiment room") && bcard.Contains("Trip time") && UnitInfo.Of("Bond") is { } be && bcard.Contains(be.Role),
+                "a ship's hover card shows its role and its stats: " + bcard.Replace("\n", " / "));
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+        // every class either side can build or train has its role and description (data/design/unit-descriptions.csv, from the lore)
+        {
+            var missing = s.Host.Economy.Costs.Rows.Where(r => r.Cost > 0).Select(r => r.Name).Where(n => UnitInfo.Of(n) is not { Role.Length: > 0, Description.Length: > 0 }).ToList();
+            Expect(missing.Count == 0, "every class that can be built or trained has a role and a description: missing " + string.Join(", ", missing));
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
 
@@ -351,5 +365,16 @@ public partial class Main
                 Expect(s.Messages.Any(m => m.Text.Contains($"joined {jDst.Name} at {jDst.At}")) && !s.Messages.Any(m => m.Text == $"Fleet {jFly} arrived at {jDst.At}."),
                     $"the log says the ship joined {jDst.Name}, not that Fleet {jFly} arrived");
         }
+    }
+
+    /// <summary>Every label's text in a hover card, top to bottom ("" for none).</summary>
+    static string CardText(Control c)
+    {
+        if (c == null) return "";
+        var sb = new System.Text.StringBuilder();
+        void Walk(Node n) { if (n is Label l) sb.Append(l.Text).Append('\n'); foreach (var k in n.GetChildren()) Walk(k); }
+        Walk(c);
+        c.Free();
+        return sb.ToString();
     }
 }

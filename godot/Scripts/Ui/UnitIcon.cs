@@ -40,8 +40,9 @@ public partial class UnitIcon : Control
         if (n.Contains("Construction", StringComparison.Ordinal)) return Kind.Construction;
         if (n.Contains("Sensor", StringComparison.Ordinal)) return Kind.Sensor;
         // "Mordant Covenant I", "Lode Escrow II", "Mordant Lien-150" (the names were renamed with a first word: StartsWith missed them)
-        if (n.Contains("Covenant", StringComparison.Ordinal)) return Kind.Shield;
-        if (n.Contains("Escrow", StringComparison.Ordinal) || n.Contains("Lien", StringComparison.Ordinal)) return Kind.Battery;
+        // Escrow is the shield generator; Lien and Covenant are batteries (data/classic/defense-facilities.csv kind column)
+        if (n.Contains("Escrow", StringComparison.Ordinal)) return Kind.Shield;
+        if (n.Contains("Covenant", StringComparison.Ordinal) || n.Contains("Lien", StringComparison.Ordinal)) return Kind.Battery;
         return Kind.Building;
     }
 
