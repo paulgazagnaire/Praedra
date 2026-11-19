@@ -64,15 +64,18 @@ public partial class GameScreen
             return ParseAll(v).FirstOrDefault() is { Kind: not '\0' } d ? d : null;
         }
 
-        /// <summary>A stack dragged with Shift travels as "R:12,13,14": every unit of it.</summary>
+        /// <summary>A stack dragged with Shift travels as "R:12,13,14": every unit of it. Picked units of several kinds travel as
+        /// "R:12,13;S:40" (Paul 2026-11-19).</summary>
         public static List<Drag> ParseAll(Variant v)
         {
             var list = new List<Drag>();
             if (v.VariantType != Variant.Type.String) return list;
-            string s = v.AsString();
-            if (s.Length < 3 || s[1] != ':') return list;
-            foreach (var part in s[2..].Split(',', StringSplitOptions.RemoveEmptyEntries))
-                if (int.TryParse(part, out int id)) list.Add(new Drag(s[0], id));
+            foreach (var group in v.AsString().Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (group.Length < 3 || group[1] != ':') continue;
+                foreach (var part in group[2..].Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    if (int.TryParse(part, out int id)) list.Add(new Drag(group[0], id));
+            }
             return list;
         }
     }

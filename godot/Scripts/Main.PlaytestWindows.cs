@@ -289,6 +289,39 @@ public partial class Main
         }
         else GD.Print("  (no fleet with room for two regiments where two stand: the stack drop is not checked on this side)");
 
+        // ---------------------------------------------------------------- pick with click and Shift+click, drag one, all go (Paul 2026-11-19)
+        var pickAt = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == me).OrderBy(n => n, StringComparer.Ordinal)
+            .FirstOrDefault(n => s.Host.Troops.RegimentsOnSystem(n).Count(o => o.Side == me && o.AboardShip == 0) >= 3);
+        if (pickAt != null)
+        {
+            var three = s.Host.Troops.RegimentsOnSystem(pickAt).Where(o => o.Side == me && o.AboardShip == 0).OrderBy(o => o.Id).Take(3).ToList();
+            gs.ShotWindow("troops", pickAt); gs.PlayRefresh();
+            gs.PlayPick($"R:{three[0].Id}", false); gs.PlayPick($"R:{three[2].Id}", true);
+            Expect(gs.PickedKeys.SequenceEqual(new[] { $"R:{three[0].Id}", $"R:{three[2].Id}" }), $"at {pickAt} a click picks a regiment and Shift+click adds another: " + string.Join(" ", gs.PickedKeys));
+            gs.PlayPick($"R:{three[1].Id}", true); gs.PlayPick($"R:{three[1].Id}", true);
+            Expect(gs.PickedKeys.Count == 2, "Shift+click on a picked one takes it out again");
+            string payload = gs.PlayDragPayload($"R:{three[2].Id}");
+            Expect(payload == $"R:{three[2].Id},{three[0].Id}", "dragging a picked card carries every picked unit, itself first: " + payload);
+            Expect(gs.PlayDragPayload($"R:{three[1].Id}") == $"R:{three[1].Id}", "dragging a card that is not picked carries only it");
+            var room = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At == pickAt && f.Transit == null && fm.FreeTroopSlots(f) >= 2).OrderBy(f => f.Id).FirstOrDefault();
+            if (room != null)
+            {
+                gs.ShotWindow("fleet", $"{room.Id}:Troops"); gs.PlayRefresh();
+                string pr = gs.MgDrop(payload, $"Fleet {room.Id} Troops");
+                Expect(pr == null, $"drop the two picked regiments on {room.Name}'s troops: {pr ?? "sent"}");
+                gs.PlayDay();
+                Expect(new[] { three[0], three[2] }.All(o => o.AboardShip != 0 && room.Ships.Contains(o.AboardShip)) && three[1].AboardShip == 0, "next day both picked ones are aboard, the third is not");
+                Expect(gs.PickedKeys.Count == 0, "a drop lets the picked units go");
+                while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+                gs.ShotWindow("troops", pickAt); gs.PlayRefresh();
+            }
+            else GD.Print($"  (no fleet with room for two regiments at {pickAt}: the picked drop is not checked on this side)");
+            gs.PlayPick($"R:{three[1].Id}", false); gs.PressKey(Key.Escape);
+            Expect(gs.PickedKeys.Count == 0 && gs.MgmtCount > 0, "Escape lets the picked units go before it closes a window");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+        else GD.Print("  (no system of yours with three regiments on the ground: picking is not checked on this side)");
+
         // ---------------------------------------------------------------- scrap from a tile: once only (QA-87), and the garrison warning (QA-88)
         var scrapAt = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == me).OrderBy(n => n)
             .FirstOrDefault(n => s.Host.Troops.RegimentsOnSystem(n).Count(o => o.Side == me && o.AboardShip == 0) >= 2);
