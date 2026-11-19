@@ -480,11 +480,11 @@ public partial class GameScreen
         string yardAt = supply?.Yard;
         List<BuildRow> rows = tab switch
         {
-            InfraTab.Construction => BuildRowsFor(n, "Facilities", yardAt, supply?.Trip ?? 0),
+            InfraTab.Construction => BuildRowsFor(n, "Facilities", yardAt, supply == null ? 0 : supply.Busy + supply.Trip),
             InfraTab.Training => BuildRowsFor(n, "Troops"),
             // ships, then fighters, both from the shipyards; what can be ordered first (OrderBy keeps the order within each)
             InfraTab.Shipyard => BuildRowsFor(n, "Ships").Concat(BuildRowsFor(n, "Fighters")).OrderBy(b => b.Usable ? 0 : 1).ToList(),
-            _ => BuildRowsFor(n, "Facilities", yardAt, supply?.Trip ?? 0).Where(b => InTab(b.Row.Name, tab)).ToList(),
+            _ => BuildRowsFor(n, "Facilities", yardAt, supply == null ? 0 : supply.Busy + supply.Trip).Where(b => InTab(b.Row.Name, tab)).ToList(),
         };
         bool canBuild = HasYard(n, fam) || yardAt != null;
         _shownBuildRows = canBuild ? rows : new();   // the cards shown (read by the playtest)
@@ -524,7 +524,7 @@ public partial class GameScreen
     Control SupplierRow(string n, Supplier picked)
     {
         var box = Boxed(new VBoxContainer(), 6);
-        var words = Look.Words("No construction yard here. Built at (the days on the cards include the trip):", 12, Look.Soft);
+        var words = Look.Words("No construction yard here. Built at (the days on the cards count the yard's work in hand and the trip):", 12, Look.Soft);
         words.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(words);
         var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };

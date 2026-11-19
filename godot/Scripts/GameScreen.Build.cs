@@ -194,6 +194,7 @@ public partial class GameScreen
     List<Supplier> SuppliersFor(string dest)
     {
         var cons = S.Host.Construction; var eco = S.Host.Economy;
+        // a cancel and a new order on the same day keep the count: at worst one stale busy figure until the next day, which is fine
         var stamp = (S.Game.Day, S.Game.Queue.Count);
         if (_suppliers.TryGetValue(dest, out var hit) && hit.Stamp == stamp) return hit.List;
         int speed = cons.Params.UnratedDeliverySpeed;
@@ -368,7 +369,7 @@ public partial class GameScreen
         int n = Math.Max(1, count);
         string dest = row.Category == ObjectCategory.Facility ? deliverTo ?? system : null;
         long seq = S.Host.Construction.SubmitBuild(Me, system, fam, row.Name, n, dest);
-        string what = dest != null && dest != system ? $"build {n} x {row.Name} at {dest}, built at {system}" : $"build {n} x {row.Name} at {system}";
+        string what = dest != null && dest != system ? $"build {n} x {row.Name} for {dest}, built at {system}" : $"build {n} x {row.Name} at {system}";
         S.Track(seq, char.ToUpper(what[0]) + what[1..]);
         S.Say($"Order sent: {what}.", MsgKind.Info, system);
         AddLogItem(S.Messages[^1], false);

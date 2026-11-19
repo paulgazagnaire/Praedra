@@ -53,7 +53,7 @@ public partial class GameScreen : Control
     int _frame;
 
     /// <param name="newGame">true for a fresh game from the start screen (the very first one shows the How to play overlay).</param>
-    public void Init(GameSession session, bool newGame = false) { S = session; _showHowToOnStart = newGame; }
+    public void Init(GameSession session, bool newGame = false) { S = session; _showHowToOnStart = newGame; _suppliers.Clear(); _supplierPick.Clear(); }
 
     public override void _Ready()
     {
