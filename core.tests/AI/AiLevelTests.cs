@@ -28,16 +28,20 @@ public class AiLevelTests
     // counts only the troops at its rally system as ready to invade (InvasionReadyAtRally, AI trainer), and sends known Talent on Burn the
     // Books only while it believes no known senser is at Charter (BooksTalentWindow).
     private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla), nameof(SimpleAiParams.HarvesterYardValue), nameof(SimpleAiParams.InvasionReadyAtRally), nameof(SimpleAiParams.BooksTalentWindow) };
+    // AI trainer 2026-11-19: the game plan is on at every level (AiLevels.GamePlan), off in the SimpleAiParams DEFAULT.
+    private static readonly string[] GamePlan = { nameof(SimpleAiParams.PlanSectorSpreadPercent), nameof(SimpleAiParams.PlanSystemSpreadPercent) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
     [Fact]
     public void Medium_IsTheDefaultAiPlayingToWinPlusTheGuerrilla()
     {
         var d = new SimpleAiParams { UseFog = true }; var m = AiLevels.For(AiLevel.Medium);
-        foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
+        foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && !GamePlan.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
         Assert.True(m.SafeHearth && m.Underground && m.Guerrilla && m.HarvesterYardValue > 0 && m.InvasionReadyAtRally && m.BooksTalentWindow);
         Assert.False(d.SafeHearth || d.Underground || d.Guerrilla || d.HarvesterYardValue > 0 || d.InvasionReadyAtRally || d.BooksTalentWindow);
+        Assert.True(m.PlanSectorSpreadPercent > 0 && m.PlanSystemSpreadPercent > 0 && d.PlanSectorSpreadPercent == 0 && d.PlanSystemSpreadPercent == 0);
+        foreach (var level in new[] { AiLevel.Easy, AiLevel.Hard }) Assert.Equal(m.PlanSectorSpreadPercent, AiLevels.For(level).PlanSectorSpreadPercent);
         Assert.True(m.WinRushDefenders > d.WinRushDefenders && m.InvasionRegimentTarget > d.InvasionRegimentTarget && m.TroopCapacityTarget > d.TroopCapacityTarget && m.AfterCharterDiplomats > d.MaxDiplomats);
     }
 
@@ -76,7 +80,7 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

@@ -217,6 +217,19 @@ public sealed record SimpleAiParams
     /// </summary>
     public int PickNoisePercent { get; init; }
     /// <summary>
+    /// Game plan spread (AI trainer 2026-11-19; Paul: "the Collective ALWAYS captures Excubia ... I don't want the enemy to be predictable").
+    /// Collective only, like the guerrilla switches: the Hand AI stays a straightforward machine (Paul 2026-11-19).
+    /// The AI's private generator is seeded from the game as well as the day (<see cref="AiMemory.Plan"/>), and each game draws its own liking
+    /// for every sector and every system: a sector's targets are worth up to this many percent more or less to it in this game. The liking is
+    /// redrawn every <see cref="PlanDays"/>, so the front moves during a game too. 0 = the same picture gives the same plan in every game (the AI
+    /// of before). DEFAULT 0; AiLevels sets it for every level.
+    /// </summary>
+    public int PlanSectorSpreadPercent { get; init; }
+    /// <summary>The same liking per system, on top of the sector's (percent either way). DEFAULT 0; AiLevels sets it for every level.</summary>
+    public int PlanSystemSpreadPercent { get; init; }
+    /// <summary>Days a game plan's liking lasts before it is drawn again (AI trainer 2026-11-19). DEFAULT 180.</summary>
+    public int PlanDays { get; init; } = 180;
+    /// <summary>
     /// Most offensives at once: armed own fleets flying to, or standing on, a system the side does not hold. A strike pile does not pick a new
     /// target while that many are out (it still relieves held systems). ai/09 §6 row "concurrent offensive jobs" (Easy 1). DEFAULT no limit.
     /// </summary>
