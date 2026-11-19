@@ -329,17 +329,19 @@ float skyGalaxy(int kind, vec2 p, vec2 po, float h, float spin, float det) {
     float arm = pow(0.5 + 0.5 * cos(nArm * d), 3.0) * smoothstep(kind == 1 ? 0.2 : 0.05, kind == 1 ? 0.42 : 0.2, r);
     float clump = 0.55 + 0.9 * noise2(p * 6.0 + h * 91.0);
     v = exp(-r / 0.3) * (0.22 + 1.2 * arm * clump) + 1.2 * exp(-pow(length(po) / 0.06, 0.9));
-    if (kind == 1) { vec2 b = vec2(cos(spin) * p.x + sin(spin) * p.y, -sin(spin) * p.x + cos(spin) * p.y); v += 0.8 * exp(-pow(b.x / 0.3, 2.0) - pow(b.y / 0.07, 2.0)); }
+    if (kind == 1) { vec2 b = vec2(cos(spin) * p.x + sin(spin) * p.y, -sin(spin) * p.x + cos(spin) * p.y); float bx = b.x / 0.3, by = b.y / 0.07; v += 0.8 * exp(-bx * bx - by * by); }
   } else if (kind == 2) {
     // elliptical: smooth, bright in the middle, no arms
     v = 1.5 * exp(-pow(r / 0.2, 0.7));
   } else if (kind == 3) {
     // edge-on disc: a thin bright needle with a round core and a dark dust lane along it
     v = exp(-pow(r / 0.35, 0.9)) + 0.9 * exp(-pow(length(po) / 0.09, 0.9));
-    v *= 1.0 - 0.8 * exp(-pow(p.y / 0.18, 2.0)) * smoothstep(0.05, 0.25, abs(p.x));
+    float ly = p.y / 0.18;
+    v *= 1.0 - 0.8 * exp(-ly * ly) * smoothstep(0.05, 0.25, abs(p.x));
   } else if (kind == 4) {
     // ring: a bright clumpy ring round a small core
-    v = exp(-pow((r - 0.62) / 0.1, 2.0)) * (0.5 + 0.9 * noise2(vec2(th * 3.0 + spin * 3.0, h * 37.0))) + 1.0 * exp(-r / 0.06);
+    float rr = (r - 0.62) / 0.1, a = th + spin;
+    v = exp(-rr * rr) * (0.5 + 0.9 * noise2(vec2(cos(a), sin(a)) * 3.0 + h * 37.0)) + 1.0 * exp(-r / 0.06);
   } else {
     // irregular: a ragged cloud of star-forming knots
     float n = noise2(p * 3.0 + h * 53.0) * 0.6 + noise2(p * 7.0 - h * 29.0) * 0.4;
@@ -350,13 +352,16 @@ float skyGalaxy(int kind, vec2 p, vec2 po, float h, float spin, float det) {
 }
 // all the galaxies on one grid: cells of 'cell' galaxy units, at most one galaxy a cell, kept inside its cell so a cell needs no neighbours
 vec3 skyField(vec2 s, float upp, float cell, float sizeMax, float bright, bool tiny) {
-  vec2 g = s / cell + uSkyW1.w * 13.7 + (tiny ? 71.3 : 0.0);
+  vec2 g = s / cell + fract(vec2(uSkyW1.w) * vec2(0.1031, 0.0973)) * 97.0 + (tiny ? 71.3 : 0.0);
   vec2 id = floor(g);
   float h0 = hash12(id + 3.1), h1 = hash12(id + 8.7), h2 = hash12(id + 15.2), h3 = hash12(id + 22.9);
   if (h0 > 0.8) return vec3(0.0);                        // one cell in five stays empty, so the spacing is not a grid
   float rad = sizeMax * mix(0.25, 1.0, h1 * h1 * h1);   // most are small, a few are big
   vec2 at = id + 0.5 + (hash22(id + 4.4) - 0.5) * (1.0 - 2.4 * rad);
-  vec2 d = (g - at) / rad;
+  float px = rad * cell / upp;                            // the galaxy's radius in dots
+  // a galaxy under about 1.5 dots across is drawn 1.5 dots wide and dimmer, with the same total light, so it does not flicker as it moves
+  float grow = max(1.0, 1.5 / max(px, 1e-3));
+  vec2 d = (g - at) / (rad * grow);
   if (dot(d, d) > 1.45) return vec3(0.0);
   int kind = 2;
   if (!tiny) {
@@ -370,14 +375,17 @@ vec3 skyField(vec2 s, float upp, float cell, float sizeMax, float bright, bool t
   float tilt = kind == 3 ? mix(0.1, 0.2, h3) : kind == 5 ? mix(0.6, 1.0, h3) : mix(0.3, 1.0, h3);
   vec2 po = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
   vec2 p = vec2(po.x, po.y / tilt);
-  float px = rad * cell / upp;                            // the galaxy's radius in dots
   float det = smoothstep(3.0, 10.0, px);
   float spin = uTime * uSkyB.w * 0.03 * (0.4 + hash12(id + 2.2)) * (h3 > 0.5 ? 1.0 : -1.0);
-  float v = skyGalaxy(kind, p, po, h2, spin, det) * mix(0.3, 1.0, hash12(id + 41.3)) * bright;
+  float v = skyGalaxy(kind, p, po, hash12(id + 55.5), spin, det) * mix(0.3, 1.0, hash12(id + 41.3)) * bright / (grow * grow);
   float warm = kind == 2 ? 0.85 : kind == 5 ? 0.1 : clamp(1.4 * exp(-length(po) / 0.12), 0.0, 1.0) * 0.8 + 0.1 * h0;
   return mix(uCSkyB, uCSkyA, warm) * v;
 }
 vec3 spaceAround(vec2 off, float upp, float r) {
+  // the clear zone: the space background fades in only outside the galaxy's edge, so it never sits on the disc
+  float rim = uSkyB.z * uShape.x;
+  float mask = smoothstep(rim, rim * 1.3, r);
+  if (mask <= 0.0) return vec3(0.0);
   // its own layer far behind the disc: it slides and zooms less than the galaxy when the view moves
   float z = pow(uZoom, 0.6 * uSkyA.w);
   vec2 s = uCenter * (1.0 - uSkyA.w) + off * z;
@@ -390,14 +398,12 @@ vec3 spaceAround(vec2 off, float upp, float r) {
   }
   if (uSkyB.x > 0.0) {
     // haze: very faint clouds of gas between the galaxies, drifting very slowly
-    vec2 hp = s / uSkyB.y + uSkyW1.w * 3.1 + vec2(uTime * 0.004, 0.0);
-    float n = fbm2(hp * 1.3, su / uSkyB.y, 5);
-    float n2 = fbm2(hp * 3.1 + 7.0, su / uSkyB.y, 4);
+    vec2 hp = s / uSkyB.y + fract(vec2(uSkyW1.w) * vec2(0.0731, 0.0577)) * 53.0 + vec2(uTime * 0.004, 0.0);
+    float n = fbm2(hp * 1.3, 1.3 * su / uSkyB.y, 5);
+    float n2 = fbm2(hp * 3.1 + 7.0, 3.1 * su / uSkyB.y, 4);
     c += mix(uCHaze, uCSkyB, n2 * 0.5) * smoothstep(0.42, 0.85, n * 0.8 + n2 * 0.35) * uSkyB.x * 0.11;
   }
-  // the clear zone: the space background fades out towards the galaxy, so it never sits on the disc
-  float rim = uSkyB.z * uShape.x;
-  return c * smoothstep(rim * 0.85, rim * 0.85 + 0.3, r);
+  return c * mask;
 }
 
 #ifdef GM_DITHER
@@ -663,11 +669,11 @@ const CTL = [
   ['Sky', 'skyN', 'How many', 0.3, 8, 0.01, (v) => v < 1 ? 'few' : v < 3 ? 'some' : v < 5.5 ? 'many' : 'crowded'],
   ['Sky', 'skySize', 'Size', 0.2, 1, 0.01, (v) => v < 0.4 ? 'small' : v < 0.75 ? 'medium' : 'large'],
   ['Sky', 'tiny', 'Tiny far galaxies', 0, 2, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
-  ['Sky', 'skyDepth', 'Distance', 0, 0.95, 0.01, (v) => v < 0.05 ? 'on the disc' : v < 0.5 ? 'near' : v < 0.8 ? 'far' : 'very far'],
-  ['Sky', 'skySpin', 'Spin', 0, 3, 0.01, (v) => v < 0.01 ? 'still' : v < 0.6 ? 'very slow' : v < 1.5 ? 'slow' : 'quick'],
+  ['Sky', 'skyDepth', 'Distance', 0, 0.95, 0.01, (v) => v < 0.05 ? 'flat' : v < 0.5 ? 'near' : v < 0.8 ? 'far' : 'very far'],
+  ['Sky', 'skySpin', 'Spin', 0, 3, 0.01, (v) => v < 0.01 ? 'still' : v < 0.6 ? 'v. slow' : v < 1.5 ? 'slow' : 'quick'],
   ['Sky', 'haze', 'Haze', 0, 3, 0.01, (v) => v < 0.01 ? 'none' : v.toFixed(2)],
   ['Sky', 'hazeSize', 'Haze size', 0.3, 3, 0.01],
-  ['Sky', 'clear', 'Clear round the galaxy', 0.8, 2, 0.01, (v) => Math.round(v * 100) + '% of the disc'],
+  ['Sky', 'clear', 'Clear round the galaxy', 0.8, 2, 0.01, (v) => Math.round(v * 100) + '%'],
   ['SkyShapes', 'wSpiral', 'Spiral', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
   ['SkyShapes', 'wBar', 'Barred spiral', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
   ['SkyShapes', 'wEll', 'Elliptical', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
@@ -747,7 +753,7 @@ const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 function clean(src) {
   const out = Object.assign({}, DEF);
   if (!src || typeof src !== 'object') return out;
-  for (const c of CTL) { const v = parseFloat(src[c[1]]); if (isFinite(v)) out[c[1]] = Math.min(c[4], Math.max(c[3], v)); }
+  for (const c of CTL) { const v = parseFloat(src[c[1]]); if (isFinite(v)) out[c[1]] = Math.min(c[4], Math.max(c[3], c[5] >= 1 ? Math.round(v / c[5]) * c[5] : v)); }
   for (const [k] of SWATCHES) if (isHex(src[k])) out[k] = src[k].toLowerCase();
   return out;
 }
