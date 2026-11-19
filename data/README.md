@@ -9,7 +9,7 @@
 
 `design/system-lore.csv` (system, world, from_space, moons, people, resources, story, history, source) holds each of the 555 systems' lore text, copied from `specs/creative/08-planet-presets.json` (text) on 2026-11-04. Only the Lore tab of a system window reads it (screens only); no rule uses it. history is empty where the Lore Master has not written one yet. When the lore changes, run `python3 tools/lore/copy-system-lore.py` (it rewrites this file and system-population.csv from 08) and commit both.
 
-`design/unit-descriptions.csv` (name, role, description, source) holds a short role and description for every class the player can build or train (ships, fighters, regiments, special forces, facilities, defences), written on 2026-11-19 from the Lore Master's `specs/creative/` files (each row's source names the file and section; rows marked "none: functional, for Lore Master" have no lore yet). Only the build cards' hover card reads it (screens only); no rule uses it. When the lore changes, update the row.
+`design/unit-descriptions.csv` (name, role, description, source) holds a short role and description for every class the player can build or train (ships, fighters, regiments, special forces, facilities, defences), is a copy of the Lore Master's `specs/creative/unit-descriptions.csv` (the master; each row's source names the lore file and section). Never edit it in the repo: the Lore Master changes the master and asks the Dev lead to re-copy it. Only the build cards' hover card reads it (screens only); no rule uses it.
 
 `design/starting-facilities.csv` is the data list of m2-construction §Starting yards (seven Orbital Shipyards: four Hand, three neutral), written from that sheet's table.
 
