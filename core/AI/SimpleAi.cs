@@ -69,9 +69,12 @@ public sealed partial class SimpleAi
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
         _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear(); _hqMoveTo = null;
         int day = Today, phase = (int)_side;
-        _rng = new GameRng((ulong)day * 2 + (ulong)_side + 0x5A1D, 0xA1);
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
         Remember();
+        _likes = null;
+        // rule: ai tuning, SimpleAiParams.PlanSectorSpreadPercent (AI trainer 2026-11-19): with a game plan on, the private generator is also
+        // seeded from the game's plan number, so two games with the same picture do not get the same tie-breaks
+        _rng = new GameRng(((ulong)day * 2 + (ulong)_side + 0x5A1D) ^ PlanNumber(), 0xA1);
         _seenForces.Clear(); ClearFogScratch();
         if (_view != null && _side == Side.Hand) KnownEnemyHq = _view.KnownHq?.System; // only what the Hand's own picture shows
         PlanUpkeepCrisis();
@@ -264,6 +267,70 @@ public sealed partial class SimpleAi
         _mem.Ingest(Events, IsArmedCapital);
         var mem = _mem;
         mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)
+    }
+
+    // ================================================================== game plan (AI trainer 2026-11-19)
+
+    /// <summary>The game plan is the Collective's (Paul 2026-11-19: the Collective plays an unpredictable guerrilla, the Hand is a straightforward
+    /// machine). With it on both sides, Medium mirrors ran longer: 45 of 192 open by day 3000 against 32 without.</summary>
+    private bool PlanOn => _side == Side.Collective && (_p.PlanSectorSpreadPercent > 0 || _p.PlanSystemSpreadPercent > 0);
+
+    /// <summary>
+    /// The side's game plan number (<see cref="AiMemory.Plan"/>), drawn the first day the AI plans from the game generator's state (only read,
+    /// never drawn from: the game's random stream is unchanged) and the side. 0 with the game plan off. rule: ai tuning,
+    /// SimpleAiParams.PlanSectorSpreadPercent.
+    /// </summary>
+    private ulong PlanNumber()
+    {
+        if (!PlanOn) return 0;
+        if (_mem.Plan == 0)
+        {
+            var r = _h.Game.Rng.Export();
+            _mem.Plan = Mix(r.State ^ Mix(r.Increment) ^ ((ulong)_side + 1) * 0x9E3779B97F4A7C15UL) | 1;
+        }
+        return _mem.Plan;
+    }
+
+    private int[]? _likes; // per PlanDay, by system index
+
+    /// <summary>
+    /// This game's liking for a system as a percent (100 = plain): its sector's liking times its own, each a draw in ±PlanSectorSpreadPercent and
+    /// ±PlanSystemSpreadPercent from the plan number, redrawn every PlanDays (shifted by the plan, so the two sides do not change on the same day).
+    /// rule: ai tuning, SimpleAiParams.PlanSectorSpreadPercent (AI trainer 2026-11-19; Paul: the enemy must not be predictable).
+    /// </summary>
+    private int PlanLike(Praedra.Core.Map.StarSystem sys)
+    {
+        if (!PlanOn) return 100;
+        var g = _h.Data.Galaxy;
+        _likes ??= new int[g.Systems.Count];
+        if (_likes[sys.Index] != 0) return _likes[sys.Index];
+        ulong plan = PlanNumber();
+        int days = Math.Max(1, _p.PlanDays);
+        ulong period = (ulong)((Today + (int)(plan % (ulong)days)) / days);
+        int sector = Draw(Hash(sys.Sector), _p.PlanSectorSpreadPercent), own = Draw(Hash(sys.Name), _p.PlanSystemSpreadPercent);
+        return _likes[sys.Index] = Math.Max(1, (100 + sector) * (100 + own) / 100);
+
+        int Draw(ulong key, int spread) => spread <= 0 ? 0 : new GameRng(Mix(plan ^ key ^ Mix(period + 1)), 0xB7).NextInt(-spread, spread);
+    }
+
+    /// <summary>FNV-1a over the name's chars (ordinal), for the plan's per-name draws.</summary>
+    private static ulong Hash(string s)
+    {
+        ulong h = 14695981039346656037UL;
+        foreach (char c in s) { h ^= c; h = unchecked(h * 1099511628211UL); }
+        return h;
+    }
+
+    /// <summary>SplitMix64 finaliser: spreads the bits of a number.</summary>
+    private static ulong Mix(ulong z)
+    {
+        unchecked
+        {
+            z += 0x9E3779B97F4A7C15UL;
+            z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
+            z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
+            return z ^ (z >> 31);
+        }
     }
 
     /// <summary>The newest notes of a kind first, while a look-back from <paramref name="sinceDay"/> still reaches them (see <see cref="AiNote.Floor"/>).</summary>

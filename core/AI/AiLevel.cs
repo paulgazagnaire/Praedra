@@ -24,7 +24,7 @@ public static class AiLevels
     /// </summary>
     public static SimpleAiParams For(AiLevel level, SimpleAiParams? baseParams = null)
     {
-        var p = baseParams ?? new SimpleAiParams { UseFog = true };
+        var p = GamePlan(baseParams ?? new SimpleAiParams { UseFog = true });
         return level switch
         {
             // ai/09 §6 Easy column: reacts late (reviews about twice as far apart), one offensive at a time, 30% pick noise, few scouts and spies.
@@ -63,6 +63,21 @@ public static class AiLevels
             _ => p,
         };
     }
+
+    /// <summary>
+    /// A game plan at every level (AI trainer 2026-11-19; Paul: "Everytime I start a new game playing the Hand, the Collective ALWAYS capture
+    /// Excubia ... I don't want the enemy to be predictable"). The AI's dice were seeded by the day only, and its strike piles took the best
+    /// target, where the first ones from the Collective's rally often scored within 10% of each other: the same picture gave the same opening in
+    /// every game. Now each game draws its liking for every sector (±PlanSectorSpread) and system (±PlanSystemSpread), redrawn every 180 days.
+    /// The plan is the Collective's only (SimpleAi.PlanOn). 192 seeds, day 3000, fog, MedE start, on main 561755b, Hand / Collective / open, and
+    /// the first Hand world the Collective invades (different worlds; share of the 3 most common): Medium mirror 24 / 136 / 32 (52; 43%) without,
+    /// 15 / 135 / 42 (62; 36%) with; Medium Hand against the Hard Collective 3 / 169 / 20 (49; 46%) without, 4 / 175 / 13 (51; 35%) with.
+    /// With the plan on both sides the mirror was 17 / 130 / 45. Notes: specs/engine/ai-notes/2026-11-19-game-plan.md.
+    /// </summary>
+    private static SimpleAiParams GamePlan(SimpleAiParams p) => p with { PlanSectorSpreadPercent = PlanSectorSpread, PlanSystemSpreadPercent = PlanSystemSpread };
+
+    /// <summary>The game plan's spreads at every level (AI trainer 2026-11-19).</summary>
+    public const int PlanSectorSpread = 30, PlanSystemSpread = 15;
 
     /// <summary>HarvesterYardValue at Medium and Hard (AI trainer 2026-10-27, QA-58): a Spike team at a harvester in the yard, below a finished harvester (SpikeValue 3000), above any other mission.</summary>
     private const int HarvesterYardHunt = 2000;

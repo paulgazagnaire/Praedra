@@ -87,6 +87,12 @@ public sealed class AiMemory
     public bool Fog { get; set; }
     public List<AiNote> Notes { get; set; } = new();
     public AiKeepDays Keep { get; set; } = new();
+    /// <summary>
+    /// The side's game plan number: drawn once per game (the first day the AI plans, from the game generator's state, which it only reads) and
+    /// saved, so a loaded game keeps its plan. 0 = not drawn yet (an older save draws it on its first day after loading). rule: ai tuning,
+    /// SimpleAiParams.PlanSectorSpreadPercent (AI trainer 2026-11-19).
+    /// </summary>
+    public ulong Plan { get; set; }
 
     // not saved: how far into the feed the notes go (a loaded game's feed starts empty), and the BattleStarted events of the current run of
     // same-day events by system (a battle starts and ends in one Step, and a save is made between Steps).
@@ -189,7 +195,7 @@ public sealed class AiMemory
     /// </summary>
     internal AiMemory ForSave(int today, Func<Side, string, int?> groundStamp) => new()
     {
-        Side = Side, Fog = Fog, Keep = Keep,
+        Side = Side, Fog = Fog, Keep = Keep, Plan = Plan,
         Notes = Notes.Where(n => (long)n.Floor >= (long)today - Keep.For(n.Kind)
             || (Fog && n.Kind == AiNoteKind.Bombardment && groundStamp(Side, n.System!) is int s && n.Floor >= s + 1)).ToList(),
     };
