@@ -32,6 +32,13 @@ public sealed record GameSettings
     /// (B4 §6, [EXE-own] 0x51ab20): the Classic setup (part B) sets 0 together with <see cref="HqFixedForces"/>. rule: m5-setup-and-victory §P6.
     /// </summary>
     public int? MinGarrison { get; init; }
+    /// <summary>
+    /// The Hand's big start (Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent
+    /// number of troops spread across its systems): the <c>big_</c> rows of new-game-forces.csv replace the Hand's Home Fleet, its regiments
+    /// at the base, and add one regiment in each sector it holds. DEFAULT off: it makes the Hand AI win fast (it takes the Hearth by day
+    /// ~120 when it knows where it is), so it waits for the AI trainer's re-tune of the Collective. rule: m5-setup-and-victory §Starting forces.
+    /// </summary>
+    public bool BigHandStart { get; init; }
 
     // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
     /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the Classic straight line, no routes).</summary>

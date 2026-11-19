@@ -90,6 +90,16 @@ public sealed class ForcesTable
 
     public string Str(Side s, string key) => _params.TryGetValue((s, key), out var v) ? v : throw new DataLoadException($"{FileName}: missing param '{key}' for {s}.");
     public int Int(Side s, string key) => int.Parse(Str(s, key), System.Globalization.CultureInfo.InvariantCulture);
+    /// <summary>The big start's fleets (kind <c>big_fleet</c>): with <see cref="GameSettings.BigHandStart"/> one replaces the side's fleet of the
+    /// same name. Paul 2026-11-19 (the Hand starts with a big military).</summary>
+    public List<ForceFleet> BigFleets { get; } = new();
+
+    /// <summary><paramref name="key"/>, or its <c>big_</c> row when <paramref name="big"/> and the side has one (the big start).</summary>
+    public int Int(Side s, string key, bool big) => big && _params.ContainsKey((s, "big_" + key)) ? Int(s, "big_" + key) : Int(s, key);
+
+    /// <summary>The side's fleets, each replaced by its <c>big_fleet</c> row of the same name when <paramref name="big"/>.</summary>
+    public IEnumerable<ForceFleet> FleetsOf(Side s, bool big) =>
+        Fleets.Where(f => f.Side == s).Select(f => big ? BigFleets.FirstOrDefault(b => b.Side == s && b.Name == f.Name) ?? f : f);
 
     public static ForcesTable Load(string path)
     {
@@ -111,11 +121,11 @@ public sealed class ForcesTable
                     case "base_facility": f.BaseFacilities.Add((side, key, int.Parse(value))); break;
                     case "site_facility": f.SiteFacilities.Add((side, key, int.Parse(value))); break;
                     case "hq_unit": f.HqUnits.Add((side, key, int.Parse(value))); break;
-                    case "fleet":
+                    case "fleet" or "big_fleet":
                         {
                             var at = key.Split('@');
                             var parts = value.Split('/');
-                            f.Fleets.Add(new ForceFleet(side, at[0], at.Length < 2 || at[1] == "base", Expand(parts[0]), parts.Length > 1 ? Expand(parts[1]) : Array.Empty<string>()));
+                            (kind == "fleet" ? f.Fleets : f.BigFleets).Add(new ForceFleet(side, at[0], at.Length < 2 || at[1] == "base", Expand(parts[0]), parts.Length > 1 ? Expand(parts[1]) : Array.Empty<string>()));
                             break;
                         }
                     default: throw new DataLoadException($"{t.Where(r)}: unknown kind '{kind}'.");

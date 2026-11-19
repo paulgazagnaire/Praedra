@@ -6,7 +6,8 @@ param,Hand,mines_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Hand,refineries_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Hand,extra_yard_sites,1,DEFAULT (playable slice 2026-10-12)
 param,Hand,min_garrison,1,"Classic = 0 (B4 §6, [EXE-own] 0x51ab20); applies with the Classic setup, part B (GameSettings.MinGarrison 0 with HqFixedForces); 1 until then (playable-slice DEFAULT 2026-10-12)"
-param,Hand,base_regiments,16,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers are a DEFAULT (Dev lead 2026-11-19)"
+param,Hand,base_regiments,6,DEFAULT (playable slice 2026-10-12)
+param,Hand,big_base_regiments,16,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers DEFAULT (Dev lead 2026-11-19); used only with GameSettings.BigHandStart (DEFAULT off until the AI trainer re-tunes the Collective)"
 param,Hand,fill_percent,90,DEFAULT (playable slice 2026-10-12)
 param,Hand,start_raw,0,DEFAULT (playable slice 2026-10-12)
 param,Hand,start_refined,300,DEFAULT (playable slice 2026-10-12)
@@ -23,8 +24,9 @@ param,Hand,garrison_class,Tranches,DEFAULT (playable slice 2026-10-12)
 param,Collective,garrison_class,Militia,DEFAULT (playable slice 2026-10-12)
 param,Hand,base_regiment_class,Pacifiers,DEFAULT (playable slice 2026-10-12)
 param,Collective,base_regiment_class,Militia,DEFAULT (playable slice 2026-10-12)
-param,Hand,spread_regiments,1,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers are a DEFAULT (Dev lead 2026-11-19)"
-param,Hand,spread_regiment_class,Pacifiers,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers are a DEFAULT (Dev lead 2026-11-19)"
+param,Hand,spread_regiments,0,"Paul 2026-11-19: none in the default start (DEFAULT); see big_spread_regiments"
+param,Hand,big_spread_regiments,1,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers DEFAULT (Dev lead 2026-11-19); used only with GameSettings.BigHandStart (DEFAULT off until the AI trainer re-tunes the Collective)"
+param,Hand,spread_regiment_class,Pacifiers,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers DEFAULT (Dev lead 2026-11-19); used only with GameSettings.BigHandStart (DEFAULT off until the AI trainer re-tunes the Collective)"
 param,Collective,spread_regiments,0,"Paul 2026-11-19: the Collective's strength is moving, not a big start; unchanged (DEFAULT)"
 param,Collective,spread_regiment_class,Militia,"Paul 2026-11-19: unused while spread_regiments is 0 (DEFAULT)"
 base_facility,Hand,Orbital Shipyard,1,DEFAULT (playable slice 2026-10-12)
@@ -37,7 +39,8 @@ base_facility,Collective,Training Facility,1,DEFAULT (playable slice 2026-10-12)
 base_facility,Collective,Construction Yard,1,DEFAULT (playable slice 2026-10-12)
 site_facility,Collective,Orbital Shipyard,1,DEFAULT (playable slice 2026-10-12)
 site_facility,Collective,Training Facility,1,DEFAULT (playable slice 2026-10-12)
-fleet,Hand,Home Fleet@base,Mandate*4;Decree*2 / Gleaner*12,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers are a DEFAULT (Dev lead 2026-11-19)"
+fleet,Hand,Home Fleet@base,Mandate*2;Decree / Gleaner*4,DEFAULT (playable slice 2026-10-12)
+big_fleet,Hand,Home Fleet@base,Mandate*4;Decree*2 / Gleaner*12,"Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent number of troops spread across its systems; numbers DEFAULT (Dev lead 2026-11-19); used only with GameSettings.BigHandStart (DEFAULT off until the AI trainer re-tunes the Collective)"
 fleet,Hand,Picket@site,Warrant;Writ,DEFAULT (playable slice 2026-10-12)
 fleet,Hand,Interdiction@base,Warrant;Subpoena,DEFAULT (playable slice 2026-10-12)
 fleet,Collective,Collective Fleet@base,Dodger*2;Mender*2 / Swift*3,DEFAULT (playable slice 2026-10-12)

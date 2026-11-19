@@ -85,7 +85,7 @@ public static class NewGame
         }
 
         foreach (var side in new[] { Side.Hand, Side.Collective })
-            DealSide(host, forces, side, settings.MinGarrison);
+            DealSide(host, forces, side, settings.MinGarrison, settings.BigHandStart && side == Side.Hand);
 
         // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Hearth system (the table's first item is empty, so nothing is a
         // carrier); no capacity check, no draw. With min_garrison 0 they are the HQ's only troops. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7)
@@ -128,7 +128,7 @@ public static class NewGame
     private static List<string> Held(GameHost host, Side side) =>
         host.Game.State.SystemOwners.Where(kv => kv.Value == side).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-    private static void DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison)
+    private static void DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison, bool big)
     {
         var eco = host.Economy;
         var held = Held(host, side);
@@ -170,12 +170,12 @@ public static class NewGame
             int n = Math.Max(minG, SupportModule.RequiredGarrison(host.Support.Params, eco.SupportOf(sys, side), false, false));
             for (int i = 0; i < n; i++) eco.AddObject(side, gClass, sys);
         }
-        for (int i = 0, n = forces.Int(side, "base_regiments"); i < n; i++) eco.AddObject(side, forces.Str(side, "base_regiment_class"), baseSys);
+        for (int i = 0, n = forces.Int(side, "base_regiments", big); i < n; i++) eco.AddObject(side, forces.Str(side, "base_regiment_class"), baseSys);
 
         // troops spread across the side's holdings: spread_regiments on the held system with the most free energy in each sector it holds
         // (sectors and ties in ordinal order; never the base or the HQ). No draw. DEFAULT (Paul 2026-11-19: the Hand starts with a decent
-        // number of troops spread across its systems; the Collective's spread_regiments is 0).
-        int spread = forces.Int(side, "spread_regiments");
+        // number of troops spread across its systems; with BigHandStart only, DEFAULT off).
+        int spread = forces.Int(side, "spread_regiments", big);
         if (spread > 0)
         {
             string sClass = forces.Str(side, "spread_regiment_class");
@@ -191,7 +191,7 @@ public static class NewGame
         int budget = eco.Capacity(side) * forces.Int(side, "fill_percent") / 100;
         int load = eco.Load(side);
         string siteSys = sites.Count > 0 ? sites[0] : baseSys;
-        foreach (var f in forces.Fleets.Where(f => f.Side == side))
+        foreach (var f in forces.FleetsOf(side, big))
         {
             int shipCost = f.Ships.Sum(c => eco.Costs.Get(c).Maintenance);
             if (load + shipCost > budget) continue;
