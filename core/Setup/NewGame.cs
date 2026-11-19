@@ -172,6 +172,21 @@ public static class NewGame
         }
         for (int i = 0, n = forces.Int(side, "base_regiments"); i < n; i++) eco.AddObject(side, forces.Str(side, "base_regiment_class"), baseSys);
 
+        // troops spread across the side's holdings: spread_regiments on the held system with the most free energy in each sector it holds
+        // (sectors and ties in ordinal order; never the base or the HQ). No draw. DEFAULT (Paul 2026-11-19: the Hand starts with a decent
+        // number of troops spread across its systems; the Collective's spread_regiments is 0).
+        int spread = forces.Int(side, "spread_regiments");
+        if (spread > 0)
+        {
+            string sClass = forces.Str(side, "spread_regiment_class");
+            var galaxy = host.Data.Galaxy;
+            var bySector = held.Where(h => h != baseSys && h != hqSys && galaxy.TryFindSystem(h, out int ix) && !galaxy.Systems[ix].IsOutsideSectors)
+                .GroupBy(h => { galaxy.TryFindSystem(h, out int ix); return galaxy.Systems[ix].Sector; }).OrderBy(g => g.Key, StringComparer.Ordinal);
+            foreach (var g in bySector)
+                if (BestEnergy(host, g.ToList(), null) is { } at)
+                    for (int i = 0; i < spread; i++) eco.AddObject(side, sClass, at);
+        }
+
         // fleets: in file order while the maintenance load stays within fill_percent of the capacity
         int budget = eco.Capacity(side) * forces.Int(side, "fill_percent") / 100;
         int load = eco.Load(side);

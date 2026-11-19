@@ -112,7 +112,9 @@ public class SimpleAiAgentsTests
         // the system they were drawn through, so some paths change and the game changes; the AI code does not. Previous pin 8636bbfc...f01d.
         // Accent-free names re-pin 2026-11-15 (Paul: the pixel font has no é; Lore Master: Ciénaga -> Kelmeer): systems are ordered by name, so
         // Kelmeer now sorts before Gemshaft and seed 1 plays another game; the AI code does not change. Previous pin 8f68c3b5...5732.
-        Assert.Equal("79c342d32a011143e40eefc5d77f22aae18bac9bf5035c200a4593dcad3c2a4d", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
+        // Hand start re-pin 2026-11-19 (Paul: the Hand "would already have big means of conquest"): the Hand starts with a bigger fleet and
+        // more Pacifiers (m5-setup-and-victory §Starting forces), so the game changes; the AI code does not. Previous pin 79c342d3...2a4d.
+        Assert.Equal("191cf0b49c5b0f23b4149762bc390ee8a17b25365dc9883c3daa0d00b6f7f0cf", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
