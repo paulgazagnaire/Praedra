@@ -541,8 +541,12 @@ public partial class GameScreen
         string tip =
             $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days per unit here once the refined is there." +
             (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : "");
-        // the painted picture is the hover card (art/units/units.json); the card itself shows the pixel icon (Paul 2026-11-19)
-        Button btn = UnitArt.Has(r.Name) ? new ArtButton { Cls = r.Name } : new Button();
+        // the hover card: what it is, its role, its stats and its picture (Paul 2026-11-19); the plain tip stays as the fallback text
+        var kind = KindOf(r.Category, r.Name);
+        var grid = PixelIcons.Unit(kind, hand, SizeOfClass(r.Name)) ?? PixelIcons.Building(kind) ?? PixelIcons.Building(UnitIcon.Kind.Building);
+        var stats = ClassStats(r, b.Days, out string extra);
+        string hoverFoot = string.Join("\n", new[] { extra, b.Why != null ? $"{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : null, b.Usable ? $"Click to order {_buildQty}." : null }.Where(x => x != null));
+        var btn = new InfoButton { Make = () => UnitInfo.Card(r.Name, KeepNumeral(r.Name), grid, b.Usable ? Ui.You : Look.Text, stats, hoverFoot) };
         btn.FocusMode = FocusModeEnum.None;
         btn.Disabled = !b.Usable;
         btn.MouseDefaultCursorShape = b.Usable ? CursorShape.PointingHand : CursorShape.Arrow;
@@ -557,8 +561,6 @@ public partial class GameScreen
         var ink = b.Usable ? Look.Text : Look.Dim;
 
         var v = Boxed(new VBoxContainer(), 4);
-        var kind = KindOf(r.Category, r.Name);
-        var grid = PixelIcons.Unit(kind, hand, SizeOfClass(r.Name)) ?? PixelIcons.Building(kind) ?? PixelIcons.Building(UnitIcon.Kind.Building);
         v.AddChild(IconPic.Of(grid, 2, ink, !b.Usable));
         var name = Look.Words(KeepNumeral(r.Name), 12, ink, true);
         name.AutowrapMode = TextServer.AutowrapMode.Word;   // between words only: never "Constructio / n"

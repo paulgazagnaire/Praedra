@@ -505,4 +505,20 @@ public partial class GameScreen
         HideModal(_reportPanel);   // the shot shows the window, not the harvest report the strike opens
     }
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
+
+    /// <summary>For a screenshot: the hover card of a build card in an open window (--infocard Mandate), drawn where its tooltip would be.</summary>
+    public void ShotInfoCard(string cls)
+    {
+        PlayRefresh();
+        foreach (var k in MgmtKeys.ToList()) MgText(k);   // rebuild the open windows as the next frame would, so a tab just clicked has its cards
+        if (UiTest.Find<Button>(this, "Build " + cls) is not InfoButton b || b.Make?.Invoke() is not Control card) { GD.PrintErr("no build card " + cls); return; }
+        var panel = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, ZIndex = 100 };
+        panel.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg, Look.Edge, 1, 1, 1, 1, 12));
+        panel.AddChild(card);
+        AddChild(panel);
+        var at = b.GetGlobalRect().Position + new Vector2(b.Size.X * 0.5f, b.Size.Y * 0.6f);
+        var size = panel.GetCombinedMinimumSize();
+        var screen = GetViewportRect().Size;
+        panel.Position = new Vector2(Mathf.Min(at.X, screen.X - size.X - 8), Mathf.Min(at.Y, screen.Y - size.Y - 8));   // kept on screen, as a tooltip is
+    }
 }
