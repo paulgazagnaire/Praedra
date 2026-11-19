@@ -35,8 +35,11 @@ public partial class GameScreen
     {
         int refund = list.Sum(RefundOf), upkeep = list.Sum(UpkeepOf);
         string body = $"{what} will be taken apart as soon as the clock moves. You get {refund} refined back (half the cost) and {upkeep} upkeep is freed. This cannot be undone.";
-        if (list.Any(o => o.Category == ObjectCategory.CapitalShip) && list.Any(o => S.Host.Economy.Objects.Any(x => x.AboardShip == o.Id)))
-            body += $" Fighters and regiments aboard stay at {system}.";
+        // QA-113: say where each loaded ship is, not where the right-clicked card is
+        var loaded = list.Where(o => o.Category == ObjectCategory.CapitalShip && S.Host.Economy.Objects.Any(x => x.AboardShip == o.Id))
+            .Select(o => S.Game.State.Fleets.Values.FirstOrDefault(f => f.Ships.Contains(o.Id))?.At ?? system).Where(n => n != null)
+            .Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList();
+        if (loaded.Count > 0) body += $" Fighters and regiments aboard stay at {string.Join(" and ", loaded)}.";
         // a mine or a refinery is upkeep room: each pair gives 50 (rule: m2-maintenance §Capacity)
         if (list.Any(o => FacilityKinds.TryParse(o.Class, out var k) && k is FacilityKind.Mine or FacilityKind.Refinery)) body += $" Mines and refineries are what give you upkeep room: scrapping one lowers your room by {S.Host.Economy.Params.CapacityPerFacility} when it was part of a pair.";
         // rule: m2-construction §Scrapping (a scrapped yard loses its running cycle; the last yard of a kind cancels the project)

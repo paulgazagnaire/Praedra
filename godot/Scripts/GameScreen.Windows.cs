@@ -159,6 +159,7 @@ public partial class GameScreen
         _zones.RemoveAll(z => w.Panel.IsAncestorOf(z.Box));
         w.Panel.Visible = false;   // gone at once: until the frame ends a freed window still stood in the tree, buttons and all
         w.Panel.QueueFree();
+        PrunePicksToShown();   // QA-112: a unit picked in a closed window is no longer picked
     }
 
     /// <summary>Esc: the window on top closes first.</summary>

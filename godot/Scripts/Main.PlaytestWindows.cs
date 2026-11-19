@@ -281,7 +281,17 @@ public partial class Main
         {
             var two = s.Host.Troops.RegimentsOnSystem(stackFleet.At).Where(o => o.Side == me).OrderBy(o => o.Id).Take(2).ToList();
             gs.ShotWindow("fleet", $"{stackFleet.Id}:Troops"); gs.PlayRefresh();
-            string r = gs.MgDrop($"R:{two[0].Id},{two[1].Id}", $"Fleet {stackFleet.Id} Troops");
+            // QA-111: a ship picked first, then a regiment: the troops box takes the drag, says how many may go, and the ship stays picked
+            string tz = $"Fleet {stackFleet.Id} Troops";
+            int ship = stackFleet.Ships.OrderBy(x => x).First();
+            gs.PlayPick($"S:{ship}", false); gs.PlayPick($"R:{two[0].Id}", true);
+            string mix = gs.PlayDragPayload($"S:{ship}");
+            string hint = gs.PlayDropHint(mix, tz);
+            Expect(hint.StartsWith("Drop to load: up to 1 of 2"), $"a ship and a regiment picked, dragged by the ship over the troops: the hint says what may go ({hint})");
+            string mr = gs.MgDrop(mix, tz);
+            Expect(mr == null && gs.PickedKeys.SequenceEqual(new[] { $"S:{ship}" }), $"the drop sends the regiment and the ship stays picked: {mr ?? "sent"}, picked {string.Join(" ", gs.PickedKeys)}");
+            gs.PlayPick($"S:{ship}", false);
+            string r = gs.MgDrop($"R:{two[0].Id},{two[1].Id}", tz);
             Expect(r == null, $"drop a stack of two regiments on {stackFleet.Name}'s troops: {r ?? "sent"}");
             gs.PlayDay();
             Expect(two.All(o => o.AboardShip != 0 && stackFleet.Ships.Contains(o.AboardShip)), "next day both are aboard");
@@ -318,6 +328,13 @@ public partial class Main
             else GD.Print($"  (no fleet with room for two regiments at {pickAt}: the picked drop is not checked on this side)");
             gs.PlayPick($"R:{three[1].Id}", false); gs.PressKey(Key.Escape);
             Expect(gs.PickedKeys.Count == 0 && gs.MgmtCount > 0, "Escape lets the picked units go before it closes a window");
+            // QA-112: closing another window keeps the pick; closing the one its cards are in lets it go
+            gs.PlayPick($"R:{three[1].Id}", false);
+            gs.ShotWindow("infra", pickAt); gs.PlayRefresh();
+            gs.PlayCloseTop(); gs.PlayRefresh();
+            Expect(gs.PickedKeys.Count == 1, "closing a window the picked card is not in keeps it picked");
+            while (gs.MgmtCount > 0) gs.PlayCloseTop();
+            Expect(gs.PickedKeys.Count == 0, "closing the window a picked card is in lets it go");
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
         else GD.Print("  (no system of yours with three regiments on the ground: picking is not checked on this side)");
