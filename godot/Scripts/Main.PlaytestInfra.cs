@@ -127,5 +127,29 @@ public partial class Main
         Expect(gs.Click($"Fold {key}") && !gs.MgText(key).Contains("System energy") && gs.MgText(key).Contains("INFRASTRUCTURE"), "– folds it to its name");
         Expect(gs.Click($"Fold {key}") && gs.MgText(key).Contains("System energy"), "+ unfolds it");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // a planet with no construction yard (Paul 2026-11-19: "we're missing a way to build infrastructure for other systems"): its window
+        // offers the facilities anyway, built by your nearest construction yard and sent there
+        var cons = s.Host.Construction;
+        string bare = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == s.Player && !s.IsDestroyed(n) && !HasAt(n, YardFamily.Construction) && eco.FreeEnergy(n) > 0)
+            .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+        Expect(bare != null, "you hold a planet with no construction yard and a free slot");
+        if (bare == null) return;
+        string bkey = $"Infra {bare}";
+        gs.OpenMgmt(GameScreen.MgKind.Infra, bare); gs.PlayRefresh();
+        gs.Click($"Yard {bare} Construction");
+        string bt = gs.MgText(bkey);
+        var bst = gs.InfraState(bare);
+        string card = bst?.Cards.FirstOrDefault(c => c.Usable).Name;
+        Expect(bt.Contains("builds it and sends it here") && card != null, $"{bare} has no construction yard, yet its window offers facilities built elsewhere and sent there: {string.Join(", ", bst?.Cards.Select(c => c.Name) ?? Enumerable.Empty<string>())}");
+        if (card == null) { while (gs.MgmtCount > 0) gs.PressKey(Key.Escape); return; }
+        int q0 = s.QueuedOrders;
+        Expect(gs.Click($"Build {card}") && s.QueuedOrders == q0 + 1, $"a click on {card} orders it for {bare}");
+        gs.PlayDay();
+        bool Bound(Praedra.Core.Construction.Project p) => p != null && (p.Destination == bare || (p.Next?.Any(x => x.Destination == bare) ?? false));
+        var yards = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => HasAt(n, YardFamily.Construction)).ToList();
+        string by = yards.FirstOrDefault(n => Bound(cons.ProjectAt(n, YardFamily.Construction)));
+        Expect(by != null && by != bare, $"the core took it: the construction yard at {by ?? "(none)"} builds {card} for {bare}");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }
 }
