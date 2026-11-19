@@ -93,6 +93,15 @@ public partial class Main
 
         // ---- the HQ buttons are gone (pick 10): H and the menu
         Expect(!gs.ButtonTexts().Any(b => b.Contains("HQ")), "no HQ button on the screen: " + string.Join(", ", gs.ButtonTexts().Where(b => b.Contains("HQ"))));
+        // ---- the map is not an endless canvas (Paul 2026-11-19): the farthest zoomed-out view is all you can reach
+        view.SetZoom(0.01f); view.PanPixels(new Vector2(99999, -99999));
+        Expect(view.MaxView.GetCenter().DistanceTo(view.ViewCenter) < 0.01f, "fully zoomed out, the map cannot be dragged off the galaxy");
+        view.SetZoom(4f); view.PanPixels(new Vector2(99999, 99999));
+        var far = view.ScreenToWorld(view.Size); var max = view.MaxView;
+        Expect(far.X <= max.End.X + 0.01f && far.Y <= max.End.Y + 0.01f, $"zoomed in, a long drag stops at the edge of the farthest view ({far} inside {max.End})");
+        view.PanPixels(new Vector2(-99999, -99999));
+        var near = view.ScreenToWorld(Vector2.Zero);
+        Expect(near.X >= max.Position.X - 0.01f && near.Y >= max.Position.Y - 0.01f, $"and the same the other way ({near} inside {max.Position})");
         view.PanPixels(new Vector2(4000, 0)); view.Select(-1);
         gs.PressKey(Key.H);
         Expect(view.Selected == homeIdx, $"H centres the map on your HQ and selects it ({home})");
