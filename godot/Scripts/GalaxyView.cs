@@ -230,8 +230,23 @@ public partial class GalaxyView : Control
     public Vector2 ScreenToWorld(Vector2 s) => _center + (s - Size / 2f) / PxPerUnit;
     public Vector2 SystemScreen(int i) => WorldToScreen(_pos[i]);
 
+    /// <summary>The map is not an endless canvas (Paul 2026-11-19): the farthest zoomed-out view, the whole galaxy centred, is the
+    /// biggest area the player can reach. At any zoom the view stays inside it, so dragging can never leave the galaxy for empty space.</summary>
+    /// <summary>The world area of the farthest zoomed-out view: nothing outside it is ever on screen.</summary>
+    public Rect2 MaxView { get { var half = Size / 2f / (FitScale() * MinZoom); return new Rect2((_min + _max) / 2f - half, half * 2f); } }
+
+    void ClampView()
+    {
+        if (_pos == null || Size.X < 1 || Size.Y < 1) return;
+        var home = (_min + _max) / 2f;
+        var room = Size / 2f / FitScale() * (1f / MinZoom - 1f / _zoom);   // how far the centre may move from home, per axis
+        room = room.Max(Vector2.Zero);
+        _center = _center.Clamp(home - room, home + room);
+    }
+
     void Changed()
     {
+        ClampView();
         foreach (var child in GetChildren()) if (child is CanvasItem ci) ci.QueueRedraw();
         QueueRedraw();
     }
