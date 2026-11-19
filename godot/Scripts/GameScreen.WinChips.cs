@@ -88,14 +88,38 @@ public partial class GameScreen
         _zones.Add(zone);
         box.SetDragForwarding(new Callable(),
             Callable.From((Func<Vector2, Variant, bool>)((_, data) => Drag.ParseAll(data).Any(d => Judge(zone, d) == null))),
-            Callable.From((Action<Vector2, Variant>)((_, data) =>
-            {
-                // a stack drops unit by unit, each judged after the ones before it (room fills up)
-                bool any = false;
-                foreach (var d in Drag.ParseAll(data)) if (Judge(zone, d) == null) { RunDrop(() => drop(d)); any = true; }
-                if (any) { _picked.Clear(); RefreshMgmt(); RefreshSectorView(); }   // what was picked has gone where it was dropped
-            })));
+            Callable.From((Action<Vector2, Variant>)((_, data) => { if (DropAll(zone, Drag.ParseAll(data)) > 0) RefreshSectorView(); })));
         return (box, flow);
+    }
+
+    /// <summary>
+    /// Drop every unit of a drag on a zone, unit by unit, each judged after the ones before it (room fills up). The units that went are no
+    /// longer picked; any that could not go stay picked, and a short note says how many went (QA-111). Returns how many went.
+    /// </summary>
+    int DropAll(Zone zone, IReadOnlyList<Drag> all)
+    {
+        var went = new List<Drag>();
+        foreach (var d in all) if (Judge(zone, d) == null) { RunDrop(() => zone.Drop(d)); went.Add(d); }
+        if (went.Count == 0) return 0;
+        _picked.RemoveAll(went.Contains);
+        if (went.Count < all.Count)
+            Toast($"Only {went.Count} of {all.Count} could {zone.Verb} here" + (all.Any(IsPicked) ? "; the rest stay picked." : "."), MsgKind.Warn);
+        RefreshMgmt();
+        return went.Count;
+    }
+
+    /// <summary>What dropping the whole drag on a zone would do: how many of its units may go on their own, and, when none may, why
+    /// (null when some may; "" when it is where they already are).</summary>
+    (int Fit, string Why) JudgeAll(Zone z)
+    {
+        int fit = 0; string why = "";
+        foreach (var d in _dragTake)
+        {
+            var w = Judge(z, d);
+            if (w == null) fit++;
+            else if (why == "" && w != "") why = w;
+        }
+        return (fit, fit > 0 ? null : why);
     }
 
     /// <summary>Whether a drop may happen here (null), quietly not (""), or not, and why.</summary>
@@ -133,7 +157,7 @@ public partial class GameScreen
         {
             if (!IsInstanceValid(z.Box)) continue;
             string look = z.Box.HasMeta("look") ? z.Box.GetMeta("look").AsString() : "plain";
-            string why = d is { } dd ? Judge(z, dd) : "";
+            string why = d is { } ? JudgeAll(z).Why : "";   // a picked mix lights every zone where any of it may go (QA-111)
             bool? ok = why == null ? true : why == "" ? null : false; // where it already is stays quiet
             z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(ok, look));
             z.Box.Modulate = ok == false ? new Color(1, 1, 1, 0.55f) : Colors.White;
@@ -141,6 +165,7 @@ public partial class GameScreen
     }
 
     Drag? _dragging;
+    List<Drag> _dragTake = new();   // every unit the drag carries, _dragging first
 
     int _dragCount = 1;
 
@@ -172,6 +197,7 @@ public partial class GameScreen
             var take = TakeFor(ds, Input.IsKeyPressed(Key.Shift), out bool picked);
             bool mixed = take.Select(ThingName).Distinct().Count() > 1;
             _dragging = take[0];
+            _dragTake = take;
             _dragCount = take.Count;
             _dragMixed = mixed;
             using var look = Ui.Window();   // the tile under the mouse looks like the one in the window
@@ -190,16 +216,23 @@ public partial class GameScreen
         var mouse = _mgLayer.GetGlobalMousePosition();
         var z = _zones.LastOrDefault(z => IsInstanceValid(z.Box) && z.Box.IsVisibleInTree() && z.Box.GetGlobalRect().HasPoint(mouse));
         if (z == null || _dragging is not { } d) { _dragHint.Visible = false; return; }
-        string why = Judge(z, d);
+        var (fit, why) = JudgeAll(z);
         if (why == "") { _dragHint.Visible = false; return; }
-        _dragHintText.Text = why ?? DropWords(d, z);
+        _dragHintText.Text = why ?? DropWords(d, z, fit);
         _dragHintText.AddThemeColorOverride("font_color", why == null ? Ui.WinActive : Ui.Warn);
         _dragHint.Visible = true;
         _dragHint.ResetSize();
         _dragHint.Position = ClampWin(mouse + new Vector2(18, 22), _dragHint.Size) with { Y = Math.Min(mouse.Y + 22, _mgLayer.Size.Y - 40) };
     }
 
-    string DropWords(Drag d, Zone z) => $"Drop to {z.Verb}: " + (_dragMixed ? $"{_dragCount} units" : $"{(_dragCount > 1 ? $"{_dragCount} × " : "")}{ThingName(d)}");
+    /// <summary>The hint over a zone that takes the drag. With several units it says "up to": room can fill before the last one, and
+    /// what can't go stays picked (QA-111).</summary>
+    string DropWords(Drag d, Zone z, int fit)
+    {
+        string what = _dragMixed ? $"{_dragCount} units" : $"{(_dragCount > 1 ? $"{_dragCount} × " : "")}{ThingName(d)}";
+        if (_dragCount <= 1) return $"Drop to {z.Verb}: {what}";
+        return $"Drop to {z.Verb}: up to " + (fit < _dragCount ? $"{fit} of {what}" : what);
+    }
 
     bool _dragMixed;   // the drag carries picked units of more than one class
 

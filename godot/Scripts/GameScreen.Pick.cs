@@ -7,7 +7,7 @@ namespace PraedraViewer;
 // Picking several units at once (Paul 2026-11-19: "I need to be able to select units and ships by clicking on them, and while maintaining
 // shift. Then drag and drop or right click to act on all of the selected units"). A click picks a unit card; Shift+click adds it to the
 // pick or takes it out. Dragging a picked card carries every picked unit; right-clicking one offers to act on all of them. Escape, or a
-// plain click on the only picked card, lets them go. Ships, regiments, fighter squadrons and special forces can be picked; leaders and
+// plain click on the only picked card, lets them go; so does closing the window they are in. Ships, regiments, fighter squadrons and special forces can be picked; leaders and
 // whole fleets drag alone. Screens only: a drop still sends one order per unit, as before.
 public partial class GameScreen
 {
@@ -43,6 +43,22 @@ public partial class GameScreen
         _picked.Clear();
         RefreshMgmt();
         return true;
+    }
+
+    /// <summary>Let go of every picked unit whose card no longer shows (its window was closed), so a drag never carries units the player
+    /// can't see (QA-112).</summary>
+    void PrunePicksToShown()
+    {
+        if (_picked.Count == 0) return;
+        var shown = new HashSet<Drag>();
+        void Walk(Node node)
+        {
+            if (node is CanvasItem ci && !ci.Visible) return;
+            if (node is Control c && c.HasMeta(UiTest.FullName) && Drag.Parse(c.GetMeta(UiTest.FullName).AsString()) is { } d) shown.Add(d);
+            foreach (var ch in node.GetChildren()) Walk(ch);
+        }
+        Walk(this);
+        if (_picked.RemoveAll(d => !shown.Contains(d)) > 0) RefreshMgmt();
     }
 
     /// <summary>A picked card's outline: the full blue, 2 px (no fill; Paul 2026-11-14), same inner margins as a card's.</summary>

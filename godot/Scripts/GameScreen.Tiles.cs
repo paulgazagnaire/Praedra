@@ -231,7 +231,10 @@ public partial class GameScreen
                     if (u.D is { } pd && IsPicked(pd) && LivePicks() is { Count: > 1 } picks)
                     {
                         var all = picks.Select(x => S.Host.Economy.Find(x.Id)).Where(o => o != null && o.Side == Me && Scrappable(o)).ToList();
-                        if (all.Count > 1) items.Insert(0, ($"Scrap the {all.Count} picked...", () => AskScrap(all, PickedWords(all), system)));
+                        // QA-113: the pick can span systems; then the question and the news line name no single one
+                        var places = picks.Select(x => WhereNow(x).System ?? system).Distinct().ToList();
+                        string at = places.Count == 1 ? places[0] : null;
+                        if (all.Count > 1) items.Insert(0, ($"Scrap the {all.Count} picked...", () => AskScrap(all, PickedWords(all), at)));
                     }
                     RightClickMenu(tile, items.ToArray());
                 }

@@ -33,11 +33,10 @@ public partial class GameScreen
         if (z == null) return "no such zone: " + zoneKey;
         var all = Drag.ParseAll(chipKey);
         if (all.Count == 0) return "bad chip: " + chipKey;
-        string why = Judge(z, all[0]);
+        _dragTake = all.ToList();
+        var (_, why) = JudgeAll(z);
         if (why != null) return why == "" ? "already there" : why;
-        foreach (var d in all) if (Judge(z, d) == null) RunDrop(() => z.Drop(d));
-        _picked.Clear();   // as the mouse's drop: what was picked has gone where it was dropped
-        RefreshMgmt();
+        DropAll(z, all);   // as the mouse's drop: what went is no longer picked, what could not stays picked
         foreach (var w in _mgWins.ToList()) RebuildMg(w);
         return null;
     }
@@ -158,7 +157,23 @@ public partial class GameScreen
         // "L:?" picks the first leader of yours standing where the first window is (screenshots don't know ids)
         if (chipKey == "L:?" && _mgWins.FirstOrDefault(x => x.System != null) is { } w)
             chipKey = S.MyCharacters.Where(c => S.Host.Characters.LocationOf(c) == w.System && c.AttachedFleet == 0).OrderBy(c => c.Id).Select(c => $"L:{c.Id}").FirstOrDefault() ?? chipKey;
-        if (Drag.Parse(chipKey) is { } d) { _dragging = d; _dragCount = Drag.ParseAll(chipKey).Count; _shotDrag = d; LightZones(d); }
+        if (Drag.Parse(chipKey) is { } d) { _dragging = d; _dragTake = Drag.ParseAll(chipKey).ToList(); _dragCount = _dragTake.Count; _shotDrag = d; LightZones(d); }
     }
-    Drag? _shotDrag;   // a screenshot holds a drag without a mouse
+    Drag? _shotDrag;
+
+    /// <summary>The hint shown while dragging <paramref name="chipKey"/> over a zone, as the mouse would see it (for the playtest).</summary>
+    internal string PlayDropHint(string chipKey, string zoneKey)
+    {
+        var z = _zones.FirstOrDefault(x => x.Key == zoneKey && IsInstanceValid(x.Box));
+        var all = Drag.ParseAll(chipKey);
+        if (z == null || all.Count == 0) return "no such zone or chip";
+        _dragTake = all.ToList();
+        _dragCount = all.Count;
+        _dragMixed = all.Select(ThingName).Distinct().Count() > 1;
+        var (fit, why) = JudgeAll(z);
+        return why ?? DropWords(all[0], z, fit);
+    }
+
+    /// <summary>Close the window on top as its X button does (for the playtest).</summary>
+    internal void PlayCloseTop() => CloseTopMgmt();   // a screenshot holds a drag without a mouse
 }
