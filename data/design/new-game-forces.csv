@@ -1,6 +1,8 @@
 kind,side,key,value,source
 param,Hand,base_system,Charter,DEFAULT (playable slice 2026-10-12)
 param,Collective,base_system,The Shoal,DEFAULT (playable slice 2026-10-12)
+param,Collective,base_draw_group,farreach,"DEFAULT (AI trainer 2026-11-19, Paul ""Per game""): with CollectiveBaseDraw the base is drawn among The Shoal and the Collective's farreach worlds"
+param,Collective,base_draw_free_energy,4,"DEFAULT (AI trainer 2026-11-19): a drawn base needs this much free energy for its yards"
 param,Hand,economy_systems,14,DEFAULT (playable slice 2026-10-12)
 param,Hand,mines_per_system,2,DEFAULT (playable slice 2026-10-12)
 param,Hand,refineries_per_system,2,DEFAULT (playable slice 2026-10-12)

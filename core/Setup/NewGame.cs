@@ -85,7 +85,7 @@ public static class NewGame
         }
 
         foreach (var side in new[] { Side.Hand, Side.Collective })
-            DealSide(host, forces, side, settings.MinGarrison, settings.BigHandStart && side == Side.Hand);
+            DealSide(host, forces, side, settings.MinGarrison, settings.BigHandStart && side == Side.Hand, settings.CollectiveBaseDraw && side == Side.Collective);
 
         // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Hearth system (the table's first item is empty, so nothing is a
         // carrier); no capacity check, no draw. With min_garrison 0 they are the HQ's only troops. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7)
@@ -128,13 +128,14 @@ public static class NewGame
     private static List<string> Held(GameHost host, Side side) =>
         host.Game.State.SystemOwners.Where(kv => kv.Value == side).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-    private static void DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison, bool big)
+    private static void DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison, bool big, bool drawBase)
     {
         var eco = host.Economy;
         var held = Held(host, side);
         if (held.Count == 0) return;
         string baseWanted = forces.Str(side, "base_system");
         string baseSys = held.Contains(baseWanted, StringComparer.Ordinal) ? baseWanted : BestEnergy(host, held, null)!;
+        if (drawBase) baseSys = DrawBase(host, forces, side, held, baseSys);
 
         // yards at the base, then the extra yard sites (best free energy first)
         foreach (var (s, kind, count) in forces.BaseFacilities)
@@ -242,6 +243,22 @@ public static class NewGame
 
     private static int CountOf(EconomyModule eco, string system, string kindName) =>
         eco.Objects.Count(x => x.Category == ObjectCategory.Facility && x.System == system && x.Class == kindName);
+
+    /// <summary>
+    /// The side's base drawn per game (<see cref="GameSettings.CollectiveBaseDraw"/>): one draw of the game generator among the usual base and
+    /// the side's held worlds of the <c>base_draw_group</c> with at least <c>base_draw_free_energy</c> free energy, never the HQ, in ordinal name
+    /// order. rule: m5-setup-and-victory §Starting forces (Collective base drawn per game; Paul 2026-11-19).
+    /// </summary>
+    private static string DrawBase(GameHost host, ForcesTable forces, Side side, List<string> held, string usual)
+    {
+        var galaxy = host.Data.Galaxy;
+        string group = forces.Str(side, "base_draw_group"); int energy = forces.Int(side, "base_draw_free_energy");
+        string? hq = host.Game.State.Scenario.HqSystem;
+        var cands = held.Where(h => h == usual || (h != hq && galaxy.TryFindSystem(h, out int ix) && galaxy.Systems[ix].Group == group
+                                                   && host.Economy.FreeEnergy(h) >= energy))
+            .Distinct(StringComparer.Ordinal).OrderBy(h => h, StringComparer.Ordinal).ToList();
+        return cands[host.Game.Rng.NextInt(0, cands.Count - 1)];
+    }
 
     /// <summary>The system of <paramref name="candidates"/> with the most free energy slots (ties by name), or null.</summary>
     private static string? BestEnergy(GameHost host, List<string> candidates, FacilityKind? _) =>

@@ -39,6 +39,14 @@ public sealed record GameSettings
     /// ~120 when it knows where it is), so it waits for the AI trainer's re-tune of the Collective. rule: m5-setup-and-victory §Starting forces.
     /// </summary>
     public bool BigHandStart { get; init; }
+    /// <summary>
+    /// The Collective's base drawn per game (Paul 2026-11-19, card "Draw the Collective's home base per game, instead of always The Shoal?":
+    /// "Per game"). Its yards, starting fleets and base regiments go to one Collective world drawn with the game generator among The Shoal and
+    /// the Collective's worlds of the <c>base_draw_group</c> with at least <c>base_draw_free_energy</c> free energy (never the HQ), sorted by
+    /// name. Off = always The Shoal (Classic). DEFAULT off until the AI trainer's re-tune of the Collective turns it on together with
+    /// BigHandStart. rule: m5-setup-and-victory §Starting forces (Collective base drawn per game).
+    /// </summary>
+    public bool CollectiveBaseDraw { get; init; }
 
     // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
     /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the Classic straight line, no routes).</summary>
