@@ -211,6 +211,109 @@ float heightAt(vec2 q, float upp)
     return bulge * 0.6 + disc + armLight * (0.45 + 1.1 * (clumps * 0.6 + streams * 0.4));
 }
 
+// ---- ported from the Galaxy Maker (tools/galaxy-maker/galaxy-maker.src.html, PR #335): skyGalaxy, skyField, spaceAround ----
+// The space around the galaxy: far-off galaxies of several shapes, smaller ones further still, and a faint haze, all on one layer
+// far behind the disc. Nothing here is drawn while Galaxies and Haze are both 0.
+uniform vec4 sky_a = vec4(0.0, 2.0, 0.7, 0.7);     // x galaxies (brightness; 0 = none), y how many, z size, w how far behind the disc (0 on it, 0.95 very far)
+uniform vec4 sky_b = vec4(0.0, 1.0, 1.1, 0.3);     // x haze, y haze size, z clear zone round the galaxy (in disc radii), w spin
+uniform vec4 sky_w0 = vec4(1.0, 0.6, 0.8, 0.5);    // how often each shape comes up: x spiral, y barred spiral, z elliptical, w edge-on
+uniform vec4 sky_w1 = vec4(0.2, 0.4, 0.0, 1.0);    // x ring, y irregular, z tiny far galaxies, w arrangement (seed)
+uniform vec3 c_sky_a = vec3(1.0, 0.698, 0.478);   // old stars (cores, ellipticals), young stars (arms, irregulars), haze
+uniform vec3 c_sky_b = vec3(0.549, 0.761, 1.0);
+uniform vec3 c_haze = vec3(0.141, 0.251, 0.431);
+// One galaxy's light. p: position in the galaxy's own frame, its radius = 1, squashed by the tilt; po: the same before the squash.
+// det: 0 when it is only a few dots across (then it is a soft blob), 1 when it is big enough for its shape to show.
+float skyGalaxy(int kind, vec2 p, vec2 po, float h, float spin, float det) {
+  float r = length(p);
+  float blob = exp(-r * r / 0.12);
+  if (det <= 0.0) return blob;
+  float th = atan(p.y, p.x);
+  float v;
+  if (kind <= 1) {
+    // spiral (two or three arms) and barred spiral (two arms from the ends of a bar)
+    float nArm = kind == 0 && h > 0.6 ? 3.0 : 2.0;
+    float wind = 2.0 + 2.5 * fract(h * 7.31);
+    float d = th - wind * log(max(r, 0.04) / 0.3) - spin;
+    float armS = pow(0.5 + 0.5 * cos(nArm * d), 3.0)   /* 'arm' in the Galaxy Maker; here that is a uniform's name */ * smoothstep(kind == 1 ? 0.2 : 0.05, kind == 1 ? 0.42 : 0.2, r);
+    float clump = 0.55 + 0.9 * noise2(p * 6.0 + h * 91.0);
+    v = exp(-r / 0.3) * (0.22 + 1.2 * armS * clump) + 1.2 * exp(-pow(length(po) / 0.06, 0.9));
+    if (kind == 1) { vec2 b = vec2(cos(spin) * p.x + sin(spin) * p.y, -sin(spin) * p.x + cos(spin) * p.y); float bx = b.x / 0.3, by = b.y / 0.07; v += 0.8 * exp(-bx * bx - by * by); }
+  } else if (kind == 2) {
+    // elliptical: smooth, bright in the middle, no arms
+    v = 1.5 * exp(-pow(r / 0.2, 0.7));
+  } else if (kind == 3) {
+    // edge-on disc: a thin bright needle with a round core and a dark dust lane along it
+    v = exp(-pow(r / 0.35, 0.9)) + 0.9 * exp(-pow(length(po) / 0.09, 0.9));
+    float ly = p.y / 0.18;
+    v *= 1.0 - 0.8 * exp(-ly * ly) * smoothstep(0.05, 0.25, abs(p.x));
+  } else if (kind == 4) {
+    // ring: a bright clumpy ring round a small core
+    float rr = (r - 0.62) / 0.1, a = th + spin;
+    v = exp(-rr * rr) * (0.5 + 0.9 * noise2(vec2(cos(a), sin(a)) * 3.0 + h * 37.0)) + 1.0 * exp(-r / 0.06);
+  } else {
+    // irregular: a ragged cloud of star-forming knots
+    float n = noise2(p * 3.0 + h * 53.0) * 0.6 + noise2(p * 7.0 - h * 29.0) * 0.4;
+    v = smoothstep(0.4, 0.8, n + 0.35 - 0.45 * r) * 1.1 + 0.2 * exp(-r / 0.2);
+  }
+  v *= 1.0 - smoothstep(0.75, 1.15, r);
+  return mix(blob, v, det);
+}
+// all the galaxies on one grid: cells of 'cell' galaxy units, at most one galaxy a cell, kept inside its cell so a cell needs no neighbours
+vec3 skyField(vec2 s, float upp, float cell, float sizeMax, float bright, bool tiny) {
+  vec2 g = s / cell + fract(vec2(sky_w1.w) * vec2(0.1031, 0.0973)) * 97.0 + (tiny ? 71.3 : 0.0);
+  vec2 id = floor(g);
+  float h0 = hash12(id + 3.1), h1 = hash12(id + 8.7), h2 = hash12(id + 15.2), h3 = hash12(id + 22.9);
+  if (h0 > 0.8) return vec3(0.0);                        // one cell in five stays empty, so the spacing is not a grid
+  float rad = sizeMax * mix(0.25, 1.0, h1 * h1 * h1);   // most are small, a few are big
+  vec2 at = id + 0.5 + (hash22(id + 4.4) - 0.5) * (1.0 - 2.4 * rad);
+  float px = rad * cell / upp;                            // the galaxy's radius in dots
+  // a galaxy under about 1.5 dots across is drawn 1.5 dots wide and dimmer, with the same total light, so it does not flicker as it moves
+  float grow = max(1.0, 1.5 / max(px, 1e-3));
+  vec2 d = (g - at) / (rad * grow);
+  if (dot(d, d) > 1.45) return vec3(0.0);
+  int kind = 2;
+  if (!tiny) {
+    float wsum = sky_w0.x + sky_w0.y + sky_w0.z + sky_w0.w + sky_w1.x + sky_w1.y;
+    if (wsum <= 0.0) return vec3(0.0);
+    float pick = h2 * wsum;
+    kind = pick < sky_w0.x ? 0 : pick < sky_w0.x + sky_w0.y ? 1 : pick < sky_w0.x + sky_w0.y + sky_w0.z ? 2
+         : pick < sky_w0.x + sky_w0.y + sky_w0.z + sky_w0.w ? 3 : pick < wsum - sky_w1.y ? 4 : 5;
+  }
+  float ang = hash12(id + 31.7) * 6.2832;
+  float tilt = kind == 3 ? mix(0.1, 0.2, h3) : kind == 5 ? mix(0.6, 1.0, h3) : mix(0.3, 1.0, h3);
+  vec2 po = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
+  vec2 p = vec2(po.x, po.y / tilt);
+  float det = smoothstep(3.0, 10.0, px);
+  float spin = time * sky_b.w * 0.03 * (0.4 + hash12(id + 2.2)) * (h3 > 0.5 ? 1.0 : -1.0);
+  float v = skyGalaxy(kind, p, po, hash12(id + 55.5), spin, det) * mix(0.3, 1.0, hash12(id + 41.3)) * bright / (grow * grow);
+  float warm = kind == 2 ? 0.85 : kind == 5 ? 0.1 : clamp(1.4 * exp(-length(po) / 0.12), 0.0, 1.0) * 0.8 + 0.1 * h0;
+  return mix(c_sky_b, c_sky_a, warm) * v;
+}
+vec3 spaceAround(vec2 off, float upp, float r) {
+  // the clear zone: the space background fades in only outside the galaxy's edge, so it never sits on the disc
+  float rim = sky_b.z * shape_mix.x;
+  float mask = smoothstep(rim, rim * 1.3, r);
+  if (mask <= 0.0) return vec3(0.0);
+  // its own layer far behind the disc: it slides and zooms less than the galaxy when the view moves
+  float z = pow(viewZoom(), 0.6 * sky_a.w);
+  vec2 s = viewCentre() * (1.0 - sky_a.w) + off * z;
+  float su = upp * z;
+  vec3 c = vec3(0.0);
+  if (sky_a.x > 0.0) {
+    float cell = 1.0 / sqrt(sky_a.y);
+    c += skyField(s, su, cell, 0.38 * sky_a.z, sky_a.x * 0.35, false);
+    if (sky_w1.z > 0.0) c += skyField(s * 1.0 + 5.0, su, cell * 0.3, 0.3, sky_a.x * sky_w1.z * 0.22, true);
+  }
+  if (sky_b.x > 0.0) {
+    // haze: very faint clouds of gas between the galaxies, drifting very slowly
+    vec2 hp = s / sky_b.y + fract(vec2(sky_w1.w) * vec2(0.0731, 0.0577)) * 53.0 + vec2(time * 0.004, 0.0);
+    float n = fbm2(hp * 1.3, 1.3 * su / sky_b.y, 5);
+    float n2 = fbm2(hp * 3.1 + 7.0, 3.1 * su / sky_b.y, 4);
+    c += mix(c_haze, c_sky_b, n2 * 0.5) * smoothstep(0.42, 0.85, n * 0.8 + n2 * 0.35) * sky_b.x * 0.11;
+  }
+  return c * mask;
+}
+
 // ---- the dither style (as in the Planet Maker): one buffer pixel is one dot ----
 float bayer(ivec2 p, int bits)
 {
@@ -408,6 +511,7 @@ void fragment()
     vec3 lit = vec3(1.0) - exp(-col * 1.3);
     vec3 glow = dust_mix.w * (lit * star_mix.w + st * 0.45);
     if (depth_mix.z > 0.0) { lq = layerQ(off, 1.4, upp, lu); glow += motes(lq) * depth_mix.z * 0.22; }
+    if (sky_a.x > 0.0 || sky_b.x > 0.0) glow += spaceAround(off, upp, r);
     if (tall)
     {
         // contour lines: one line per step of height, about a dot wide; they fade out where they would crowd together
