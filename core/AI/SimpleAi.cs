@@ -49,15 +49,11 @@ public sealed partial class SimpleAi
     public SimpleAi(GameHost host, Side side, SimpleAiParams? p = null) { _h = host; _side = side; _p = Doctrine(p ?? new SimpleAiParams(), side); }
 
     /// <summary>
-    /// The side's doctrine on top of the parameters: with <see cref="SimpleAiParams.HandMachine"/> the Hand launches big fleets with big troop
-    /// stacks. rule: ai tuning, SimpleAiParams.HandMachine (AI trainer 2026-11-19).
+    /// The side's own parameters: the Collective reviews its military every <see cref="SimpleAiParams.CollectiveMilitaryEvery"/> days when that
+    /// is set. rule: ai tuning, SimpleAiParams.CollectiveMilitaryEvery (AI trainer 2026-11-20).
     /// </summary>
-    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side) => side == Side.Hand && p.HandMachine
-        ? p with
-        {
-            LaunchStrength = p.MachineLaunchStrength, MinLaunchRegiments = p.MachineMinLaunchRegiments, InvasionRegimentTarget = p.MachineInvasionRegimentTarget,
-            TroopCapacityTarget = p.MachineTroopCapacityTarget, TaskForceMax = p.MachineTaskForceMax, TaskForceMarginPercent = p.MachineTaskForceMarginPercent,
-        }
+    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side) => side == Side.Collective && p.CollectiveMilitaryEvery > 0
+        ? p with { MilitaryEvery = p.CollectiveMilitaryEvery }
         : p;
 
     public Side Side => _side;

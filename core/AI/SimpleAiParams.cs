@@ -17,6 +17,12 @@ public sealed record SimpleAiParams
     public int ProductionEvery { get; init; } = 5;
     /// <summary>Days between military reviews (merge, load, move, bombard, assault). DEFAULT.</summary>
     public int MilitaryEvery { get; init; } = 3;
+    /// <summary>
+    /// The Collective's own military review interval, Collective only like the guerrilla switches; 0 = <see cref="MilitaryEvery"/> (AI trainer
+    /// 2026-11-20, against the Hand's big start: the same interval for the Hand made the Hand AI far stronger, Medium mirror on 96 seeds Hand /
+    /// Collective / open 40 / 36 / 20 with both sides at 2 days against 14 / 70 / 12 with the Collective alone). DEFAULT 0; AiLevels sets it at Medium.
+    /// </summary>
+    public int CollectiveMilitaryEvery { get; init; }
 
     // ---- economy and budget
     /// <summary>Maintenance room kept free after every purchase (m2-maintenance: load above capacity makes the autoscrap fire). DEFAULT.</summary>
@@ -216,27 +222,6 @@ public sealed record SimpleAiParams
     /// ai/09 §6 row "pick noise" (Easy 30). DEFAULT 0.
     /// </summary>
     public int PickNoisePercent { get; init; }
-    /// <summary>
-    /// The Hand machine (AI trainer 2026-11-19; Paul: "the Hand to act as a huge unstoppable machine, a bit more straight forward, but with bigger
-    /// fleets, more troops ... The Collective strength is in its ability to move. the hand don't have this"). Hand only, like the guerrilla
-    /// switches are Collective only: with it on, the Hand AI launches only big fleets (MachineLaunchStrength), forms fewer and bigger task forces
-    /// (MachineTaskForceMax, MachineTaskForceMarginPercent), carries big troop stacks (MachineMinLaunchRegiments) and keeps more regiments and
-    /// troop slots ready (MachineInvasionRegimentTarget, MachineTroopCapacityTarget). false = the Hand AI of before. DEFAULT false; AiLevels
-    /// sets it at Medium and Hard.
-    /// </summary>
-    public bool HandMachine { get; init; }
-    /// <summary>The Hand machine's LaunchStrength. DEFAULT (AI trainer 2026-11-19).</summary>
-    public int MachineLaunchStrength { get; init; } = 100;
-    /// <summary>The Hand machine's MinLaunchRegiments. DEFAULT (AI trainer 2026-11-19).</summary>
-    public int MachineMinLaunchRegiments { get; init; } = 6;
-    /// <summary>The Hand machine's InvasionRegimentTarget. DEFAULT (AI trainer 2026-11-19).</summary>
-    public int MachineInvasionRegimentTarget { get; init; } = 50;
-    /// <summary>The Hand machine's TroopCapacityTarget. DEFAULT (AI trainer 2026-11-19).</summary>
-    public int MachineTroopCapacityTarget { get; init; } = 60;
-    /// <summary>The Hand machine's TaskForceMax. DEFAULT (AI trainer 2026-11-19).</summary>
-    public int MachineTaskForceMax { get; init; } = 2;
-    /// <summary>The Hand machine's TaskForceMarginPercent. DEFAULT (AI trainer 2026-11-19).</summary>
-    public int MachineTaskForceMarginPercent { get; init; } = 250;
 
     /// <summary>
     /// Game plan spread (AI trainer 2026-11-19; Paul: "the Collective ALWAYS captures Excubia ... I don't want the enemy to be predictable").
