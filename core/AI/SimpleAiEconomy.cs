@@ -13,6 +13,7 @@ public sealed partial class SimpleAi
     private void PlanEconomy()
     {
         var eco = _h.Economy;
+        TryFoundYard();
         foreach (var y in YardSystems(YardFamily.Construction))
         {
             if (!CanOrderAt(y, YardFamily.Construction)) continue;
@@ -23,6 +24,29 @@ public sealed partial class SimpleAi
             if (m > 0 && Budget < m) continue;
             OrderFacility(y, kind, dest);
         }
+    }
+
+    /// <summary>
+    /// FoundYardsBelow (AI trainer 2026-11-20; Paul: a losing side must "reproduce a military and fight until it's dying breath", smarter only):
+    /// with fewer construction yards than that (finished and queued, a founding one included), the side founds one, one at a time, on its held,
+    /// populated world farthest from the enemy it knows (then the most energy, then the name), where the rule allows it.
+    /// rule: m2-construction §Founding a construction yard (ConstructionModule.CanFoundYardAt).
+    /// </summary>
+    private void TryFoundYard()
+    {
+        if (_p.FoundYardsBelow <= 0 || CountYards(YardFamily.Construction) >= _p.FoundYardsBelow) return;
+        if (HeldSystems().Any(s => _h.Construction.ProjectAt(s, YardFamily.Construction) is { Founding: true })) return;
+        string cls = FacilityKinds.ClassName(FacilityKind.ConstructionYard);
+        if (!Available(cls) || Budget < Maint(cls)) return;
+        var eco = _h.Economy;
+        string? site = HeldSystems().Where(s => eco.SlotsOf(s).Populated && !_h.Support.IsUprising(s) && eco.FreeEnergy(s) - _reservedEnergy.GetValueOrDefault(s) >= 1
+                                                && _h.Construction.CanFoundYardAt(s))
+            .OrderByDescending(s => HopsFromEnemy(s, FoundSafeHops)).ThenByDescending(s => eco.SlotsOf(s).Energy).ThenBy(s => s, StringComparer.Ordinal).FirstOrDefault();
+        if (site == null) return;
+        long seq = _h.Construction.SubmitBuild(_side, site, YardFamily.Construction, cls, 1, site);
+        Note(seq, "Build", $"{cls} founded at {site}");
+        _plannedLoad += Maint(cls);
+        _reservedEnergy[site] = _reservedEnergy.GetValueOrDefault(site) + 1;
     }
 
     private void OrderFacility(string yard, FacilityKind kind, string dest)
@@ -97,8 +121,6 @@ public sealed partial class SimpleAi
         var order = new List<FacilityKind>();
         int refined = eco.Refined(_side);
         int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
-        // SpreadConstructionYards (Collective, AI trainer 2026-11-20): short of spread construction yards, one comes first, whatever the pool holds
-        if (!_advisor && SpreadsYards && cons < _p.SpreadConstructionYards) order.Add(FacilityKind.ConstructionYard);
         // rule: m6-advisor-sibyl §Manage Production 1: the advisor's yards come from PlanAdvisorYards, so here only mines and refineries
         if (!_advisor && ships == 0) order.Add(FacilityKind.OrbitalShipyard);
         if (!_advisor && train == 0) order.Add(FacilityKind.TrainingFacility);
@@ -158,14 +180,7 @@ public sealed partial class SimpleAi
                 var fam = FamilyOfKind(kind);
                 int here = YardsAt(s, fam) + _reservedYards.GetValueOrDefault((s, fam));
                 if (here >= _p.YardsPerSystem) continue;
-                if (SpreadsYards && fam == YardFamily.Construction)
-                {
-                    // SpreadConstructionYards: one construction yard per world, the worlds farthest from the enemy first, so one lost world
-                    // never takes them all
-                    if (here > 0) continue;
-                    score += 25 * HopsFromEnemy(s, SpreadSafeHops);
-                }
-                else if (here > 0) score += 40 * here;
+                if (here > 0) score += 40 * here;
                 if (!_advisor) score -= BorderDanger(s) * 15; // the advisor reads only her own worlds (m6-advisor-sibyl §Manage Garrisons 9)
             }
             else score -= YardsAnyAt(s) * 3; // keep room on the yard systems for more yards
@@ -177,10 +192,8 @@ public sealed partial class SimpleAi
 
     private int YardsAnyAt(string system) => _h.Economy.Objects.Count(o => o.System == system && o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
 
-    private bool SpreadsYards => _side == Side.Collective && _p.SpreadConstructionYards > 0;
-
-    /// <summary>SpreadConstructionYards: steps on the Nearby graph out to here count as safer; farther is no safer. AI tuning (AI trainer 2026-11-20).</summary>
-    private const int SpreadSafeHops = 4;
+    /// <summary>FoundYardsBelow: steps on the Nearby graph out to here count as safer; farther is no safer. AI tuning (AI trainer 2026-11-20).</summary>
+    private const int FoundSafeHops = 4;
 
     /// <summary>Steps (m1-galaxy-data Nearby) from <paramref name="system"/> to the nearest system the side believes the enemy holds, up to
     /// <paramref name="cap"/> (no enemy that close: cap). Breadth first, neighbours in the galaxy's order.</summary>
