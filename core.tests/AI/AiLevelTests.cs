@@ -89,7 +89,7 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 2, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

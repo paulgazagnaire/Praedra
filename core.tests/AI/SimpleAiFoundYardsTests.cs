@@ -10,7 +10,7 @@ namespace Praedra.Core.Tests.AI;
 // SimpleAiParams.FoundYardsBelow (AI trainer 2026-11-20; Paul: a losing side "needs to adapt, regroup, conquer unexplored system, reproduce a
 // military and fight until it's dying breath", smarter only). On seed 1 MedA the Medium Collective lost its last construction yard by day 600
 // and never built again (the game stalled at 275 Hand worlds to 8). With the founding rule (m2-construction §Founding a construction yard,
-// GameSettings.FoundConstructionYards) a side with too few founds one on its safest world.
+// GameSettings.FoundConstructionYards) a side with none left founds one on its safest world.
 public class SimpleAiFoundYardsTests
 {
     private readonly ITestOutputHelper _out;

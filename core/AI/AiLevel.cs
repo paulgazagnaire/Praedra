@@ -32,7 +32,7 @@ public static class AiLevels
             {
                 MilitaryEvery = 6, ProductionEvery = 8, EconomyEvery = 10, AgentsEvery = 4,
                 PickNoisePercent = 30, MaxOffensives = 1, ScoutCount = 2, HqSpies = 2, SafeHearth = true,
-                FoundYardsBelow = 1, // Easy founds a construction yard only once it has none (AI trainer 2026-11-20)
+                FoundYardsBelow = FoundBelow,
             },
             // AI trainer 2026-10-26 (Paul: Easy about today's AI, Medium balanced, Hard really hard; the Collective plays guerrilla). The guerrilla
             // switches are Collective-only (both sides play to win, PlayToWin below). Medium Hand against the Collective, 96 seeds (1-96), day 3000, fog, Hand / Collective / no winner,
@@ -98,9 +98,10 @@ public static class AiLevels
     /// <summary>The game plan's spreads at every level (AI trainer 2026-11-19).</summary>
     public const int PlanSectorSpread = 30, PlanSystemSpread = 15;
 
-    /// <summary>FoundYardsBelow at Medium and Hard, both sides (AI trainer 2026-11-20, m2-construction §Founding a construction yard): with fewer than
-    /// 2 construction yards a side founds one on its safest world.</summary>
-    public const int FoundBelow = 2;
+    /// <summary>FoundYardsBelow at every level, both sides (AI trainer 2026-11-20, m2-construction §Founding a construction yard): a side with no
+    /// construction yard left founds one on its safest world. 1, not 2 (Dev lead: only once it has lost its yards): over 128 Medium mirrors
+    /// (MedA, MedE, default start) "below 2" and "below 1" end alike (Hand 16 / 13 wins, Collective 99 / 95), so the second yard adds nothing.</summary>
+    public const int FoundBelow = 1;
 
     /// <summary>HarvesterYardValue at Medium and Hard (AI trainer 2026-10-27, QA-58): a Spike team at a harvester in the yard, below a finished harvester (SpikeValue 3000), above any other mission.</summary>
     private const int HarvesterYardHunt = 2000;
