@@ -187,6 +187,13 @@ public partial class Main
         {
             GD.Print("  sabotage team: " + string.Join(" | ", s.Messages.Skip(Math.Max(0, before - 3)).Where(m => m.Text.Contains("harvester sabotage")).Select(m => m.Text)));
         }
+        // The two harvesters are test plants and cost the Hand 450 upkeep each. With the big start (GameSettings.BigHandStart, about 70% of
+        // the limit on day one) they put the player over the limit, and the autoscrap then took the Sensor Stations, yards and the
+        // Window Test transports that the later checks use (AI trainer 2026-11-20, #343). So the test takes them away again, silently and
+        // without refund, as it planted them (test only). The Collective run keeps the enemy's harvester: its sabotage team is still on the way.
+        if (me == Side.Hand)
+            foreach (var shipId in s.Game.State.Fleets.Values.Where(f => f.Side == Side.Hand && f.Name is "DS Strike" or "DS Guard").OrderBy(f => f.Id).SelectMany(f => f.Ships).ToList())
+                s.Host.Economy.RemoveObject(shipId);
         gs.View.Select(-1); gs.PlayRefresh();
     }
 }

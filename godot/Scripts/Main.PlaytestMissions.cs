@@ -200,7 +200,10 @@ public partial class Main
     void FinishSpy(GameScreen gs, int id, string target, int lastDay, int from)
     {
         var s = gs.S;
-        if (s.Game.Day < lastDay) { Expect(OutcomeWithin(gs, "Espionage", target, lastDay), $"an Espionage result on {target} within the expected days"); }
+        // a result may already have come in while the other checks ran (seen with the big Hand start: day 48, checked from day 63), so read
+        // the messages since the mission was sent before waiting for more days
+        bool already = s.Messages.Skip(Math.Min(from, s.Messages.Count)).Any(m => m.Text.StartsWith($"Espionage on {target}", StringComparison.Ordinal));
+        if (s.Game.Day < lastDay && !already) { Expect(OutcomeWithin(gs, "Espionage", target, lastDay), $"an Espionage result on {target} within the expected days"); }
         else
         {
             var got = s.Messages.Skip(Math.Min(from, s.Messages.Count)).FirstOrDefault(m => m.Text.StartsWith($"Espionage on {target}", StringComparison.Ordinal));
