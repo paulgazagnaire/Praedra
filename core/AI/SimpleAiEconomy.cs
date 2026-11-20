@@ -44,7 +44,8 @@ public sealed partial class SimpleAi
         // the AI: the world farthest from the enemy it knows first; Sibyl reads only her own worlds (m6-advisor-sibyl §Manage Garrisons 9)
         string? site = HeldSystems().Where(s => eco.SlotsOf(s).Populated && !_h.Support.IsUprising(s) && eco.FreeEnergy(s) - _reservedEnergy.GetValueOrDefault(s) >= 1
                                                 && _h.Construction.CanFoundYardAt(s))
-            .OrderByDescending(s => _advisor ? 0 : HopsFromEnemy(s, FoundSafeHops)).ThenByDescending(s => eco.SlotsOf(s).Energy).ThenBy(s => s, StringComparer.Ordinal).FirstOrDefault();
+            .OrderByDescending(s => _advisor ? 0 : HopsFromEnemy(s, FoundSafeHops)).ThenByDescending(s => Math.Min(eco.SlotsOf(s).Energy, FoundGoodEnergy))
+                .ThenBy(s => FoundTie(s)).ThenByDescending(s => eco.SlotsOf(s).Energy).ThenBy(s => s, StringComparer.Ordinal).FirstOrDefault();
         if (site == null) return;
         long seq = _h.Construction.SubmitBuild(_side, site, YardFamily.Construction, cls, 1, site);
         Note(seq, "Build", $"{cls} founded at {site}");
@@ -199,6 +200,18 @@ public sealed partial class SimpleAi
 
     /// <summary>FoundYardsBelow: steps on the Nearby graph out to here count as safer; farther is no safer. AI tuning (AI trainer 2026-11-20).</summary>
     private const int FoundSafeHops = 4;
+
+    /// <summary>Among the safest worlds, those with at least this many energy slots are equally good founding sites (AI trainer 2026-11-20, QA-117):
+    /// room for the yard and a few facilities. rule: ai tuning, SimpleAiParams.FoundYardsBelow.</summary>
+    private const int FoundGoodEnergy = 3;
+
+    /// <summary>
+    /// QA-117 (AI trainer 2026-11-20; Paul 2026-11-19: the enemy must not be predictable): with the game plan on (the Collective), the tie among the
+    /// safest good founding sites is broken by this game's plan number, so the rebuilt yard is not at the same world every game; the same game seed
+    /// founds at the same world (the plan number is read from GameRng, never drawn). The Hand machine, with no plan, keeps most energy, then name.
+    /// rule: ai tuning, SimpleAiParams.PlanSectorSpreadPercent.
+    /// </summary>
+    private ulong FoundTie(string system) => PlanOn ? Mix(PlanNumber() ^ Hash(system)) : 0;
 
     /// <summary>Steps (m1-galaxy-data Nearby) from <paramref name="system"/> to the nearest system the side believes the enemy holds, up to
     /// <paramref name="cap"/> (no enemy that close: cap). Breadth first, neighbours in the galaxy's order.</summary>

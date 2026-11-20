@@ -50,6 +50,36 @@ public class SimpleAiFoundYardsTests
         Assert.Equal(0, classic.Founding);
     }
 
+    // QA-117 (QA round 199, AI trainer 2026-11-20; Paul 2026-11-19: the enemy must not be predictable): the Collective re-founded at The Moorings
+    // in 7 of 8 wipe games (most worlds tie on hops from the enemy, capped at FoundSafeHops). Medium mirror, MedE, every Collective construction
+    // yard taken away on day 150 (test setup), the founding site on day 160.
+    private static string? FoundingSite(int seed)
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+        var p = AiLevels.For(AiLevel.Medium);
+        var m = new AiMatch(host, p, p);
+        while (host.Game.Day < 150) m.Step();
+        var eco = host.Economy;
+        foreach (var id in eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Class == "Construction Yard" && o.System != null
+                     && eco.OwnerOf(o) == Side.Collective).Select(o => o.Id).OrderBy(i => i).ToList())
+            eco.RemoveObject(id);
+        while (host.Game.Day < 160) m.Step();
+        return host.Data.Galaxy.Systems.Select(s => s.Name).Where(s => host.Fleets.OwnerOf(s) == Side.Collective)
+            .Where(s => host.Construction.ProjectAt(s, YardFamily.Construction) is { Founding: true }).OrderBy(s => s, StringComparer.Ordinal).FirstOrDefault();
+    }
+
+    [Trait("Category", "Play")]
+    [Fact]
+    public void TheRefoundingSiteChangesFromGameToGame()
+    {
+        var sites = MultiSeed.Play(MultiSeed.OneToEight, seed => (Seed: seed, Site: FoundingSite(seed)));
+        _out.WriteLine(string.Join(", ", sites.Select(x => $"seed {x.Seed} {x.Site ?? "-"}")));
+        Assert.All(sites, x => Assert.NotNull(x.Site));
+        int distinct = sites.Select(x => x.Site).Distinct().Count(), most = sites.GroupBy(x => x.Site).Max(g => g.Count());
+        Assert.True(distinct >= 4 && most <= 3, $"{distinct} distinct sites, one site {most} of 8 times");
+        Assert.Equal(sites.First().Site, FoundingSite(sites.First().Seed)); // the same seed, the same site
+    }
+
     [Fact]
     public void FoundingIsOffByDefault() => Assert.Equal(0, new SimpleAiParams().FoundYardsBelow);
 
