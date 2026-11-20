@@ -486,9 +486,27 @@ public partial class GameScreen
             InfraTab.Shipyard => BuildRowsFor(n, "Ships").Concat(BuildRowsFor(n, "Fighters")).OrderBy(b => b.Usable ? 0 : 1).ToList(),
             _ => BuildRowsFor(n, "Facilities", yardAt, supply == null ? 0 : supply.Busy + supply.Trip).Where(b => InTab(b.Row.Name, tab)).ToList(),
         };
-        bool canBuild = HasYard(n, fam) || yardAt != null;
+        // a construction yard needs no construction yard: on a planet with none it builds itself here, 1 per order (Paul 2026-11-20).
+        // rule: m2-construction §Founding a construction yard
+        const string yardClass = "Construction Yard";
+        var cons = S.Host.Construction;
+        bool found = fam == YardFamily.Construction && !HasYard(n, fam) && cons.CanFoundYardAt(n);
+        if (found)
+        {
+            var own = BuildRowsFor(n, "Facilities").Where(b => b.Row.Name == yardClass && (tab == InfraTab.Construction || InTab(b.Row.Name, tab)))
+                .Select(b => b with { Days = cons.FoundingDays(b.Row.Cost) }).ToList();
+            // with no yard of yours able to reach it, only the yard itself can be ordered here
+            rows = own.Concat(yardAt == null ? Enumerable.Empty<BuildRow>() : rows.Where(b => b.Row.Name != yardClass)).ToList();
+        }
+        bool canBuild = HasYard(n, fam) || yardAt != null || found;
         _shownBuildRows = canBuild ? rows : new();   // the cards shown (read by the playtest)
         if (yardAt != null) sec.AddChild(SupplierRow(n, supply));
+        if (found && yardAt == null)
+        {
+            var only = Look.Words("No construction yard here, and none of yours can reach it. A construction yard can still build itself here.", 12, Look.Soft);
+            only.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            sec.AddChild(only);
+        }
         if (!canBuild)
         {
             var why = Look.Words($"This planet has no {FamilyName(fam).ToLowerInvariant()}. "
@@ -502,7 +520,7 @@ public partial class GameScreen
             grid.AddThemeConstantOverride("h_separation", 1); grid.AddThemeConstantOverride("v_separation", 1);
             float cardW = MathF.Floor((BodyWidth(w) - 3) / 4f);
             bool hand = Me == Side.Hand;
-            foreach (var b in rows) grid.AddChild(BuildCard(n, b, hand, cardW, yardAt));
+            foreach (var b in rows) grid.AddChild(found && b.Row.Name == yardClass ? BuildCard(n, b, hand, cardW, founds: true) : BuildCard(n, b, hand, cardW, yardAt));
             sec.AddChild(grid);
         }
         var prev = _into;
@@ -578,17 +596,20 @@ public partial class GameScreen
     /// A thing the yards here can build, as a card (Paul's design): its icon, its name, and at the foot its refined cost and the days one
     /// takes here. Grey when it can't be ordered; the reason, when it is not "not researched", in a line of its own. Click: order "How many".
     /// </summary>
-    Control BuildCard(string n, BuildRow b, bool hand, float width, string yardAt = null)
+    Control BuildCard(string n, BuildRow b, bool hand, float width, string yardAt = null, bool founds = false)
     {
         var r = b.Row;
+        int qty = founds ? 1 : _buildQty; // a yard that builds itself is ordered one at a time (m2-construction §Founding a construction yard)
+        string where = founds ? "here: it builds itself, with no construction yard needed, one at a time"
+            : yardAt != null ? $"for the first one (built at {yardAt}, then sent here; each one travels as soon as it is done)" : "per unit here";
         string tip =
-            $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days {(yardAt != null ? $"for the first one (built at {yardAt}, then sent here; each one travels as soon as it is done)" : "per unit here")} once the refined is there." +
-            (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {_buildQty}." : "");
+            $"{r.Name}: costs {r.Cost} refined each and {r.Maintenance} upkeep each, about {b.Days} days {where} once the refined is there." +
+            (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {qty}." : "");
         // the hover card: what it is, its role, its stats and its picture (Paul 2026-11-19); the plain tip stays as the fallback text
         var kind = KindOf(r.Category, r.Name);
         var grid = PixelIcons.Unit(kind, hand, SizeOfClass(r.Name)) ?? PixelIcons.Building(kind) ?? PixelIcons.Building(UnitIcon.Kind.Building);
         var stats = ClassStats(r, b.Days, out string extra);
-        string hoverFoot = string.Join("\n", new[] { extra, b.Why != null ? $"{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : null, b.Usable ? $"Click to order {_buildQty}." : null }.Where(x => x != null));
+        string hoverFoot = string.Join("\n", new[] { extra, b.Why != null ? $"{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : null, b.Usable ? (founds ? "Builds itself here, no construction yard needed. Click to order 1." : $"Click to order {qty}.") : null }.Where(x => x != null));
         var btn = new InfoButton { Make = () => UnitInfo.Card(r.Name, KeepNumeral(r.Name), grid, b.Usable ? Ui.You : Look.Text, stats, hoverFoot) };
         btn.FocusMode = FocusModeEnum.None;
         btn.Disabled = !b.Usable;
@@ -626,7 +647,7 @@ public partial class GameScreen
         foot.AddChild(Amount(b.Days.ToString(), PixelIconData.Bar["days"], ink, !b.Usable));
         v.AddChild(foot);
         Fill(btn, v, 16, 16, new Vector2(width, CardHeight));
-        btn.Pressed += () => { if (yardAt != null) SubmitBuild(yardAt, b.Family, r, _buildQty, n); else SubmitBuild(n, b.Family, r, _buildQty); MgRefreshSoon(); };
+        btn.Pressed += () => { if (yardAt != null) SubmitBuild(yardAt, b.Family, r, qty, n); else SubmitBuild(n, b.Family, r, qty); MgRefreshSoon(); };
         return btn;
     }
 
