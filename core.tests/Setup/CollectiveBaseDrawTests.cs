@@ -37,15 +37,19 @@ public class CollectiveBaseDrawTests
             Assert.Equal(b, FirstFleet(h, Side.Collective).At); // the table's first fleet (Collective Fleet@base)
             Assert.True(h.Economy.Objects.Count(o => o.Side == Side.Collective && o.Category == ObjectCategory.Regiment && o.System == b)
                         >= forces.Int(Side.Collective, "base_regiments"), b);
+            // as loyal as The Shoal, and the Hand's day-0 full copy is of the drawn base, as it was of The Shoal
+            Assert.Equal(100, h.Economy.SupportOf(b, Side.Collective));
+            Assert.Equal(0, h.Game.State.Fog.Hand.Systems[b].StampD); // a full copy writes every group (m5-fog-and-hq §F4 3)
             bases.Add(b);
         }
         Assert.True(bases.Distinct().Count() >= 5, string.Join(", ", bases));
     }
 
-    // m5-setup-and-victory §Starting forces (Collective base drawn per game): off, the base is always The Shoal, and the Hand's base never moves
+    // m5-setup-and-victory §Starting forces (Collective base drawn per game): on by default; off, the base is always The Shoal, and the Hand's base never moves
     [Fact]
     public void WithoutTheDrawTheBaseIsTheShoal()
     {
+        Assert.True(new GameSettings().CollectiveBaseDraw); // DEFAULT on since the Collective re-tune (2026-11-20)
         foreach (int seed in new[] { 1, 2, 3 })
         {
             var off = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE, Settings = new GameSettings { CollectiveBaseDraw = false } });

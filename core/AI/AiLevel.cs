@@ -45,7 +45,12 @@ public static class AiLevels
             // mirror, 192 seeds, day 3000, fog, on main 7765d8a: Hand / Collective / open 45 / 93 / 54 off, 48 / 89 / 55 on (noise). Against the
             // Hand AI the window never opened (0 known-Talent tries, against 127 off, 93 of them foiled by a senser at Charter); it
             // matters only against a Hand whose sensers leave Charter where the Collective sees them. No burns in either run.
-            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true },
+            // AI trainer 2026-11-20 (Paul: the Hand starts with a big military, the Collective must stay hard to kill): with BigHandStart and
+            // CollectiveBaseDraw on, the Medium Collective reviews its military every 2 days (was 3, Hard 1; the Medium Hand keeps 3). Medium Hand against Medium
+            // Collective, MedE, fog, day 3000, Hand / Collective / open: 192 seeds on main 561755b before the big start 15 / 135 / 42; big start
+            // (4 Mandate, 12 Gleaner) 61 / 99 / 32; 96 seeds: 4 Mandate fleet, every 3 days 24 / 54 / 18; 3 Mandate fleet, every 2 days
+            // 14 / 70 / 12; 192 seeds, 3 Mandate fleet, every 2 days 34 / 132 / 26. Notes: specs/engine/ai-notes/2026-11-20-big-hand-start.md.
+            AiLevel.Medium => PlayToWin(p) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -54,11 +59,16 @@ public static class AiLevels
             // enemy it knows; since 2026-10-18 every level does (FinishWhenAheadRatio DEFAULT 5, needed to end games under derived control).
             // AI trainer 2026-10-26: the Hard Collective keeps more agents out and raids more; on main f00fbb8 a Medium Hand won 24 of 96 against
             // Hard without these counts instead of 14 (more still cost wins: 32 forces, 16 missions, 6 looks and 4 raids gave 28 Hand wins).
+            // AI trainer 2026-11-20 (the Hand's big start): the Hard Collective reaches one step farther with its agents and fleets (UndergroundHops,
+            // GuerrillaHops 6, Medium 5); a drawn base can start far from the Hand. Medium Hand against the Hard Collective, MedE, fog, day 3000,
+            // 192 seeds, Hand / Collective / open: before the big start 4 / 175 / 13; with it (3 Mandate fleet) 28 / 126 / 38 at reach 5,
+            // 22 / 139 / 31 at reach 6 (Medium Collective 34 / 132 / 26). Its agent counts below no longer help (96 seeds: 15 / 66 / 15 with them,
+            // 17 / 68 / 11 without) but are kept, as nothing better replaced them.
             AiLevel.Hard => PlayToWin(p) with
             {
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Underground = true, Guerrilla = true,
                 UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
-                InvasionReadyAtRally = true, BooksTalentWindow = true,
+                InvasionReadyAtRally = true, BooksTalentWindow = true, UndergroundHops = HardReach, GuerrillaHops = HardReach,
             },
             _ => p,
         };
@@ -68,13 +78,20 @@ public static class AiLevels
     /// A game plan at every level (AI trainer 2026-11-19; Paul: "Everytime I start a new game playing the Hand, the Collective ALWAYS capture
     /// Excubia ... I don't want the enemy to be predictable"). The AI's dice were seeded by the day only, and its strike piles took the best
     /// target, where the first ones from the Collective's rally often scored within 10% of each other: the same picture gave the same opening in
-    /// every game. Now each game draws its liking for every sector (±PlanSectorSpread) and system (±PlanSystemSpread), redrawn every 180 days.
+    /// every game. Now each game draws its liking for every sector (up to +PlanSectorSpread%) and system (up to +PlanSystemSpread%), redrawn every 180 days
+    /// (until 2026-11-20 also dislikes, down to -30% and -15%: they held the first invasion back, median day 204 to 300; likes only, 228).
     /// The plan is the Collective's only (SimpleAi.PlanOn). 192 seeds, day 3000, fog, MedE start, on main 561755b, Hand / Collective / open, and
     /// the first Hand world the Collective invades (different worlds; share of the 3 most common): Medium mirror 24 / 136 / 32 (52; 43%) without,
     /// 15 / 135 / 42 (62; 36%) with; Medium Hand against the Hard Collective 3 / 169 / 20 (49; 46%) without, 4 / 175 / 13 (51; 35%) with.
     /// With the plan on both sides the mirror was 17 / 130 / 45. Notes: specs/engine/ai-notes/2026-11-19-game-plan.md.
     /// </summary>
     private static SimpleAiParams GamePlan(SimpleAiParams p) => p with { PlanSectorSpreadPercent = PlanSectorSpread, PlanSystemSpreadPercent = PlanSystemSpread };
+
+    /// <summary>The Medium Collective's military review interval in days (AI trainer 2026-11-20, against the big Hand start; the Hand keeps 3).</summary>
+    private const int MediumCollectiveMilitaryEvery = 2;
+
+    /// <summary>The Hard Collective's UndergroundHops and GuerrillaHops (AI trainer 2026-11-20; DEFAULT 5).</summary>
+    private const int HardReach = 6;
 
     /// <summary>The game plan's spreads at every level (AI trainer 2026-11-19).</summary>
     public const int PlanSectorSpread = 30, PlanSystemSpread = 15;

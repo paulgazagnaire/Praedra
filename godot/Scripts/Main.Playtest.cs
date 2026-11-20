@@ -340,7 +340,17 @@ public partial class Main
             gs.PlayRefresh();
             gs.Click("Fighters"); gs.PlayRefresh();
         }
-        // facility: a system I own with a construction yard and a free energy slot
+        // facility: a system I own with a construction yard and a free energy slot. The Collective's drawn base (GameSettings.CollectiveBaseDraw)
+        // can start with every energy slot of its yard systems in use (seed 1: Fallout, 0 free; the setup's refineries fill it): then the test
+        // plants a construction yard on the held system with the most free energy (test only, like Charter's Training Facility, QA-98).
+        if (!eco.Objects.Any(o => o.Category == ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Construction Yard") && s.OwnerOf(o.System) == me && eco.FreeEnergy(o.System) > 0)
+            && s.Game.State.SystemOwners.Where(kv => kv.Value == me && eco.FreeEnergy(kv.Key) > 1).Select(kv => kv.Key)
+                   .OrderByDescending(x => eco.FreeEnergy(x)).ThenBy(x => x, StringComparer.Ordinal).FirstOrDefault() is string roomy)
+        {
+            eco.AddFacility(roomy, FacilityKind.ConstructionYard);
+            GD.Print($"  no yard system of mine has a free energy slot: planted a Construction Yard at {roomy} (test only)");
+            gs.PlayDay(); if (gs.ReportVisible) gs.Click("Close");   // the screens read yards once a day
+        }
         string facSys = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System != null && o.Class.Contains("Construction Yard") && s.OwnerOf(o.System) == me)
             .Select(o => o.System).Distinct().OrderBy(x => x, StringComparer.Ordinal).FirstOrDefault(x => eco.FreeEnergy(x) > 0);
         Expect(facSys != null, "I own a system with a construction yard and a free energy slot");

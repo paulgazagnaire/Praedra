@@ -135,6 +135,15 @@ public partial class Main
             .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
         Expect(bare != null, "you hold a planet with no construction yard and a free slot");
         if (bare == null) return;
+        // a construction yard to build for it: the Hand starts with one, at Charter, and 400 AI days may have bombed it away (seen with the
+        // big Hand start, day 80): then plant one on another planet of yours with room (test only, as the windows test plants a Training facility)
+        if (!s.Data.Galaxy.Systems.Any(x => s.OwnerOf(x.Name) == s.Player && HasAt(x.Name, YardFamily.Construction))
+            && s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => n != bare && s.OwnerOf(n) == s.Player && !s.IsDestroyed(n) && eco.FreeEnergy(n) > 0)
+                   .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault() is string yardAt)
+        {
+            GD.Print($"  no construction yard of yours is left: planted one at {yardAt} (test only)");
+            eco.AddFacility(yardAt, FacilityKind.ConstructionYard); gs.PlayDay();   // the screens read yards once a day
+        }
         string bkey = $"Infra {bare}";
         gs.OpenMgmt(GameScreen.MgKind.Infra, bare); gs.PlayRefresh();
         gs.Click($"Yard {bare} Construction");
