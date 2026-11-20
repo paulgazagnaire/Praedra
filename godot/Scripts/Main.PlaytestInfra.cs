@@ -41,6 +41,10 @@ public partial class Main
             bool clicked = gs.Click($"Yard {sys} {cell}");
             var st = gs.InfraState(sys);
             if (Has(fam)) Expect(clicked && st?.Cell == cell && st.Value.Cards.Count > 0 && st.Value.Cards.All(c => right(Cat(c.Name))), $"{words}: " + Cards());
+            // a construction yard builds itself where there is none (Paul 2026-11-20): then that card, and with no yard of yours in reach, only it
+            else if (fam == YardFamily.Construction && s.Host.Construction.CanFoundYardAt(sys))
+                Expect(clicked && st?.Cell == cell && st.Value.Cards.Any(c => c.Name == "Construction Yard") && st.Value.Cards.All(c => right(Cat(c.Name))),
+                    $"{words}: with none here, a Construction Yard that builds itself: " + Cards());
             else Expect(clicked && st?.Cell == cell && st.Value.Cards.Count == 0 && gs.MgText(key).Contains(none), $"{words}: none, and the window says why ({sys} has no such yard)");
         }
 
@@ -149,7 +153,7 @@ public partial class Main
         gs.Click($"Yard {bare} Construction");
         string bt = gs.MgText(bkey);
         var bst = gs.InfraState(bare);
-        string card = bst?.Cards.FirstOrDefault(c => c.Usable).Name;
+        string card = bst?.Cards.FirstOrDefault(c => c.Usable && c.Name != "Construction Yard").Name;   // the yard itself builds itself here (checked below)
         Expect(bt.Contains("No construction yard here. Built at") && card != null, $"{bare} has no construction yard, yet its window offers facilities built elsewhere and sent there: {string.Join(", ", bst?.Cards.Select(c => c.Name) ?? Enumerable.Empty<string>())}");
         if (card == null) { while (gs.MgmtCount > 0) gs.PressKey(Key.Escape); return; }
         // the yards that can build for it, soonest first; the soonest is picked, and a click picks another (Paul 2026-11-19: "Let me pick")
@@ -177,6 +181,22 @@ public partial class Main
         var yards = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => HasAt(n, YardFamily.Construction)).ToList();
         string by = yards.FirstOrDefault(n => Bound(cons.ProjectAt(n, YardFamily.Construction)));
         Expect(by == want, $"the core took it: the construction yard at {by ?? "(none)"} builds {card} for {bare} (picked: {want})");
+
+        // a construction yard needs no construction yard (Paul 2026-11-20): its card on the bare planet orders one that builds itself there
+        gs.MgText(bkey);
+        var yc = gs.InfraState(bare)?.Cards.FirstOrDefault(c => c.Name == "Construction Yard");
+        // after the AI days the Hand may be over its upkeep room: the card is then shown but greyed out ("no upkeep room"), and not ordered
+        bool room = eco.Free(s.Player) >= (eco.Costs.TryGet("Construction Yard", out var cyRow) ? cyRow.Maintenance : 0);
+        Expect(yc != null && yc.Value.Usable == room && cons.CanFoundYardAt(bare), $"{bare}'s window offers a Construction Yard that builds itself there{(room ? "" : ", greyed out with no upkeep room")}: "
+            + string.Join(", ", gs.InfraState(bare)?.Cards.Select(c => $"{c.Name}{(c.Usable ? "" : " (no)")}") ?? Enumerable.Empty<string>()) + $"; free {eco.Free(s.Player)}, refined {eco.Refined(s.Player)}");
+        if (yc is { Usable: true })
+        {
+            int q1 = s.QueuedOrders;
+            Expect(gs.Click("Build Construction Yard") && s.QueuedOrders == q1 + 1, $"a click on the Construction Yard card orders it at {bare}");
+            gs.PlayDay();
+            Expect(cons.ProjectAt(bare, YardFamily.Construction) is { Founding: true } && !cons.CanFoundYardAt(bare),
+                $"the core took it: a construction yard is building itself at {bare}");
+        }
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }
 }

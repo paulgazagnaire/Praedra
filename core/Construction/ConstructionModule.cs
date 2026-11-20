@@ -74,6 +74,13 @@ public sealed class ConstructionModule
     /// </summary>
     public bool NewOrderReplacesProject { get; set; }
     /// <summary>
+    /// A standard Construction Yard can be ordered on a held system with no construction yard (and no construction project): it builds itself
+    /// at one standard yard's pace. DEFAULT on (Paul 2026-11-20: "The construction yard has no prerequisite other than the ressources and can be
+    /// built without another construction yard an any eligible system"); off = Classic (only a construction yard builds one, NoYard).
+    /// rule: m2-construction §Founding a construction yard.
+    /// </summary>
+    public bool FoundConstructionYards { get; set; } = true;
+    /// <summary>
     /// Is the system in uprising (its yards start no new cycle)? The flag belongs to the uprising sheet (m2-uprisings-and-garrison); this package
     /// sets nothing, so the default answers no. rule: m2-construction §Suspension.
     /// </summary>
@@ -223,7 +230,8 @@ public sealed class ConstructionModule
         if (_eco.IsDestroyed(o.System) || (o.Destination != null && _eco.IsDestroyed(o.Destination))) return OrderResult.Reject(RejectReason.SystemDestroyed); // rule: m5-harvester §2 effect 5 (no builds)
         if (!_eco.Costs.TryGet(o.Class, out var row)) return OrderResult.Reject(RejectReason.UnknownItem);
         if (_fleets.OwnerOf(o.System) != o.Side) return OrderResult.Reject(RejectReason.NotYours); // also a neutral system (C24)
-        if (!YardsOf(o.System, o.Family).Any()) return OrderResult.Reject(RejectReason.NoYard);
+        bool founding = !YardsOf(o.System, o.Family).Any() && IsFounding(o);
+        if (!founding && !YardsOf(o.System, o.Family).Any()) return OrderResult.Reject(RejectReason.NoYard);
         if (Yards.BuiltBy(row.Category) != o.Family) return OrderResult.Reject(RejectReason.WrongFamily);
         // rule: m2-construction §Build order (NotAvailable: the file's side flag; cost 0 is not buildable, m3-troops-and-special-forces §Training Facility production)
         if (!(o.Side == Side.Hand ? row.Hand : row.Collective) || row.Cost <= 0) return OrderResult.Reject(RejectReason.NotAvailable);
@@ -233,7 +241,7 @@ public sealed class ConstructionModule
         if (ExtraBuildCheck?.Invoke(o) is { } extra) return OrderResult.Reject(extra);
 
         bool facility = row.Category == ObjectCategory.Facility;
-        string? dest = facility ? o.Destination : o.Destination ?? o.System; // a facility needs a destination
+        string? dest = founding ? o.System : facility ? o.Destination : o.Destination ?? o.System; // a facility needs a destination; a founded yard stands where it is ordered
         if (dest == null) return OrderResult.Reject(RejectReason.BadDestination);
         if (!_galaxy.TryFindSystem(dest, out _)) return OrderResult.Reject(RejectReason.UnknownSystem);
         if ((facility || UnitDestinationMustBeControlled) && !Controls(dest, o.Side)) return OrderResult.Reject(RejectReason.BadDestination);
@@ -300,11 +308,27 @@ public sealed class ConstructionModule
             if (old.Next == null && old.Destination == dest) old.Units.AddRange(ids);
             else (old.Next ??= new List<QueuedOrder>()).Add(new QueuedOrder { Destination = dest, Units = new List<int>(ids) });
         }
-        else C.Set(new Project { Side = o.Side, System = o.System, Family = o.Family, Destination = dest, Units = new List<int>(ids), Progress = 0 });
+        else C.Set(new Project { Side = o.Side, System = o.System, Family = o.Family, Destination = dest, Units = new List<int>(ids), Progress = 0, Founding = founding });
         int day = ctx.Day;
         ctx.Emit((i, _) => new ProjectStarted(i, day, o.Side, o.System, o.Family, o.Class, o.Count, dest, new ValueList<int>(ids)));
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
+
+    /// <summary>
+    /// The order founds a construction yard: the switch is on, it is one standard Construction Yard for the system itself (no destination, or the
+    /// system), and the system has no construction project yet. The caller has checked that the system has no construction yard.
+    /// rule: m2-construction §Founding a construction yard.
+    /// </summary>
+    private bool IsFounding(BuildOrder o) =>
+        FoundConstructionYards && o.Family == YardFamily.Construction && o.Class == FacilityKinds.ClassName(FacilityKind.ConstructionYard) && o.Count == 1
+        && (o.Destination == null || o.Destination == o.System) && C.Find(o.System, YardFamily.Construction) == null;
+
+    /// <summary>Would a Construction Yard ordered on <paramref name="system"/> now found itself there (no construction yard and no project on it)? For the screens. rule: m2-construction §Founding a construction yard.</summary>
+    public bool CanFoundYardAt(string system) =>
+        FoundConstructionYards && !YardsOf(system, YardFamily.Construction).Any() && C.Find(system, YardFamily.Construction) == null;
+
+    /// <summary>Days a founded construction yard of cost <paramref name="cost"/> takes with refined on hand: one standard yard's pace. rule: m2-construction §Founding a construction yard.</summary>
+    public int FoundingDays(int cost) => BuildDays(cost, 1, Params.StandardCycleDays);
 
     // rule: m2-construction §Projects and queues (StopBuild = cancel without a new order)
     /// <summary>
@@ -517,7 +541,7 @@ public sealed class ConstructionModule
         foreach (var p in C.AllProjects())
         {
             if (!Controls(p.System, p.Side)) CancelProject(ctx, t, p, "SystemLost");
-            else if (!YardsOf(p.System, p.Family).Any()) CancelProject(ctx, t, p, "YardLost");
+            else if (!p.Founding && !YardsOf(p.System, p.Family).Any()) CancelProject(ctx, t, p, "YardLost");
         }
 
         // A blockade or an uprising stops a yard at once: its running cycle is abandoned (the refined spent is lost) and it leaves the refined line;
@@ -529,6 +553,9 @@ public sealed class ConstructionModule
             if (y.Due != 0) y.Due = YardStopMode == StopMode.Pause ? y.Due + 1 : 0;
             if (y.InLine) { C.Hand.RefinedLine.Remove(y.Id); C.Collective.RefinedLine.Remove(y.Id); y.InLine = false; }
         }
+        // a founding yard pauses (or abandons, Classic stop mode) like a yard. rule: m2-construction §Founding a construction yard
+        foreach (var p in C.AllProjects().Where(p => p.Founding && p.FoundDue != 0 && IsSuspendedAt(p.System)))
+            p.FoundDue = YardStopMode == StopMode.Pause ? p.FoundDue + 1 : 0;
 
         // 6.6.a: cycles due now add their point; a unit that reaches its cost completes.
         foreach (var y in YardObjects().Where(o => o.Due == t).ToList())
@@ -536,6 +563,13 @@ public sealed class ConstructionModule
             y.Due = 0;
             var p = C.Find(y.System!, Yards.FamilyOf(KindOf(y)));
             if (p == null || p.Units.Count == 0) continue;
+            p.Progress += Params.PointsPerCycle;
+            if (p.Progress >= CostOf(p.Units[0])) CompleteUnit(ctx, t, p);
+        }
+        // the founding yard's cycle adds its point the same way. rule: m2-construction §Founding a construction yard
+        foreach (var p in C.AllProjects().Where(p => p.Founding && p.FoundDue == t))
+        {
+            p.FoundDue = 0;
             p.Progress += Params.PointsPerCycle;
             if (p.Progress >= CostOf(p.Units[0])) CompleteUnit(ctx, t, p);
         }
@@ -550,6 +584,18 @@ public sealed class ConstructionModule
             // DEFAULT: a unit of cost 0 needs no cycle (nothing is buildable at cost 0 by order, so this only guards setups).
             while (p.Units.Count > 0 && p.Progress >= CostOf(p.Units[0])) CompleteUnit(ctx, t, p);
             if (p.Units.Count == 0) continue;
+            // a founding yard is its own one standard yard: it takes 1 refined when the side has it (after the yards ahead of it in the line),
+            // and runs a standard cycle. rule: m2-construction §Founding a construction yard
+            if (p.Founding)
+            {
+                var pool = E.Pool(p.Side);
+                if (p.FoundDue == 0 && !IsSuspendedAt(p.System) && C.Of(p.Side).RefinedLine.Count == 0 && pool.Refined >= Params.RefinedPerCycle)
+                {
+                    pool.Refined -= Params.RefinedPerCycle;
+                    p.FoundDue = t + Params.StandardCycleDays;
+                }
+                continue;
+            }
             var yards = YardsOf(p.System, p.Family).OrderBy(RateOf).ThenBy(y => y.Id).ToList();
             foreach (var y in yards)
             {

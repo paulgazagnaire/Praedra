@@ -163,6 +163,7 @@ public sealed class GameHost
         Construction.YardStopMode = settings.YardStopMode;
         Construction.RefuseOverdrawOrders = settings.RefuseOverdrawOrders;
         Construction.NewOrderReplacesProject = settings.NewOrderReplacesProject;
+        Construction.FoundConstructionYards = settings.FoundConstructionYards;
 
         Troops = TroopModule.Attach(game, Fleets, data.Troops);
         Troops.UnloadOnlyAtHeldSystem = settings.UnloadOnlyAtHeldSystem;
