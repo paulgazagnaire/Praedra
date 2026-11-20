@@ -35,7 +35,7 @@ public sealed partial class SimpleAi
     private void TryFoundYard()
     {
         // Sibyl (Manage Production 0a, QA-116): only when the player's side has no construction yard, with her upkeep margin
-        int below = _advisor ? 1 : _p.FoundYardsBelow;
+        int below = _advisor ? _p.AdvisorFoundYardsBelow : _p.FoundYardsBelow;
         if (below <= 0 || CountYards(YardFamily.Construction) >= below) return;
         if (HeldSystems().Any(s => _h.Construction.ProjectAt(s, YardFamily.Construction) is { Founding: true })) return;
         string cls = FacilityKinds.ClassName(FacilityKind.ConstructionYard);

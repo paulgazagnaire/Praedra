@@ -17,8 +17,9 @@ public class SimpleAiFoundYardsTests
     public SimpleAiFoundYardsTests(ITestOutputHelper o) { _out = o; }
 
     // Seed 1 MedA, Medium mirror; on day 100 every Collective construction yard, finished or still being built, is taken away (test setup), then
-    // 30 days pass.
-    private (int Yards, int Founding, string Where) AfterLosingTheYards(int below, bool rule = true)
+    // 30 days pass; Built: by day 190 (a founding takes FoundingDays, 40 at the yard's cost) a finished Collective construction yard stands where it
+    // was founded.
+    private (int Yards, int Founding, string Where, bool Built) AfterLosingTheYards(int below, bool rule = true)
     {
         var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = new GameSettings { FoundConstructionYards = rule } });
         var p = AiLevels.For(AiLevel.Medium);
@@ -31,8 +32,10 @@ public class SimpleAiFoundYardsTests
         var held = host.Data.Galaxy.Systems.Select(s => s.Name).Where(s => host.Fleets.OwnerOf(s) == Side.Collective).ToList();
         var founding = held.Where(s => host.Construction.ProjectAt(s, YardFamily.Construction) is { Founding: true }).OrderBy(s => s, StringComparer.Ordinal).ToList();
         int yards = eco.Objects.Count(o => CollectiveYard(o) && o.Completed);
-        _out.WriteLine($"below {below} rule {rule}: {yards} finished construction yards, founding at {string.Join(", ", founding)}");
-        return (yards, founding.Count, string.Join(",", founding));
+        while (host.Game.Day < 190) m.Step();
+        bool built = founding.Count == 1 && eco.Objects.Any(o => CollectiveYard(o) && o.Completed && o.System == founding[0]);
+        _out.WriteLine($"below {below} rule {rule}: {yards} finished construction yards, founding at {string.Join(", ", founding)}; built by day 190 {built}");
+        return (yards, founding.Count, string.Join(",", founding), built);
     }
 
     [Fact]
@@ -40,6 +43,7 @@ public class SimpleAiFoundYardsTests
     {
         var on = AfterLosingTheYards(AiLevels.FoundBelow);
         Assert.Equal(1, on.Founding);
+        Assert.True(on.Built, $"the yard founded at {on.Where} was not finished by day 190");
         var off = AfterLosingTheYards(0);
         Assert.Equal(0, off.Founding);
         var classic = AfterLosingTheYards(AiLevels.FoundBelow, rule: false); // the rule off (Classic): nothing can be founded
@@ -48,4 +52,8 @@ public class SimpleAiFoundYardsTests
 
     [Fact]
     public void FoundingIsOffByDefault() => Assert.Equal(0, new SimpleAiParams().FoundYardsBelow);
+
+    // m6-advisor-sibyl §Manage Production 0a (QA-116): Sibyl founds only once the side has none left
+    [Fact]
+    public void SibylFoundsOnlyWithNoneLeftByDefault() => Assert.Equal(1, new SimpleAiParams().AdvisorFoundYardsBelow);
 }

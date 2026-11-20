@@ -75,6 +75,8 @@ public sealed record SimpleAiParams
     /// capacity loss does not start the autoscrap on the player's yards (QA-106). rule: m6-advisor-sibyl §Manage Garrisons 6, §Manage Production 1a.
     /// </summary>
     public int AdvisorUpkeepMargin { get; init; } = 100;
+    /// <summary>Sibyl founds a construction yard when the side has fewer than this many (QA-116, 2026-11-20; DEFAULT 1: only with none left). rule: m6-advisor-sibyl §Manage Production 0a.</summary>
+    public int AdvisorFoundYardsBelow { get; init; } = 1;
     /// <summary>
     /// Below this much free upkeep room, with Manage Production on, an idle construction yard builds a mine or refinery before a training
     /// facility or a construction yard, so lost capacity comes back before more upkeep is added (QA-107). rule: m6-advisor-sibyl §Manage Production 0.
