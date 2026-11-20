@@ -302,8 +302,9 @@ public sealed partial class SimpleAi
     private int[]? _likes; // per PlanDay, by system index
 
     /// <summary>
-    /// This game's liking for a system as a percent (100 = plain): its sector's liking times its own, each a draw in ±PlanSectorSpreadPercent and
-    /// ±PlanSystemSpreadPercent from the plan number, redrawn every PlanDays (shifted by the plan, so the two sides do not change on the same day).
+    /// This game's liking for a system as a percent (100 = plain): its sector's liking times its own, each a draw in 0..+PlanSectorSpreadPercent and
+    /// 0..+PlanSystemSpreadPercent from the plan number (likings only raise a value: AI trainer 2026-11-20, a disliked sector pulled the first strike
+    /// off the near soft worlds and held the first invasion back, median day 204 to 300; raising only, 228), redrawn every PlanDays (shifted by the plan, so the two sides do not change on the same day).
     /// rule: ai tuning, SimpleAiParams.PlanSectorSpreadPercent (AI trainer 2026-11-19; Paul: the enemy must not be predictable).
     /// </summary>
     private int PlanLike(Praedra.Core.Map.StarSystem sys)

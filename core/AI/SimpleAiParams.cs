@@ -227,7 +227,7 @@ public sealed record SimpleAiParams
     /// Game plan spread (AI trainer 2026-11-19; Paul: "the Collective ALWAYS captures Excubia ... I don't want the enemy to be predictable").
     /// Collective only, like the guerrilla switches: the Hand AI stays a straightforward machine (Paul 2026-11-19).
     /// The AI's private generator is seeded from the game as well as the day (<see cref="AiMemory.Plan"/>), and each game draws its own liking
-    /// for every sector and every system: a sector's targets are worth up to this many percent more or less to it in this game. The liking is
+    /// for every sector and every system: a sector's targets are worth up to this many percent more to it in this game (never less, since 2026-11-20). The liking is
     /// redrawn every <see cref="PlanDays"/>, so the front moves during a game too. 0 = the same picture gives the same plan in every game (the AI
     /// of before). DEFAULT 0; AiLevels sets it for every level.
     /// </summary>
