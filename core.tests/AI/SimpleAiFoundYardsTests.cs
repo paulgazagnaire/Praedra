@@ -16,7 +16,8 @@ public class SimpleAiFoundYardsTests
     private readonly ITestOutputHelper _out;
     public SimpleAiFoundYardsTests(ITestOutputHelper o) { _out = o; }
 
-    // Seed 1 MedA, Medium mirror; on day 100 every Collective construction yard is taken away (test setup), then 30 days pass.
+    // Seed 1 MedA, Medium mirror; on day 100 every Collective construction yard, finished or still being built, is taken away (test setup), then
+    // 30 days pass.
     private (int Yards, int Founding, string Where) AfterLosingTheYards(int below, bool rule = true)
     {
         var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA, Settings = new GameSettings { FoundConstructionYards = rule } });
@@ -25,7 +26,7 @@ public class SimpleAiFoundYardsTests
         while (host.Game.Day < 100) m.Step();
         var eco = host.Economy;
         bool CollectiveYard(EconObject o) => o.Category == ObjectCategory.Facility && o.Class == "Construction Yard" && o.System != null && eco.OwnerOf(o) == Side.Collective;
-        foreach (var id in eco.Objects.Where(o => CollectiveYard(o) && o.Completed).Select(o => o.Id).OrderBy(i => i).ToList()) eco.RemoveObject(id);
+        foreach (var id in eco.Objects.Where(CollectiveYard).Select(o => o.Id).OrderBy(i => i).ToList()) eco.RemoveObject(id);
         while (host.Game.Day < 130) m.Step();
         var held = host.Data.Galaxy.Systems.Select(s => s.Name).Where(s => host.Fleets.OwnerOf(s) == Side.Collective).ToList();
         var founding = held.Where(s => host.Construction.ProjectAt(s, YardFamily.Construction) is { Founding: true }).OrderBy(s => s, StringComparer.Ordinal).ToList();
