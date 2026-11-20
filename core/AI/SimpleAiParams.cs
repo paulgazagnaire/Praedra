@@ -75,6 +75,8 @@ public sealed record SimpleAiParams
     /// capacity loss does not start the autoscrap on the player's yards (QA-106). rule: m6-advisor-sibyl §Manage Garrisons 6, §Manage Production 1a.
     /// </summary>
     public int AdvisorUpkeepMargin { get; init; } = 100;
+    /// <summary>Sibyl founds a construction yard when the side has fewer than this many (QA-116, 2026-11-20; DEFAULT 1: only with none left). rule: m6-advisor-sibyl §Manage Production 0a.</summary>
+    public int AdvisorFoundYardsBelow { get; init; } = 1;
     /// <summary>
     /// Below this much free upkeep room, with Manage Production on, an idle construction yard builds a mine or refinery before a training
     /// facility or a construction yard, so lost capacity comes back before more upkeep is added (QA-107). rule: m6-advisor-sibyl §Manage Production 0.
@@ -524,6 +526,15 @@ public sealed record SimpleAiParams
     /// refineries make it scrap ships. DEFAULT off (Medium and Hard turn it on).
     /// </summary>
     public bool Guerrilla { get; init; }
+
+    /// <summary>
+    /// With fewer construction yards than this (finished and queued), the side founds one on its safest world (m2-construction §Founding a
+    /// construction yard), one at a time. DEFAULT 0 (off). AI trainer 2026-11-20 (Paul: a losing side "needs to adapt, regroup, conquer unexplored
+    /// system, reproduce a military and fight until it's dying breath"; smarter only, no bonus): the stalled games ended with a Collective that had
+    /// lost every construction yard (seed 1 MedA: its base and the 3 yards stacked on Unbought, gone by day 600), so it never built a mine, a
+    /// refinery or a yard again, and its upkeep room shrank with every world it lost while 6000 refined sat unspent. Both sides read it.
+    /// </summary>
+    public int FoundYardsBelow { get; init; }
     public int GuerrillaAttackOddsPercent { get; init; } = 200;
     public int GuerrillaRetreatOddsPercent { get; init; } = 120;
     public int RaidStrikes { get; init; } = 2;

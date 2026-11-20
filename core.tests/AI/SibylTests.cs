@@ -148,9 +148,12 @@ public class SibylTests
         Riot(h, world);
         var orders = s.PlanDay();
         Assert.DoesNotContain(orders, x => x.Detail.Contains(" x Tranches at ", StringComparison.Ordinal));
-        var tf = Assert.Single(orders, x => x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal));
+        // one Training Facility per idle construction yard while under the rule-9 count (the Hand has two construction yards since 2026-11-20,
+        // and both may order one when more than 8 regiments are short)
+        var tfs = orders.Where(x => x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal)).ToList();
+        Assert.InRange(tfs.Count, 1, 2);
         h.Game.Step();
-        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == tf.Sequence);
+        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => tfs.Any(t => t.Sequence == e.Sequence));
     }
 
     // S16 (QA-107): both on, short of room (under 200 free) and a training facility wanted: the idle construction yard builds a mine or refinery first
@@ -320,6 +323,28 @@ public class SibylTests
         s.Submit(SibylJob.ManageProduction, false);
         h.Game.Step();
         Assert.Empty(s.PlanDay());
+    }
+
+    // m6-advisor-sibyl §Manage Production 0a (QA-116, 2026-11-20): with no construction yard left, Manage Production founds one
+    // (m2-construction §Founding a construction yard); off, or with a yard still standing, nothing is founded
+    [Fact]
+    public void ManageProduction_FoundsAConstructionYardWhenThePlayerHasNone()
+    {
+        static bool Founds(GameHost h, bool on)
+        {
+            foreach (var id in HandFacilities(h, FacilityKind.ConstructionYard).Select(o => o.Id).ToList()) h.Economy.RemoveObject(id);
+            var s = new Sibyl(h, Side.Hand);
+            s.Submit(SibylJob.ManageProduction, on);
+            h.Game.Step();
+            return s.PlanDay().Any(x => x.Detail.StartsWith(FacilityKinds.ClassName(FacilityKind.ConstructionYard) + " founded at ", StringComparison.Ordinal));
+        }
+        Assert.True(Founds(NewHost(), true));
+        Assert.False(Founds(NewHost(), false));
+        var kept = NewHost();
+        var s = new Sibyl(kept, Side.Hand);
+        s.Submit(SibylJob.ManageProduction, true);
+        kept.Game.Step();
+        Assert.DoesNotContain(s.PlanDay(), x => x.Detail.Contains(" founded at ", StringComparison.Ordinal));
     }
 
     // ---- redirect of Sibyl's own regiments in training (m6-advisor-sibyl §Manage Garrisons 8; m2-construction §Redirect training)

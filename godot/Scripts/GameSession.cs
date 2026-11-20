@@ -342,6 +342,10 @@ public sealed partial class GameSession
         var troops = System.Text.RegularExpressions.Regex.Match(detail, @"^(\d+) x (.+) at (.+) for (.+)$");
         if (troops.Success)
             return ($"{troops.Groups[1].Value} {troops.Groups[2].Value} ordered at {troops.Groups[3].Value} for {troops.Groups[4].Value}", troops.Groups[4].Value);
+        // m6-advisor-sibyl §Manage Production 0a: a construction yard founded on a world with none (m2-construction §Founding)
+        var founded = System.Text.RegularExpressions.Regex.Match(detail, @"^(.+) founded at (.+)$");
+        if (founded.Success)
+            return ($"a {founded.Groups[1].Value} founded at {founded.Groups[2].Value} (you had none left; it builds itself)", founded.Groups[2].Value);
         var build = System.Text.RegularExpressions.Regex.Match(detail, @"^(.+) at (.+) from (.+)$");
         if (build.Success)
             return ($"a {build.Groups[1].Value} ordered at {build.Groups[3].Value} for {build.Groups[2].Value}", build.Groups[2].Value);
