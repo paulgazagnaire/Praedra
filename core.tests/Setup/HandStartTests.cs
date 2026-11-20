@@ -22,13 +22,13 @@ public class HandStartTests
         var forces = NewGameData.Default.Forces;
         var eco = h.Economy; var galaxy = h.Data.Galaxy;
 
-        // the big fleet: 4 Mandate and 2 Decree at Charter, its fighter berths filled
+        // the big fleet: 3 Mandate and 2 Decree at Charter, with 8 Gleaner squadrons (AI trainer 2026-11-20; was 4 Mandate and 12 Gleaner)
         var big = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Hand && f.At == "Charter")
             .OrderByDescending(f => f.Ships.Count).First();
         var classes = big.Ships.Select(id => eco.Find(id)!.Class).ToList();
-        Assert.Equal(4, classes.Count(c => c == "Mandate"));
+        Assert.Equal(3, classes.Count(c => c == "Mandate"));
         Assert.Equal(2, classes.Count(c => c == "Decree"));
-        Assert.Equal(12, eco.Objects.Count(o => o.Category == ObjectCategory.Fighter && o.Side == Side.Hand && big.Ships.Contains(o.AboardShip)));
+        Assert.Equal(8, eco.Objects.Count(o => o.Category == ObjectCategory.Fighter && o.Side == Side.Hand && big.Ships.Contains(o.AboardShip)));
 
         // the regiments at Charter fill the fleet's troop berths
         int berths = classes.Sum(c => h.Data.Ships[c].TroopCapacity);
@@ -51,12 +51,13 @@ public class HandStartTests
     }
 
     // m5-setup-and-victory §Starting forces (Hand big military), QA-114: the other presets keep the Hand under its upkeep capacity on day one.
-    // Measured 2026-11-20 (seeds 1-4): Easy 63-64%, HardE 65-66%, HardA 85-87% (the Hard start for a Collective player deals the Hand the
-    // fewest systems, so the least capacity; the AI Hand starts big but builds little at first). Medium presets: under 80% above.
+    // Measured 2026-11-20 (seeds 1-4, the 3 Mandate fleet): Easy 59-60%, HardE 60-61%, HardA 81-82% (the Hard start for a Collective player
+    // deals the Hand the fewest systems, so the least capacity; the AI Hand starts big but builds little at first). Medium presets (69-73%):
+    // under 80% above.
     [Theory]
     [InlineData(StartPreset.Easy, 70)]
     [InlineData(StartPreset.HardE, 70)]
-    [InlineData(StartPreset.HardA, 90)]
+    [InlineData(StartPreset.HardA, 85)]
     public void TheBigStartFitsTheHandsUpkeepOnEveryPreset(StartPreset preset, int maxPercent)
     {
         foreach (int seed in new[] { 1, 2 })

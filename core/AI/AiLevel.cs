@@ -45,7 +45,12 @@ public static class AiLevels
             // mirror, 192 seeds, day 3000, fog, on main 7765d8a: Hand / Collective / open 45 / 93 / 54 off, 48 / 89 / 55 on (noise). Against the
             // Hand AI the window never opened (0 known-Talent tries, against 127 off, 93 of them foiled by a senser at Charter); it
             // matters only against a Hand whose sensers leave Charter where the Collective sees them. No burns in either run.
-            AiLevel.Medium => PlayToWin(p) with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true },
+            // AI trainer 2026-11-20 (Paul: the Hand starts with a big military, the Collective must stay hard to kill): with BigHandStart and
+            // CollectiveBaseDraw on, the Medium Collective reviews its military every 2 days (was 3, Hard 1). Medium Hand against Medium
+            // Collective, MedE, fog, day 3000, Hand / Collective / open: 192 seeds on main 561755b before the big start 15 / 135 / 42; big start
+            // (4 Mandate, 12 Gleaner) 61 / 99 / 32; 96 seeds with the 3 Mandate fleet: every 3 days 24 / 54 / 18 (4 Mandate), every 2 days
+            // 14 / 70 / 12; 192 seeds, 3 Mandate fleet, every 2 days 34 / 132 / 26. Notes: specs/engine/ai-notes/2026-11-20-big-hand-start.md.
+            AiLevel.Medium => PlayToWin(p) with { MilitaryEvery = MediumMilitaryEvery, SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -75,6 +80,9 @@ public static class AiLevels
     /// With the plan on both sides the mirror was 17 / 130 / 45. Notes: specs/engine/ai-notes/2026-11-19-game-plan.md.
     /// </summary>
     private static SimpleAiParams GamePlan(SimpleAiParams p) => p with { PlanSectorSpreadPercent = PlanSectorSpread, PlanSystemSpreadPercent = PlanSystemSpread };
+
+    /// <summary>The Medium Collective's military review interval in days (AI trainer 2026-11-20, against the big Hand start; DEFAULT 3).</summary>
+    private const int MediumMilitaryEvery = 2;
 
     /// <summary>The game plan's spreads at every level (AI trainer 2026-11-19).</summary>
     public const int PlanSectorSpread = 30, PlanSystemSpread = 15;
