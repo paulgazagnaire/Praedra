@@ -36,6 +36,16 @@ public sealed class Project
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public List<QueuedOrder>? Next { get; set; }
 
+    /// <summary>
+    /// A construction yard founded with no construction yard on its system (Paul 2026-11-20): the queued yard builds itself as one standard yard
+    /// would, 1 refined per cycle. Omitted from the save while false. rule: m2-construction §Founding a construction yard.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Founding { get; set; }
+    /// <summary>Hook time at which the founding yard's running cycle adds its point; 0 = no cycle running. rule: m2-construction §Founding a construction yard.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int FoundDue { get; set; }
+
     /// <summary>Every unfinished unit of the project: the current order's, then the queued orders'.</summary>
     public IEnumerable<int> AllUnits() => Next == null ? Units : Units.Concat(Next.SelectMany(q => q.Units));
 }

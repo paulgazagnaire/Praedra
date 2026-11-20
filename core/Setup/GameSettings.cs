@@ -104,6 +104,8 @@ public sealed record GameSettings
     public bool UseClassicBlockadeFlag { get; init; }
     /// <summary>A suspended yard's running cycle: Pause (DEFAULT, Paul economy/02 "shipyards are paused") or Abandon (Classic, B5b §3). rule: m2-construction §Suspension (Blockade pause, 2026-10-18).</summary>
     public StopMode YardStopMode { get; init; } = StopMode.Pause;
+    /// <summary>A Construction Yard can be ordered on any held system with no construction yard; it builds itself. DEFAULT on (Paul 2026-11-20); off = Classic. rule: m2-construction §Founding a construction yard.</summary>
+    public bool FoundConstructionYards { get; init; } = true;
     public ConstructionParams? Construction { get; init; }
 
     // ---- troops. rule: m3-troops-and-special-forces §Defaults
