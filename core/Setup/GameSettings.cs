@@ -35,18 +35,19 @@ public sealed record GameSettings
     /// <summary>
     /// The Hand's big start (Paul 2026-11-19: the Hand has existed for a long time, so it starts with at least one big fleet and a decent
     /// number of troops spread across its systems): the <c>big_</c> rows of new-game-forces.csv replace the Hand's Home Fleet, its regiments
-    /// at the base, and add one regiment in each sector it holds. DEFAULT off: it makes the Hand AI win fast (it takes the Hearth by day
-    /// ~120 when it knows where it is), so it waits for the AI trainer's re-tune of the Collective. rule: m5-setup-and-victory §Starting forces.
+    /// at the base, and add one regiment in each sector it holds. DEFAULT on since the AI trainer's re-tune of the Collective (2026-11-20,
+    /// with <see cref="CollectiveBaseDraw"/>); off = the start before. rule: m5-setup-and-victory §Starting forces.
     /// </summary>
-    public bool BigHandStart { get; init; }
+    public bool BigHandStart { get; init; } = true;
     /// <summary>
     /// The Collective's base drawn per game (Paul 2026-11-19, card "Draw the Collective's home base per game, instead of always The Shoal?":
     /// "Per game"). Its yards, starting fleets and base regiments go to one Collective world drawn with the game generator among The Shoal and
     /// the Collective's worlds of the <c>base_draw_group</c> with at least <c>base_draw_free_energy</c> free energy (never the HQ), sorted by
-    /// name. Off = always The Shoal (Classic). DEFAULT off until the AI trainer's re-tune of the Collective turns it on together with
-    /// BigHandStart. rule: m5-setup-and-victory §Starting forces (Collective base drawn per game).
+    /// name; the drawn base gets support 100 and the Hand's day-0 full copy. Off = always The Shoal (Classic). DEFAULT on since the AI
+    /// trainer's re-tune of the Collective (2026-11-20, with <see cref="BigHandStart"/>). rule: m5-setup-and-victory §Starting forces (Collective
+    /// base drawn per game).
     /// </summary>
-    public bool CollectiveBaseDraw { get; init; }
+    public bool CollectiveBaseDraw { get; init; } = true;
 
     // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
     /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the Classic straight line, no routes).</summary>

@@ -217,6 +217,28 @@ public sealed record SimpleAiParams
     /// </summary>
     public int PickNoisePercent { get; init; }
     /// <summary>
+    /// The Hand machine (AI trainer 2026-11-19; Paul: "the Hand to act as a huge unstoppable machine, a bit more straight forward, but with bigger
+    /// fleets, more troops ... The Collective strength is in its ability to move. the hand don't have this"). Hand only, like the guerrilla
+    /// switches are Collective only: with it on, the Hand AI launches only big fleets (MachineLaunchStrength), forms fewer and bigger task forces
+    /// (MachineTaskForceMax, MachineTaskForceMarginPercent), carries big troop stacks (MachineMinLaunchRegiments) and keeps more regiments and
+    /// troop slots ready (MachineInvasionRegimentTarget, MachineTroopCapacityTarget). false = the Hand AI of before. DEFAULT false; AiLevels
+    /// sets it at Medium and Hard.
+    /// </summary>
+    public bool HandMachine { get; init; }
+    /// <summary>The Hand machine's LaunchStrength. DEFAULT (AI trainer 2026-11-19).</summary>
+    public int MachineLaunchStrength { get; init; } = 100;
+    /// <summary>The Hand machine's MinLaunchRegiments. DEFAULT (AI trainer 2026-11-19).</summary>
+    public int MachineMinLaunchRegiments { get; init; } = 6;
+    /// <summary>The Hand machine's InvasionRegimentTarget. DEFAULT (AI trainer 2026-11-19).</summary>
+    public int MachineInvasionRegimentTarget { get; init; } = 50;
+    /// <summary>The Hand machine's TroopCapacityTarget. DEFAULT (AI trainer 2026-11-19).</summary>
+    public int MachineTroopCapacityTarget { get; init; } = 60;
+    /// <summary>The Hand machine's TaskForceMax. DEFAULT (AI trainer 2026-11-19).</summary>
+    public int MachineTaskForceMax { get; init; } = 2;
+    /// <summary>The Hand machine's TaskForceMarginPercent. DEFAULT (AI trainer 2026-11-19).</summary>
+    public int MachineTaskForceMarginPercent { get; init; } = 250;
+
+    /// <summary>
     /// Game plan spread (AI trainer 2026-11-19; Paul: "the Collective ALWAYS captures Excubia ... I don't want the enemy to be predictable").
     /// Collective only, like the guerrilla switches: the Hand AI stays a straightforward machine (Paul 2026-11-19).
     /// The AI's private generator is seeded from the game as well as the day (<see cref="AiMemory.Plan"/>), and each game draws its own liking

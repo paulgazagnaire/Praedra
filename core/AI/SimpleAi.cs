@@ -46,7 +46,19 @@ public sealed partial class SimpleAi
     private int[]? _hops;
     private GameRng _rng = new(0);
 
-    public SimpleAi(GameHost host, Side side, SimpleAiParams? p = null) { _h = host; _side = side; _p = p ?? new SimpleAiParams(); }
+    public SimpleAi(GameHost host, Side side, SimpleAiParams? p = null) { _h = host; _side = side; _p = Doctrine(p ?? new SimpleAiParams(), side); }
+
+    /// <summary>
+    /// The side's doctrine on top of the parameters: with <see cref="SimpleAiParams.HandMachine"/> the Hand launches big fleets with big troop
+    /// stacks. rule: ai tuning, SimpleAiParams.HandMachine (AI trainer 2026-11-19).
+    /// </summary>
+    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side) => side == Side.Hand && p.HandMachine
+        ? p with
+        {
+            LaunchStrength = p.MachineLaunchStrength, MinLaunchRegiments = p.MachineMinLaunchRegiments, InvasionRegimentTarget = p.MachineInvasionRegimentTarget,
+            TroopCapacityTarget = p.MachineTroopCapacityTarget, TaskForceMax = p.MachineTaskForceMax, TaskForceMarginPercent = p.MachineTaskForceMarginPercent,
+        }
+        : p;
 
     public Side Side => _side;
     public SimpleAiParams Params => _p;
@@ -310,7 +322,7 @@ public sealed partial class SimpleAi
         int sector = Draw(Hash(sys.Sector), _p.PlanSectorSpreadPercent), own = Draw(Hash(sys.Name), _p.PlanSystemSpreadPercent);
         return _likes[sys.Index] = Math.Max(1, (100 + sector) * (100 + own) / 100);
 
-        int Draw(ulong key, int spread) => spread <= 0 ? 0 : new GameRng(Mix(plan ^ key ^ Mix(period + 1)), 0xB7).NextInt(-spread, spread);
+        int Draw(ulong key, int spread) => spread <= 0 ? 0 : new GameRng(Mix(plan ^ key ^ Mix(period + 1)), 0xB7).NextInt(0, spread);
     }
 
     /// <summary>FNV-1a over the name's chars (ordinal), for the plan's per-name draws.</summary>

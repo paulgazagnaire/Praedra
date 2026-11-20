@@ -5,7 +5,7 @@ using Praedra.Core.Setup;
 namespace Praedra.Core.Tests.Setup;
 
 /// <summary>
-/// The Hand's big starting military (Paul 2026-11-19), behind GameSettings.BigHandStart (DEFAULT off): one big fleet at Charter, Pacifiers at Charter for its troop berths, and one Pacifier
+/// The Hand's big starting military (Paul 2026-11-19), behind GameSettings.BigHandStart (DEFAULT on since 2026-11-20): one big fleet at Charter, Pacifiers at Charter for its troop berths, and one Pacifier
 /// regiment spread to every sector the Hand holds. The Collective's start is unchanged. rule: m5-setup-and-victory §Starting forces on the v5
 /// galaxy (The Hand starts with a big military).
 /// </summary>
@@ -50,12 +50,28 @@ public class HandStartTests
         Assert.True(eco.Load(Side.Hand) * 100 < eco.Capacity(Side.Hand) * 80, $"Hand load {eco.Load(Side.Hand)} of {eco.Capacity(Side.Hand)}");
     }
 
-    // m5-setup-and-victory §Starting forces (Hand big military): off by default, and the default start is the old one
-    [Fact]
-    public void TheBigStartIsOffByDefault_AndTheDefaultStartIsUnchanged()
+    // m5-setup-and-victory §Starting forces (Hand big military), QA-114: the other presets keep the Hand under its upkeep capacity on day one.
+    // Measured 2026-11-20 (seeds 1-4): Easy 63-64%, HardE 65-66%, HardA 85-87% (the Hard start for a Collective player deals the Hand the
+    // fewest systems, so the least capacity; the AI Hand starts big but builds little at first). Medium presets: under 80% above.
+    [Theory]
+    [InlineData(StartPreset.Easy, 70)]
+    [InlineData(StartPreset.HardE, 70)]
+    [InlineData(StartPreset.HardA, 90)]
+    public void TheBigStartFitsTheHandsUpkeepOnEveryPreset(StartPreset preset, int maxPercent)
     {
-        Assert.False(new GameSettings().BigHandStart);
-        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+        foreach (int seed in new[] { 1, 2 })
+        {
+            var eco = NewGame.Create(new NewGameOptions { Seed = seed, Preset = preset }).Economy;
+            Assert.True(eco.Load(Side.Hand) * 100 < eco.Capacity(Side.Hand) * maxPercent, $"{preset} seed {seed}: Hand load {eco.Load(Side.Hand)} of {eco.Capacity(Side.Hand)}");
+        }
+    }
+
+    // m5-setup-and-victory §Starting forces (Hand big military): on by default since the Collective re-tune (2026-11-20), and off gives the old start
+    [Fact]
+    public void TheBigStartIsOnByDefault_AndOffGivesTheOldStart()
+    {
+        Assert.True(new GameSettings().BigHandStart);
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE, Settings = new GameSettings { BigHandStart = false } });
         var eco = h.Economy;
         var home = h.Game.State.Fleets.Values.Where(f => f.Side == Side.Hand && f.At == "Charter").OrderByDescending(f => f.Ships.Count).First();
         var classes = home.Ships.Select(id => eco.Find(id)!.Class).ToList();

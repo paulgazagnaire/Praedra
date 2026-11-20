@@ -100,7 +100,8 @@ public sealed class FogModule
     /// each side gets OwnLive of the systems it holds; the StartFullCopy lists give a FullCopy (The Shoal to the Hand,
     /// only if the galaxy has it). Nothing reveals the HQ system. Call after owners, facilities and fleets are dealt. rule: m5-fog-and-hq §F4.
     /// </summary>
-    public void SetupNewGame(IEnumerable<string> startExploredAll)
+    /// <param name="handFullCopy">Replaces <see cref="FogParams.StartFullCopyHand"/> when given (the drawn Collective base, GameSettings.CollectiveBaseDraw).</param>
+    public void SetupNewGame(IEnumerable<string> startExploredAll, IReadOnlyList<string>? handFullCopy = null)
     {
         int day = _game.Day;
         var all = new SortedSet<string>(startExploredAll.Where(s => _galaxy.TryFindSystem(s, out _)), StringComparer.Ordinal);
@@ -113,7 +114,7 @@ public sealed class FogModule
                 if (all.Contains(sys.Name)) Write(null, truth, side, sys.Name, RevealKind.Setup, day);
                 if (_fleets.OwnerOf(sys.Name) == side) Write(null, truth, side, sys.Name, RevealKind.OwnLive, day);
             }
-            var list = side == Side.Hand ? Params.StartFullCopyHand : Params.StartFullCopyCollective;
+            var list = side == Side.Hand ? handFullCopy ?? Params.StartFullCopyHand : Params.StartFullCopyCollective;
             foreach (var s in list.OrderBy(x => x, StringComparer.Ordinal))
                 if (_galaxy.TryFindSystem(s, out _)) Write(null, truth, side, s, RevealKind.FullCopy, day);
         }

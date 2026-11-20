@@ -84,8 +84,12 @@ public static class NewGame
             Place(host, f.System, f.Kind);
         }
 
+        string? collectiveBase = null;
         foreach (var side in new[] { Side.Hand, Side.Collective })
-            DealSide(host, forces, side, settings.MinGarrison, settings.BigHandStart && side == Side.Hand, settings.CollectiveBaseDraw && side == Side.Collective);
+        {
+            string? b = DealSide(host, forces, side, settings.MinGarrison, settings.BigHandStart && side == Side.Hand, settings.CollectiveBaseDraw && side == Side.Collective);
+            if (side == Side.Collective) collectiveBase = b;
+        }
 
         // P7 step 2: the fixed HQ forces (CMUNHQTB), completed, standing on the Hearth system (the table's first item is empty, so nothing is a
         // carrier); no capacity check, no draw. With min_garrison 0 they are the HQ's only troops. rule: m5-setup-and-victory §P7 ([EXE-own] 0x51ad90; B4 §7)
@@ -108,8 +112,11 @@ public static class NewGame
         NameAtSetup(host, forces);
 
         // Day-0 pictures: explored-for-all systems (A and B), own holdings (OwnLive), the StartFullCopy list. rule: m5-fog-and-hq §F4
+        // With CollectiveBaseDraw the Hand's day-0 full copy is of the drawn base instead of The Shoal: it knows where the Collective's base
+        // stands, as it does today. rule: m5-setup-and-victory §Starting forces (Collective base drawn per game); m5-fog-and-hq §F4 3
         host.Fog.SetupNewGame(rows.Where(r => r.ExploredAll).Select(r => r.Name)
-            .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3));
+            .Where(n => state.Scenario.Explored.TryGetValue(n, out var m) && m == 3),
+            settings.CollectiveBaseDraw && collectiveBase != null ? new[] { collectiveBase } : null);
 
         // No research grant: every side starts at level 0 in every track and builds only order-0 classes (the Mender Frigates of the
         // starting fleet stay unbuildable until Ship level 1). rule: m5-research §State per side (no setup path preloads a level), RS1.
@@ -128,14 +135,20 @@ public static class NewGame
     private static List<string> Held(GameHost host, Side side) =>
         host.Game.State.SystemOwners.Where(kv => kv.Value == side).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-    private static void DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison, bool big, bool drawBase)
+    private static string? DealSide(GameHost host, ForcesTable forces, Side side, int? minGarrison, bool big, bool drawBase)
     {
         var eco = host.Economy;
         var held = Held(host, side);
-        if (held.Count == 0) return;
+        if (held.Count == 0) return null;
         string baseWanted = forces.Str(side, "base_system");
         string baseSys = held.Contains(baseWanted, StringComparer.Ordinal) ? baseWanted : BestEnergy(host, held, null)!;
-        if (drawBase) baseSys = DrawBase(host, forces, side, held, baseSys);
+        if (drawBase)
+        {
+            baseSys = DrawBase(host, forces, side, held, baseSys);
+            // the drawn base is as loyal as The Shoal: support 100, set before the garrisons are worked out. rule: m5-setup-and-victory §Starting
+            // forces (Collective base drawn per game); setup-victory/09 §2 (The Shoal 100)
+            eco.SetCollectiveSupport(baseSys, 100);
+        }
 
         // yards at the base, then the extra yard sites (best free energy first)
         foreach (var (s, kind, count) in forces.BaseFacilities)
@@ -202,6 +215,7 @@ public static class NewGame
             load += shipCost + squads.Sum(c => eco.Costs.Get(c).Maintenance);
             host.Fleets.AddFleet(side, f.Name, f.Ships, f.AtBase ? baseSys : siteSys, squads, listedOrder: true);
         }
+        return baseSys;
     }
 
     /// <summary>
