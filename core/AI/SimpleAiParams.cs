@@ -524,6 +524,16 @@ public sealed record SimpleAiParams
     /// refineries make it scrap ships. DEFAULT off (Medium and Hard turn it on).
     /// </summary>
     public bool Guerrilla { get; init; }
+
+    /// <summary>
+    /// The Collective keeps this many construction yards, one per world, on its worlds farthest from the enemy it knows; while it has fewer
+    /// (finished and queued), a construction yard is the first thing its construction yards build, with no refined reserve. Collective only;
+    /// DEFAULT 0 (off: construction yards stack up to YardsPerSystem, as before). AI trainer 2026-11-20 (Paul: when losing, the Collective
+    /// "needs to adapt, regroup, conquer unexplored system, reproduce a military and fight until it's dying breath"): the stalled games ended
+    /// with a Collective that had lost every construction yard (seed 1 MedA: its base and 3 stacked yards on one world, gone by day 600), so it
+    /// could never build a mine, a refinery or a yard again, and its upkeep room shrank with every world it lost while 6000 refined sat unspent.
+    /// </summary>
+    public int SpreadConstructionYards { get; init; }
     public int GuerrillaAttackOddsPercent { get; init; } = 200;
     public int GuerrillaRetreatOddsPercent { get; init; } = 120;
     public int RaidStrikes { get; init; } = 2;

@@ -97,6 +97,8 @@ public sealed partial class SimpleAi
         var order = new List<FacilityKind>();
         int refined = eco.Refined(_side);
         int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
+        // SpreadConstructionYards (Collective, AI trainer 2026-11-20): short of spread construction yards, one comes first, whatever the pool holds
+        if (!_advisor && SpreadsYards && cons < _p.SpreadConstructionYards) order.Add(FacilityKind.ConstructionYard);
         // rule: m6-advisor-sibyl §Manage Production 1: the advisor's yards come from PlanAdvisorYards, so here only mines and refineries
         if (!_advisor && ships == 0) order.Add(FacilityKind.OrbitalShipyard);
         if (!_advisor && train == 0) order.Add(FacilityKind.TrainingFacility);
@@ -156,7 +158,14 @@ public sealed partial class SimpleAi
                 var fam = FamilyOfKind(kind);
                 int here = YardsAt(s, fam) + _reservedYards.GetValueOrDefault((s, fam));
                 if (here >= _p.YardsPerSystem) continue;
-                if (here > 0) score += 40 * here;
+                if (SpreadsYards && fam == YardFamily.Construction)
+                {
+                    // SpreadConstructionYards: one construction yard per world, the worlds farthest from the enemy first, so one lost world
+                    // never takes them all
+                    if (here > 0) continue;
+                    score += 25 * HopsFromEnemy(s, SpreadSafeHops);
+                }
+                else if (here > 0) score += 40 * here;
                 if (!_advisor) score -= BorderDanger(s) * 15; // the advisor reads only her own worlds (m6-advisor-sibyl §Manage Garrisons 9)
             }
             else score -= YardsAnyAt(s) * 3; // keep room on the yard systems for more yards
@@ -167,6 +176,33 @@ public sealed partial class SimpleAi
     }
 
     private int YardsAnyAt(string system) => _h.Economy.Objects.Count(o => o.System == system && o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
+
+    private bool SpreadsYards => _side == Side.Collective && _p.SpreadConstructionYards > 0;
+
+    /// <summary>SpreadConstructionYards: steps on the Nearby graph out to here count as safer; farther is no safer. AI tuning (AI trainer 2026-11-20).</summary>
+    private const int SpreadSafeHops = 4;
+
+    /// <summary>Steps (m1-galaxy-data Nearby) from <paramref name="system"/> to the nearest system the side believes the enemy holds, up to
+    /// <paramref name="cap"/> (no enemy that close: cap). Breadth first, neighbours in the galaxy's order.</summary>
+    private int HopsFromEnemy(string system, int cap)
+    {
+        var g = _h.Data.Galaxy;
+        if (!g.TryFindSystem(system, out var start)) return cap;
+        var seen = new HashSet<int> { start }; var ring = new List<int> { start };
+        for (int d = 0; d < cap; d++)
+        {
+            var next = new List<int>();
+            foreach (var i in ring)
+                foreach (var n in g.NearOf(i))
+                {
+                    if (!seen.Add(n)) continue;
+                    if (IsEnemyHeld(g.Systems[n].Name)) return d;
+                    next.Add(n);
+                }
+            ring = next;
+        }
+        return cap;
+    }
 
     /// <summary>0 when no nearby system (m1-galaxy-data Nearby) is enemy-held, 2 when one is (a yard there is a target).</summary>
     private int BorderDanger(string system)

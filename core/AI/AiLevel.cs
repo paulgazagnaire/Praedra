@@ -50,7 +50,7 @@ public static class AiLevels
             // Collective, MedE, fog, day 3000, Hand / Collective / open: 192 seeds on main 561755b before the big start 15 / 135 / 42; big start
             // (4 Mandate, 12 Gleaner) 61 / 99 / 32; 96 seeds: 4 Mandate fleet, every 3 days 24 / 54 / 18; 3 Mandate fleet, every 2 days
             // 14 / 70 / 12; 192 seeds, 3 Mandate fleet, every 2 days 34 / 132 / 26. Notes: specs/engine/ai-notes/2026-11-20-big-hand-start.md.
-            AiLevel.Medium => PlayToWin(p) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true },
+            AiLevel.Medium => PlayToWin(p) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, SpreadConstructionYards = SpreadYards },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -69,6 +69,7 @@ public static class AiLevels
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Underground = true, Guerrilla = true,
                 UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
                 InvasionReadyAtRally = true, BooksTalentWindow = true, UndergroundHops = HardReach, GuerrillaHops = HardReach,
+                SpreadConstructionYards = SpreadYards,
             },
             _ => p,
         };
@@ -95,6 +96,9 @@ public static class AiLevels
 
     /// <summary>The game plan's spreads at every level (AI trainer 2026-11-19).</summary>
     public const int PlanSectorSpread = 30, PlanSystemSpread = 15;
+
+    /// <summary>SpreadConstructionYards at Medium and Hard (AI trainer 2026-11-20): the Collective keeps 3 construction yards on 3 safe worlds.</summary>
+    public const int SpreadYards = 3;
 
     /// <summary>HarvesterYardValue at Medium and Hard (AI trainer 2026-10-27, QA-58): a Spike team at a harvester in the yard, below a finished harvester (SpikeValue 3000), above any other mission.</summary>
     private const int HarvesterYardHunt = 2000;

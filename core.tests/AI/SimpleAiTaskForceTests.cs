@@ -34,7 +34,11 @@ public class SimpleAiTaskForceTests
             Fog = new Praedra.Core.Fog.FogParams { HearthTipPermille = 0, HearthTipSectorPermille = 0 },
             // harvester upkeep pinned to Classic 600 (Dev lead 2026-10-27, m5-harvester §1 Upkeep): at 450 this default-params Hand builds a
             // harvester, which moves seed 1 (no win by day 1400 with task forces on); this test measures task forces
-            Harvester = new Praedra.Core.Harvester.HarvesterParams { Upkeep = null } } });
+            Harvester = new Praedra.Core.Harvester.HarvesterParams { Upkeep = null },
+            // the old start pinned (AI trainer 2026-11-20, #344): the big Hand start's second construction yard makes the TaskForces-off Hand
+            // faster too (2 of 12 seeds still going on day 1250, floor 4), so the floors no longer separate the switch; they were measured on the
+            // old start, like the other AI behaviour tests (DealSettings.FileOldVictory); DefaultStartPlayTests watches the default start
+            BigHandStart = false, CollectiveBaseDraw = false } });
         // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Collective makes the Hand "far ahead" from the start, and this test
         // measures task forces; SimpleAiGarrisonsFirstTests measures that switch.
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces, GarrisonsFirst = false },
