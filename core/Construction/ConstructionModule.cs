@@ -527,7 +527,8 @@ public sealed class ConstructionModule
         C.Hand.RefinedLine.Remove(o.Id); C.Collective.RefinedLine.Remove(o.Id);
         var fam = Yards.FamilyOf(k);
         var p = o.System == null ? null : C.Find(o.System, fam);
-        if (p != null && !YardsOf(o.System!, fam).Any()) CancelProject(ctx, day, p, "YardLost");
+        // a founding yard has no yard to lose (Ponytail on #345). rule: m2-construction §Founding a construction yard
+        if (p != null && !p.Founding && !YardsOf(o.System!, fam).Any()) CancelProject(ctx, day, p, "YardLost");
     }
 
     // ================================================================== slot 6.6: yards
