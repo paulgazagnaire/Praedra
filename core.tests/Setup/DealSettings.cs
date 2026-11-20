@@ -9,8 +9,12 @@ namespace Praedra.Core.Tests.Setup;
 internal static class DealSettings
 {
     public static readonly GameSettings File = new() { DealMode = DealMode.File };
-    /// <summary>The fixed deal plus the victory and research rules of before 2026-10-16 (<see cref="OldVictory"/>): AI tests tuned on both.</summary>
-    public static GameSettings FileOldVictory => new() { DealMode = DealMode.File, Victory = OldVictory.Rules, Research = OldResearch };
+    /// <summary>
+    /// The fixed deal plus the victory and research rules of before 2026-10-16 (<see cref="OldVictory"/>): AI tests tuned on both. Since
+    /// 2026-11-20 also the start of before: no big Hand start and the Collective's base at The Shoal (BigHandStart and CollectiveBaseDraw off;
+    /// the new start is measured in specs/engine/ai-notes/2026-11-20-big-hand-start.md and checked by HandStartTests and CollectiveBaseDrawTests).
+    /// </summary>
+    public static GameSettings FileOldVictory => new() { DealMode = DealMode.File, Victory = OldVictory.Rules, Research = OldResearch, BigHandStart = false, CollectiveBaseDraw = false };
     /// <summary>Research as before 2026-10-16: no galaxy-size scaling, blockade does not stop yards (m5-research §Defaults).</summary>
     public static Praedra.Core.Research.ResearchParams OldResearch => new() { ResearchCostScale = Praedra.Core.Research.ResearchScale.None, MissionPointsScale = Praedra.Core.Research.ResearchScale.None, BlockadeStopsResearch = false };
 }

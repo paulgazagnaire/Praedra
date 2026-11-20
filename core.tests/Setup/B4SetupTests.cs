@@ -15,13 +15,14 @@ namespace Praedra.Core.Tests.Setup;
 public class B4SetupTests
 {
     private static readonly int[] Seeds = { 1, 2, 3, 7 };
-    private static GameHost Make(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed });
+    // B4 reads the Classic setup, whose Collective base is The Shoal: the base draw (GameSettings.CollectiveBaseDraw, DEFAULT on) is off here.
+    private static GameHost Make(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { CollectiveBaseDraw = false } });
     /// <summary>The Classic garrisons and HQ forces: MinGarrison 0 with HqFixedForces on (what the Classic setup, part B, will switch on).</summary>
-    private static readonly GameSettings Classic = new() { MinGarrison = 0, HqFixedForces = true };
+    private static readonly GameSettings Classic = new() { MinGarrison = 0, HqFixedForces = true, CollectiveBaseDraw = false };
     private static GameHost MakeClassic(int seed = 1) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = Classic });
     private static IEnumerable<GameHost> Games() => Seeds.Select(Make);
     /// <summary>The Classic day-one reveal: SetupRevealsFacilities on (DEFAULT on since 2026-10-18; explicit here so the test pins the rule).</summary>
-    private static GameHost MakeReveal(int seed) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = true } } });
+    private static GameHost MakeReveal(int seed) => NewGame.Create(new NewGameOptions { Seed = seed, Settings = new GameSettings { CollectiveBaseDraw = false, Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = true } } });
 
     private static int Standing(GameHost h, Side side, string cls, string sys) =>
         h.Economy.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == side && o.Class == cls && o.System == sys && o.AboardShip == 0);
@@ -33,7 +34,7 @@ public class B4SetupTests
     {
         // DEFAULT on (Classic) since 2026-10-18 (AI trainer: the AI floors pass with it); with the switch off there is no C.
         Assert.True(new Praedra.Core.Fog.FogParams().SetupRevealsFacilities);
-        var off = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = false } } });
+        var off = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { CollectiveBaseDraw = false, Fog = new Praedra.Core.Fog.FogParams { SetupRevealsFacilities = false } } });
         Assert.Null(off.Fog.Picture(Side.Collective, "Charter")!.Facilities);
         foreach (var h in Seeds.Select(MakeReveal))
         {

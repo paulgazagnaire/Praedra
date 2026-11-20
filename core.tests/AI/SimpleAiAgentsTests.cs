@@ -662,7 +662,8 @@ public class SimpleAiAgentsTests
     // m5-fog-and-hq §N6b + SimpleAiParams.HarvesterYardValue (Paul 2026-10-27: spies spot a harvester being built, Spike teams go at that yard; m5-harvester §5 SpikeInYard)
     private static int YardSpikes(int value, out bool seen, int? floor = null, int goneDay = -1, int countFrom = 0, int seed = 1)
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        // tuned on the start of before 2026-11-20 (no big Hand start, the Collective's base at The Shoal), as DealSettings.FileOldVictory
+        var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA, Settings = new GameSettings { BigHandStart = false, CollectiveBaseDraw = false } });
         var p = AiLevels.For(AiLevel.Medium) with { HarvesterYardValue = value, BurnTheBooks = false }; // Burn the Books off: it would take the free Sabotage-capable agents this test counts
         if (floor is int f) p = p with { HarvesterYardMinOddsPercent = f };
         var m = new AiMatch(h, null, p, passive: Side.Hand);

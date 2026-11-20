@@ -126,7 +126,10 @@ public class AnchoredDealTests
         // other anchors use their holder's strong band: Hand 10..40 (Collective support), Collective 60..90
         foreach (var a in ND.Anchors.Where(a => a.Owner == Side.Hand && a.CollectiveSupport == null))
             Assert.InRange(h.Economy.SupportOf(a.System, Side.Collective), 10, 40);
-        foreach (var a in ND.Anchors.Where(a => a.Owner == Side.Collective))
+        // (the Collective's drawn base gets 100 instead, m5-setup-and-victory §Starting forces; CollectiveBaseDrawTests checks it)
+        string drawnBase = h.Economy.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Class == "Construction Yard" && Holder(h, o.System!) == Side.Collective)
+            .Select(o => o.System!).First();
+        foreach (var a in ND.Anchors.Where(a => a.Owner == Side.Collective && a.System != drawnBase))
             Assert.InRange(h.Economy.SupportOf(a.System, Side.Collective), 60, 90);
     }
 

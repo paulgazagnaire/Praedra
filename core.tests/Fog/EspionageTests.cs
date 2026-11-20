@@ -144,7 +144,8 @@ public class EspionageTests
     [Fact]
     public void FE7_HandStartsWithAFullCopyOfShoal()
     {
-        var h = NewGame.Create(new NewGameOptions { Seed = 1 });
+        // Classic's base, The Shoal (with CollectiveBaseDraw, DEFAULT on, the copy follows the drawn base: CollectiveBaseDrawTests)
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings { CollectiveBaseDraw = false } });
         var k = h.Game.State.Fog.Hand.Systems["The Shoal"];
         Assert.True(k.Explored);
         Assert.Equal(0, k.StampC); Assert.Equal(0, k.StampD); Assert.Equal(0, k.StampE);

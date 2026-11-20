@@ -24,7 +24,7 @@ internal static class SimCli
                                               [--officer "<Name>" [--officer-esp <n>]] [--target-agent "<Name>"] [--facility <Kind>[,<Kind>...]]
                                               [--at Charter] [--owner Collective|Hand|neutral] [--support 50] [--missions 1000] [--seed 1]
           dotnet run --project sim -- campaign [--days 1000] [--seed 1] [--ruleset Classic|New]
-          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive hand|collective] [--trace] [--hq-unknown] [--fog] [--no-agents] [--hand-level L] [--collective-level L] [--hand-params K=V,..] [--collective-params K=V,..] [--hunt-log] [--every 365]
+          dotnet run --project sim -- aivai [--days 730] [--seed 1] [--start meda|campaign] [--passive hand|collective] [--trace] [--hq-unknown] [--fog] [--no-agents] [--hand-level L] [--collective-level L] [--hand-params K=V,..] [--collective-params K=V,..] [--hunt-log] [--every 365] [--settings K=V,..]
         aivai plays the simple AI (core/AI) on both sides from the new-game start (MedA, DEFAULT) or the test campaign, printing a yearly summary (--every N: every N days),
         battle, assault and capture counts, the winner (if any) and the AI's order and rejection counts. Without --fog the AIs see everything and
         the Hand is told the Hearth (unless --hq-unknown). --fog turns SimpleAiParams.UseFog on for both AIs: each reads only its side's
@@ -35,7 +35,8 @@ internal static class SimCli
         that off (the AI of before, byte for byte). --hand-level / --collective-level (easy, medium, hard; core/AI/AiLevel.cs) play that side at a
         difficulty level, fog on (AiLevels.For); --hand-params / --collective-params set SimpleAiParams values on top (as in tourney; they turn --fog on). --hunt-log prints every Espionage and Reconnaissance the Hand starts and how it ends, next to the
         true Hearth of that day (a trainer's log; the AI never reads the truth). The report adds missions started and succeeded by side and kind, posts given, and the days
-        the Hand's own picture first showed (and later re-found) the Hearth.
+        the Hand's own picture first showed (and later re-found) the Hearth. --settings sets GameSettings values as in tourney (e.g. BigHandStart=false,CollectiveBaseDraw=false
+        for the start before the Collective re-tune; --start meda only).
         battle runs N seeded battles (Classic: m4-battle-classic, New: m4-battle-new; --ruleset, DEFAULT new, Paul 2026-10-18) at a synthetic system where every retreat has a destination, and prints how often each
         side won or retreated, and the mean survivors. Battle k uses seed (seed + k - 1). --no-rolls turns the subsystem rolls off. --carry (New) puts squadrons aboard their side's carriers instead of basing them.
         mission runs N seeded missions (m5-missions) of one kind against a defended system and prints how often the first iteration succeeded,
@@ -187,7 +188,7 @@ internal static class SimCli
     private static int AiVsAi(string[] a)
     {
         int days = 730; ulong seed = 1; string start = "meda"; Side? passive = null; bool trace = false; bool hqKnown = true; bool fog = false; bool agents = true;
-        Praedra.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0, every = 365; string? empParams = null, allParams = null;
+        Praedra.Core.AI.AiLevel? empLevel = null, allLevel = null; bool huntLog = false; int hunted = 0, every = 365; string? empParams = null, allParams = null, settingsSpec = null;
         for (int i = 0; i < a.Length; i++)
         {
             string key = a[i];
@@ -204,6 +205,7 @@ internal static class SimCli
                 case "--hq-unknown": hqKnown = false; break;
                 case "--fog": fog = true; break;
                 case "--no-agents": agents = false; break;
+                case "--settings": settingsSpec = Next(); break;
                 case "--hand-level": empLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--hand-level must be easy, medium or hard."); fog = true; break;
                 case "--collective-level": allLevel = Praedra.Core.AI.AiLevels.Parse(Next()) ?? throw new ArgumentException("--collective-level must be easy, medium or hard."); fog = true; break;
                 case "--passive": passive = Next().ToLowerInvariant() switch { "hand" => Side.Hand, "collective" => Side.Collective, "none" => null, _ => throw new ArgumentException("--passive must be hand, collective or none.") }; break;
@@ -212,7 +214,8 @@ internal static class SimCli
             }
         }
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA }) : TestCampaign.New(seed).Host;
+        if (settingsSpec != null && start != "meda") throw new ArgumentException("--settings needs --start meda.");
+        var host = start == "meda" ? NewGame.Create(new NewGameOptions { Seed = (int)seed, Preset = StartPreset.MedA, Settings = Tourney.SettingsWith(settingsSpec) }) : TestCampaign.New(seed).Host;
         var aiParams = fog || !agents ? new Praedra.Core.AI.SimpleAiParams { UseFog = fog, UseCharactersAndMissions = agents } : null;
         Praedra.Core.AI.SimpleAiParams? Level(Praedra.Core.AI.AiLevel? l) => l is { } v ? Praedra.Core.AI.AiLevels.For(v, aiParams) : aiParams;
         var match = new Praedra.Core.AI.AiMatch(host, Tourney.WithOverrides(Level(empLevel) ?? new() { UseFog = fog, UseCharactersAndMissions = agents }, empParams),

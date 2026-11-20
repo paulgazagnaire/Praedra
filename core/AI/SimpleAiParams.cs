@@ -17,6 +17,12 @@ public sealed record SimpleAiParams
     public int ProductionEvery { get; init; } = 5;
     /// <summary>Days between military reviews (merge, load, move, bombard, assault). DEFAULT.</summary>
     public int MilitaryEvery { get; init; } = 3;
+    /// <summary>
+    /// The Collective's own military review interval, Collective only like the guerrilla switches; 0 = <see cref="MilitaryEvery"/> (AI trainer
+    /// 2026-11-20, against the Hand's big start: the same interval for the Hand made the Hand AI far stronger, Medium mirror on 96 seeds Hand /
+    /// Collective / open 40 / 36 / 20 with both sides at 2 days against 14 / 70 / 12 with the Collective alone). DEFAULT 0; AiLevels sets it at Medium.
+    /// </summary>
+    public int CollectiveMilitaryEvery { get; init; }
 
     // ---- economy and budget
     /// <summary>Maintenance room kept free after every purchase (m2-maintenance: load above capacity makes the autoscrap fire). DEFAULT.</summary>
@@ -216,11 +222,12 @@ public sealed record SimpleAiParams
     /// ai/09 §6 row "pick noise" (Easy 30). DEFAULT 0.
     /// </summary>
     public int PickNoisePercent { get; init; }
+
     /// <summary>
     /// Game plan spread (AI trainer 2026-11-19; Paul: "the Collective ALWAYS captures Excubia ... I don't want the enemy to be predictable").
     /// Collective only, like the guerrilla switches: the Hand AI stays a straightforward machine (Paul 2026-11-19).
     /// The AI's private generator is seeded from the game as well as the day (<see cref="AiMemory.Plan"/>), and each game draws its own liking
-    /// for every sector and every system: a sector's targets are worth up to this many percent more or less to it in this game. The liking is
+    /// for every sector and every system: a sector's targets are worth up to this many percent more to it in this game (never less, since 2026-11-20). The liking is
     /// redrawn every <see cref="PlanDays"/>, so the front moves during a game too. 0 = the same picture gives the same plan in every game (the AI
     /// of before). DEFAULT 0; AiLevels sets it for every level.
     /// </summary>
