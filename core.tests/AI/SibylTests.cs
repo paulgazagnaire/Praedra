@@ -325,6 +325,28 @@ public class SibylTests
         Assert.Empty(s.PlanDay());
     }
 
+    // m6-advisor-sibyl §Manage Production 0a (QA-116, 2026-11-20): with no construction yard left, Manage Production founds one
+    // (m2-construction §Founding a construction yard); off, or with a yard still standing, nothing is founded
+    [Fact]
+    public void ManageProduction_FoundsAConstructionYardWhenThePlayerHasNone()
+    {
+        static bool Founds(GameHost h, bool on)
+        {
+            foreach (var id in HandFacilities(h, FacilityKind.ConstructionYard).Select(o => o.Id).ToList()) h.Economy.RemoveObject(id);
+            var s = new Sibyl(h, Side.Hand);
+            s.Submit(SibylJob.ManageProduction, on);
+            h.Game.Step();
+            return s.PlanDay().Any(x => x.Detail.StartsWith(FacilityKinds.ClassName(FacilityKind.ConstructionYard) + " founded at ", StringComparison.Ordinal));
+        }
+        Assert.True(Founds(NewHost(), true));
+        Assert.False(Founds(NewHost(), false));
+        var kept = NewHost();
+        var s = new Sibyl(kept, Side.Hand);
+        s.Submit(SibylJob.ManageProduction, true);
+        kept.Game.Step();
+        Assert.DoesNotContain(s.PlanDay(), x => x.Detail.Contains(" founded at ", StringComparison.Ordinal));
+    }
+
     // ---- redirect of Sibyl's own regiments in training (m6-advisor-sibyl §Manage Garrisons 8; m2-construction §Redirect training)
 
     private static string TrainingWorld(GameHost h) => HandFacilities(h, FacilityKind.TrainingFacility).First().System!;

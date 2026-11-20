@@ -34,14 +34,17 @@ public sealed partial class SimpleAi
     /// </summary>
     private void TryFoundYard()
     {
-        if (_p.FoundYardsBelow <= 0 || CountYards(YardFamily.Construction) >= _p.FoundYardsBelow) return;
+        // Sibyl (Manage Production 0a, QA-116): only when the player's side has no construction yard, with her upkeep margin
+        int below = _advisor ? 1 : _p.FoundYardsBelow;
+        if (below <= 0 || CountYards(YardFamily.Construction) >= below) return;
         if (HeldSystems().Any(s => _h.Construction.ProjectAt(s, YardFamily.Construction) is { Founding: true })) return;
         string cls = FacilityKinds.ClassName(FacilityKind.ConstructionYard);
-        if (!Available(cls) || Budget < Maint(cls)) return;
+        if (!Available(cls) || Budget - Maint(cls) < (_advisor ? _p.AdvisorUpkeepMargin : 0)) return;
         var eco = _h.Economy;
+        // the AI: the world farthest from the enemy it knows first; Sibyl reads only her own worlds (m6-advisor-sibyl §Manage Garrisons 9)
         string? site = HeldSystems().Where(s => eco.SlotsOf(s).Populated && !_h.Support.IsUprising(s) && eco.FreeEnergy(s) - _reservedEnergy.GetValueOrDefault(s) >= 1
                                                 && _h.Construction.CanFoundYardAt(s))
-            .OrderByDescending(s => HopsFromEnemy(s, FoundSafeHops)).ThenByDescending(s => eco.SlotsOf(s).Energy).ThenBy(s => s, StringComparer.Ordinal).FirstOrDefault();
+            .OrderByDescending(s => _advisor ? 0 : HopsFromEnemy(s, FoundSafeHops)).ThenByDescending(s => eco.SlotsOf(s).Energy).ThenBy(s => s, StringComparer.Ordinal).FirstOrDefault();
         if (site == null) return;
         long seq = _h.Construction.SubmitBuild(_side, site, YardFamily.Construction, cls, 1, site);
         Note(seq, "Build", $"{cls} founded at {site}");
@@ -67,6 +70,8 @@ public sealed partial class SimpleAi
     /// </summary>
     private void PlanAdvisorYards(bool garrisons, bool production)
     {
+        // rule: m6-advisor-sibyl §Manage Production 0a (QA-116, 2026-11-20): with no construction yard left, she founds one (m2-construction §Founding)
+        if (production) TryFoundYard();
         foreach (var y in YardSystems(YardFamily.Construction))
         {
             if (!CanOrderAt(y, YardFamily.Construction)) continue;
