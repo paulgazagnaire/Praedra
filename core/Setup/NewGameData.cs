@@ -84,6 +84,13 @@ public sealed class ForcesTable
     private readonly Dictionary<(Side, string), string> _params = new();
     public List<(Side Side, string Kind, int Count)> BaseFacilities { get; } = new();
     public List<(Side Side, string Kind, int Count)> SiteFacilities { get; } = new();
+    /// <summary>The big start's extra site facilities (kind <c>big_site_facility</c>): with <see cref="GameSettings.BigHandStart"/> they are added to the
+    /// side's <see cref="SiteFacilities"/>. Paul 2026-11-20 (the Hand starts with a second construction yard). rule: m5-setup-and-victory §Starting forces.</summary>
+    public List<(Side Side, string Kind, int Count)> BigSiteFacilities { get; } = new();
+
+    /// <summary>The side's site facilities, plus its <c>big_site_facility</c> rows when <paramref name="big"/>.</summary>
+    public IEnumerable<(Side Side, string Kind, int Count)> SiteFacilitiesOf(Side s, bool big) =>
+        SiteFacilities.Concat(big ? BigSiteFacilities : new()).Where(f => f.Side == s);
     public List<ForceFleet> Fleets { get; } = new();
     /// <summary>The fixed forces of the Hearth system (kind <c>hq_unit</c>): regiments and squadrons placed on the system, not in a fleet. rule: m5-setup-and-victory §P7 (B4 §7 step 2).</summary>
     public List<(Side Side, string Class, int Count)> HqUnits { get; } = new();
@@ -120,6 +127,7 @@ public sealed class ForcesTable
                     case "param": f._params[(side, key)] = value; break;
                     case "base_facility": f.BaseFacilities.Add((side, key, int.Parse(value))); break;
                     case "site_facility": f.SiteFacilities.Add((side, key, int.Parse(value))); break;
+                    case "big_site_facility": f.BigSiteFacilities.Add((side, key, int.Parse(value))); break;
                     case "hq_unit": f.HqUnits.Add((side, key, int.Parse(value))); break;
                     case "fleet" or "big_fleet":
                         {

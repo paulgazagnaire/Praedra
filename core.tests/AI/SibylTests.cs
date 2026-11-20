@@ -148,9 +148,12 @@ public class SibylTests
         Riot(h, world);
         var orders = s.PlanDay();
         Assert.DoesNotContain(orders, x => x.Detail.Contains(" x Tranches at ", StringComparison.Ordinal));
-        var tf = Assert.Single(orders, x => x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal));
+        // one Training Facility per idle construction yard while under the rule-9 count (the Hand has two construction yards since 2026-11-20,
+        // and both may order one when more than 8 regiments are short)
+        var tfs = orders.Where(x => x.Detail.StartsWith("Training Facility at ", StringComparison.Ordinal)).ToList();
+        Assert.InRange(tfs.Count, 1, 2);
         h.Game.Step();
-        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => e.Sequence == tf.Sequence);
+        Assert.Contains(h.Game.Events.OfType<OrderAccepted>(), e => tfs.Any(t => t.Sequence == e.Sequence));
     }
 
     // S16 (QA-107): both on, short of room (under 200 free) and a training facility wanted: the idle construction yard builds a mine or refinery first

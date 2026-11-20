@@ -81,4 +81,25 @@ public class HandStartTests
         Assert.Equal(NewGameData.Default.Forces.Int(Side.Hand, "base_regiments"),
             eco.Objects.Count(o => o.Category == ObjectCategory.Regiment && o.Side == Side.Hand && o.Class == "Pacifiers"));
     }
+    // m5-setup-and-victory §Starting forces (Hand second construction yard, Paul 2026-11-20): with the big start the Hand holds two construction
+    // yards on day one, Charter's and one at its extra yard site (never Charter or the Hearth); off keeps the one at Charter
+    [Theory]
+    [InlineData(StartPreset.MedE, 1)]
+    [InlineData(StartPreset.MedA, 2)]
+    [InlineData(StartPreset.HardA, 3)]
+    public void TheBigStartGivesTheHandASecondConstructionYard(StartPreset preset, int seed)
+    {
+        List<string> Yards(bool big)
+        {
+            var h = NewGame.Create(new NewGameOptions { Seed = seed, Preset = preset, Settings = new GameSettings { BigHandStart = big } });
+            return h.Economy.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Class == "Construction Yard" && o.System != null
+                    && h.Game.State.SystemOwners.TryGetValue(o.System, out var s) && s == Side.Hand)
+                .Select(o => o.System!).OrderBy(n => n, StringComparer.Ordinal).ToList();
+        }
+        var on = Yards(true);
+        Assert.Equal(2, on.Count);
+        Assert.Contains("Charter", on);
+        Assert.Equal(2, on.Distinct().Count());
+        Assert.Equal(new[] { "Charter" }, Yards(false));
+    }
 }

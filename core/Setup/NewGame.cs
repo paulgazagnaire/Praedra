@@ -162,8 +162,9 @@ public static class NewGame
             var siteOrNull = BestEnergy(host, held.Where(h => h != baseSys && h != hqSys && !sites.Contains(h)).ToList(), null);
             if (siteOrNull is not { } site) break;
             sites.Add(site);
-            foreach (var (s, kind, count) in forces.SiteFacilities)
-                if (s == side && CountOf(eco, site, kind) == 0) for (int i = 0; i < count; i++) PlaceNear(host, held, site, kind);
+            // with the big start the Hand's site also gets a construction yard (big_site_facility; Paul 2026-11-20). rule: m5-setup-and-victory §Starting forces
+            foreach (var (_, kind, count) in forces.SiteFacilitiesOf(side, big))
+                if (CountOf(eco, site, kind) == 0) for (int i = 0; i < count; i++) PlaceNear(host, held, site, kind);
         }
 
         // economy: mines and refineries on the systems richest in raw slots

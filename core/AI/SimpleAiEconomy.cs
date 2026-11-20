@@ -67,7 +67,11 @@ public sealed partial class SimpleAi
     private bool TryAdvisorYard(string from, FacilityKind kind, int want, int room)
     {
         string cls = FacilityKinds.ClassName(kind);
-        if (CountYards(Yards.FamilyOf(kind)) >= want || !Available(cls) || Budget - Maint(cls) < Math.Max(0, room)) return false;
+        // count today's orders too: the rule counts "finished and queued", and a second idle yard must not order a yard the first one already
+        // covered (the Hand starts with two construction yards since 2026-11-20). rule: m6-advisor-sibyl §Manage Garrisons 9, §Manage Production 1a
+        var fam = Yards.FamilyOf(kind);
+        int planned = _reservedYards.Where(r => r.Key.Item2 == fam).Sum(r => r.Value);
+        if (CountYards(fam) + planned >= want || !Available(cls) || Budget - Maint(cls) < Math.Max(0, room)) return false;
         var site = PickSite(from, kind);
         if (site == null) return false;
         OrderFacility(from, kind, site);
