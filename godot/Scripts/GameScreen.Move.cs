@@ -20,7 +20,7 @@ public partial class GameScreen
     List<int> _moveFighters;        // based fighters flying on their own (MoveSquadrons), null when not choosing
     string _moveFightersFrom;
     string _moveBanner;
-    bool? _retreatPending;
+    readonly Dictionary<int, bool> _retreatPending = new();   // fleet id -> Elusive chosen today, shown before the day runs the order
     int _lastSelectedSystem = -2, _lastSelectedFleet = -2;
 
     // Waypoints of the fleet move being planned (shift-click adds one, Backspace drops the last).

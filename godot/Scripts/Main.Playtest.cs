@@ -248,6 +248,11 @@ public partial class Main
             gs.PlayDay();
             Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0 + 1, "split made a new fleet");
             Expect(!s.Messages.Skip(refusedBefore).Any(m => m.Text.StartsWith("Order refused: Change the battle", StringComparison.Ordinal)), "retreat switch accepted");
+            {   // rule: m4-battle-classic §1.3, m3-fleets (per fleet): the fleet is Elusive, and the fleet split off it copies that
+                var made = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderByDescending(f => f.Id).First();
+                Expect(s.Host.Battles.OnContactOfFleet(sid) == Praedra.Core.Battle.OnContactMode.Retreat && s.Host.Battles.OnContactOfFleet(made.Id) == Praedra.Core.Battle.OnContactMode.Retreat,
+                    $"{splitFleet.Name} is Elusive and {made.Name}, split off it, is Elusive too");
+            }
             SelectFleetByList(gs, splitFleet);
             Expect(gs.Click("Fleet orders") && gs.Click("Behavior Defensive"), "back to Defensive (fight) from the fleet window's Command tab");
             gs.MgCloseAll();

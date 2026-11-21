@@ -239,11 +239,12 @@ public partial class GameScreen
         Sent($"{f.Name} invades {f.At}", f.At);
     }
 
-    void SetRetreat(bool on)
+    /// <summary>One fleet's answer when an enemy fleet arrives: Elusive (Retreat) or Defensive (Fight). rule: m4-battle-classic §1.3 (SetFleetOnContact {fleet, mode}, per fleet, Paul 2026-11-21).</summary>
+    void SetRetreat(Fleet f, bool on)
     {
-        _retreatPending = on;
-        S.Track(S.Host.Battles.SubmitSetOnContact(Me, on ? OnContactMode.Retreat : OnContactMode.Fight), "Change the battle behaviour");
-        S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
+        _retreatPending[f.Id] = on;
+        S.Track(S.Host.Battles.SubmitSetFleetOnContact(Me, f.Id, on ? OnContactMode.Retreat : OnContactMode.Fight), $"Change the battle behaviour of {f.Name}");
+        S.Say(on ? $"Order sent: {f.Name} will pull back when an enemy arrives." : $"Order sent: {f.Name} will stay and fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
         // the setting shows in the Fleet window's Orders tab; the panel redraws too, so nothing shows the old setting

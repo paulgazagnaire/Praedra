@@ -148,7 +148,7 @@ public partial class GameScreen : Control
     bool RunDay()
     {
         var oc = S.StepDay();
-        _retreatPending = null;
+        _retreatPending.Clear();
         _pauseNote = null;
         foreach (var m in oc.New) AddLogItem(m, true);
         if (S.Game.Day % AutosaveEvery == 0) Autosave();

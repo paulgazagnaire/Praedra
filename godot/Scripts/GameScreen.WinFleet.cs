@@ -325,9 +325,9 @@ public partial class GameScreen
     {
         FleetSection("Fleet actions", 8).AddChild(FleetActions(f));
 
-        // one setting for every fleet in the core today (rule: m4-battle-classic §1.3, SetOnContact {side, mode}): the dim note says so
-        FleetSection("Fleet behavior", 8, "all fleets", "What your fleets do when an enemy fleet arrives. The game has one setting for all your fleets: changing it here changes it for every fleet.")
-            .AddChild(BehaviorRow());
+        // each fleet keeps its own answer (rule: m4-battle-classic §1.3, SetFleetOnContact {fleet, mode}, per fleet, Paul 2026-11-21)
+        FleetSection("Fleet behavior", 8, tip: "What this fleet does when an enemy fleet arrives. Each fleet has its own setting.")
+            .AddChild(BehaviorRow(f));
 
         var cmd = FleetSection("Fleet command", 16);
         var posts = Boxed(new HBoxContainer(), CardSpace);
@@ -418,20 +418,21 @@ public partial class GameScreen
         return bar;
     }
 
-    /// <summary>Defensive (fight an enemy fleet that arrives) or Elusive (pull back): the chosen one has the light outline. One setting for
-    /// all your fleets in the core today, so the section's note says "all fleets". rule: m4-battle-classic §1.3.</summary>
-    Control BehaviorRow()
+    /// <summary>This fleet's choice when an enemy fleet arrives, Defensive (fight) or Elusive (pull back); the chosen one has the light outline.
+    /// rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive fleets leave in their first step and the rest fight).</summary>
+    Control BehaviorRow(Fleet f)
     {
         var row = Boxed(new HBoxContainer(), 8);
-        bool retreat = _retreatPending ?? S.Host.Battles.OnContactOf(Me) == OnContactMode.Retreat;
+        bool Elusive() => _retreatPending.TryGetValue(f.Id, out var p) ? p : S.Host.Battles.OnContactOfFleet(f.Id) == OnContactMode.Retreat;
+        bool retreat = Elusive();
         foreach (var (word, on, tip) in new[]
         {
-            ("Defensive", false, "Your fleets stay and fight an enemy fleet that arrives. One setting for all your fleets."),
-            ("Elusive", true, "Your fleets pull back to a neighbouring system when an enemy fleet arrives, instead of fighting. One setting for all your fleets."),
+            ("Defensive", false, "This fleet stays and fights an enemy fleet that arrives."),
+            ("Elusive", true, "This fleet pulls back when an enemy fleet arrives, instead of fighting. Your Defensive fleets there stay and fight without it. An enemy ship that blocks retreat can keep it in the fight."),
         })
         {
             bool r = on;
-            var b = FleetAction(word, $"Behavior {word}", () => { if (r != (_retreatPending ?? S.Host.Battles.OnContactOf(Me) == OnContactMode.Retreat)) { SetRetreat(r); MgRefreshSoon(); } },
+            var b = FleetAction(word, $"Behavior {word}", () => { if (r != Elusive()) { SetRetreat(f, r); MgRefreshSoon(); } },
                 tip + (retreat == on ? " Chosen." : ""));
             if (retreat == on) b.AddThemeStyleboxOverride("normal", ButtonBox(Look.Text));
             row.AddChild(b);

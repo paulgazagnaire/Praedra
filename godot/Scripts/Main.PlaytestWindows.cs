@@ -126,20 +126,26 @@ public partial class Main
 
         // ---------------------------------------------------------------- Command (Paul's design 2026-11-21): the actions, the behaviour, scrap on the head
         Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Command,Ships,Fighters,Troops", $"the fleet's tabs: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
-        Expect(gs.Click($"Tab Fleet {fid} Command") && gs.MgText($"Fleet {fid}").Contains("all fleets") && gs.Has("Behavior Defensive") && gs.Has("Behavior Elusive"),
-            "Command: Defensive or Elusive, and the note that it is one setting for every fleet");
+        Expect(gs.Click($"Tab Fleet {fid} Command") && !gs.MgText($"Fleet {fid}").Contains("all fleets") && gs.Has("Behavior Defensive") && gs.Has("Behavior Elusive"),
+            "Command: Defensive or Elusive, this fleet's own (no \"all fleets\" note)");
         Expect(gs.Has("Fleet Move") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade"), "the actions: Bombardment, Invasion, Move");
         if (fleet.At != null && fleet.Transit == null) Expect(gs.MenuOf($"Fleet head {fid}").Any(l => l.StartsWith("Scrap the whole fleet", StringComparison.Ordinal)), "the head's right-click scraps the fleet");
         {
             int q0 = s.QueuedOrders;
-            bool wasRetreat = s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat;
+            bool wasRetreat = s.Host.Battles.OnContactOfFleet(fid) == Praedra.Core.Battle.OnContactMode.Retreat;
+            var others = s.Game.State.Fleets.Values.Where(o => o.Side == me && o.Id != fid).ToDictionary(o => o.Id, o => s.Host.Battles.OnContactOfFleet(o.Id));
             string flip = wasRetreat ? "Defensive" : "Elusive", back = wasRetreat ? "Elusive" : "Defensive";
             if (gs.ReportVisible) gs.Click("Close");   // the night's report, if one popped up, is closed first, as a player would
             Expect(gs.Click($"Behavior {flip}") && s.QueuedOrders == q0 + 1, $"Orders: {flip} sends the order (orders waiting {q0} -> {s.QueuedOrders})");
-            gs.PlayRefresh();
-            Expect(gs.Click($"Behavior {back}") && s.QueuedOrders == q0 + 2, $"Orders: {back} sends it back (orders waiting {s.QueuedOrders})");
             gs.PlayDay();
-            Expect((s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat) == wasRetreat, "the last choice holds after the day");
+            if (gs.ReportVisible) gs.Click("Close");
+            Expect((s.Host.Battles.OnContactOfFleet(fid) == Praedra.Core.Battle.OnContactMode.Retreat) == !wasRetreat, $"after the day the fleet is {flip}");
+            Expect(others.All(kv => !s.Game.State.Fleets.ContainsKey(kv.Key) || s.Host.Battles.OnContactOfFleet(kv.Key) == kv.Value), $"the other {others.Count} fleet(s) keep their own setting");
+            gs.Click($"Tab Fleet {fid} Command");
+            int q1 = s.QueuedOrders;
+            Expect(gs.Click($"Behavior {back}") && s.QueuedOrders == q1 + 1, $"Orders: {back} sends it back (orders waiting {q1} -> {s.QueuedOrders})");
+            gs.PlayDay();
+            Expect((s.Host.Battles.OnContactOfFleet(fid) == Praedra.Core.Battle.OnContactMode.Retreat) == wasRetreat, "the last choice holds after the day");
         }
 
         // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back from the head's menu
