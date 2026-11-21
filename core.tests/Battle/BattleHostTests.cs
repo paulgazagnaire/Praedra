@@ -33,16 +33,18 @@ public class BattleHostTests
         Assert.True(mandate.Hull > afterBattle);
     }
 
-    // m4-battle-classic section 1.4: the host attaches the module and OnContact is part of the saved state
+    // m4-battle-classic section 1.4: the host attaches the module and OnContact (per fleet since 2026-11-21, §1.3) is part of the saved state
     [Fact]
     public void HostExposesBattlesAndSavesOnContact()
     {
         var h = GameHost.New(1);
         Assert.NotNull(h.Battles);
-        h.Battles.SubmitSetOnContact(Side.Collective, Praedra.Core.Battle.OnContactMode.Retreat);
+        string at = h.Data.Galaxy.Systems[0].Name;
+        int fleet = h.Fleets.AddFleet(Side.Collective, "Raiders", new[] { "Dodger" }, at);
+        h.Battles.SubmitSetFleetOnContact(Side.Collective, fleet, Praedra.Core.Battle.OnContactMode.Retreat);
         h.Game.Step();
         var loaded = GameHost.Load(h.Save());
-        Assert.Equal(Praedra.Core.Battle.OnContactMode.Retreat, loaded.Battles.OnContactOf(Side.Collective));
+        Assert.Equal(Praedra.Core.Battle.OnContactMode.Retreat, loaded.Battles.OnContactOfFleet(fleet));
         Assert.Equal(h.StateHash(), loaded.StateHash());
     }
 }

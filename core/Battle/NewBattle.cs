@@ -158,10 +158,11 @@ public sealed class NewBattle
         : u.C.Hyperdrive > 0;
 
     /// <summary>The test CanRetreat: null = can; else the first failing reason (checked in the order gravity well, hyperdrive, destination). rule: m4-battle-new §11.2; m4-retreat-damage-repair §1.</summary>
-    private RetreatRefusal? CanRetreat(Side side)
+    private RetreatRefusal? CanRetreat(Side side, bool elusiveOnly = false)
     {
         if (_u.Any(u => u.Side == Other(side) && AliveShip(u) && u.B.Class.GravityWellProjector > 0)) return RetreatRefusal.GravityWell;
-        bool able = _u.Any(u => u.Side == side && (u.State == St.Active || u.State == St.Hangar) && HyperdriveOk(u) && (u.Capital || u.C.Hyperdrive > 0));
+        bool able = _u.Any(u => u.Side == side && (!elusiveOnly || u.B.Elusive) && (u.State == St.Active || u.State == St.Hangar) && HyperdriveOk(u)
+                                && (u.Capital || u.C.Hyperdrive > 0));
         if (!able) return RetreatRefusal.NoHyperdrive;
         if (!_hasDestination[I(side)]) return RetreatRefusal.NoDestination;
         return null;
@@ -235,6 +236,12 @@ public sealed class NewBattle
         {
             if (_alert[I(side)] != OnContactMode.Retreat || ShipsLive(side) == 0 || ShipsLive(Other(side)) == 0 || _decided[I(Other(side))]) continue;
             if (CanRetreat(side) is { } r) Refuse(side, r); else ExecuteRetreat(side);
+        }
+        // rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21): a fighting side's Elusive units leave at second 0 on their own if they can; the rest fights
+        foreach (var side in Sides)
+        {
+            if (_decided[I(side)] || !_u.Any(u => u.Side == side && u.B.Elusive && u.Capital && u.State == St.Active) || ShipsLive(Other(side)) == 0) continue;
+            if (CanRetreat(side, elusiveOnly: true) is { } r) Refuse(side, r); else ExecuteRetreat(side, elusiveOnly: true);
         }
 
         var low = new double[] { double.PositiveInfinity, double.PositiveInfinity };
@@ -840,14 +847,15 @@ public sealed class NewBattle
     /// Retreat executed once per side: ships with a working hyperdrive become jumping (hittable for 5 s, then gone), the others are destroyed; squadrons
     /// riding a leaving ship go with it, one with a hyperdrive jumps alone, the rest take a free berth on a leaving ship (fighter_capacity minus the
     /// squadrons already aboard) in id order, else are destroyed. rule: m4-battle-new §11.3; m4-retreat-damage-repair §2.
+    /// <paramref name="elusiveOnly"/>: the same for the side's Elusive units only; the side is not decided and fights on. rule: m4-battle-classic §1.3.
     /// </summary>
-    private void ExecuteRetreat(Side side)
+    private void ExecuteRetreat(Side side, bool elusiveOnly = false)
     {
-        _decided[I(side)] = true;
+        if (!elusiveOnly) _decided[I(side)] = true;
         var leaving = new List<NU>();
         foreach (var u in _u)
         {
-            if (u.Side != side || !u.Capital || u.State != St.Active) continue;
+            if (u.Side != side || !u.Capital || u.State != St.Active || (elusiveOnly && !u.B.Elusive)) continue;
             if (!HyperdriveOk(u)) { Kill(u, UnitLossReason.NoHyperdrive); continue; } // left behind (DEFAULT, open question 8)
             if (TryHold(u)) continue; // held by an enemy Hold beam: stays on the field and fights on. rule: m4-retreat-damage-repair §6
             u.State = St.Jumping; u.JumpEnd = _t + _np.JumpSeconds; leaving.Add(u); Note("jump", u, null, "");
@@ -857,7 +865,7 @@ public sealed class NewBattle
             free[c.Id] = c.C.FighterSquadrons - _u.Count(q => !q.Capital && q.Side == side && q.Carrier == c && q.State != St.Dead && q.State != St.Left);
         foreach (var q in _u)
         {
-            if (q.Side != side || q.Capital || !(q.State == St.Hangar || q.State == St.Active)) continue;
+            if (q.Side != side || q.Capital || !(q.State == St.Hangar || q.State == St.Active) || (elusiveOnly && !q.B.Elusive)) continue;
             if (q.Carrier != null && q.Carrier.State == St.Jumping) { q.State = St.Leaving; continue; } // keeps its own berth
             if (q.Carrier != null && q.Carrier.HeldBy != null) continue; // stays with its held carrier (DEFAULT). rule: m4-retreat-damage-repair §6
             if (q.C.Hyperdrive > 0)
@@ -873,7 +881,7 @@ public sealed class NewBattle
             }
             Kill(q, UnitLossReason.NoBerth);
         }
-        _steps.Add(new SideRetreatedStep(side, _t));
+        _steps.Add(elusiveOnly ? new ElusiveLeftStep(side, _t) : new SideRetreatedStep(side, _t));
     }
 
     // ---------------------------------------------------------------- the end: docking and result

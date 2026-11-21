@@ -7,23 +7,19 @@ using Praedra.Core.Ships;
 namespace Praedra.Core.Battle;
 
 /// <summary>
-/// Battle state kept in the game state (saved and hashed): each side's standing OnContact answer, and the objects that took part in a battle
-/// in the Step of <see cref="FoughtDay"/>. rule: m4-battle-classic §1.3 (OnContact is per-side game state); m4-retreat-damage-repair §5 (no repair on a battle day).
+/// Battle state kept in the game state (saved and hashed): the objects that took part in a battle in the Step of <see cref="FoughtDay"/>. The
+/// OnContact answer is on each fleet (<see cref="Fleets.Fleet.OnContact"/>). rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21);
+/// m4-retreat-damage-repair §5 (no repair on a battle day).
 /// </summary>
 public sealed class BattleState
 {
-    public int HandOnContact { get; set; }
-    public int CollectiveOnContact { get; set; }
     /// <summary>The Step (K) whose battles fill <see cref="Fought"/>; -1 = none yet.</summary>
     public int FoughtDay { get; set; } = -1;
     /// <summary>Object ids (ships and squadrons) that took part in a battle in Step <see cref="FoughtDay"/>, ascending. Stale after that Step: the query checks the day.</summary>
     public List<int> Fought { get; set; } = new();
 
-    public OnContactMode OnContact(Side s) => (OnContactMode)(s == Side.Hand ? HandOnContact : CollectiveOnContact);
-
     internal void CopyFrom(BattleState o)
     {
-        HandOnContact = o.HandOnContact; CollectiveOnContact = o.CollectiveOnContact;
         FoughtDay = o.FoughtDay; Fought = new List<int>(o.Fought);
     }
 }
@@ -56,6 +52,7 @@ public sealed class BattleModule
     {
         var m = new BattleModule(game, galaxy, fleets, eco, p ?? new BattleParams(), newData);
         game.RegisterOrderHandler<SetOnContactOrder>(m.HandleSetOnContact);
+        game.RegisterOrderHandler<SetFleetOnContactOrder>(m.HandleSetFleetOnContact);
         game.RegisterHook("5", m.Resolve);
         return m;
     }
@@ -64,8 +61,20 @@ public sealed class BattleModule
     private GameState State => _game.State;
     private EconomyState E => _game.State.Economy;
 
-    /// <summary>The side's standing answer to the Battle Alert (the AI side always fights, with its own threshold). rule: m4-battle-classic §1.3.</summary>
-    public OnContactMode OnContactOf(Side side) => IsAi(side) ? OnContactMode.Fight : B.OnContact(side);
+    /// <summary>
+    /// Retreat when the side has fleets and every one of them is set to Retreat, else Fight (the AI side always fights, with its own threshold).
+    /// rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21).
+    /// </summary>
+    public OnContactMode OnContactOf(Side side)
+    {
+        if (IsAi(side)) return OnContactMode.Fight;
+        var mine = State.Fleets.Values.Where(f => f.Side == side).ToList();
+        return mine.Count > 0 && mine.All(f => f.OnContact == OnContactMode.Retreat) ? OnContactMode.Retreat : OnContactMode.Fight;
+    }
+
+    /// <summary>A fleet's standing answer to the Battle Alert as the battle reads it (the AI side always fights). rule: m4-battle-classic §1.3.</summary>
+    public OnContactMode OnContactOfFleet(int fleet) =>
+        State.Fleets.TryGetValue(fleet, out var f) && !IsAi(f.Side) ? f.OnContact : OnContactMode.Fight;
 
     /// <summary>True when no human plays the side (its controller is the computer). rule: B6a §1.</summary>
     public bool IsAi(Side s) => s == Side.Hand ? Params.HandIsAi : Params.CollectiveIsAi;
@@ -125,6 +134,8 @@ public sealed class BattleModule
 
     public long SubmitSetOnContact(Side side, OnContactMode mode) => _game.Submit(seq => new SetOnContactOrder(seq, side, mode));
 
+    public long SubmitSetFleetOnContact(Side side, int fleet, OnContactMode mode) => _game.Submit(seq => new SetFleetOnContactOrder(seq, side, fleet, mode));
+
     /// <summary>
     /// True when this ship or squadron took part in a battle in the Step being run (the repair slot 6.8 reads it: no repair on a battle day).
     /// False between Steps (the day has moved on), so it is false at every save point and the list it reads is saved state.
@@ -132,12 +143,23 @@ public sealed class BattleModule
     /// </summary>
     public bool FoughtThisStep(int objectId) => B.FoughtDay == _game.Day && B.Fought.BinarySearch(objectId) >= 0;
 
-    // rule: m4-battle-classic §1.3 (SetOnContact {side, mode}); the AI side stays Fight
+    // rule: m4-battle-classic §1.3 (SetOnContact {side, mode}: every fleet of the side, in id order); the AI side stays Fight
     private OrderResult HandleSetOnContact(StepContext ctx, SetOnContactOrder o)
     {
         if (!Enum.IsDefined(o.Mode)) return OrderResult.Reject(RejectReason.BadValue);
         if (IsAi(o.Side)) return OrderResult.Reject(BattleReject.AiSide);
-        if (o.Side == Side.Hand) B.HandOnContact = (int)o.Mode; else B.CollectiveOnContact = (int)o.Mode;
+        foreach (var f in State.Fleets.Values.Where(f => f.Side == o.Side).OrderBy(f => f.Id)) f.OnContact = o.Mode;
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    // rule: m4-battle-classic §1.3 (SetFleetOnContact {fleet, mode}: BadValue, UnknownFleet, NotYours, AiSide); the fleet may be anywhere, moving too
+    private OrderResult HandleSetFleetOnContact(StepContext ctx, SetFleetOnContactOrder o)
+    {
+        if (!Enum.IsDefined(o.Mode)) return OrderResult.Reject(RejectReason.BadValue);
+        if (!State.Fleets.TryGetValue(o.Fleet, out var f)) return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (f.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        if (IsAi(o.Side)) return OrderResult.Reject(BattleReject.AiSide);
+        f.OnContact = o.Mode;
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
@@ -266,10 +288,24 @@ public sealed class BattleModule
         var collective = force.Units.Where(u => u.Side == Side.Collective).Select(u => u.ObjectId).ToList();
         var hand = force.Units.Where(u => u.Side == Side.Hand).Select(u => u.ObjectId).ToList();
         ctx.Emit((i, _) => new BattleStarted(i, day, sys, new ValueList<int>(collective), new ValueList<int>(hand)));
+        // rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21): a unit follows its fleet's answer (a squadron aboard follows its ship's fleet), a unit in
+        // no fleet fights. A side whose every unit is set to Retreat answers Retreat; a mixed side answers Fight and its Retreat units leave on their own.
+        var fleetOf = new Dictionary<int, OnContactMode>(); // lookup only
+        foreach (var fid in force.Fleets.OrderBy(i => i))
+            if (State.Fleets.TryGetValue(fid, out var fl))
+            {
+                foreach (var id in fl.Ships) fleetOf[id] = fl.OnContact;
+                foreach (var id in fl.Squadrons) fleetOf[id] = fl.OnContact;
+            }
         var alert = new OnContactMode[2];
         foreach (var s in new[] { Side.Collective, Side.Hand })
         {
-            var mode = OnContactOf(s);
+            var mine = force.Units.Where(u => u.Side == s).ToList();
+            foreach (var u in mine)
+                u.Elusive = !IsAi(s) && (fleetOf.TryGetValue(u.ObjectId, out var m) || (!u.IsCapital && u.Carrier != 0 && fleetOf.TryGetValue(u.Carrier, out m)))
+                    && m == OnContactMode.Retreat;
+            var mode = mine.Count > 0 && mine.All(u => u.Elusive) ? OnContactMode.Retreat : OnContactMode.Fight;
+            if (mode == OnContactMode.Retreat) foreach (var u in mine) u.Elusive = false; // the whole side retreats at the alert
             alert[(int)s] = mode;
             ctx.Emit((i, _) => new BattleChoice(i, day, sys, s, mode));
         }
@@ -330,6 +366,7 @@ public sealed class BattleModule
                 case RetreatRefusedStep r: { var side = r.Side; var why = r.Reason; ctx.Emit((i, _) => new RetreatRefused(i, day, sys, side, why)); break; }
                 case HoldBeamHeldStep h: { int ship = h.Ship.ObjectId, holder = h.Holder.ObjectId, sec = h.Second; ctx.Emit((i, _) => new RetreatHeldByHoldBeam(i, day, sys, ship, holder, sec)); break; } // rule: m4-retreat-damage-repair §6
                 case SideRetreatedStep r: left[r.Side] = true; break;
+                case ElusiveLeftStep r: left[r.Side] = true; break; // only the fleets whose ships all left relocate (Relocate keeps the others)
             }
         }
 

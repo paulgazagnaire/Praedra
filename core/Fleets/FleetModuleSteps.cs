@@ -86,6 +86,7 @@ public sealed partial class FleetModule
         string system = fleet.At!;
         foreach (var s in ships) fleet.Ships.Remove(s.Id);
         var f = NewFleet(o.Side, system, ships.Select(s => s.Id));
+        f.OnContact = fleet.OnContact; // rule: m3-fleets §What a fleet is (a split copies its parent's battle answer, Paul 2026-11-21)
         var members = new ValueList<int>(f.Ships.ToList());
         ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.SplitFleet));
         if (o.Destination != null && SendPath(system, ships, o.Destination) is { Ok: true } path)   // checked above: the same path
