@@ -113,12 +113,14 @@ public partial class GameScreen
 
     /// <summary>
     /// A right-click on a system sends the fleets picked there (the Fleets window's pick, else the fleet selected on the map), each its
-    /// own way, as Move and a click would: a path through a known trap still waits for Go anyway or Go around. Shift+right-click adds a
-    /// waypoint instead. rule: m1-travel §Path rule.
+    /// own way, as Move and a click would: a path through a known trap still waits for Go anyway or Go around. Shift+right-click starts
+    /// the move with that system as a waypoint; while a fleet move is being chosen, a right-click is a left click (Shift adds a waypoint,
+    /// a plain one sends). rule: m1-travel §Path rule.
     /// </summary>
     void OnMapRightClick(int idx)
     {
-        if (idx < 0 || InMoveMode) return;
+        if (idx < 0) return;
+        if (InMoveMode) { if (_moveFleet >= 0) OnSystemPicked(idx); return; }
         var ids = FleetsWindow != null ? _fleetPicks.ToList() : _view.SelectedFleet >= 0 ? new List<int> { _view.SelectedFleet } : new List<int>();
         string to = G.Systems[idx].Name;
         var fs = ids.Select(i => S.Game.State.Fleets.TryGetValue(i, out var f) ? f : null).Where(f => f != null && f.Side == Me && Still(f) && f.At != to).ToList();
@@ -141,7 +143,9 @@ public partial class GameScreen
     void FleetWin(MgWin w)
     {
         var mine = MyFleets();
-        MgHead(w, mine.Count == 0 ? "Fleets" : $"Fleets · {Ui.Count(mine.Count, "fleet", "fleets")}, {Ui.Count(mine.Sum(f => f.Ships.Count), "ship", "ships")}", "Fleets", Ui.Text2);
+        // the window is named after what it shows, as the Ground window is named after its system: the fleet, or "3 fleets"
+        string title = mine.Count == 0 ? "Fleets" : _fleetPicks.Count > 1 ? $"{_fleetPicks.Count} fleets" : S.Game.State.Fleets[w.Fleet].Name;
+        MgHead(w, mine.Count == 0 ? "Fleets" : $"Fleets · {mine.Count} in all, {Ui.Count(mine.Sum(f => f.Ships.Count), "ship", "ships")}", title, Ui.Text2);
         w.Head.AddChild(OnContactRow());
         if (mine.Count == 0) { Line("You have no fleet. Ships you build start a fleet at their shipyard.", Ui.Text3, Ui.Small); return; }
 
@@ -309,10 +313,7 @@ public partial class GameScreen
         var riders = Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
         int posts = new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander }.Count(p => Cm.HolderOf(f.Id, p) != null);
 
-        // the fleet's name and where it is
-        var name = Ui.Label(f.Name.ToUpperInvariant(), null, Ui.Text, 32, wrap: false);
-        name.AddThemeFontOverride("font", Ui.NameFont(32, f.Name.ToUpperInvariant()));
-        Add(name);
+        // where it is (its name is the window's)
         string where = still ? $"At {f.At}." : f.Transit is { } t ? $"Travelling to {t.Path[^1]}, arrives day {GameSession.ArrivalDay(t)}." : "";
         if (S.PlannedMoveOf(f.Id) is { } pm) where = $"At {f.At}. Leaves for {pm.To} when the clock moves, arrives day {pm.ArrivalDay}.";
         Line(where, Ui.Text3, Ui.Small);
@@ -383,9 +384,6 @@ public partial class GameScreen
 
     void ManyFleets(MgWin w, List<Fleet> fs)
     {
-        var name = Ui.Label($"{fs.Count} FLEETS", null, Ui.Text, 32, wrap: false);
-        name.AddThemeFontOverride("font", Ui.NameFont(32, $"{fs.Count} FLEETS"));
-        Add(name);
         var places = fs.Select(f => f.At ?? (f.Transit != null ? $"on the way to {f.Transit.Path[^1]}" : "?")).Distinct().ToList();
         Line(places.Count == 1 ? $"All at {places[0]}." : $"At {Ui.Count(places.Count, "place", "places")}: {string.Join(", ", places)}.", Ui.Text3, Ui.Small);
         Add(Ui.Space(4));
@@ -452,7 +450,7 @@ public partial class GameScreen
         var bar = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
         bar.AddThemeConstantOverride("h_separation", 8); bar.AddThemeConstantOverride("v_separation", 8);
         int n = fs.Count;
-        string Of(int k) => n == 1 || k == 0 ? "" : k == n ? $" {k}" : $" {k} of {n}";
+        string Of(int k) => n == 1 || k == 0 || k == n ? "" : $" {k} of {n}";   // a count only when some can't: the title says "3 fleets"
         var still = fs.Where(Still).ToList();
 
         // move
@@ -697,7 +695,8 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// One ship: its class and number, its hull, its damage in words, whether it is being repaired, the class's stats and what it carries.
+    /// One ship: its class and number, its hull, its damage in words, whether it is being repaired, what it carries, then the numbers
+    /// of its class (the same for every ship of the class, so they come last).
     /// rule: m3-ships-and-fighters §Damaged state, §Class data; m4-retreat-damage-repair §5.
     /// </summary>
     void ShipDetail(Fleet f, EconObject o)
@@ -710,6 +709,26 @@ public partial class GameScreen
         Line(hits.Count == 0 ? "No damage." : $"Damaged: {string.Join(", ", hits)}." + (o.Hits is { Count: > 4 } hh && hh[4] > 0 ? " A damaged hyperdrive makes it slower." : ""),
             hits.Count == 0 ? Ui.Text3 : Ui.Warn, Ui.Small);
         if (o.RepairMode != 0) Line("Being repaired.", Ui.Text3, Ui.Small);
+
+        // what it carries
+        var sq = Fm.UnitsAboard(o.Id, ObjectCategory.Fighter).OrderBy(x => x.Id).ToList();
+        var rg = Fm.UnitsAboard(o.Id, ObjectCategory.Regiment).OrderBy(x => x.Id).ToList();
+        if (sc.FighterCapacity + sc.TroopCapacity > 0)
+        {
+            var parts = new List<string>();
+            if (sc.FighterCapacity > 0) parts.Add($"{sq.Count} of {sc.FighterCapacity} fighter berths");
+            if (sc.TroopCapacity > 0) parts.Add($"{rg.Count} of {sc.TroopCapacity} regiment places");
+            Section("It carries", string.Join(" · ", parts), "Squadrons and regiments ride on one ship of the fleet. Drag one to a planet's window to unload it.");
+            if (sq.Count + rg.Count == 0) Line("Nothing aboard.", Ui.Dimmed, Ui.Small);
+            else
+            {
+                var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+                flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
+                UnitTiles(flow, sq.Select(x => ((Drag?)new Drag('Q', x.Id), x, (string)null)).Concat(rg.Select(x => ((Drag?)new Drag('R', x.Id), x, (string)null))), f.At);
+                Add(flow);
+            }
+        }
+        else Line("It carries no fighters and no regiments.", Ui.Text3, Ui.Small);
 
         // the class's numbers
         if (S.Host.Economy.Costs.TryGet(o.Class, out var row))
@@ -731,25 +750,6 @@ public partial class GameScreen
             Add(grid);
             if (extra != null) Line(extra, Ui.Text3, Ui.Tiny);
         }
-        // what it carries
-        var sq = Fm.UnitsAboard(o.Id, ObjectCategory.Fighter).OrderBy(x => x.Id).ToList();
-        var rg = Fm.UnitsAboard(o.Id, ObjectCategory.Regiment).OrderBy(x => x.Id).ToList();
-        if (sc.FighterCapacity + sc.TroopCapacity > 0)
-        {
-            var parts = new List<string>();
-            if (sc.FighterCapacity > 0) parts.Add($"{sq.Count} of {sc.FighterCapacity} fighter berths");
-            if (sc.TroopCapacity > 0) parts.Add($"{rg.Count} of {sc.TroopCapacity} regiment places");
-            Section("It carries", string.Join(" · ", parts), "Squadrons and regiments ride on one ship of the fleet. Drag one to a planet's window to unload it.");
-            if (sq.Count + rg.Count == 0) Line("Nothing aboard.", Ui.Dimmed, Ui.Small);
-            else
-            {
-                var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
-                flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
-                UnitTiles(flow, sq.Select(x => ((Drag?)new Drag('Q', x.Id), x, (string)null)).Concat(rg.Select(x => ((Drag?)new Drag('R', x.Id), x, (string)null))), f.At);
-                Add(flow);
-            }
-        }
-        else Line("It carries no fighters and no regiments.", Ui.Text3, Ui.Small);
     }
 
     /// <summary>Several ships of the fleet picked: split them off into a new fleet, or scrap them; or drag them onto another fleet.</summary>
