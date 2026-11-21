@@ -55,8 +55,9 @@ public partial class GameScreen
         var shown = new HashSet<Drag>();
         void Walk(Node node)
         {
-            // a tab that is not in front still counts: its window is open (a fleet's picked ship shows on its own tab, over the ship cards)
-            if (node is CanvasItem ci && !ci.Visible && !ci.HasMeta("page")) return;
+            // a tab that is not in front still counts: its window is open (a fleet's picked ship shows on its own tab, over the ship cards);
+            // so do the windows while they step aside for a fleet's move (Ponytail on #348: a window closing then dropped every pick)
+            if (node is CanvasItem ci && !ci.Visible && !ci.HasMeta("page") && node != _mgLayer) return;
             if (node is Control c && c.HasMeta(UiTest.FullName) && Drag.Parse(c.GetMeta(UiTest.FullName).AsString()) is { } d) shown.Add(d);
             foreach (var ch in node.GetChildren()) Walk(ch);
         }

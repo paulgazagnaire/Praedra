@@ -76,6 +76,14 @@ public partial class Main
         Expect(page.Contains("IT CARRIES") || page.Contains("It carries no fighters"), "and what it carries");
         Expect(page.Contains($"EVERY {ship.Class.ToUpperInvariant()}") && page.Contains("Trip time"), "and the numbers of its class");
         ship.Hull = hull0; if (hits0 != null) ship.Hits = hits0;
+        // a window that closes while the windows step aside for a move (its fleet merged away or lost) leaves the other windows' picks
+        // alone (Ponytail on #348)
+        gs.ShotWindow("fleet", bid.ToString());
+        Expect(gs.Click("Fleet Move") && !gs.MgShown, "Move... with two fleet windows open: both step aside");
+        gs.PlayCloseTop();
+        Expect(gs.PickedKeys.Contains($"S:{ship.Id}"), "a window closing meanwhile keeps the ship picked in the other");
+        gs.PressKey(Key.Escape);
+        Expect(gs.MgShown && !gs.InMoveMode && gs.MgmtKeys.Contains(key), "Esc cancels the move and the other window is back");
         if (a.Ships.Count >= 3)
         {
             gs.PlayPick($"S:{a.Ships[1]}", true); gs.PlayRefresh();
