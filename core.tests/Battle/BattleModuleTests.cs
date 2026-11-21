@@ -198,17 +198,20 @@ public class BattleModuleTests
         Assert.Equal(OnContactMode.Fight, choices.Single(c => c.Side == Side.Hand).Mode);
     }
 
-    // m4-battle-classic §1.3: OnContact is saved and hashed
+    // m4-battle-classic §1.3 (per fleet since 2026-11-21): OnContact is on each fleet, saved and hashed; SetOnContact sets every fleet of the side
     [Fact]
     public void OnContactIsSavedAndHashed()
     {
         var w = new BattleWorld();
+        int a = w.Fleet(Side.Collective, "A", Corvette, 1), b = w.Fleet(Side.Collective, "C", Corvette, 1);
         string h0 = GameSave.StateHash(w.Game);
         w.Battles.SubmitSetOnContact(Side.Collective, OnContactMode.Retreat);
         w.Run();
         Assert.NotEqual(h0, GameSave.StateHash(w.Game));
+        Assert.Equal(OnContactMode.Retreat, w.Battles.OnContactOf(Side.Collective));
         var g = GameSave.Load(GameSave.Save(w.Game));
-        Assert.Equal((int)OnContactMode.Retreat, g.State.Battle.CollectiveOnContact);
+        Assert.Equal(OnContactMode.Retreat, g.State.Fleets[a].OnContact);
+        Assert.Equal(OnContactMode.Retreat, g.State.Fleets[b].OnContact);
         Assert.Equal(GameSave.StateHash(w.Game), GameSave.StateHash(g));
     }
 

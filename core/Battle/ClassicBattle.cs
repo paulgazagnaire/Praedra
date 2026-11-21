@@ -42,6 +42,11 @@ public sealed class BattleUnit
     public bool Alive { get; set; } = true;
     /// <summary>The side retreated and this unit jumped (it survived).</summary>
     public bool Left { get; set; }
+    /// <summary>
+    /// The unit's fleet is set to Retreat (Elusive) while its side fights: it leaves on its own at its side's first step. Set by the caller; false when
+    /// the whole side answered Retreat. rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21).
+    /// </summary>
+    public bool Elusive { get; set; }
     /// <summary>Retreat: a squadron that docked in (or found a free berth on) this ship (object id), or 0.</summary>
     public int NewCarrier { get; set; }
     /// <summary>Retreat: a squadron with a working hyperdrive that jumped on its own (it needs no berth).</summary>
@@ -67,6 +72,8 @@ public sealed record RetreatRefusedStep(Side Side, RetreatRefusal Reason) : Batt
 public sealed record HoldBeamHeldStep(BattleUnit Ship, BattleUnit Holder, int Second) : BattleStep;
 /// <summary>A side retreated (its units are marked <see cref="BattleUnit.Left"/>). rule: m4-retreat-damage-repair §2.</summary>
 public sealed record SideRetreatedStep(Side Side, int Second) : BattleStep;
+/// <summary>The Elusive units of a fighting side left on their own (marked <see cref="BattleUnit.Left"/>); the rest fights on. rule: m4-battle-classic §1.3.</summary>
+public sealed record ElusiveLeftStep(Side Side, int Second) : BattleStep;
 
 /// <summary>The result of one battle.</summary>
 public sealed class ClassicBattleResult
@@ -493,6 +500,22 @@ public sealed class ClassicBattle
         return null;
     }
 
+    /// <summary>
+    /// The Elusive units of a fighting side: they leave when the side could retreat with them alone (no enemy gravity well, one of them can jump, a
+    /// destination) and the enemy's strength is above 0, the test of a side set to Retreat. Retested every step; a refusal is reported once per battle.
+    /// rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21).
+    /// </summary>
+    private bool ElusiveLeave(Side side)
+    {
+        if (_retreated[I(side)] || !_units.Any(u => u.Elusive && u.Side == side && Active(u))) return false;
+        if (!ClassicRates.RetreatWanted(Strength(side), Strength(Other(side)), _p.RetreatAlertThreshold)) return false;
+        RetreatRefusal? why = AliveOf(Other(side)).Any(u => u.IsCapital && u.Class.GravityWellProjector > 0) ? RetreatRefusal.GravityWell
+            : !AliveOf(side).Any(u => u.Elusive && !u.Docked && ClassicRates.CanJump(_p, u)) ? RetreatRefusal.NoHyperdrive
+            : !_hasDestination[I(side)] ? RetreatRefusal.NoDestination : null;
+        if (why is { } r) { Refuse(side, r); return false; }
+        return true;
+    }
+
     /// <summary>The retreat test of a side's step (0x5d19a0); a refused retreat is reported once per battle. rule: m4-battle-classic §8.4.</summary>
     private bool WantsRetreat(Side side)
     {
@@ -711,6 +734,7 @@ public sealed class ClassicBattle
         Assign(side);
         Fire(side);
         if (WantsRetreat(side)) ExecuteRetreat(side);
+        else if (ElusiveLeave(side)) ExecuteRetreat(side, elusiveOnly: true);
         Recharge(side);
         return !HasUnits(side);
     }
@@ -732,7 +756,9 @@ public sealed class ClassicBattle
             if (v.Hull <= 0) Kill(v, UnitLossReason.Combat);
         }
         var want = Order.Where(s => HasUnits(s) && WantsRetreat(s)).ToList();
+        var elusive = Order.Where(s => HasUnits(s) && !want.Contains(s) && ElusiveLeave(s)).ToList();
         foreach (var s in want) ExecuteRetreat(s);
+        foreach (var s in elusive) ExecuteRetreat(s, elusiveOnly: true);
         foreach (var s in Order) Recharge(s);
         return (!hasE || !HasUnits(Side.Hand), !hasA || !HasUnits(Side.Collective));
     }
@@ -746,30 +772,32 @@ public sealed class ClassicBattle
     /// Squadrons first, in the side's list order: one that can jump leaves; else it docks in its own carrier still in the battle (its hyperdrive is not
     /// checked), else in the first own capital ship with room, else (Hand) in the harvester; no room: destroyed. Then the harvester leaves; then
     /// capital ships that can jump leave and the others are destroyed with everything docked in them. rule: m4-retreat-damage-repair §2.
+    /// <paramref name="elusiveOnly"/>: the same for the side's Elusive units only (they dock only in Elusive ships); the side fights on. rule: m4-battle-classic §1.3.
     /// </summary>
-    private void ExecuteRetreat(Side side)
+    private void ExecuteRetreat(Side side, bool elusiveOnly = false)
     {
-        _retreated[I(side)] = true;
+        if (!elusiveOnly) _retreated[I(side)] = true;
+        bool Goes(BattleUnit u) => !elusiveOnly || u.Elusive;
         foreach (var q in _squadList[I(side)].ToList())
         {
-            if (!q.Alive || q.Docked) continue;
+            if (!q.Alive || q.Docked || !Goes(q)) continue;
             if (ClassicRates.CanJump(_p, q)) { q.Alive = false; q.Left = true; q.JumpedAlone = true; continue; }
             BattleUnit? ship = null;
-            var own = q.Carrier != 0 ? _units.FirstOrDefault(c => c.IsCapital && c.Side == side && c.ObjectId == q.Carrier && Active(c)) : null;
+            var own = q.Carrier != 0 ? _units.FirstOrDefault(c => c.IsCapital && c.Side == side && c.ObjectId == q.Carrier && Active(c) && Goes(c)) : null;
             if (own != null && HasRoom(own)) ship = own;
-            ship ??= _units.FirstOrDefault(c => c.IsCapital && c.Side == side && Active(c) && !IsHarvester(c) && HasRoom(c));
-            if (ship == null && side == Side.Hand) ship = _units.FirstOrDefault(c => Active(c) && c.Side == side && IsHarvester(c) && HasRoom(c));
+            ship ??= _units.FirstOrDefault(c => c.IsCapital && c.Side == side && Active(c) && Goes(c) && !IsHarvester(c) && HasRoom(c));
+            if (ship == null && side == Side.Hand) ship = _units.FirstOrDefault(c => Active(c) && c.Side == side && Goes(c) && IsHarvester(c) && HasRoom(c));
             if (ship == null) { Kill(q, UnitLossReason.NoBerth); continue; }
             q.Docked = true; q.DockedIn = ship;
         }
         // squadrons docked from the start that never launched (none in practice) stay docked in their carrier
-        foreach (var ds in _units.Where(u => u.Side == side && Active(u) && IsHarvester(u)).ToList()) Leave(ds);
-        foreach (var c in _units.Where(u => u.Side == side && u.IsCapital && Active(u)).ToList())
+        foreach (var ds in _units.Where(u => u.Side == side && Active(u) && Goes(u) && IsHarvester(u)).ToList()) Leave(ds);
+        foreach (var c in _units.Where(u => u.Side == side && u.IsCapital && Active(u) && Goes(u)).ToList())
         {
             if (ClassicRates.CanJump(_p, c)) Leave(c);
             else Kill(c, UnitLossReason.NoHyperdrive);
         }
-        _steps.Add(new SideRetreatedStep(side, _second));
+        _steps.Add(elusiveOnly ? new ElusiveLeftStep(side, _second) : new SideRetreatedStep(side, _second));
     }
 
     private void Leave(BattleUnit c)
@@ -839,7 +867,7 @@ public sealed class ClassicBattle
         bool aliveA = HasUnits(Side.Collective), aliveE = HasUnits(Side.Hand);
         BattleOutcome Outcome(Side s, bool alive, bool otherAlive) =>
             alive && !otherAlive ? BattleOutcome.Victorious
-            : !alive && otherAlive ? (_retreated[I(s)] ? BattleOutcome.Retreated : BattleOutcome.Annihilated)
+            : !alive && otherAlive ? (_retreated[I(s)] || _units.Any(u => u.Side == s && u.Left) ? BattleOutcome.Retreated : BattleOutcome.Annihilated)
             : BattleOutcome.Indecisive;
         int Lost(Side s) => _units.Count(u => u.Side == s && u.Destroyed);
         int Survived(Side s) => _units.Count(u => u.Side == s && !u.Destroyed);

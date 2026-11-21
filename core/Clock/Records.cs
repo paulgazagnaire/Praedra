@@ -31,6 +31,7 @@ public enum Side { Hand = 0, Collective = 1 }
 [JsonDerivedType(typeof(Praedra.Core.Defenses.BombardOrder), "Bombard")]
 [JsonDerivedType(typeof(Praedra.Core.Assault.AssaultOrder), "Assault")]
 [JsonDerivedType(typeof(Praedra.Core.Battle.SetOnContactOrder), "SetOnContact")]
+[JsonDerivedType(typeof(Praedra.Core.Battle.SetFleetOnContactOrder), "SetFleetOnContact")]
 [JsonDerivedType(typeof(Praedra.Core.Fog.MoveHqOrder), "MoveHq")]
 [JsonDerivedType(typeof(Praedra.Core.Characters.AttachCharacterOrder), "AttachCharacter")]
 [JsonDerivedType(typeof(Praedra.Core.Characters.DetachCharacterOrder), "DetachCharacter")]
