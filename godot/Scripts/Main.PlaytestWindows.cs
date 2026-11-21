@@ -50,7 +50,7 @@ public partial class Main
         Expect(gs.Click($"Tab Ground {sys} Fleets") && gs.MgTab($"Ground {sys}") == "Fleets", "a click on the Fleets tab shows it");
         Expect(gs.Click($"Open {fleet.Name}"), $"the Fleets tab's Open button opens {fleet.Name}");
         gs.PlayRefresh();
-        Expect(gs.MgmtCount == 2 && gs.MgHasZone($"Fleet {fid} Admiral") && gs.MgHasZone($"Fleet {fid} Passengers"), "the Fleets window opens beside it, with the fleet's posts and passengers");
+        Expect(gs.MgmtCount == 2 && gs.MgHasZone($"Fleet {fid} Admiral") && gs.MgHasZone($"Fleet {fid} Passengers"), "the fleet window opens beside it, with its posts and passengers");
         // a hover card stays while you read it when a day passes (Paul 2026-11-19), and the window catches up once the mouse moves off
         var (tipHeld, tipCaught, tipText) = gs.PlayTipHold($"Ground {sys}");
         Expect(tipHeld && tipCaught, $"a hover card in the system window stays up when a day passes, and the window updates after (held {tipHeld}, caught up {tipCaught}, card \"{tipText?.Split('\n')[0]}\")");
@@ -125,10 +125,10 @@ public partial class Main
             Expect(gs.MgDrop($"R:{reg.Id}", $"Fleet {fid} Troops")?.Contains("no troop room") == true, "a fleet with no troop room refuses regiments");
 
         // ---------------------------------------------------------------- the order bar and the head (Paul 2026-11-21): attack, merge, fight or retreat, scrap
-        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Ships,Fighters,Troops,Leaders", $"the fleet's tabs: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
+        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Fighters,Troops,Leaders", $"the fleet's tabs, with no ship picked: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
         Expect(gs.MgText($"Fleet {fid}").Contains("ALL FLEETS, WHEN AN ENEMY ARRIVES") && gs.Has("On contact Fight") && gs.Has("On contact Retreat"), "the head: fight or retreat, one setting for every fleet");
-        Expect(gs.Has("Fleets Move") && gs.Has("Fleets Merge") && gs.Has("Fleets Bombard") && gs.Has("Fleets Invade") && gs.Has("Fleets Scrap"), "the order bar: Move, Merge, Bombard, Invade, Scrap");
-        if (fleet.At != null && fleet.Transit == null) Expect(gs.Enabled("Fleets Scrap") && gs.TipOf("Fleets Scrap").Contains("right-click"), "Scrap the fleet, and how to scrap one ship");
+        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "the order bar: Move, Merge, Bombard, Invade, Scrap");
+        if (fleet.At != null && fleet.Transit == null) Expect(gs.Enabled("Fleet Scrap") && gs.TipOf("Fleet Scrap").Contains("right-click"), "Scrap the fleet, and how to scrap one ship");
         {
             int q0 = s.QueuedOrders;
             bool wasRetreat = s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat;
@@ -141,7 +141,7 @@ public partial class Main
             Expect((s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat) == wasRetreat, "the last choice holds after the day");
         }
 
-        // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back by the grip
+        // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back with Merge with
         if (fleet.Ships.Count > 1)
         {
             for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first (a system lost overnight)
@@ -162,12 +162,14 @@ public partial class Main
             if (ship2 != 0) Expect(made != null && made.Ships.Contains(ship2) && s.Game.State.Fleets.Keys.Count(k => !before.Contains(k)) == 1, "two ships dropped the same day make one new fleet (QA)");
             if (made != null)
             {
+                gs.MgText($"Fleet {fid}");   // only this fleet's window is open: its Merge with is the one pressed
+                int qm = s.QueuedOrders;
+                Expect(gs.RunMenu("Fleet Merge", $"{made.Name}: here") && s.QueuedOrders == qm + 1, $"{fleet.Name}'s Merge with lists {made.Name}, standing with it: one merge order");
                 gs.ShotWindow("fleet", made.Id.ToString()); gs.PlayRefresh();
-                Expect(gs.MgDrop($"M:{made.Id}", $"Fleet {fid} Row") == null, $"drag {made.Name} onto {fleet.Name} in the fleet list");
                 Expect(gs.MgDrop($"M:{fid}", $"Fleet {made.Id} Ships") != null, "the other fleet can't be merged back into it the same day (QA)");
                 gs.PlayDay(); gs.PlayRefresh();
                 Expect(!s.Game.State.Fleets.ContainsKey(made.Id) && fleet.Ships.Contains(ship), "next day it has merged back");
-                Expect(gs.MgmtKeys.Any(k => k.StartsWith("Fleet ", StringComparison.Ordinal)) && !gs.MgmtKeys.Contains($"Fleet {made.Id}"), "the Fleets window moves on from the merged fleet by itself");
+                Expect(!gs.MgmtKeys.Contains($"Fleet {made.Id}"), "the merged fleet's window closes by itself");
             }
         }
 
@@ -182,7 +184,7 @@ public partial class Main
             gs.PlayDay();
             var two = s.Game.State.Fleets.Values.Where(f => !before2.Contains(f.Id)).ToList();
             Expect(two.Count == 1 && two[0].Ships.Contains(a1) && two[0].Ships.Contains(a2), $"next day they make one new fleet ({two.Count} made)");
-            if (two.Count == 1) { gs.ShotWindow("fleet", two[0].Id.ToString()); gs.PlayRefresh(); gs.MgDrop($"M:{two[0].Id}", $"Fleet {big.Id} Row"); gs.PlayDay(); }
+            if (two.Count == 1) { gs.ShotWindow("fleet", two[0].Id.ToString()); gs.PlayRefresh(); gs.MgDrop($"M:{two[0].Id}", $"Fleet {big.Id} Ships"); gs.PlayDay(); }
         }
         else GD.Print("  (no fleet of three ships: the two-ship split is not checked on this side)");
 
@@ -259,7 +261,7 @@ public partial class Main
         PlaytestInfra(gs, sys);
         gs.TileClick(sys, "infra"); gs.PlayRefresh();
         gs.TileClick(sys, "fleets"); gs.PlayRefresh();
-        Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the Fleets window on the fleets there");
+        Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the fleet windows");
         gs.TileClick(sys, "ground"); gs.PlayRefresh();
         Expect(gs.MgmtKeys.Contains($"Ground {sys}"), "a click elsewhere on the tile opens its Ground window");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);

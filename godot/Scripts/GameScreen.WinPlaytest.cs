@@ -62,7 +62,7 @@ public partial class GameScreen
     }
 
     /// <summary>Right-click the button named <paramref name="fullName"/> and pick the menu line starting with <paramref name="item"/>.</summary>
-    /// <summary>Shift+click on a fleet's marker on the map, as the mouse would (the Fleets window's pick).</summary>
+    /// <summary>Shift+click on a fleet's marker on the map, as the mouse would (several fleets picked on the map).</summary>
     internal void PlayShiftClickFleet(int id) => ShiftPickOnMap(id);
 
     /// <summary>A right-click on a system on the map, as the mouse would.</summary>

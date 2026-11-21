@@ -77,7 +77,7 @@ public partial class GameScreen : Control
         _view.SystemPicked += OnSystemPicked;
         _view.SectorClicked += OpenSector;
         _view.FleetPicker = _fleets.Pick;
-        _view.FleetShiftClicked += ShiftPickOnMap;   // the Fleets window's pick (Paul 2026-11-21)
+        _view.FleetShiftClicked += ShiftPickOnMap;   // several fleets picked on the map (Paul 2026-11-21)
         _view.RightClicked += OnMapRightClick;
         _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;
@@ -267,7 +267,7 @@ public partial class GameScreen : Control
             case Key.Space: TogglePlay(); break;
             case Key.N: StepOne(); break;
             case Key.Q: ShowTab(DrawerTab.Needs); break;
-            case Key.F: OpenFleets(); break;   // the Fleets window (Paul 2026-11-21)
+            case Key.F: OpenFleets(); break;   // the selected fleet's window, else the drawer's fleets (Paul 2026-11-21)
             case Key.C: ToggleCharacters(); break;
             case Key.M: ToggleMissions(); break;
             case Key.E: ShowTab(DrawerTab.Log); break;
@@ -303,6 +303,7 @@ public partial class GameScreen : Control
         if (_searchResults.Visible) { CloseSearch(); return; }
         if (_layersCard.Visible) { ToggleLayers(); return; }
         if (ClearPicks()) return;   // Escape first lets picked units go, then closes windows
+        if (ClearMapPicks()) return;   // then the fleets picked on the map
         if (CloseTopMgmt()) return;
         if (SectorViewOpen) { CloseSectorView(); return; }
         if (InMoveMode) { CancelMove(); return; }

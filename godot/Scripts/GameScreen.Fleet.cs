@@ -80,9 +80,9 @@ public partial class GameScreen
             "Then click a destination system (or a row of a sector window). The route and arrival day show before anything is sent.", !atSystem, "Primary");
         move.Alignment = HorizontalAlignment.Center;
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
-        // attack, the harvester's strike, merge, fight or retreat and scrap live in the Fleets window only (Paul 2026-11-14 pick 5, 2026-11-21)
-        Act("Fleets window: attack, merge, ships...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
-            "Opens the Fleets window on this fleet: bombard, invade" + (S.HoldsHarvester(f) ? ", the harvester's strike" : "") + ", merge, its ships one by one, what they carry, fight or retreat, and scrap.")
+        // attack, the harvester's strike, merge, fight or retreat and scrap live in the fleet's window only (Paul 2026-11-14 pick 5, 2026-11-21)
+        Act("Fleet window: attack, merge, ships...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
+            "Opens the fleet's window: bombard, invade" + (S.HoldsHarvester(f) ? ", the harvester's strike" : "") + ", merge with another fleet, its ships one by one, what they carry, fight or retreat, and scrap.")
             .SetMeta(UiTest.FullName, "Fleet orders");
 
         if (atSystem)
@@ -108,7 +108,7 @@ public partial class GameScreen
                 Act($"Unload all troops at {at}", () => UnloadTroops(f, aboard.Select(a => a.Regiment.Id).ToList()),
                     owner == Me ? "Lands the regiments on the planet: they join its garrison."
                     : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
-                    : "Lands the regiments only on a system you hold. To land them here, invade it from the Fleets window.", owner != Me);
+                    : "Lands the regiments only on a system you hold. To land them here, invade it from the fleet's window.", owner != Me);
 
             // fighters (C7)
             var based = FightersBasedAt(at);

@@ -543,7 +543,7 @@ public partial class FleetLayer : Control
         foreach (var (f, p, h, count) in DrawnOwn(placed))
         {
             var col = ColorOf(f.Side);
-            bool selected = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id);   // or picked in the Fleets window
+            bool selected = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id);   // or picked with Shift+click
             float r = selected ? 10f : 8.5f;
             var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };

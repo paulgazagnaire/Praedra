@@ -23,105 +23,68 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The Fleets window (Paul 2026-11-21: "I need a better way to manage fleets... merge fleets, select individual ships, see their stats and
-/// their inventory... assign one or multiple fleets an order"). Two columns: on the left every fleet of yours, grouped by danger; on the
-/// right the fleet picked, or the fleets picked. A click picks one fleet, Shift+click adds one or takes it out. One action bar gives the
-/// picked fleets their orders: move, merge, bombard, invade, scrap. A ship is a card with its hull and what it carries; a click on it
-/// shows its stats, its damage and its cargo. Every order is one the core already has, judged when the clock moves. Screens only.
+/// A fleet's window (Paul 2026-11-21: "a fleet (single fleet) window that works really well"). Two columns. The left holds the fleet:
+/// where it is, its numbers, one bar of orders (move, merge with another fleet, bombard, invade, scrap) and its ships, one card each with
+/// its hull and what it carries. The right holds what the fleet carries and who leads it, and the ship picked: its hull, its damage in
+/// words, its cargo and its class's numbers. Several fleets are picked on the map with Shift+click, and a right-click on a system sends
+/// them there (Paul's pick: move only). Every order is one the core already has, judged when the clock moves. Screens only.
 /// </summary>
 public partial class GameScreen
 {
     const int FleetListW = 150;   // the Ground window's fleet rows, two to a row
-    const int FleetColW = 196;    // the Fleets window's list column
-    const int ShipTileW = 104;    // a ship card, a little wider than a tile for its cargo: four to a row beside the list
-    const int RightColW = WideWidth - 34 - 4 - FleetColW - WinGap;   // the rest of the page: the fleet or fleets picked
-
-    /// <summary>The fleets picked in the Fleets window, in the order picked: the first is where a merge gathers.</summary>
-    readonly List<int> _fleetPicks = new();
+    const int FleetColW = (WideWidth - 34 - 4 - WinGap) / 2;   // each of the window's two columns
+    const int ShipTileW = 100;    // a ship card, a little wider than a tile for its cargo: three to a column
 
     static readonly string[] HitNames = { "shield generator", "weapons", "hold beam", "sub-light engines", "hyperdrive", "damage control" };
 
-    /// <summary>Keep the window's fleet and the picks to fleets you still have: a fleet merged away or lost gives way to the next.</summary>
-    void SettleFleets(MgWin w)
-    {
-        var mine = MyFleets();
-        _fleetPicks.RemoveAll(id => !mine.Any(f => f.Id == id));
-        if (!mine.Any(f => f.Id == w.Fleet)) w.Fleet = _fleetPicks.Count > 0 ? _fleetPicks[^1] : mine.FirstOrDefault()?.Id ?? 0;
-        if (_fleetPicks.Count == 0 && w.Fleet > 0) _fleetPicks.Add(w.Fleet);
-    }
+    /// <summary>The ship picks each window last showed: a new pick brings its tab to the front.</summary>
+    readonly Dictionary<string, string> _shipPickSeen = new();
 
     List<Fleet> MyFleets() => S.Game.State.Fleets.Values.Where(f => f.Side == Me).OrderBy(f => f.Id).ToList();
 
-    /// <summary>Your fleets in the order a commander looks at them: facing the enemy, at enemy or neutral systems, moving, at home.</summary>
-    List<(string Head, List<Fleet> Fleets)> FleetGroups(List<Fleet> mine)
-    {
-        bool AtEnemy(Fleet f) => f.At != null && (S.OwnerOf(f.At) != Me || S.VisibleEnemyFleetsAt(f.At).Count > 0);
-        var groups = new List<(string, List<Fleet>)>
-        {
-            ("Facing the enemy", mine.Where(f => f.At != null && S.VisibleEnemyFleetsAt(f.At).Count > 0).ToList()),
-            ("At enemy or neutral systems", mine.Where(f => f.At != null && S.VisibleEnemyFleetsAt(f.At).Count == 0 && S.OwnerOf(f.At) != Me).ToList()),
-            ("Moving", mine.Where(f => f.At == null || S.PlannedMoveOf(f.Id) != null).Where(f => !AtEnemy(f) || f.At == null).ToList()),
-            ("At your systems", mine.Where(f => f.At != null && !AtEnemy(f) && S.PlannedMoveOf(f.Id) == null).ToList()),
-        };
-        return groups.Where(g => g.Item2.Count > 0)
-            .Select(g => (g.Item1, g.Item2.OrderBy(f => f.At ?? f.Transit?.Path[^1], StringComparer.Ordinal).ThenBy(f => f.Id).ToList())).ToList();
-    }
-
-    /// <summary>F: the Fleets window, showing the fleet selected on the map, else the first in the list; brought forward if open.</summary>
+    /// <summary>F: the window of the fleet selected on the map; with none selected, the drawer's list of fleets.</summary>
     internal void OpenFleets()
     {
-        if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet) is { } open) { Front(open); open.Min = false; RebuildMg(open); return; }
-        var mine = MyFleets();
-        if (mine.Count == 0) { Toast("You have no fleet.", MsgKind.Info); return; }
-        int id = mine.Any(f => f.Id == _view.SelectedFleet) ? _view.SelectedFleet : FleetGroups(mine)[0].Fleets[0].Id;
-        OpenMgmt(MgKind.Fleet, fleet: id);
+        if (S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f) && f.Side == Me) OpenMgmt(MgKind.Fleet, fleet: f.Id);
+        else ShowTab(DrawerTab.Fleets);
     }
 
-    MgWin FleetsWindow => _mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet);
+    // ================================================================== several fleets on the map (Paul 2026-11-21: move only)
 
-    /// <summary>The Fleets window with these fleets picked (a sector tile's triangles: the fleets there); the first is shown and gathers a merge.</summary>
-    void OpenFleetsPicked(List<int> ids)
-    {
-        if (ids.Count == 0) return;
-        OpenMgmt(MgKind.Fleet, fleet: ids[0]);
-        if (FleetsWindow is not { } w) return;
-        _fleetPicks.AddRange(ids.Skip(1).Where(id => !_fleetPicks.Contains(id)));
-        RebuildMg(w);
-    }
-
-    /// <summary>Shift+click on one of your fleets on the map: it joins the Fleets window's pick, or leaves it. With the window closed it
-    /// opens with the fleet selected on the map and this one picked.</summary>
+    /// <summary>Shift+click on one of your fleets on the map: it joins the fleets picked, or leaves them. The fleet selected before counts
+    /// as the first one picked.</summary>
     void ShiftPickOnMap(int id)
     {
         if (!S.Game.State.Fleets.TryGetValue(id, out var f) || f.Side != Me) return;
-        if (FleetsWindow is { } w) { PickFleet(w, id, true); return; }
-        int first = _view.SelectedFleet;
-        bool two = first >= 0 && first != id && S.Game.State.Fleets.TryGetValue(first, out var ff) && ff.Side == Me;
-        OpenMgmt(MgKind.Fleet, fleet: two ? first : id);
-        if (two && FleetsWindow is { } w2) PickFleet(w2, id, true);
+        var picks = _view.PickedFleets;
+        if (picks.Count == 0 && _view.SelectedFleet >= 0 && _view.SelectedFleet != id && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var sel) && sel.Side == Me)
+            picks.Add(_view.SelectedFleet);
+        if (!picks.Add(id)) picks.Remove(id);
+        _view.QueueRedraw(); _fleets.QueueRedraw();
+        if (picks.Count > 1) Toast($"{Ui.Count(picks.Count, "fleet", "fleets")} picked: right-click a system to send them there. Esc lets them go.", MsgKind.Info);
     }
 
-    /// <summary>A plain click on one of your fleets on the map shows it in the Fleets window, if that is open.</summary>
-    void ShowSelectedInFleets()
+    /// <summary>Let the fleets picked on the map go. True if there were any.</summary>
+    bool ClearMapPicks()
     {
-        int id = _view.SelectedFleet;
-        if (id < 0 || FleetsWindow is not { } w || (_fleetPicks.Count == 1 && _fleetPicks[0] == id)) return;
-        if (!S.Game.State.Fleets.TryGetValue(id, out var f) || f.Side != Me) return;
-        _fleetPicks.Clear(); _fleetPicks.Add(id); w.Fleet = id;
-        RebuildMg(w);
+        if (_view.PickedFleets.Count == 0) return false;
+        _view.PickedFleets.Clear();
+        _view.QueueRedraw(); _fleets.QueueRedraw();
+        return true;
     }
 
     /// <summary>
-    /// A right-click on a system sends the fleets picked there (the Fleets window's pick, else the fleet selected on the map), each its
-    /// own way, as Move and a click would: a path through a known trap still waits for Go anyway or Go around. Shift+right-click starts
-    /// the move with that system as a waypoint; while a fleet move is being chosen, a right-click is a left click (Shift adds a waypoint,
-    /// a plain one sends). rule: m1-travel §Path rule.
+    /// A right-click on a system sends the fleet selected and the fleets picked on the map there, each its own way, as Move and a click
+    /// would: a path through a known trap still waits for a choice. Shift+right-click starts the move with that system as a waypoint;
+    /// while a fleet move is being chosen, a right-click is a left click (Shift adds a waypoint, a plain one sends). rule: m1-travel §Path rule.
     /// </summary>
     void OnMapRightClick(int idx)
     {
         if (idx < 0) return;
         if (InMoveMode) { if (_moveFleet >= 0) OnSystemPicked(idx); return; }
-        var ids = FleetsWindow != null ? _fleetPicks.ToList() : _view.SelectedFleet >= 0 ? new List<int> { _view.SelectedFleet } : new List<int>();
+        var ids = new List<int>();
+        if (_view.SelectedFleet >= 0) ids.Add(_view.SelectedFleet);
+        ids.AddRange(_view.PickedFleets.Where(x => !ids.Contains(x)).OrderBy(x => x));
         string to = G.Systems[idx].Name;
         var fs = ids.Select(i => S.Game.State.Fleets.TryGetValue(i, out var f) ? f : null).Where(f => f != null && f.Side == Me && Still(f) && f.At != to).ToList();
         if (fs.Count == 0) return;
@@ -129,49 +92,57 @@ public partial class GameScreen
         OnSystemPicked(idx);
     }
 
-    /// <summary>The map draws the fleets picked in the Fleets window like the selected one.</summary>
-    void SyncMapPicks()
-    {
-        var want = FleetsWindow != null ? _fleetPicks.ToHashSet() : new HashSet<int>();
-        if (want.SetEquals(_view.PickedFleets)) return;
-        _view.PickedFleets = want;
-        _view.QueueRedraw(); _fleets.QueueRedraw();
-    }
-
     // ================================================================== the window
 
-    void FleetWin(MgWin w)
+    void FleetWin(MgWin w, Fleet f)
     {
-        var mine = MyFleets();
-        // the window is named after what it shows, as the Ground window is named after its system: the fleet, or "3 fleets"
-        string title = mine.Count == 0 ? "Fleets" : _fleetPicks.Count > 1 ? $"{_fleetPicks.Count} fleets" : S.Game.State.Fleets[w.Fleet].Name;
-        MgHead(w, mine.Count == 0 ? "Fleets" : $"Fleets · {mine.Count} in all, {Ui.Count(mine.Sum(f => f.Ships.Count), "ship", "ships")}", title, Ui.Text2);
+        bool still = Still(f);
+        string where = still ? $"Fleet · at {f.At}" : f.Transit is { } t ? $"Fleet · to {t.Path[^1]}, arrives day {GameSession.ArrivalDay(t)}" : "Fleet";
+        MgHead(w, where, f.Name, Ui.Text2);
         w.Head.AddChild(OnContactRow());
-        if (mine.Count == 0) { Line("You have no fleet. Ships you build start a fleet at their shipyard.", Ui.Text3, Ui.Small); return; }
 
         var cols = Ui.HBox(WinGap);
         cols.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var left = Ui.VBox(6);
-        left.SizeFlagsHorizontal = SizeFlags.Fill;
+        var left = Ui.VBox(Ui.Block);
         left.CustomMinimumSize = new Vector2(FleetColW, 0);
         var right = Ui.VBox(Ui.Block);
+        right.CustomMinimumSize = new Vector2(FleetColW, 0);
         right.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         cols.AddChild(left);
         cols.AddChild(right);
         Add(cols);
 
+        var aboardF = FightersAboard(f);
+        var aboardR = S.Host.Troops.RegimentsAboard(f);
+        var riders = Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
+        int posts = new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander }.Count(p => Cm.HolderOf(f.Id, p) != null);
+        var eco = S.Host.Economy;
+        var picked = LivePicks().Where(d => d.Kind == 'S' && f.Ships.Contains(d.Id)).Select(d => eco.Find(d.Id)).Where(o => o != null).ToList();
+
         var prev = _into;
         try
         {
             _into = left;
-            FleetList(w, mine);
+            FleetSide(w, f, still, aboardF.Count + f.Squadrons.Count, aboardR.Count, posts + riders.Count);
+
+            // the right: the ship picked, what the fleet carries, who leads it; a new pick of its ships brings the ship's tab forward
             _into = right;
-            var picked = _fleetPicks.Select(id => S.Game.State.Fleets[id]).ToList();
-            if (picked.Count > 1) ManyFleets(w, picked);
-            else OneFleet(w, S.Game.State.Fleets[w.Fleet]);
+            var tabs = new List<(string Name, int? Count, Action Build)>();
+            string shipTab = picked.Count == 1 ? "Ship" : picked.Count > 1 ? "Picked" : null;
+            if (picked.Count == 1) tabs.Add(("Ship", null, () => ShipDetail(f, picked[0])));
+            else if (picked.Count > 1) tabs.Add(("Picked", picked.Count, () => PickedShips(f, picked, still)));
+            tabs.Add(("Fighters", aboardF.Count + f.Squadrons.Count, () => FightersAboardTab(f, aboardF)));
+            tabs.Add(("Troops", aboardR.Count, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
+            tabs.Add(("Leaders", posts + riders.Count, () => CommandTab(f, riders)));
+            string pickKey = string.Join(",", picked.Select(o => o.Id));
+            if (!_shipPickSeen.TryGetValue(w.Key, out var seen) || seen != pickKey)
+            {
+                _shipPickSeen[w.Key] = pickKey;
+                if (shipTab != null) w.Tab = shipTab;
+            }
+            Tabs(w, right, tabs.ToArray());
         }
         finally { _into = prev; }
-        SyncMapPicks();
     }
 
     /// <summary>Fight or retreat when an enemy arrives: one setting for every fleet of yours, so it sits in the window's head.</summary>
@@ -199,152 +170,28 @@ public partial class GameScreen
         return row;
     }
 
-    // ================================================================== the list
-
-    void FleetList(MgWin w, List<Fleet> mine)
+    /// <summary>The left column: where the fleet is, its numbers, its orders and its ships.</summary>
+    void FleetSide(MgWin w, Fleet f, bool still, int fighters, int regiments, int leaders)
     {
-        foreach (var (head, list) in FleetGroups(mine))
-        {
-            if (_into.GetChildCount() > 0) Add(Ui.Space(6));
-            Add(Caption(head, list.Count.ToString()));
-            foreach (var f in list) Add(FleetListRow(w, f));
-        }
-        Add(Ui.Space(6));
-        var hint = Line("Click a fleet to show it. Shift+click to pick several. Drag a fleet onto another to merge them.", Ui.Dimmed, Ui.Tiny);
-        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-    }
-
-    /// <summary>
-    /// One fleet in the list: its icon, name, ships and where it is. A click shows it, Shift+click adds it to the pick or takes it out.
-    /// Drag it onto another fleet to merge them (there, or it flies to join). Ships, troops, fighters and leaders dropped on it go to it.
-    /// </summary>
-    Control FleetListRow(MgWin w, Fleet f)
-    {
-        bool picked = _fleetPicks.Contains(f.Id);
-        var z = DropZone($"Fleet {f.Id} Row", $"send to {f.Name}", d => d.Kind switch
-        {
-            'S' or 'M' => RefuseShipsInto(d, f),
-            'R' or 'Q' => RefuseOnto(d, f, d.Kind),
-            'L' => RefuseFleetPost(d, f, CharacterPost.None),
-            _ => "",
-        }, d =>
-        {
-            if (d.Kind is 'S' or 'M') DropShipsInto(d, f);
-            else if (d.Kind is 'R' or 'Q') DropOnto(d, f);
-            else if (d.Kind == 'L') DropFleetPost(d, f, CharacterPost.None);
-        });
-        z.Box.SetMeta("look", picked ? "selected" : "row");
-        z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(null, picked ? "selected" : "row"));
-        z.Box.SetMeta("selected", picked);
-        z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-
-        var h = Ui.HBox(8);
-        h.MouseFilter = MouseFilterEnum.Pass;   // drops pass on to the row
-        h.CustomMinimumSize = new Vector2(FleetColW - 10, 0);
-        var size = f.Ships.Select(id => S.Host.Economy.Find(id)?.Class).Where(c => c != null).Select(SizeOfClass).DefaultIfEmpty(1).Max();
-        var icon = UnitIcon.For(UnitIcon.Kind.Ship, Me == Side.Hand, Ui.You, size, new Vector2(30, 20));
-        icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        h.AddChild(icon);
-        var v = Ui.VBox(0);
-        v.MouseFilter = MouseFilterEnum.Ignore;
-        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var nm = Ui.Label(f.Name, null, Ui.Text, Ui.Small, wrap: false);
-        nm.AddThemeFontOverride("font", Ui.SemiBold);
-        nm.ClipText = true;
-        v.AddChild(nm);
-        var sl = Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")} · {PlaceWords(f)}", null, Ui.Text3, Ui.Tiny, wrap: false);
-        sl.ClipText = true;
-        sl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        v.AddChild(sl);
-        h.AddChild(v);
-        z.Flow.AddChild(h);
-
-        // drag the row onto another fleet to merge (Paul's ask: merge fleets); a click is not a drag
-        int fid = f.Id;
-        if (Still(f) && !_moved.ContainsKey(new Drag('M', f.Id).Key)) MakeDraggable(h, new List<Drag> { new('M', f.Id) }, f.Name);
-        h.MouseDefaultCursorShape = CursorShape.PointingHand;
-        Vector2? down = null;
-        h.GuiInput += e =>
-        {
-            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left } mb) return;
-            if (mb.Pressed) { down = mb.Position; return; }
-            if (down is Vector2 at && at.DistanceTo(mb.Position) < 6) { PickFleet(w, fid, mb.ShiftPressed); h.AcceptEvent(); }
-            down = null;
-        };
-        h.SetMeta(UiTest.FullName, $"Fleet row {f.Name}");
-        z.Box.TooltipText = Ui.Wrap($"{f.Name}: {Ui.Count(f.Ships.Count, "ship", "ships")}, strength {Fm.StrengthOf(f):0}, {PlaceWords(f)}.\n"
-            + "Click to show it, Shift+click to add it to the fleets picked. Drag it onto another fleet to merge them. Drop ships, troops, fighters or leaders here to send them to it.");
-        return z.Box;
-    }
-
-    /// <summary>"at Tiryal", "to Skopia, 3 days", "at Tiryal, leaving".</summary>
-    string PlaceWords(Fleet f)
-    {
-        if (f.Transit is { } t) return $"to {t.Path[^1]}, {Arrives(t, null)}";
-        if (S.PlannedMoveOf(f.Id) is { } pm) return $"at {f.At}, leaving for {pm.To}";
-        return $"at {f.At}";
-    }
-
-    /// <summary>A click on a fleet: it alone is picked and shown. Shift+click: it joins the pick, or leaves it (one always stays).</summary>
-    void PickFleet(MgWin w, int id, bool shift)
-    {
-        if (!shift) { _fleetPicks.Clear(); _fleetPicks.Add(id); w.Fleet = id; }
-        else if (_fleetPicks.Contains(id)) { if (_fleetPicks.Count > 1) _fleetPicks.Remove(id); w.Fleet = _fleetPicks[^1]; }
-        else { _fleetPicks.Add(id); w.Fleet = id; }
-        SyncMapPicks();
-        Callable.From(() => { if (_mgWins.Contains(w)) RebuildMg(w); }).CallDeferred();
-    }
-
-    /// <summary>For the playtest and the screenshots: a click on a fleet's row, as the mouse would.</summary>
-    internal void PlayPickFleet(int id, bool shift)
-    {
-        if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet) is { } w) { PickFleet(w, id, shift); RebuildMg(w); }
-    }
-
-    internal IReadOnlyList<int> FleetPicks => _fleetPicks.ToList();
-
-    // ================================================================== one fleet
-
-    void OneFleet(MgWin w, Fleet f)
-    {
-        bool still = Still(f);
-        var aboardF = FightersAboard(f);
-        var aboardR = S.Host.Troops.RegimentsAboard(f);
-        var riders = Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
-        int posts = new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander }.Count(p => Cm.HolderOf(f.Id, p) != null);
-
-        // where it is (its name is the window's)
         string where = still ? $"At {f.At}." : f.Transit is { } t ? $"Travelling to {t.Path[^1]}, arrives day {GameSession.ArrivalDay(t)}." : "";
         if (S.PlannedMoveOf(f.Id) is { } pm) where = $"At {f.At}. Leaves for {pm.To} when the clock moves, arrives day {pm.ArrivalDay}.";
         Line(where, Ui.Text3, Ui.Small);
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto)) Line($"This fleet {mto.Words}.", Pending, Ui.Small);
 
-        Add(Ui.Space(4));
         Add(Numbers(
             ("Ships", f.Ships.Count.ToString(), "Capital ships in the fleet."),
-            ("Fighters", Room(aboardF.Count + f.Squadrons.Count, Fm.FreeBerths(f) + aboardF.Count), "Fighter squadrons aboard its carriers, and berths in all."),
-            ("Regiments", Room(aboardR.Count, Fm.FreeTroopSlots(f) + aboardR.Count), "Regiments aboard, and places in all."),
-            ("Leaders", (posts + riders.Count).ToString(), "Leaders with a post in the fleet, and passengers."),
+            ("Fighters", Room(fighters, Fm.FreeBerths(f) + FightersAboard(f).Count), "Fighter squadrons aboard its carriers, and berths in all."),
+            ("Regiments", Room(regiments, Fm.FreeTroopSlots(f) + regiments), "Regiments aboard, and places in all."),
+            ("Leaders", leaders.ToString(), "Leaders with a post in the fleet, and passengers."),
             ("Strength", $"{Fm.StrengthOf(f):0}", "How hard the fleet hits: its damage rate against a reference force of three Mandates, with its damage counted. Three Decrees score about 65."),
             ("Slowest", SlowestShip(f) ?? "–", "The slowest ship sets the fleet's speed.")));
 
-        Add(Ui.Space(4));
-        Add(ActionBar(w, new List<Fleet> { f }));
+        Add(ActionBar(w, f));
         foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
 
-        // the ships, what they carry and who leads them
-        var tabs = Ui.VBox(Ui.Block);
-        Add(Ui.Space(8));
-        Add(tabs);
-        Tabs(w, tabs,
-            ("Ships", f.Ships.Count, () => ShipsTab(f, still)),
-            ("Fighters", aboardF.Count + f.Squadrons.Count, () => FightersAboardTab(f, aboardF)),
-            ("Troops", aboardR.Count, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())),
-            ("Leaders", posts + riders.Count, () => CommandTab(f, riders)));
-        if (still)
-        {
-            MgLinks(($"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));
-        }
+        Section("Ships", f.Ships.Count.ToString(), "One card per ship: its hull, and the fighters and regiments it carries out of its room.");
+        ShipsTab(f, still);
+        if (still) MgLinks(($"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At), "The planet's window: drag its leaders, troops and fighters onto this fleet"));
     }
 
     static string Room(int have, int room) => room <= 0 ? (have == 0 ? "none" : have.ToString()) : $"{have} / {room}";
@@ -380,138 +227,80 @@ public partial class GameScreen
         return flow;
     }
 
-    // ================================================================== several fleets
-
-    void ManyFleets(MgWin w, List<Fleet> fs)
-    {
-        var places = fs.Select(f => f.At ?? (f.Transit != null ? $"on the way to {f.Transit.Path[^1]}" : "?")).Distinct().ToList();
-        Line(places.Count == 1 ? $"All at {places[0]}." : $"At {Ui.Count(places.Count, "place", "places")}: {string.Join(", ", places)}.", Ui.Text3, Ui.Small);
-        Add(Ui.Space(4));
-        int fighters = fs.Sum(f => FightersAboard(f).Count + f.Squadrons.Count), regiments = fs.Sum(f => S.Host.Troops.RegimentsAboard(f).Count);
-        Add(Numbers(
-            ("Ships", fs.Sum(f => f.Ships.Count).ToString(), "Capital ships in the fleets picked."),
-            ("Fighters", fighters.ToString(), "Fighter squadrons with the fleets picked."),
-            ("Regiments", regiments.ToString(), "Regiments aboard the fleets picked."),
-            ("Strength", $"{fs.Sum(f => Fm.StrengthOf(f)):0}", "The fleets' strengths added up.")));
-        Add(Ui.Space(4));
-        Add(ActionBar(w, fs));
-
-        Section("Fleets picked", fs.Count.ToString(), "The first one picked is where a merge gathers.");
-        foreach (var f in fs)
-        {
-            foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"{f.Name}: {pend}", Ui.Small);
-            var card = PickedFleetCard(w, f, f == fs[0]);
-            Add(card);
-        }
-        Line("Shift+click a fleet in the list to add it or take it out. Click one to show only it.", Ui.Dimmed, Ui.Tiny);
-    }
-
-    /// <summary>A picked fleet in the "several" view: its name, where it is and what it holds; a click shows it alone.</summary>
-    Control PickedFleetCard(MgWin w, Fleet f, bool first)
-    {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
-        p.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 0, Ui.WinLine, 1, 10, 8));
-        var h = Ui.HBox(12);
-        h.MouseFilter = MouseFilterEnum.Ignore;
-        p.AddChild(h);
-        var size = f.Ships.Select(id => S.Host.Economy.Find(id)?.Class).Where(c => c != null).Select(SizeOfClass).DefaultIfEmpty(1).Max();
-        var icon = UnitIcon.For(UnitIcon.Kind.Ship, Me == Side.Hand, Ui.You, size, new Vector2(36, 22));
-        icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        h.AddChild(icon);
-        var v = Ui.VBox(0);
-        v.MouseFilter = MouseFilterEnum.Ignore;
-        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var nm = Ui.Label(f.Name + (first ? "  (gathers a merge)" : ""), null, Ui.Text, Ui.Small, wrap: false);
-        nm.AddThemeFontOverride("font", Ui.SemiBold);
-        v.AddChild(nm);
-        int fq = FightersAboard(f).Count + f.Squadrons.Count, rg = S.Host.Troops.RegimentsAboard(f).Count;
-        var words = new List<string> { PlaceWords(f), Ui.Count(f.Ships.Count, "ship", "ships") };
-        if (fq > 0) words.Add(Ui.Count(fq, "fighter squadron", "fighter squadrons"));
-        if (rg > 0) words.Add(Ui.Count(rg, "regiment", "regiments"));
-        words.Add($"strength {Fm.StrengthOf(f):0}");
-        v.AddChild(Ui.Label(string.Join(" · ", words), null, Ui.Text3, Ui.Tiny, wrap: true));
-        h.AddChild(v);
-        int fid = f.Id;
-        p.GuiInput += e => { if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } mb) PickFleet(w, fid, mb.ShiftPressed); };
-        p.SetMeta(UiTest.FullName, $"Picked {f.Name}");
-        p.TooltipText = Ui.Wrap($"Click to show {f.Name} alone; Shift+click to take it out of the pick.");
-        return p;
-    }
-
     // ================================================================== the orders
 
     /// <summary>
-    /// The orders for the fleets picked, as one row of buttons: Move, Merge, Bombard, Invade, the harvester's strike, Scrap. With several
-    /// fleets each order goes to every fleet that can take it, and the button says how many ("Bombard 2 of 3"). The core judges each order
-    /// when the clock moves. rule: m3-fleets §Orders, m4-bombardment, m4-invasion, m5-harvester §2, m2-maintenance §Scrapping and refunds.
+    /// The fleet's orders as one row of buttons: Move, Merge with another fleet, Bombard, Invade, the harvester's strike, Scrap. A button
+    /// that can't act is greyed and its hover says why. The core judges each order when the clock moves.
+    /// rule: m3-fleets §Orders, m4-bombardment, m4-invasion, m5-harvester §2, m2-maintenance §Scrapping and refunds.
     /// </summary>
-    Control ActionBar(MgWin w, List<Fleet> fs)
+    Control ActionBar(MgWin w, Fleet f)
     {
         var bar = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
         bar.AddThemeConstantOverride("h_separation", 8); bar.AddThemeConstantOverride("v_separation", 8);
-        int n = fs.Count;
-        string Of(int k) => n == 1 || k == 0 || k == n ? "" : $" {k} of {n}";   // a count only when some can't: the title says "3 fleets"
-        var still = fs.Where(Still).ToList();
+        bool still = Still(f);
+        string travelling = $"Travelling: give this order when it reaches {f.Transit?.Path[^1] ?? "its destination"}.";
 
         // move
-        bar.AddChild(FleetAction(n > 1 ? $"Move{Of(still.Count)}..." : "Move...", "Fleets Move", () => { CloseSectorView(); StartMoveMany(still); },
-            still.Count == 0 ? "Travelling: a fleet takes a new destination when it arrives." : n > 1 ? $"Pick a destination on the map: the {still.Count} fleets standing still fly there, each as its own fleet." : "Pick a destination on the map.",
-            still.Count == 0));
+        int fid = f.Id;
+        bar.AddChild(FleetAction("Move...", "Fleet Move", () => { if (S.Game.State.Fleets.TryGetValue(fid, out var ff)) { CloseSectorView(); StartMove(ff); } },
+            still ? "Pick a destination on the map. To send several fleets at once, Shift+click them on the map and right-click a system." : travelling, !still));
 
-        // merge
-        if (n == 1)
-        {
-            var f = fs[0];
-            var here = Still(f) ? MyFleets().Where(x => x.Id != f.Id && x.At == f.At && Still(x)).ToList() : new List<Fleet>();
-            var lines = here.Select(x => ($"Merge {x.Name} into {f.Name}", (Action)(() => MergeInto(w, f, new List<Fleet> { x })))).ToList();
-            if (here.Count > 1) lines.Insert(0, ($"Merge all {here.Count} fleets here into {f.Name}", () => MergeInto(w, f, here)));
-            bar.AddChild(MenuAction("Merge", "Fleets Merge", lines.ToArray(),
-                here.Count > 0 ? $"Merge another fleet at {f.At} into {f.Name}." : $"No other fleet of yours stands at {f.At ?? "its place"}. To merge fleets that are apart, Shift+click them in the list: they fly to the first one picked and join it."));
-        }
-        else
-        {
-            var into = fs[0];
-            bar.AddChild(FleetAction($"Merge into {into.Name}", "Fleets Merge", () => MergeInto(w, into, fs.Skip(1).ToList()),
-                Still(into) ? $"The others join {into.Name}: at once where they stand with it, else they fly to {into.At} and join it there." : $"{into.Name}, the first one picked, is travelling: the others can't join it until it stands still.",
-                !Still(into)));
-        }
+        // merge with another fleet: one here joins at once, one elsewhere flies here and joins
+        var lines = still ? MergeLines(f) : new List<(string, Action)>();
+        bar.AddChild(MenuAction("Merge with", "Fleet Merge", lines.ToArray(),
+            !still ? travelling : lines.Count == 0 ? "You have no other fleet standing still to merge with this one."
+            : $"Pick a fleet to join {f.Name}: one at {f.At} joins at once, one elsewhere flies to {f.At} and joins on arrival."));
 
-        // bombard and invade the system each fleet is at
-        var canHit = fs.Where(CanAttackHere).ToList();
-        var canLand = canHit.Where(f => S.Host.Troops.RegimentsAboard(f).Count > 0).ToList();
-        string hitWhy = canHit.Count > 0 ? null : n > 1 ? "None of these fleets is at a system you don't hold, or each has an attack ordered already." : AttackWhyNot(fs[0]);
-        bar.AddChild(MenuAction(n > 1 ? $"Bombard{Of(canHit.Count)}" : "Bombard", "Fleets Bombard", canHit.Count == 0 ? Array.Empty<(string, Action)>() : new (string, Action)[]
+        // bombard and invade the system it is at
+        bool canHit = CanAttackHere(f);
+        int regs = S.Host.Troops.RegimentsAboard(f).Count;
+        string hitWhy = canHit ? null : AttackWhyNot(f);
+        bar.AddChild(MenuAction("Bombard", "Fleet Bombard", !canHit ? Array.Empty<(string, Action)>() : new (string, Action)[]
         {
-            ("Military targets: regiments and defences", () => { foreach (var f in canHit) Bombard(f, BombardCategory.Military); MgRefreshSoon(); }),
-            ("Civilian targets: the planet's support", () => { foreach (var f in canHit) Bombard(f, BombardCategory.Civilian); MgRefreshSoon(); }),
-            ("Everything", () => { foreach (var f in canHit) Bombard(f, BombardCategory.General); MgRefreshSoon(); }),
-        }, hitWhy ?? "Bombard weakens the defences from orbit." + (n > 1 ? $" {canHit.Count} of the {n} fleets are at a system you don't hold." : "")));
-        int regs = canLand.Sum(f => S.Host.Troops.RegimentsAboard(f).Count);
-        bar.AddChild(FleetAction(n > 1 ? $"Invade{Of(canLand.Count)}" : regs > 0 ? $"Invade with {Ui.Count(regs, "regiment", "regiments")}" : "Invade", "Fleets Invade",
-            () => { foreach (var f in canLand) Invade(f); MgRefreshSoon(); },
-            canLand.Count > 0 ? "Lands the regiments aboard to take the planet: land more than the defenders have." : hitWhy ?? "No regiments aboard: load some at one of your planets first (Troops tab).",
-            canLand.Count == 0));
+            ("Military targets: regiments and defences", () => { Bombard(f, BombardCategory.Military); MgRefreshSoon(); }),
+            ("Civilian targets: the planet's support", () => { Bombard(f, BombardCategory.Civilian); MgRefreshSoon(); }),
+            ("Everything", () => { Bombard(f, BombardCategory.General); MgRefreshSoon(); }),
+        }, hitWhy ?? "Bombard weakens the defences from orbit."));
+        bar.AddChild(FleetAction(regs > 0 ? $"Invade with {Ui.Count(regs, "regiment", "regiments")}" : "Invade", "Fleet Invade",
+            () => { Invade(f); MgRefreshSoon(); },
+            hitWhy ?? (regs > 0 ? "Lands the regiments aboard to take the planet: land more than the defenders have." : "No regiments aboard: load some at one of your planets first (Troops tab)."),
+            !canHit || regs == 0));
 
         // the harvester's strike
-        if (n == 1 && Still(fs[0]) && S.HoldsHarvester(fs[0]))
+        if (still && S.HoldsHarvester(f))
         {
-            var f = fs[0];
             bool struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
             int? readyDay = S.HarvesterRechargingUntil(f);
-            bar.AddChild(FleetAction("Destroy System...", "Fleets Destroy", () => AskDestroySystem(f.Id),
+            bar.AddChild(FleetAction("Destroy System...", "Fleet Destroy", () => AskDestroySystem(f.Id),
                 S.IsDestroyed(f.At) ? $"{f.At} is already destroyed." + (readyDay is int rd0 ? " " + S.HarvestWaitText(rd0) : "") : struck ? "The strike is ordered: it happens as soon as the clock moves." : readyDay is int rd ? S.HarvestWaitText(rd) : "Wipes out the system the harvester is at. Asks first.",
                 S.IsDestroyed(f.At) || struck || readyDay != null, Ui.Danger));
         }
 
         // scrap
-        var eco = S.Host.Economy;
-        var ships = still.SelectMany(f => f.Ships).Select(eco.Find).Where(o => o != null && !_scrapped.Contains(o.Id)).ToList();
-        var at = still.Select(f => f.At).Distinct().ToList();
-        bar.AddChild(FleetAction(n > 1 ? $"Scrap{Of(still.Count)}..." : "Scrap...", "Fleets Scrap",
-            () => AskScrap(ships, n > 1 ? $"all {ships.Count} ships of {still.Count} fleets" : $"all {ships.Count} ships of {fs[0].Name}", at.Count == 1 ? at[0] : null),
+        var ships = still ? f.Ships.Select(S.Host.Economy.Find).Where(o => o != null && !_scrapped.Contains(o.Id)).ToList() : new List<EconObject>();
+        bar.AddChild(FleetAction("Scrap...", "Fleet Scrap", () => AskScrap(ships, $"all {ships.Count} ships of {f.Name}", f.At),
             ships.Count == 0 ? "Travelling: a fleet can be scrapped where it stands." : "Asks first. Half the refined cost comes back and the upkeep is freed. Fighters and regiments aboard stay at the system. To scrap one ship, right-click it.",
             ships.Count == 0, Ui.Danger));
         return bar;
+    }
+
+    /// <summary>
+    /// The fleets that can merge with this one, closest first: those standing with it join at once, the others fly to it and join on
+    /// arrival, each line with its trip time and a known trap on the way. rule: m3-fleets §Orders (MergeFleets; MoveFleet joining a fleet).
+    /// </summary>
+    List<(string Text, Action Do)> MergeLines(Fleet f)
+    {
+        var others = MyFleets().Where(x => x.Id != f.Id && Still(x) && !_moved.ContainsKey(new Drag('M', x.Id).Key) && RefuseShipsInto(new Drag('M', x.Id), f) == null).ToList();
+        var here = others.Where(x => x.At == f.At).ToList();
+        var far = others.Where(x => x.At != f.At).Select(x => (F: x, Plan: S.Host.PlanMove(Me, x.Id, f.At, null))).Where(p => p.Plan.Ok)
+            .OrderBy(p => p.Plan.HopTicks.Sum()).ThenBy(p => p.F.Id).ToList();
+        var lines = new List<(string, Action)>();
+        if (here.Count > 1) lines.Add(($"All {here.Count} fleets here, at once", () => MergeInto(f, here)));
+        foreach (var x in here) lines.Add(($"{x.Name}: here, joins at once", () => MergeInto(f, new List<Fleet> { x })));
+        foreach (var (x, plan) in far)
+            lines.Add(($"{x.Name}: at {x.At}, flies here in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? ", known trap on the way" : ""), () => MergeInto(f, new List<Fleet> { x })));
+        return lines;
     }
 
     bool CanAttackHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) && S.OwnerOf(f.At) != Me
@@ -529,7 +318,7 @@ public partial class GameScreen
     /// Merge fleets into one: those standing with it join at once (MergeFleets), the others fly to it and join on arrival (MoveFleet with
     /// a fleet to join). rule: m3-fleets §Orders (MergeFleets; MoveFleet: joining a fleet on arrival).
     /// </summary>
-    void MergeInto(MgWin w, Fleet into, List<Fleet> others)
+    void MergeInto(Fleet into, List<Fleet> others)
     {
         int sent = 0;
         foreach (var from in others)
@@ -542,9 +331,7 @@ public partial class GameScreen
             DropShipsInto(d, into);
             sent++;
         }
-        if (sent == 0) return;
-        _fleetPicks.Clear(); _fleetPicks.Add(into.Id); w.Fleet = into.Id;
-        RefreshMgmt();
+        if (sent > 0) RefreshMgmt();
     }
 
     /// <summary>An order button: outlined, its words in the window's grey (or the meaning colour), greyed with the reason when it can't.</summary>
@@ -564,7 +351,7 @@ public partial class GameScreen
         return b;
     }
 
-    /// <summary>An order button that opens a short list of choices under it (the bombard targets, the fleets to merge).</summary>
+    /// <summary>An order button that opens a short list of choices under it (the bombard targets, the fleets to merge with).</summary>
     Button MenuAction(string words, string key, (string Text, Action Do)[] lines, string tip)
     {
         Button b = null;
@@ -622,7 +409,7 @@ public partial class GameScreen
 
     /// <summary>
     /// One card per ship (Paul 2026-11-14), each with its hull and what it carries (Paul 2026-11-21). A click picks a ship and shows its
-    /// stats, damage and cargo under the cards; Shift+click picks several, to split them off, send them to another fleet or scrap them.
+    /// stats, damage and cargo in the right column; Shift+click picks several, to split them off, send them to another fleet or scrap them.
     /// </summary>
     void ShipsTab(Fleet f, bool still)
     {
@@ -644,11 +431,8 @@ public partial class GameScreen
         }
         Add(sz.Box);
 
-        // the ship or ships picked in this fleet
-        var picked = LivePicks().Where(d => d.Kind == 'S' && f.Ships.Contains(d.Id)).Select(d => eco.Find(d.Id)).Where(o => o != null).ToList();
-        if (picked.Count == 1) ShipDetail(f, picked[0]);
-        else if (picked.Count > 1) PickedShips(f, picked, still);
-        else Line("Click a ship to see its stats, its damage and what it carries. Shift+click to pick several.", Ui.Dimmed, Ui.Tiny);
+        if (!LivePicks().Any(d => d.Kind == 'S' && f.Ships.Contains(d.Id)))
+            Line("Click a ship to see its damage, what it carries and its class's numbers. Shift+click to pick several.", Ui.Dimmed, Ui.Tiny);
     }
 
     /// <summary>Under a ship card's picture: its hull as a thin bar, and what it carries (fighters and regiments, out of its room).</summary>
@@ -704,7 +488,7 @@ public partial class GameScreen
         var sc = Fm.ClassOf(o);
         if (sc == null) return;
         Section($"{o.Class} #{o.Id}", $"hull {o.Hull} of {sc.Hull}", ClassTip(o.Class));
-        Add(HullBar(o.Hull, sc.Hull, RightColW));
+        Add(HullBar(o.Hull, sc.Hull, FleetColW));
         var hits = (o.Hits ?? new List<int>()).Select((h, i) => (h, i)).Where(x => x.h > 0 && x.i < HitNames.Length).Select(x => $"{HitNames[x.i]} ({x.h})").ToList();
         Line(hits.Count == 0 ? "No damage." : $"Damaged: {string.Join(", ", hits)}." + (o.Hits is { Count: > 4 } hh && hh[4] > 0 ? " A damaged hyperdrive makes it slower." : ""),
             hits.Count == 0 ? Ui.Text3 : Ui.Warn, Ui.Small);
@@ -716,8 +500,8 @@ public partial class GameScreen
         if (sc.FighterCapacity + sc.TroopCapacity > 0)
         {
             var parts = new List<string>();
-            if (sc.FighterCapacity > 0) parts.Add($"{sq.Count} of {sc.FighterCapacity} fighter berths");
-            if (sc.TroopCapacity > 0) parts.Add($"{rg.Count} of {sc.TroopCapacity} regiment places");
+            if (sc.FighterCapacity > 0) parts.Add($"{sq.Count}/{sc.FighterCapacity} fighters");
+            if (sc.TroopCapacity > 0) parts.Add($"{rg.Count}/{sc.TroopCapacity} regiments");
             Section("It carries", string.Join(" · ", parts), "Squadrons and regiments ride on one ship of the fleet. Drag one to a planet's window to unload it.");
             if (sq.Count + rg.Count == 0) Line("Nothing aboard.", Ui.Dimmed, Ui.Small);
             else
@@ -735,7 +519,7 @@ public partial class GameScreen
         {
             var stats = ClassStats(row, 0, out string extra).Where(s => s.Item1 is not ("Refined cost" or "Days here")).ToList();
             Section($"Every {o.Class}", null, "The numbers of its class.");
-            var grid = new GridContainer { Columns = 4, MouseFilter = MouseFilterEnum.Ignore };
+            var grid = new GridContainer { Columns = 2, MouseFilter = MouseFilterEnum.Ignore };
             grid.AddThemeConstantOverride("h_separation", 16); grid.AddThemeConstantOverride("v_separation", 4);
             foreach (var (label, value) in stats)
             {
@@ -760,12 +544,12 @@ public partial class GameScreen
         bar.AddThemeConstantOverride("h_separation", 8); bar.AddThemeConstantOverride("v_separation", 8);
         var ds = ships.Select(o => new Drag('S', o.Id)).ToList();
         string why = !still ? "The fleet is travelling." : ships.Count >= f.Ships.Count - ShipsLeaving(f) ? "A fleet keeps at least one ship: leave one out of the pick." : null;
-        bar.AddChild(FleetAction("Split them off", "Fleets Split", () => { foreach (var d in ds) if (!_moved.ContainsKey(d.Key) && RefuseSplit(d, f) == null) DropSplit(d, f); _picked.RemoveAll(ds.Contains); RefreshMgmt(); },
+        bar.AddChild(FleetAction("Split them off", "Fleet Split", () => { foreach (var d in ds) if (!_moved.ContainsKey(d.Key) && RefuseSplit(d, f) == null) DropSplit(d, f); _picked.RemoveAll(ds.Contains); RefreshMgmt(); },
             why ?? "They become a new fleet here.", why != null));
-        bar.AddChild(FleetAction("Scrap them...", "Fleets Scrap ships", () => AskScrap(ships, PickedWords(ships), f.At),
+        bar.AddChild(FleetAction("Scrap them...", "Fleet Scrap ships", () => AskScrap(ships, PickedWords(ships), f.At),
             still ? "Asks first. Half the refined cost comes back." : "The fleet is travelling.", !still, Ui.Danger));
         Add(bar);
-        Line("Or drag them onto a fleet in the list to send them there.", Ui.Dimmed, Ui.Tiny);
+        Line("Or drag them onto another fleet's window to send them there.", Ui.Dimmed, Ui.Tiny);
     }
 
     void FightersAboardTab(Fleet f, List<EconObject> aboard)

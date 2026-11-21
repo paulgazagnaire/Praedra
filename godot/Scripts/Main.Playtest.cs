@@ -202,23 +202,23 @@ public partial class Main
         gs.PickSystem(target);
         gs.PlayDay();
         Expect(RunUntil(gs, () => troopFleet.At == target, 400), $"fleet reached {target} (day {s.Game.Day})");
-        // the attack orders live in the Fleets window's order bar only (Paul 2026-11-14, pick 5; 2026-11-21); the panel's fleet card opens it
+        // the attack orders live in the fleet window's order bar only (Paul 2026-11-14, pick 5; 2026-11-21); the panel's fleet card opens it
         gs.MgCloseAll();
         SelectFleetByList(gs, troopFleet);
         Expect(!gs.Has("Bombard") && !gs.Has("Invade"), "the panel's fleet card has no attack orders of its own");
-        Expect(gs.Click("Fleet orders") && gs.MgmtKeys.Contains($"Fleet {troopFleet.Id}"), "the fleet card's button opens the Fleets window on this fleet");
-        Expect(gs.Enabled("Fleets Bombard") && gs.MenuOf("Fleets Bombard").Any(l => l.StartsWith("Military", StringComparison.Ordinal)), "Bombard offers military targets at an enemy/neutral system");
-        Expect(gs.RunMenu("Fleets Bombard", "Military"), "bombard military targets");
+        Expect(gs.Click("Fleet orders") && gs.MgmtKeys.Contains($"Fleet {troopFleet.Id}"), "the fleet card's button opens the fleet's window");
+        Expect(gs.Enabled("Fleet Bombard") && gs.MenuOf("Fleet Bombard").Any(l => l.StartsWith("Military", StringComparison.Ordinal)), "Bombard offers military targets at an enemy/neutral system");
+        Expect(gs.RunMenu("Fleet Bombard", "Military"), "bombard military targets");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains("Ordered: Bombard"), "the bombard order shows on the fleet");
-        Expect(gs.MgText($"Fleet {troopFleet.Id}").Contains("Ordered: Bombard") && !gs.Enabled("Fleets Invade") && !gs.Enabled("Fleets Bombard"),
+        Expect(gs.MgText($"Fleet {troopFleet.Id}").Contains("Ordered: Bombard") && !gs.Enabled("Fleet Invade") && !gs.Enabled("Fleet Bombard"),
             "Bombard and Invade are greyed out while a bombard order is waiting (the core allows one attack order per fleet)");
         gs.PlayDay();
         Expect(s.Messages.Any(m => m.Text.Contains("ombard") && m.Text.Contains(target)), "bombardment happened or was explained");
         SelectFleetByList(gs, troopFleet);
         gs.Click("Fleet orders");
-        Expect(gs.Enabled("Fleets Invade"), "Invade is enabled with regiments aboard");
-        gs.Click("Fleets Invade");
+        Expect(gs.Enabled("Fleet Invade"), "Invade is enabled with regiments aboard");
+        gs.Click("Fleet Invade");
         gs.MgCloseAll();
         int msgBefore = s.Messages.Count;
         for (int i = 0; i < 8; i++) { gs.PlayDay(); if (s.Messages.Skip(msgBefore).Any(m => m.Text.StartsWith("Invasion of", StringComparison.Ordinal))) break; }
@@ -239,7 +239,7 @@ public partial class Main
         if (splitFleet != null)
         {
             SelectFleetByList(gs, splitFleet);
-            Expect(gs.Click("Fleet orders") && gs.Click("On contact Retreat"), "Retreat from the Fleets window's head");
+            Expect(gs.Click("Fleet orders") && gs.Click("On contact Retreat"), "Retreat from the fleet window's head");
             gs.MgCloseAll();
             int n0 = s.Game.State.Fleets.Values.Count(f => f.Side == me); int sid = splitFleet.Id;
             Expect(gs.TickShip(0), "tick a ship to split off");
@@ -249,7 +249,7 @@ public partial class Main
             Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0 + 1, "split made a new fleet");
             Expect(!s.Messages.Skip(refusedBefore).Any(m => m.Text.StartsWith("Order refused: Change the battle", StringComparison.Ordinal)), "retreat switch accepted");
             SelectFleetByList(gs, splitFleet);
-            Expect(gs.Click("Fleet orders") && gs.Click("On contact Fight"), "back to Fight from the Fleets window's head");
+            Expect(gs.Click("Fleet orders") && gs.Click("On contact Fight"), "back to Fight from the fleet window's head");
             gs.MgCloseAll();
             var newest = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderByDescending(f => f.Id).First();
             SelectFleetByList(gs, newest);

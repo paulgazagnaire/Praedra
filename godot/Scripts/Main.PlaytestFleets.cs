@@ -8,10 +8,12 @@ using Praedra.Core.Fleets;
 namespace PraedraViewer;
 
 /// <summary>
-/// Playtest of the Fleets window (Paul 2026-11-21: merge fleets, pick single ships, see their stats and what they carry, give one or
-/// several fleets an order): F opens it; a click picks one fleet, Shift+click adds one or takes it out, on the list and on the map; a
-/// ship's card shows what it carries, a click shows its damage and its class; several ships split off; Merge joins the fleets picked,
-/// there or by flying to the first; Move and a right-click on the map send every fleet picked. Every click is a real button's Pressed signal.
+/// Playtest of a fleet's window and of several fleets on the map (Paul 2026-11-21: merge fleets, pick single ships, see their stats and
+/// what they carry, give one or several fleets an order; then "a fleet (single fleet) window that works really well", and for several
+/// fleets: move only, by a right-click). F opens the selected fleet's window: its numbers and one bar of orders; a ship's card shows what
+/// it carries; a click on a ship brings its tab forward with its damage, its cargo and its class; two ships split off together; Merge with
+/// lists the fleets here first, then the others closest first, and merges; Shift+click on the map picks a second fleet and a right-click
+/// sends both. Every click is a real button's Pressed signal or the map's own handler.
 /// </summary>
 public partial class Main
 {
@@ -33,41 +35,25 @@ public partial class Main
         int bid = fm.AddFleet(me, "Test Pair", new[] { cls }, a.At!);
         var b = s.Game.State.Fleets[bid];
 
-        // ---- F opens the window; one fleet shown, every fleet listed
+        // ---- F opens the selected fleet's window: its name, its numbers, one bar of orders
+        SelectFleetByList(gs, a);
         gs.PressKey(Key.F); gs.PlayRefresh();
-        string key = gs.MgmtKeys.FirstOrDefault(k => k.StartsWith("Fleet ", StringComparison.Ordinal));
-        Expect(key != null, $"F opens the Fleets window ({string.Join(", ", gs.MgmtKeys)})");
-        if (key == null) return;
-        gs.PlayPickFleet(a.Id, false); gs.PlayRefresh();
-        key = $"Fleet {a.Id}";
+        string key = $"Fleet {a.Id}";
+        Expect(gs.MgmtKeys.Contains(key), $"F opens the selected fleet's window ({string.Join(", ", gs.MgmtKeys)})");
+        if (!gs.MgmtKeys.Contains(key)) return;
         string text = gs.MgText(key);
-        var mine = s.Game.State.Fleets.Values.Where(f => f.Side == me).ToList();
-        Expect(mine.All(f => text.Contains(f.Name)), "every fleet of yours is in the list");
-        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("SHIPS") && text.Contains("STRENGTH") && text.Contains("SLOWEST"), "a click shows the fleet: its name and its numbers");
-        Expect(gs.FleetPicks.SequenceEqual(new[] { a.Id }) && gs.View.PickedFleets.SetEquals(new[] { a.Id }), "it alone is picked, and the map draws it as picked");
+        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("SHIPS") && text.Contains("STRENGTH") && text.Contains("SLOWEST"), "the window shows the fleet: its name and its numbers");
+        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "one bar of orders: Move, Merge with, Bombard, Invade, Scrap");
+        Expect(string.Join(",", gs.MgTabs(key)) == "Fighters,Troops,Leaders", $"with no ship picked, the right holds what it carries and who leads it: {string.Join(", ", gs.MgTabs(key))}");
 
-        // ---- Shift+click adds a fleet, and takes it out
-        gs.PlayPickFleet(b.Id, true); gs.PlayRefresh();
-        text = gs.MgText($"Fleet {b.Id}");
-        Expect(gs.FleetPicks.SequenceEqual(new[] { a.Id, b.Id }) && text.Contains("2 FLEETS") && text.Contains("FLEETS PICKED"), "Shift+click adds a second fleet: the window shows both");
-        Expect(gs.Has($"Fleets Merge") && gs.Enabled("Fleets Merge") && gs.TipOf("Fleets Merge").Contains(a.Name), $"Merge offers to join them into {a.Name}, the first picked");
-        gs.PlayPickFleet(b.Id, true); gs.PlayRefresh();
-        Expect(gs.FleetPicks.SequenceEqual(new[] { a.Id }), "Shift+click again takes it out");
-        // the same from the map: Shift+click on a fleet's marker
-        gs.PlayShiftClickFleet(b.Id); gs.PlayRefresh();
-        Expect(gs.FleetPicks.Contains(b.Id) && gs.View.PickedFleets.Contains(b.Id), "Shift+click on its marker on the map adds it too");
-        gs.PlayShiftClickFleet(b.Id); gs.PlayRefresh();
-        Expect(!gs.FleetPicks.Contains(b.Id), "and takes it out");
-
-        // ---- ships: one card each, with its cargo; a click shows the ship
-        gs.PlayPickFleet(a.Id, false); gs.PlayRefresh();
+        // ---- ships: one card each, with its cargo; a click on a ship brings its tab forward
         var eco = s.Host.Economy;
         var carrier = a.Ships.Select(eco.Find).FirstOrDefault(o => o != null && fm.ClassOf(o) is { } c && c.FighterCapacity + c.TroopCapacity > 0);
         if (carrier != null)
         {
             var cc = fm.ClassOf(carrier)!;
             string room = cc.FighterCapacity > 0 ? $"{fm.UnitsAboard(carrier.Id, ObjectCategory.Fighter).Count()}/{cc.FighterCapacity}" : $"{fm.UnitsAboard(carrier.Id, ObjectCategory.Regiment).Count()}/{cc.TroopCapacity}";
-            Expect(gs.MgPageText(key, "Ships").Contains(room), $"a ship's card says what it carries out of its room ({room})");
+            Expect(text.Contains(room), $"a ship's card says what it carries out of its room ({room})");
         }
         var ship = eco.Find(a.Ships[0])!;
         var sc = fm.ClassOf(ship)!;
@@ -76,31 +62,44 @@ public partial class Main
         ship.Hull = sc.Hull / 2;
         if (ship.Hits is { Count: > 1 }) ship.Hits[1] = 2;
         gs.PlayPick($"S:{ship.Id}", false); gs.PlayRefresh();
-        string page = gs.MgPageText(key, "Ships");
-        Expect(page.Contains($"hull {sc.Hull / 2} of {sc.Hull}") && (ship.Hits is not { Count: > 1 } || page.Contains("weapons (2)")), "a click on a ship shows its hull and its damage in words");
-        Expect(page.Contains($"EVERY {ship.Class.ToUpperInvariant()}") && page.Contains("Trip time"), "and the numbers of its class");
+        gs.MgText(key);
+        Expect(gs.MgTab(key) == "Ship", $"a click on a ship brings its tab forward ({gs.MgTab(key)})");
+        string page = gs.MgPageText(key, "Ship");
+        Expect(page.Contains($"hull {sc.Hull / 2} of {sc.Hull}") && (ship.Hits is not { Count: > 1 } || page.Contains("weapons (2)")), "it shows the ship's hull and its damage in words");
         Expect(page.Contains("IT CARRIES") || page.Contains("It carries no fighters"), "and what it carries");
+        Expect(page.Contains($"EVERY {ship.Class.ToUpperInvariant()}") && page.Contains("Trip time"), "and the numbers of its class");
         ship.Hull = hull0; if (hits0 != null) ship.Hits = hits0;
         if (a.Ships.Count >= 3)
         {
             gs.PlayPick($"S:{a.Ships[1]}", true); gs.PlayRefresh();
-            Expect(gs.MgPageText(key, "Ships").Contains("2 SHIPS PICKED") && gs.Enabled("Fleets Split"), "Shift+click a second ship: they can be split off together");
+            gs.MgText(key);
+            Expect(gs.MgTab(key) == "Picked" && gs.MgPageText(key, "Picked").Contains("2 SHIPS PICKED") && gs.Enabled("Fleet Split"), "Shift+click a second ship: they can be split off together");
             int q0 = s.QueuedOrders;
-            Expect(gs.Click("Fleets Split") && s.QueuedOrders == q0 + 1, "Split them off sends one split order");
+            Expect(gs.Click("Fleet Split") && s.QueuedOrders == q0 + 1, "Split them off sends one split order");
             gs.MgText(key);   // as the next frame would
             Expect(gs.Click($"Cancel: Split 2 ships off {a.Name}") && s.QueuedOrders == q0, "and its Cancel takes it back");
         }
         gs.ClearUnitPicks();
+        gs.MgText(key);
+        Expect(!gs.MgTabs(key).Contains("Ship") && !gs.MgTabs(key).Contains("Picked"), "with the ships let go, their tab goes");
 
-        // ---- Merge: the fleets picked join the first; one standing with it merges at once
-        gs.PlayPickFleet(a.Id, false); gs.PlayPickFleet(b.Id, true); gs.PlayRefresh();
+        // ---- Merge with: the fleets here first, then the others, closest first, each with its trip time
+        var menu = gs.MenuOf("Fleet Merge").ToList();
+        int hereAt = menu.FindIndex(l => l.StartsWith($"{b.Name}: here", StringComparison.Ordinal));
+        Expect(hereAt >= 0, $"Merge with lists {b.Name}, standing with it: {string.Join(" | ", menu)}");
+        var far = still.FirstOrDefault(f => f.At != a.At && s.Host.PlanMove(me, f.Id, a.At!, null) is { Ok: true });
+        if (far != null)
+        {
+            int farAt = menu.FindIndex(l => l.StartsWith($"{far.Name}: at {far.At}, flies here in ", StringComparison.Ordinal));
+            Expect(farAt > hereAt, $"and {far.Name} at {far.At}, after the fleets here, with its trip time");
+        }
         int ships0 = a.Ships.Count;
-        Expect(gs.Click("Fleets Merge"), $"Merge into {a.Name}");
+        Expect(gs.RunMenu("Fleet Merge", $"{b.Name}: here"), $"Merge {b.Name} into {a.Name}");
         gs.PlayDay(); gs.PlayRefresh();
         Expect(!s.Game.State.Fleets.ContainsKey(bid) && a.Ships.Count == ships0 + 1, $"next day {b.Name} has merged into {a.Name}");
-        Expect(gs.MgmtKeys.Contains($"Fleet {a.Id}") && gs.FleetPicks.SequenceEqual(new[] { a.Id }), "the window shows the merged fleet");
 
-        // ---- one Move for several fleets, and the map's right-click
+        // ---- several fleets on the map: Shift+click picks, a right-click sends them all (Paul: move only)
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         still = Still();
         if (still.Count >= 2)
         {
@@ -109,21 +108,24 @@ public partial class Main
                 .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault(n => s.Host.PlanMove(me, x.Id, n, null) is { Ok: true, Red: false } && s.Host.PlanMove(me, y.Id, n, null) is { Ok: true, Red: false });
             if (to != null)
             {
-                gs.PlayPickFleet(x.Id, false); gs.PlayPickFleet(y.Id, true); gs.PlayRefresh();
-                Expect(gs.Click("Fleets Move"), "Move for the two fleets picked");
-                gs.PickSystem(to);
-                Expect(s.PlannedMoveOf(x.Id)?.To == to && s.PlannedMoveOf(y.Id)?.To == to, $"one click on {to} sends both");
-                gs.MgText($"Fleet {y.Id}");   // as the next frame would
-                Expect(gs.Click($"Cancel: Move {x.Name} to {to}") && gs.Click($"Cancel: Move {y.Name} to {to}") && s.PlannedMoveOf(x.Id) == null && s.PlannedMoveOf(y.Id) == null, "each order can be cancelled");
+                SelectFleetByList(gs, x);
+                gs.HoverTextFor(to);   // the map takes in the selection before the Shift+click
+                gs.PlayShiftClickFleet(y.Id);
+                Expect(gs.View.PickedFleets.SetEquals(new[] { x.Id, y.Id }), $"Shift+click {y.Name} on the map: it and {x.Name}, selected, are picked");
                 gs.PlayRightClick(to);
-                Expect(s.PlannedMoveOf(x.Id)?.To == to && s.PlannedMoveOf(y.Id)?.To == to, $"a right-click on {to} on the map sends both too");
-                gs.MgText($"Fleet {y.Id}");
-                gs.Click($"Cancel: Move {x.Name} to {to}"); gs.Click($"Cancel: Move {y.Name} to {to}");
+                Expect(s.PlannedMoveOf(x.Id)?.To == to && s.PlannedMoveOf(y.Id)?.To == to, $"a right-click on {to} sends both");
+                foreach (var f in new[] { x, y })
+                {
+                    gs.ShotWindow("fleet", f.Id.ToString()); gs.MgText($"Fleet {f.Id}");
+                    Expect(gs.Click($"Cancel: Move {f.Name} to {to}") && s.PlannedMoveOf(f.Id) == null, $"{f.Name}'s order can be cancelled in its window");
+                }
+                int open = gs.MgmtCount;
+                gs.PressKey(Key.Escape);
+                Expect(gs.View.PickedFleets.Count == 0 && gs.MgmtCount == open, "Esc lets the fleets picked go before it closes a window");
             }
             else GD.Print("  (no system both fleets reach without a known trap: the shared move is not checked on this side)");
         }
         else GD.Print("  (one fleet standing still: the shared move is not checked on this side)");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
-        Expect(gs.View.PickedFleets.Count == 0, "closing the window lets the map forget the fleets picked");
     }
 }

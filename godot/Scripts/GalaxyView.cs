@@ -29,7 +29,7 @@ public partial class GalaxyView : Control
     public int Selected { get; private set; } = -1;
     /// <summary>Fleet id of the selected fleet, or -1.</summary>
     public int SelectedFleet { get; set; } = -1;
-    /// <summary>The fleets picked in the Fleets window: drawn like the selected fleet (Paul 2026-11-21).</summary>
+    /// <summary>The fleets picked on the map with Shift+click: drawn like the selected fleet, sent together by a right-click (Paul 2026-11-21).</summary>
     public HashSet<int> PickedFleets { get; set; } = new();
     /// <summary>Shift+click on one of your fleets: add it to the fleets picked, or take it out.</summary>
     public event Action<int> FleetShiftClicked;

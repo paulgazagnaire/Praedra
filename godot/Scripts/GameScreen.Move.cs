@@ -15,7 +15,7 @@ namespace PraedraViewer;
 public partial class GameScreen
 {
     int _moveFleet = -1;
-    readonly List<int> _moveAlso = new();   // the other fleets picked in the Fleets window, sent with _moveFleet (Paul 2026-11-21)
+    readonly List<int> _moveAlso = new();   // the other fleets picked on the map, sent with _moveFleet (Paul 2026-11-21)
     bool _moveHq;
     List<int> _moveFighters;        // based fighters flying on their own (MoveSquadrons), null when not choosing
     string _moveFightersFrom;
@@ -51,7 +51,7 @@ public partial class GameScreen
             bool newSystem = _view.Selected != _lastSelectedSystem;
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();
-            ShowSelectedInFleets();
+            if (!Input.IsKeyPressed(Key.Shift)) ClearMapPicks();   // a plain click lets the fleets picked on the map go
             if (_view.Selected >= 0 || _view.SelectedFleet >= 0)
             {
                 if (_plan != null && !_pickMission) _plan = null; // a map selection closes the planner

@@ -139,7 +139,7 @@ public partial class GameScreen
         if (hot == "fleets")
         {
             var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).Take(3).ToList();
-            if (own.Count > 0) { OpenFleetsPicked(own.Select(f => f.Id).ToList()); return; }
+            if (own.Count > 0) { foreach (var f in own) OpenMgmt(MgKind.Fleet, fleet: f.Id); return; }
         }
         OpenMgmt(hot == "infra" ? MgKind.Infra : MgKind.Ground, n);
     }
