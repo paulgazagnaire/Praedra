@@ -97,6 +97,17 @@ public partial class GameScreen
     /// <summary>The yards that can build for a planet with no construction yard, soonest first, and the one picked.</summary>
     internal (List<string> Yards, string Picked) InfraSuppliers(string dest) => (SuppliersFor(dest).Select(x => x.Yard).ToList(), PickedSupplier(dest)?.Yard);
 
+    /// <summary>A window's width, and how wide its head and its shown page want to be (a page wider than the window would widen it).</summary>
+    internal (float Want, float Width) MgFit(string key)
+    {
+        if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return (0, 0);
+        RebuildMg(w);
+        return (Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
+    }
+
+    /// <summary>The windows are shown (they step aside while a fleet's destination is picked).</summary>
+    internal bool MgShown => _mgLayer.Visible;
+
     internal bool MgHasZone(string zoneKey) => _zones.Any(x => x.Key == zoneKey && IsInstanceValid(x.Box));
 
     internal string MgText(string key)

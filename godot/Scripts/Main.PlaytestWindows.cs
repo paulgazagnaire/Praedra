@@ -125,8 +125,8 @@ public partial class Main
             Expect(gs.MgDrop($"R:{reg.Id}", $"Fleet {fid} Troops")?.Contains("no troop room") == true, "a fleet with no troop room refuses regiments");
 
         // ---------------------------------------------------------------- the order bar and the head (Paul 2026-11-21): attack, merge, fight or retreat, scrap
-        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Fighters,Troops,Leaders", $"the fleet's tabs, with no ship picked: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
-        Expect(gs.MgText($"Fleet {fid}").Contains("ALL FLEETS, WHEN AN ENEMY ARRIVES") && gs.Has("On contact Fight") && gs.Has("On contact Retreat"), "the head: fight or retreat, one setting for every fleet");
+        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Ships,Fighters,Troops,Leaders", $"the fleet's tabs, with no ship picked: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
+        Expect(gs.MgText($"Fleet {fid}").Contains("ALL FLEETS, IF AN ENEMY COMES") && gs.Has("On contact Fight") && gs.Has("On contact Retreat"), "the head: fight or retreat, one setting for every fleet");
         Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "the order bar: Move, Merge, Bombard, Invade, Scrap");
         if (fleet.At != null && fleet.Transit == null) Expect(gs.Enabled("Fleet Scrap") && gs.TipOf("Fleet Scrap").Contains("right-click"), "Scrap the fleet, and how to scrap one ship");
         {

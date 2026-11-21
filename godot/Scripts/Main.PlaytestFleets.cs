@@ -9,9 +9,10 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Playtest of a fleet's window and of several fleets on the map (Paul 2026-11-21: merge fleets, pick single ships, see their stats and
-/// what they carry, give one or several fleets an order; then "a fleet (single fleet) window that works really well", and for several
-/// fleets: move only, by a right-click). F opens the selected fleet's window: its numbers and one bar of orders; a ship's card shows what
-/// it carries; a click on a ship brings its tab forward with its damage, its cargo and its class; two ships split off together; Merge with
+/// what they carry, give one or several fleets an order; then "a fleet (single fleet) window that works really well", one column with
+/// tabs so four stand side by side, and for several fleets: move only, by a right-click). F opens the selected fleet's window: its numbers
+/// and its orders; a ship's card shows what it carries; a click on a ship brings its tab forward with its damage, its cargo and its class;
+/// Shift+click a second one and the cards come back, to split the two off together; Merge with
 /// lists the fleets here first, then the others closest first, and merges; Shift+click on the map picks a second fleet and a right-click
 /// sends both. Every click is a real button's Pressed signal or the map's own handler.
 /// </summary>
@@ -42,9 +43,15 @@ public partial class Main
         Expect(gs.MgmtKeys.Contains(key), $"F opens the selected fleet's window ({string.Join(", ", gs.MgmtKeys)})");
         if (!gs.MgmtKeys.Contains(key)) return;
         string text = gs.MgText(key);
-        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("SHIPS") && text.Contains("STRENGTH") && text.Contains("SLOWEST"), "the window shows the fleet: its name and its numbers");
-        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "one bar of orders: Move, Merge with, Bombard, Invade, Scrap");
-        Expect(string.Join(",", gs.MgTabs(key)) == "Fighters,Troops,Leaders", $"with no ship picked, the right holds what it carries and who leads it: {string.Join(", ", gs.MgTabs(key))}");
+        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("STRENGTH") && text.Contains("SLOWEST") && text.Contains("FIGHTERS") && text.Contains("TROOPS"), "the window shows the fleet: its name and its numbers");
+        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "the orders: Move, Merge with, Bombard, Invade, Scrap");
+        Expect(string.Join(",", gs.MgTabs(key)) == "Ships,Fighters,Troops,Leaders" && gs.MgTab(key) == "Ships", $"with no ship picked, the tabs are its ships, fighters, troops and leaders, the ships in front: {string.Join(", ", gs.MgTabs(key))}");
+        var (want, width) = gs.MgFit(key);
+        Expect(width == 344 && want <= width, $"the window is one column wide, so four stand side by side, and nothing in it is wider ({want:0} in {width:0})");
+        // Move: the windows step aside while the destination is picked, and Esc brings them back
+        Expect(gs.Click("Fleet Move") && gs.InMoveMode && !gs.MgShown, "Move...: the windows step aside so the map can be clicked");
+        gs.PressKey(Key.Escape);
+        Expect(!gs.InMoveMode && gs.MgShown && gs.MgmtKeys.Contains(key), "Esc cancels the move and the windows come back, none closed");
 
         // ---- ships: one card each, with its cargo; a click on a ship brings its tab forward
         var eco = s.Host.Economy;
@@ -73,7 +80,7 @@ public partial class Main
         {
             gs.PlayPick($"S:{a.Ships[1]}", true); gs.PlayRefresh();
             gs.MgText(key);
-            Expect(gs.MgTab(key) == "Picked" && gs.MgPageText(key, "Picked").Contains("2 SHIPS PICKED") && gs.Enabled("Fleet Split"), "Shift+click a second ship: they can be split off together");
+            Expect(gs.MgTab(key) == "Ships" && !gs.MgTabs(key).Contains("Ship") && gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap ships"), $"Shift+click a second ship: the ship cards come back in front, and the two can be split off or scrapped together ({gs.MgTab(key)})");
             int q0 = s.QueuedOrders;
             Expect(gs.Click("Fleet Split") && s.QueuedOrders == q0 + 1, "Split them off sends one split order");
             gs.MgText(key);   // as the next frame would
@@ -81,7 +88,7 @@ public partial class Main
         }
         gs.ClearUnitPicks();
         gs.MgText(key);
-        Expect(!gs.MgTabs(key).Contains("Ship") && !gs.MgTabs(key).Contains("Picked"), "with the ships let go, their tab goes");
+        Expect(!gs.MgTabs(key).Contains("Ship") && !gs.Has("Fleet Split"), "with the ships let go, their tab and the split go");
 
         // ---- Merge with: the fleets here first, then the others, closest first, each with its trip time
         var menu = gs.MenuOf("Fleet Merge").ToList();

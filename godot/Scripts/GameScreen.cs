@@ -302,6 +302,7 @@ public partial class GameScreen : Control
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
         if (_layersCard.Visible) { ToggleLayers(); return; }
+        if (InMoveMode && !_mgLayer.Visible) { CancelMove(); return; }   // the windows stepped aside for a fleet's move: Esc cancels it, as its banner says
         if (ClearPicks()) return;   // Escape first lets picked units go, then closes windows
         if (ClearMapPicks()) return;   // then the fleets picked on the map
         if (CloseTopMgmt()) return;

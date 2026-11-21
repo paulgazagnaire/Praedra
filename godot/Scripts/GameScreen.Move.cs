@@ -124,6 +124,7 @@ public partial class GameScreen
         _moveFleet = f.Id;
         _waypoints.Clear(); _view.Waypoints = null;
         _view.PickMode = true;
+        _mgLayer.Visible = false;   // the windows step aside while a destination is picked: four fleet windows side by side cover the map
         _moveBanner = $"Move {f.Name}: click a destination system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
@@ -153,6 +154,7 @@ public partial class GameScreen
 
     void CancelMove()
     {
+        if (_mgLayer != null) _mgLayer.Visible = true;
         _moveFleet = -1; _moveAlso.Clear(); _moveHq = false; _moveChar = -1; _pickMission = false; _moveFighters = null; _view.PickMode = false; _view.PathPreview = null;
         _waypoints.Clear(); _view.Waypoints = null; _view.PathTraps = null; _view.PathRouteHop = null; _moveWarn = false;
         _lockedTo = null; _around = null;

@@ -111,9 +111,8 @@ public partial class GameScreen
 
     /// <summary>Your own planet's Infrastructure window is two columns wide: what stands there on the left, what it can build on the right,
     /// so it needs no scrolling (Paul 2026-11-14, impeccable critique). Someone else's planet shows only its buildings: one column.</summary>
-    /// A fleet's window is two columns too: the fleet and its ships on the left, the ship picked and what the fleet carries on the right
-    /// (Paul 2026-11-21).
-    bool WantsWide(MgWin w) => w.Kind == MgKind.Fleet || (w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me);
+    /// A fleet's window is one column, so four fleets stand side by side (Paul 2026-11-21).
+    bool WantsWide(MgWin w) => w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me;
 
     internal int MgmtCount => _mgWins.Count;
     internal IEnumerable<string> MgmtKeys => _mgWins.Select(w => w.Key);
