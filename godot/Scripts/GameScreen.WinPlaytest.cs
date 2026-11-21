@@ -61,6 +61,9 @@ public partial class GameScreen
         return Walk(this, fullName) ?? UiTest.Find<BaseButton>(this, fullName);
     }
 
+    /// <summary>The hover words of the card (a ship row, a leader card, a fleet's status) whose full name is exactly <paramref name="fullName"/>, on one line.</summary>
+    internal string CardTip(string fullName) => (MenuCard(fullName)?.TooltipText ?? "").Replace('\n', ' ');
+
     /// <summary>Right-click the button named <paramref name="fullName"/> and pick the menu line starting with <paramref name="item"/>.</summary>
     /// <summary>Shift+click on a fleet's marker on the map, as the mouse would (several fleets picked on the map).</summary>
     internal void PlayShiftClickFleet(int id) => ShiftPickOnMap(id);
@@ -199,6 +202,9 @@ public partial class GameScreen
         // "L:?" picks the first leader of yours standing where the first window is (screenshots don't know ids)
         if (chipKey == "L:?" && _mgWins.FirstOrDefault(x => x.System != null) is { } w)
             chipKey = S.MyCharacters.Where(c => S.Host.Characters.LocationOf(c) == w.System && c.AttachedFleet == 0).OrderBy(c => c.Id).Select(c => $"L:{c.Id}").FirstOrDefault() ?? chipKey;
+        // "S:?" the first ship of the first fleet window
+        if (chipKey == "S:?" && _mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet) is { } fw && S.Game.State.Fleets.TryGetValue(fw.Fleet, out var ff) && ff.Ships.Count > 0)
+            chipKey = $"S:{ff.Ships[0]}";
         if (Drag.Parse(chipKey) is { } d) { _dragging = d; _dragTake = Drag.ParseAll(chipKey).ToList(); _dragCount = _dragTake.Count; _shotDrag = d; LightZones(d); }
     }
     Drag? _shotDrag;

@@ -101,7 +101,7 @@ public partial class Main
             int qd = s.QueuedOrders;
             Expect(gs.MgDrop($"L:{far.Id}", $"Fleet {fid} Passengers") != null || s.QueuedOrders == qd, "dropping them again does not queue a second trip");
             gs.PlayDay(); gs.PlayRefresh();
-            Expect(far.Transit != null && far.JoinFleet == fid && gs.MgText($"Fleet {fid}").Contains("ON THE WAY"), $"next day {fname} travels to {sys}, listed under On the way");
+            Expect(far.Transit != null && far.JoinFleet == fid && gs.MgText($"Fleet {fid}").Contains("On the way"), $"next day {fname} travels to {sys}, listed under On the way");
         }
 
         // ---------------------------------------------------------------- a regiment aboard and back
@@ -124,24 +124,25 @@ public partial class Main
         else if (reg != null && fm.FreeTroopSlots(fleet) == 0)
             Expect(gs.MgDrop($"R:{reg.Id}", $"Fleet {fid} Troops")?.Contains("no troop room") == true, "a fleet with no troop room refuses regiments");
 
-        // ---------------------------------------------------------------- the order bar and the head (Paul 2026-11-21): attack, merge, fight or retreat, scrap
-        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Ships,Fighters,Troops,Leaders", $"the fleet's tabs, with no ship picked: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
-        Expect(gs.MgText($"Fleet {fid}").Contains("ALL FLEETS, IF AN ENEMY COMES") && gs.Has("On contact Fight") && gs.Has("On contact Retreat"), "the head: fight or retreat, one setting for every fleet");
-        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "the order bar: Move, Merge, Bombard, Invade, Scrap");
-        if (fleet.At != null && fleet.Transit == null) Expect(gs.Enabled("Fleet Scrap") && gs.TipOf("Fleet Scrap").Contains("right-click"), "Scrap the fleet, and how to scrap one ship");
+        // ---------------------------------------------------------------- Command (Paul's design 2026-11-21): the actions, the behaviour, scrap on the head
+        Expect(string.Join(",", gs.MgTabs($"Fleet {fid}")) == "Command,Ships,Fighters,Troops", $"the fleet's tabs: {string.Join(", ", gs.MgTabs($"Fleet {fid}"))}");
+        Expect(gs.Click($"Tab Fleet {fid} Command") && gs.MgText($"Fleet {fid}").Contains("all fleets") && gs.Has("Behavior Defensive") && gs.Has("Behavior Elusive"),
+            "Command: Defensive or Elusive, and the note that it is one setting for every fleet");
+        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade"), "the actions: Bombardment, Invasion, Move");
+        if (fleet.At != null && fleet.Transit == null) Expect(gs.MenuOf($"Fleet head {fid}").Any(l => l.StartsWith("Scrap the whole fleet", StringComparison.Ordinal)), "the head's right-click scraps the fleet");
         {
             int q0 = s.QueuedOrders;
             bool wasRetreat = s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat;
-            string flip = wasRetreat ? "Fight" : "Retreat", back = wasRetreat ? "Retreat" : "Fight";
+            string flip = wasRetreat ? "Defensive" : "Elusive", back = wasRetreat ? "Elusive" : "Defensive";
             if (gs.ReportVisible) gs.Click("Close");   // the night's report, if one popped up, is closed first, as a player would
-            Expect(gs.Click($"On contact {flip}") && s.QueuedOrders == q0 + 1, $"Orders: {flip} sends the order (orders waiting {q0} -> {s.QueuedOrders})");
+            Expect(gs.Click($"Behavior {flip}") && s.QueuedOrders == q0 + 1, $"Orders: {flip} sends the order (orders waiting {q0} -> {s.QueuedOrders})");
             gs.PlayRefresh();
-            Expect(gs.Click($"On contact {back}") && s.QueuedOrders == q0 + 2, $"Orders: {back} sends it back (orders waiting {s.QueuedOrders})");
+            Expect(gs.Click($"Behavior {back}") && s.QueuedOrders == q0 + 2, $"Orders: {back} sends it back (orders waiting {s.QueuedOrders})");
             gs.PlayDay();
             Expect((s.Host.Battles.OnContactOf(me) == Praedra.Core.Battle.OnContactMode.Retreat) == wasRetreat, "the last choice holds after the day");
         }
 
-        // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back with Merge with
+        // ---------------------------------------------------------------- ships split off (two drops, one new fleet), then merged back from the head's menu
         if (fleet.Ships.Count > 1)
         {
             for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first (a system lost overnight)
@@ -162,9 +163,9 @@ public partial class Main
             if (ship2 != 0) Expect(made != null && made.Ships.Contains(ship2) && s.Game.State.Fleets.Keys.Count(k => !before.Contains(k)) == 1, "two ships dropped the same day make one new fleet (QA)");
             if (made != null)
             {
-                gs.MgText($"Fleet {fid}");   // only this fleet's window is open: its Merge with is the one pressed
+                gs.MgText($"Fleet {fid}");
                 int qm = s.QueuedOrders;
-                Expect(gs.RunMenu("Fleet Merge", $"{made.Name}: here") && s.QueuedOrders == qm + 1, $"{fleet.Name}'s Merge with lists {made.Name}, standing with it: one merge order");
+                Expect(gs.RunMenu($"Fleet head {fid}", $"Merge {made.Name}: here") && s.QueuedOrders == qm + 1, $"{fleet.Name}'s head menu lists {made.Name}, standing with it: one merge order");
                 gs.ShotWindow("fleet", made.Id.ToString()); gs.PlayRefresh();
                 Expect(gs.MgDrop($"M:{fid}", $"Fleet {made.Id} Ships") != null, "the other fleet can't be merged back into it the same day (QA)");
                 gs.PlayDay(); gs.PlayRefresh();

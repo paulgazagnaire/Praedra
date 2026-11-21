@@ -10,11 +10,11 @@ namespace PraedraViewer;
 /// <summary>
 /// Playtest of a fleet's window and of several fleets on the map (Paul 2026-11-21: merge fleets, pick single ships, see their stats and
 /// what they carry, give one or several fleets an order; then "a fleet (single fleet) window that works really well", one column with
-/// tabs so four stand side by side, and for several fleets: move only, by a right-click). F opens the selected fleet's window: its numbers
-/// and its orders; a ship's card shows what it carries; a click on a ship brings its tab forward with its damage, its cargo and its class;
-/// Shift+click a second one and the cards come back, to split the two off together; Merge with
-/// lists the fleets here first, then the others closest first, and merges; Shift+click on the map picks a second fleet and a right-click
-/// sends both. Every click is a real button's Pressed signal or the map's own handler.
+/// tabs so four stand side by side; then his Paper design, fleet-new-frame-1 and -2). F opens the selected fleet's window: its status,
+/// its tabs with Command first, the orders and the fleets' behaviour there; a ship's row shows what it carries and its hull, its hover its
+/// damage; Shift+click a second ship and the two can be split off together; a right-click on the head lists the fleets here first, then
+/// the others closest first, and merges; Shift+click on the map picks a second fleet and a right-click sends both. Every click is a real
+/// button's Pressed signal or the map's own handler.
 /// </summary>
 public partial class Main
 {
@@ -36,31 +36,36 @@ public partial class Main
         int bid = fm.AddFleet(me, "Test Pair", new[] { cls }, a.At!);
         var b = s.Game.State.Fleets[bid];
 
-        // ---- F opens the selected fleet's window: its name, its numbers, one bar of orders
+        // ---- F opens the selected fleet's window: its name and status, its tabs with Command in front, the orders there
         SelectFleetByList(gs, a);
         gs.PressKey(Key.F); gs.PlayRefresh();
         string key = $"Fleet {a.Id}";
         Expect(gs.MgmtKeys.Contains(key), $"F opens the selected fleet's window ({string.Join(", ", gs.MgmtKeys)})");
         if (!gs.MgmtKeys.Contains(key)) return;
         string text = gs.MgText(key);
-        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("STRENGTH") && text.Contains("SLOWEST") && text.Contains("FIGHTERS") && text.Contains("TROOPS"), "the window shows the fleet: its name and its numbers");
-        Expect(gs.Has("Fleet Move") && gs.Has("Fleet Merge") && gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Scrap"), "the orders: Move, Merge with, Bombard, Invade, Scrap");
-        Expect(string.Join(",", gs.MgTabs(key)) == "Ships,Fighters,Troops,Leaders" && gs.MgTab(key) == "Ships", $"with no ship picked, the tabs are its ships, fighters, troops and leaders, the ships in front: {string.Join(", ", gs.MgTabs(key))}");
+        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("Status:") && text.Contains($"In orbit at {a.At}"), "the head: the fleet's name, and its status saying where it is");
+        Expect(gs.CardTip($"Fleet status {a.Id}").Contains("Strength") && gs.CardTip($"Fleet status {a.Id}").Contains("Slowest ship"), "the status's hover gives its strength and its slowest ship");
+        Expect(string.Join(",", gs.MgTabs(key)) == "Command,Ships,Fighters,Troops" && gs.MgTab(key) == "Command", $"the tabs are Command, Ships, Fighters and Troops, Command in front: {string.Join(", ", gs.MgTabs(key))}");
+        Expect(text.Contains("Fleet actions") && text.Contains("Fleet behavior") && text.Contains("Fleet command") && text.Contains("Passengers"), "Command: actions, behaviour, the three posts and the passengers");
+        Expect(gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Move") && gs.Has("Behavior Defensive") && gs.Has("Behavior Elusive"), "the actions Bombardment, Invasion and Move, and the behaviour Defensive or Elusive");
+        Expect(!gs.Has("Fleet Merge") && !gs.Has("Fleet Scrap"), "no Merge or Scrap button, as the design");
+        Expect(gs.MenuOf($"Fleet head {a.Id}").Any(l => l.StartsWith("Scrap the whole fleet", StringComparison.Ordinal)), "a right-click on the head scraps the fleet");
         var (want, width) = gs.MgFit(key);
         Expect(width == 344 && want <= width, $"the window is one column wide, so four stand side by side, and nothing in it is wider ({want:0} in {width:0})");
         // Move: the windows step aside while the destination is picked, and Esc brings them back
-        Expect(gs.Click("Fleet Move") && gs.InMoveMode && !gs.MgShown, "Move...: the windows step aside so the map can be clicked");
+        Expect(gs.Click("Fleet Move") && gs.InMoveMode && !gs.MgShown, "Move: the windows step aside so the map can be clicked");
         gs.PressKey(Key.Escape);
         Expect(!gs.InMoveMode && gs.MgShown && gs.MgmtKeys.Contains(key), "Esc cancels the move and the windows come back, none closed");
 
-        // ---- ships: one card each, with its cargo; a click on a ship brings its tab forward
+        // ---- ships: one row each, with its cargo and hull; its damage in its hover; a click picks it
         var eco = s.Host.Economy;
+        Expect(gs.Click($"Tab {key} Ships") && gs.MgTab(key) == "Ships", "a click on the Ships tab shows it");
         var carrier = a.Ships.Select(eco.Find).FirstOrDefault(o => o != null && fm.ClassOf(o) is { } c && c.FighterCapacity + c.TroopCapacity > 0);
         if (carrier != null)
         {
             var cc = fm.ClassOf(carrier)!;
             string room = cc.FighterCapacity > 0 ? $"{fm.UnitsAboard(carrier.Id, ObjectCategory.Fighter).Count()}/{cc.FighterCapacity}" : $"{fm.UnitsAboard(carrier.Id, ObjectCategory.Regiment).Count()}/{cc.TroopCapacity}";
-            Expect(text.Contains(room), $"a ship's card says what it carries out of its room ({room})");
+            Expect(gs.MgPageText(key, "Ships").Contains(room), $"a ship's row says what it carries out of its room ({room})");
         }
         var ship = eco.Find(a.Ships[0])!;
         var sc = fm.ClassOf(ship)!;
@@ -68,18 +73,19 @@ public partial class Main
         int hull0 = ship.Hull; var hits0 = ship.Hits?.ToList();
         ship.Hull = sc.Hull / 2;
         if (ship.Hits is { Count: > 1 }) ship.Hits[1] = 2;
+        gs.MgText(key);
+        Expect(gs.MgPageText(key, "Ships").Contains($"{sc.Hull / 2}/{sc.Hull}"), "its row shows the hull it has left");
+        Expect(ship.Hits is not { Count: > 1 } || gs.CardTip($"S:{ship.Id}").Contains("weapons (2)"), $"its hover says its damage in words ({gs.CardTip($"S:{ship.Id}")})");
+        ship.Hull = hull0; if (hits0 != null) ship.Hits = hits0;
+        Expect(gs.MenuOf($"S:{ship.Id}").Any(l => l.StartsWith("Split it off", StringComparison.Ordinal)) && gs.MenuOf($"S:{ship.Id}").Any(l => l.StartsWith("Scrap this one", StringComparison.Ordinal)),
+            $"a right-click on a ship splits it off or scraps it: {string.Join(" | ", gs.MenuOf($"S:{ship.Id}"))}");
         gs.PlayPick($"S:{ship.Id}", false); gs.PlayRefresh();
         gs.MgText(key);
-        Expect(gs.MgTab(key) == "Ship", $"a click on a ship brings its tab forward ({gs.MgTab(key)})");
-        string page = gs.MgPageText(key, "Ship");
-        Expect(page.Contains($"hull {sc.Hull / 2} of {sc.Hull}") && (ship.Hits is not { Count: > 1 } || page.Contains("weapons (2)")), "it shows the ship's hull and its damage in words");
-        Expect(page.Contains("IT CARRIES") || page.Contains("It carries no fighters"), "and what it carries");
-        Expect(page.Contains($"EVERY {ship.Class.ToUpperInvariant()}") && page.Contains("Trip time"), "and the numbers of its class");
-        ship.Hull = hull0; if (hits0 != null) ship.Hits = hits0;
+        Expect(gs.PickedKeys.Contains($"S:{ship.Id}") && gs.MgTab(key) == "Ships", "a click on a ship picks it, and the ships stay in front");
         // a window that closes while the windows step aside for a move (its fleet merged away or lost) leaves the other windows' picks
         // alone (Ponytail on #348)
         gs.ShotWindow("fleet", bid.ToString());
-        Expect(gs.Click("Fleet Move") && !gs.MgShown, "Move... with two fleet windows open: both step aside");
+        Expect(gs.Click("Fleet Move") && !gs.MgShown, "Move with two fleet windows open: both step aside");
         gs.PlayCloseTop();
         Expect(gs.PickedKeys.Contains($"S:{ship.Id}"), "a window closing meanwhile keeps the ship picked in the other");
         gs.PressKey(Key.Escape);
@@ -88,28 +94,28 @@ public partial class Main
         {
             gs.PlayPick($"S:{a.Ships[1]}", true); gs.PlayRefresh();
             gs.MgText(key);
-            Expect(gs.MgTab(key) == "Ships" && !gs.MgTabs(key).Contains("Ship") && gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap ships"), $"Shift+click a second ship: the ship cards come back in front, and the two can be split off or scrapped together ({gs.MgTab(key)})");
+            Expect(gs.MgTab(key) == "Ships" && gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap ships"), $"Shift+click a second ship: the two can be split off or scrapped together ({gs.MgTab(key)})");
             int q0 = s.QueuedOrders;
             Expect(gs.Click("Fleet Split") && s.QueuedOrders == q0 + 1, "Split them off sends one split order");
             gs.MgText(key);   // as the next frame would
-            Expect(gs.Click($"Cancel: Split 2 ships off {a.Name}") && s.QueuedOrders == q0, "and its Cancel takes it back");
+            Expect(gs.MgText(key).Contains("Ordered: Split 2 ships off") && gs.Click($"Cancel: Split 2 ships off {a.Name}") && s.QueuedOrders == q0, "the head shows the order, and its Cancel takes it back");
         }
         gs.ClearUnitPicks();
         gs.MgText(key);
-        Expect(!gs.MgTabs(key).Contains("Ship") && !gs.Has("Fleet Split"), "with the ships let go, their tab and the split go");
+        Expect(!gs.Has("Fleet Split"), "with the ships let go, the split goes");
 
-        // ---- Merge with: the fleets here first, then the others, closest first, each with its trip time
-        var menu = gs.MenuOf("Fleet Merge").ToList();
-        int hereAt = menu.FindIndex(l => l.StartsWith($"{b.Name}: here", StringComparison.Ordinal));
-        Expect(hereAt >= 0, $"Merge with lists {b.Name}, standing with it: {string.Join(" | ", menu)}");
+        // ---- a right-click on the head merges: the fleets here first, then the others, closest first, each with its trip time
+        var menu = gs.MenuOf($"Fleet head {a.Id}").ToList();
+        int hereAt = menu.FindIndex(l => l.StartsWith($"Merge {b.Name}: here", StringComparison.Ordinal));
+        Expect(hereAt >= 0, $"the head's menu lists {b.Name}, standing with it: {string.Join(" | ", menu)}");
         var far = still.FirstOrDefault(f => f.At != a.At && s.Host.PlanMove(me, f.Id, a.At!, null) is { Ok: true });
         if (far != null)
         {
-            int farAt = menu.FindIndex(l => l.StartsWith($"{far.Name}: at {far.At}, flies here in ", StringComparison.Ordinal));
+            int farAt = menu.FindIndex(l => l.StartsWith($"Merge {far.Name}: at {far.At}, flies here in ", StringComparison.Ordinal));
             Expect(farAt > hereAt, $"and {far.Name} at {far.At}, after the fleets here, with its trip time");
         }
         int ships0 = a.Ships.Count;
-        Expect(gs.RunMenu("Fleet Merge", $"{b.Name}: here"), $"Merge {b.Name} into {a.Name}");
+        Expect(gs.RunMenu($"Fleet head {a.Id}", $"Merge {b.Name}: here"), $"Merge {b.Name} into {a.Name}");
         gs.PlayDay(); gs.PlayRefresh();
         Expect(!s.Game.State.Fleets.ContainsKey(bid) && a.Ships.Count == ships0 + 1, $"next day {b.Name} has merged into {a.Name}");
 

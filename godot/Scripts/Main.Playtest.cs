@@ -239,7 +239,7 @@ public partial class Main
         if (splitFleet != null)
         {
             SelectFleetByList(gs, splitFleet);
-            Expect(gs.Click("Fleet orders") && gs.Click("On contact Retreat"), "Retreat from the fleet window's head");
+            Expect(gs.Click("Fleet orders") && gs.Click("Behavior Elusive"), "Elusive (retreat) from the fleet window's Command tab");
             gs.MgCloseAll();
             int n0 = s.Game.State.Fleets.Values.Count(f => f.Side == me); int sid = splitFleet.Id;
             Expect(gs.TickShip(0), "tick a ship to split off");
@@ -249,7 +249,7 @@ public partial class Main
             Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0 + 1, "split made a new fleet");
             Expect(!s.Messages.Skip(refusedBefore).Any(m => m.Text.StartsWith("Order refused: Change the battle", StringComparison.Ordinal)), "retreat switch accepted");
             SelectFleetByList(gs, splitFleet);
-            Expect(gs.Click("Fleet orders") && gs.Click("On contact Fight"), "back to Fight from the fleet window's head");
+            Expect(gs.Click("Fleet orders") && gs.Click("Behavior Defensive"), "back to Defensive (fight) from the fleet window's Command tab");
             gs.MgCloseAll();
             var newest = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderByDescending(f => f.Id).First();
             SelectFleetByList(gs, newest);

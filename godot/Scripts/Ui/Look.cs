@@ -22,7 +22,9 @@ public static class Look
     public static readonly Color Empty = new("252525");     // a free slot
     public static readonly Color Raw = new("c8c8c8");       // raw slots with a mine
     public static readonly Color RawDeep = new("6a6a6a");   // raw slots with a mine ordered
-    public static readonly Color Divider = new(0x61 / 255f, 0x61 / 255f, 0x61 / 255f, 0.4f); // between the two gauges
+    public static readonly Color Divider = new(0x61 / 255f, 0x61 / 255f, 0x61 / 255f, 0.4f); // between the two gauges; a bar's track
+    public static readonly Color Outline = new("36363c");   // a button's and a card's outline (Paul's fleet window design, 2026-11-21)
+    public static readonly Color Muted = new("7d8699");     // what a fleet is doing, in its status line (the same design)
 
     /// <summary>A label in the design's face: Space Grotesk, Medium for names and headings, Regular for numbers and states.</summary>
     public static Label Words(string text, int size, Color color, bool medium = false)

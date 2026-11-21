@@ -25,7 +25,7 @@ public partial class GameScreen
     readonly Dictionary<long, DropUndo> _dropUndo = new(); // an order made by a drop -> that drop's undo (until the clock moves)
 
     /// <summary>A waiting order: its words, then a Cancel button.</summary>
-    void OrderLine(long seq, string text, int size = 0)
+    void OrderLine(long seq, string text, int size = 0, Container into = null)
     {
         var h = Ui.HBox(6);
         var l = Ui.Label(text, null, Pending, size);
@@ -36,7 +36,7 @@ public partial class GameScreen
         b.SetMeta(UiTest.FullName, $"Cancel: {what}");
         b.SizeFlagsVertical = SizeFlags.ShrinkBegin;
         h.AddChild(b);
-        Add(h);
+        if (into != null) into.AddChild(h); else Add(h);
     }
 
     /// <summary>Take back a waiting order (and the rest of its drop). Nothing happens to the game: the order is simply never given.</summary>

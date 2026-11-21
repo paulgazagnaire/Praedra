@@ -164,6 +164,8 @@ public partial class GameScreen
             bool? ok = why == null ? true : why == "" ? null : false; // where it already is stays quiet
             z.Box.AddThemeStyleboxOverride("panel", ZoneStyle(ok, look));
             z.Box.Modulate = ok == false ? new Color(1, 1, 1, 0.55f) : Colors.White;
+            // a fleet's split place shows only while a ship that can go there is dragged, or once ships were dropped there today
+            if (z.Box.HasMeta("dragonly")) z.Box.Visible = ok == true || z.Box.HasMeta("ghosts");
         }
     }
 
@@ -184,7 +186,9 @@ public partial class GameScreen
         if (Pickable(self))
         {
             // a click picks it, Shift+click adds it to the pick or takes it out (Paul 2026-11-19); a drag is not a click
-            if (IsPicked(self) && c is PanelContainer pc) pc.AddThemeStyleboxOverride("panel", PickedLook());
+            // picked: a fleet window's card or ship row keeps its frame, its line turns blue; other tiles take the picked look
+            if (IsPicked(self) && c is PanelContainer pc)
+                pc.AddThemeStyleboxOverride("panel", !c.HasMeta("card") ? PickedLook() : c.GetMeta("card").AsString() == "row" ? RowBox(Ui.You) : CardBox(Ui.You));
             Vector2? down = null;
             c.GuiInput += e =>
             {
