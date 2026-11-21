@@ -34,6 +34,13 @@ public sealed class Fleet
     /// MoveFleet and when it arrives. rule: m3-fleets §Orders (MoveFleet: joining a fleet on arrival, Paul 2026-11-02).</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public int JoinFleet { get; set; }
+    /// <summary>
+    /// The fleet's standing answer to the Battle Alert: Fight (Defensive, DEFAULT) or Retreat (Elusive). A new fleet starts Fight; a split copies its
+    /// parent's; a transfer, merge or join keeps the receiving fleet's. The AI side always fights. rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21);
+    /// m3-fleets §What a fleet is.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public Praedra.Core.Battle.OnContactMode OnContact { get; set; }
 }
 
 /// <summary>

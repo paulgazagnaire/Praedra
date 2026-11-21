@@ -6,8 +6,12 @@ namespace Praedra.Core.Battle;
 // Order for one battle: BattleStarted, BattleChoice (Collective, Hand), then per destroyed unit UnitDestroyed / RetreatRefused / RetreatHeldByHoldBeam / FleetRetreated /
 // SquadronsRelocated in the order they happen, then BattleEnded. rule: m4-battle-classic §10; m4-retreat-damage-repair §Where it runs.
 
-/// <summary>SetOnContact: a side's standing answer to the Battle Alert. Order (step 1). rule: m4-battle-classic §1.3.</summary>
+/// <summary>SetOnContact: the same answer to the Battle Alert for every fleet of the side at once. Order (step 1). rule: m4-battle-classic §1.3.</summary>
 public sealed record SetOnContactOrder(long Sequence, Side Side, OnContactMode Mode) : Order(Sequence, Side);
+
+/// <summary>SetFleetOnContact: one fleet's standing answer to the Battle Alert (Fight = Defensive, Retreat = Elusive). Order (step 1).
+/// rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21).</summary>
+public sealed record SetFleetOnContactOrder(long Sequence, Side Side, int Fleet, OnContactMode Mode) : Order(Sequence, Side);
 
 /// <summary>Reject codes of SetOnContact. rule: m4-battle-classic §1.3 (the AI side is fixed to Simulate; the codes are DEFAULT names).</summary>
 public static class BattleReject

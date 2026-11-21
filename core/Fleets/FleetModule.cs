@@ -420,6 +420,7 @@ public sealed partial class FleetModule
         string system = fleet.At!;
         foreach (var s in ships) fleet.Ships.Remove(s);
         var f = NewFleet(fleet.Side, system, ships);
+        f.OnContact = fleet.OnContact; // rule: m3-fleets §What a fleet is (a split copies its parent's battle answer)
         var members = new ValueList<int>(f.Ships.ToList());
         ctx.Emit((i, _) => new FleetCreated(i, day, f.Id, system, members, FleetCreateCause.HoldBeamHeld));
         return f.Id;
