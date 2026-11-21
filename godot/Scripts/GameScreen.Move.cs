@@ -179,18 +179,20 @@ public partial class GameScreen
         else
         {
             var plan = S.Host.PlanMove(Me, f.Id, to, via);
-            if (plan.Ok)
+            // the other fleets picked are checked even when the first has no route there (Ponytail on #348)
+            var redOthers = _moveAlso.Count == 0 ? new List<(Fleet F, MovePlan Plan)>() : RedOthers(to);
+            bool leadRed = plan.Ok && plan.Red;
+            if (plan.Ok || redOthers.Count > 0)
             {
-                _view.PathPreview = plan.Path.Select(n => G.TryFindSystem(n, out int i) ? i : -1).ToList();
-                _view.PathRouteHop = plan.RouteHop;
-                string trip = $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}";
+                _view.PathPreview = plan.Ok ? plan.Path.Select(n => G.TryFindSystem(n, out int i) ? i : -1).ToList() : null;
+                _view.PathRouteHop = plan.Ok ? plan.RouteHop : null;
+                string trip = plan.Ok ? $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}" : $"{f.Name} has no route there and stays";
                 string through = via.Count == 0 ? "" : " via " + string.Join(", ", via);
-                var redOthers = _moveAlso.Count == 0 ? new List<(Fleet F, MovePlan Plan)>() : RedOthers(to);
-                if (plan.Red || redOthers.Count > 0)
+                if (leadRed || redOthers.Count > 0)
                 {
                     _moveWarn = true;
-                    _view.PathColor = plan.Red ? TrapRed : new Color(1f, 1f, 1f, 0.9f);
-                    var reds = (plan.Red ? new[] { (F: f, Plan: plan) } : Array.Empty<(Fleet F, MovePlan Plan)>()).Concat(redOthers).ToList();
+                    _view.PathColor = leadRed ? TrapRed : new Color(1f, 1f, 1f, 0.9f);
+                    var reds = (leadRed ? new[] { (F: f, Plan: plan) } : Array.Empty<(Fleet F, MovePlan Plan)>()).Concat(redOthers).ToList();
                     var traps = reds.SelectMany(r => r.Plan.Traps).GroupBy(t => t.System).Select(g => g.First()).OrderBy(t => t.System, StringComparer.Ordinal).ToList();
                     _view.PathTraps = traps.Select(t => G.TryFindSystem(t.System, out int i) ? i : -1).Where(i => i >= 0).ToList();
                     string where = string.Join(", ", traps.Select(t => $"{t.System} (seen day {t.SeenDay})"));
@@ -198,7 +200,7 @@ public partial class GameScreen
                     _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {who} out of hyperspace there.\n"
                         + $"{MovingWho(f)} to {to}{through}: {trip}. " + (_lockedTo != null ? "Choose below." : "Click to choose, or Shift-click a waypoint to steer around it.");
                     // a waypoint steers the first fleet only: offered when it alone is in danger
-                    if (_lockedTo != null && plan.Red && redOthers.Count == 0) _around = GoAround(f, to, via, plan);
+                    if (_lockedTo != null && leadRed && redOthers.Count == 0) _around = GoAround(f, to, via, plan);
                 }
                 else
                 {
@@ -257,9 +259,10 @@ public partial class GameScreen
             _orderActions.AddChild(anyway);
             if (many && S.Game.State.Fleets.TryGetValue(_moveFleet, out var first))
             {
-                int all = 1 + _moveAlso.Count(id => S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != _lockedTo);
-                int red1 = S.Host.PlanMove(Me, first.Id, _lockedTo, _waypoints.ToList()) is { Ok: true, Red: true } ? 1 : 0;
-                int safe = all - red1 - RedOthers(_lockedTo).Count;
+                // the fleets with a route there and no known trap on it
+                int safe = (S.Host.PlanMove(Me, first.Id, _lockedTo, _waypoints.ToList()) is { Ok: true, Red: false } ? 1 : 0)
+                    + _moveAlso.Count(id => S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != _lockedTo
+                        && S.Host.PlanMove(Me, o.Id, _lockedTo, new List<string>()) is { Ok: true, Red: false });
                 if (safe > 0)
                     _orderActions.AddChild(Ui.Button($"Send only the {Ui.Count(safe, "fleet", "fleets")} with no trap", () => SendMove(_lockedTo, _waypoints.ToList(), safeOnly: true),
                         "The fleets whose path crosses a known trap stay where they are.", "Primary"));
@@ -309,7 +312,7 @@ public partial class GameScreen
         if (to == f.At) return;
         var via = _waypoints.ToList();
         var plan = S.Host.PlanMove(Me, f.Id, to, via); // the same path the order will fly
-        if (plan.Ok && (plan.Red || (_moveAlso.Count > 0 && RedOthers(to).Count > 0)))
+        if ((plan.Ok && plan.Red) || (_moveAlso.Count > 0 && RedOthers(to).Count > 0))
         {
             // a known trap on the way of any fleet picked: never sent by the click alone (the bar offers Go anyway / Go around or
             // Send only the fleets with no trap / Cancel)
@@ -325,11 +328,17 @@ public partial class GameScreen
     {
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
         var also = _moveAlso.ToList();
-        bool Red(Fleet x, List<string> v) => safeOnly && S.Host.PlanMove(Me, x.Id, to, v) is { Ok: true, Red: true };
-        if (!Red(f, via)) SendFleetMove(f, to, via);
+        // with several fleets, one with no route there stays (and says so); with safeOnly, so does one whose path crosses a known trap
+        bool Stays(Fleet x, List<string> v)
+        {
+            var p = S.Host.PlanMove(Me, x.Id, to, v);
+            if (also.Count > 0 && !p.Ok) { Toast($"{x.Name} has no route to {to}: it stays.", MsgKind.Warn); return true; }
+            return safeOnly && p is { Ok: true, Red: true };
+        }
+        if (!Stays(f, via)) SendFleetMove(f, to, via);
         // the other fleets picked: each its own path to the same place (the waypoints are the first fleet's; the others take theirs)
         foreach (var id in also)
-            if (S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != to && !Red(o, new List<string>())) SendFleetMove(o, to, new List<string>());
+            if (S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != to && !Stays(o, new List<string>())) SendFleetMove(o, to, new List<string>());
         CancelMove();
         _fleetListDirty = true;
         if (also.Count > 0) MgRefreshSoon();

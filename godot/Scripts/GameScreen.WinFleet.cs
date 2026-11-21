@@ -74,17 +74,18 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A right-click on a system sends the fleet selected and the fleets picked on the map there, each its own way, as Move and a click
-    /// would: a path through a known trap still waits for a choice. Shift+right-click starts the move with that system as a waypoint;
-    /// while a fleet move is being chosen, a right-click is a left click (Shift adds a waypoint, a plain one sends). rule: m1-travel §Path rule.
+    /// A right-click on a system sends the fleets picked on the map there (the selected fleet leads if it is one of them), or the fleet
+    /// selected when none is picked, each its own way, as Move and a click would: a path through a known trap still waits for a choice.
+    /// Shift+right-click starts the move with that system as a waypoint; while a fleet move is being chosen, a right-click is a left click
+    /// (Shift adds a waypoint, a plain one sends). rule: m1-travel §Path rule.
     /// </summary>
     void OnMapRightClick(int idx)
     {
         if (idx < 0) return;
         if (InMoveMode) { if (_moveFleet >= 0) OnSystemPicked(idx); return; }
-        var ids = new List<int>();
-        if (_view.SelectedFleet >= 0) ids.Add(_view.SelectedFleet);
-        ids.AddRange(_view.PickedFleets.Where(x => !ids.Contains(x)).OrderBy(x => x));
+        var picks = _view.PickedFleets;
+        var ids = picks.Count == 0 ? (_view.SelectedFleet >= 0 ? new List<int> { _view.SelectedFleet } : new List<int>())
+            : picks.OrderBy(x => x == _view.SelectedFleet ? 0 : 1).ThenBy(x => x).ToList();   // a fleet Shift+clicked out stays out (Ponytail on #348)
         string to = G.Systems[idx].Name;
         var fs = ids.Select(i => S.Game.State.Fleets.TryGetValue(i, out var f) ? f : null).Where(f => f != null && f.Side == Me && Still(f) && f.At != to).ToList();
         if (fs.Count == 0) return;

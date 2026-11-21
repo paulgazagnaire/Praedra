@@ -112,6 +112,9 @@ public partial class Main
                 gs.HoverTextFor(to);   // the map takes in the selection before the Shift+click
                 gs.PlayShiftClickFleet(y.Id);
                 Expect(gs.View.PickedFleets.SetEquals(new[] { x.Id, y.Id }), $"Shift+click {y.Name} on the map: it and {x.Name}, selected, are picked");
+                gs.PlayShiftClickFleet(x.Id);
+                Expect(gs.View.PickedFleets.SetEquals(new[] { y.Id }), $"Shift+click {x.Name} takes it out, though it is the one selected");
+                gs.PlayShiftClickFleet(x.Id);
                 gs.PlayRightClick(to);
                 Expect(s.PlannedMoveOf(x.Id)?.To == to && s.PlannedMoveOf(y.Id)?.To == to, $"a right-click on {to} sends both");
                 foreach (var f in new[] { x, y })
