@@ -77,6 +77,8 @@ public partial class GameScreen : Control
         _view.SystemPicked += OnSystemPicked;
         _view.SectorClicked += OpenSector;
         _view.FleetPicker = _fleets.Pick;
+        _view.FleetShiftClicked += ShiftPickOnMap;   // several fleets picked on the map (Paul 2026-11-21)
+        _view.RightClicked += OnMapRightClick;
         _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;
         _view.Player = S.Player;
@@ -265,7 +267,7 @@ public partial class GameScreen : Control
             case Key.Space: TogglePlay(); break;
             case Key.N: StepOne(); break;
             case Key.Q: ShowTab(DrawerTab.Needs); break;
-            case Key.F: ShowTab(DrawerTab.Fleets); break;
+            case Key.F: OpenFleets(); break;   // the selected fleet's window, else the drawer's fleets (Paul 2026-11-21)
             case Key.C: ToggleCharacters(); break;
             case Key.M: ToggleMissions(); break;
             case Key.E: ShowTab(DrawerTab.Log); break;
@@ -300,7 +302,9 @@ public partial class GameScreen : Control
         if (CloseTopModal()) return;
         if (_searchResults.Visible) { CloseSearch(); return; }
         if (_layersCard.Visible) { ToggleLayers(); return; }
+        if (InMoveMode && !_mgLayer.Visible) { CancelMove(); return; }   // the windows stepped aside for a fleet's move: Esc cancels it, as its banner says
         if (ClearPicks()) return;   // Escape first lets picked units go, then closes windows
+        if (ClearMapPicks()) return;   // then the fleets picked on the map
         if (CloseTopMgmt()) return;
         if (SectorViewOpen) { CloseSectorView(); return; }
         if (InMoveMode) { CancelMove(); return; }

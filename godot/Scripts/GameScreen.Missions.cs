@@ -335,6 +335,7 @@ public partial class GameScreen
         if (_plan?.Kind == null) return;
         _pickMission = true; _moveFleet = -1; _moveHq = false; _moveChar = -1;
         _view.PickMode = true;
+        _mgLayer.Visible = true;   // only a fleet's move sets the windows aside (Ponytail on #348)
         _moveBanner = $"{GameSession.KindWords(_plan.Kind.Value)}: click the target system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();

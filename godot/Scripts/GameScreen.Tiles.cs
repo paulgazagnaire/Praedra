@@ -198,7 +198,7 @@ public partial class GameScreen
     /// Identical units (same class, same state, both movable or both not) still sit side by side. A drag takes that unit; Shift takes it
     /// and every identical one beside it. A right-click offers to scrap. Units already dropped elsewhere today are left out (they show there).
     /// </summary>
-    void UnitTiles(HFlowContainer flow, IEnumerable<(Drag? D, EconObject O, string Sub)> units, string system)
+    void UnitTiles(HFlowContainer flow, IEnumerable<(Drag? D, EconObject O, string Sub)> units, string system, Action<EconObject, VBoxContainer> more = null)
     {
         var list = units.Where(u => !(u.D is { } d && _moved.ContainsKey(d.Key)) && !_scrapped.Contains(u.O.Id)).ToList();
         foreach (var g in list.GroupBy(u => (u.O.Class, u.Sub, Can: u.D != null)))
@@ -239,6 +239,7 @@ public partial class GameScreen
                     RightClickMenu(tile, items.ToArray());
                 }
                 tile.TooltipText = Ui.Wrap(tip.Trim());
+                if (more != null && tile.GetChildren().OfType<VBoxContainer>().FirstOrDefault() is { } body) more(u.O, body);   // a ship card's hull and cargo
                 flow.AddChild(tile);
             }
         }

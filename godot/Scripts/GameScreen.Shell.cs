@@ -239,7 +239,7 @@ public partial class GameScreen
     internal static string NeedsCount(int urgent, int watch) =>
         urgent == 0 ? $"{Ui.Count(watch, "thing", "things")} to watch" : watch == 0 ? $"{urgent} urgent" : $"{urgent} urgent, {watch} to watch";
 
-    bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission || _moveFighters != null;
+    internal bool InMoveMode => _moveFleet >= 0 || _moveHq || _moveChar >= 0 || _pickMission || _moveFighters != null;
 
     void ToggleLayers()
     {

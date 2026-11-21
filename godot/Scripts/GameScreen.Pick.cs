@@ -12,6 +12,7 @@ namespace PraedraViewer;
 public partial class GameScreen
 {
     readonly List<Drag> _picked = new();   // in the order they were picked
+    bool _pickShift;   // the last pick was a Shift+click: a fleet's window keeps its ship cards in front for the next one
 
     static bool Pickable(Drag d) => d.Kind is 'R' or 'S' or 'Q' or 'F';
 
@@ -30,6 +31,7 @@ public partial class GameScreen
     void PickClick(Drag d, bool shift)
     {
         if (!Pickable(d)) return;
+        _pickShift = shift;
         if (shift) { if (!_picked.Remove(d)) _picked.Add(d); }
         else if (_picked.Count == 1 && _picked[0] == d) _picked.Clear();
         else { _picked.Clear(); _picked.Add(d); }
@@ -53,7 +55,9 @@ public partial class GameScreen
         var shown = new HashSet<Drag>();
         void Walk(Node node)
         {
-            if (node is CanvasItem ci && !ci.Visible) return;
+            // a tab that is not in front still counts: its window is open (a fleet's picked ship shows on its own tab, over the ship cards);
+            // so do the windows while they step aside for a fleet's move (Ponytail on #348: a window closing then dropped every pick)
+            if (node is CanvasItem ci && !ci.Visible && !ci.HasMeta("page") && node != _mgLayer) return;
             if (node is Control c && c.HasMeta(UiTest.FullName) && Drag.Parse(c.GetMeta(UiTest.FullName).AsString()) is { } d) shown.Add(d);
             foreach (var ch in node.GetChildren()) Walk(ch);
         }
