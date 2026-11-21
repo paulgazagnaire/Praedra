@@ -15,6 +15,7 @@ namespace PraedraViewer;
 public partial class GameScreen
 {
     int _moveFleet = -1;
+    readonly List<int> _moveAlso = new();   // the other fleets picked in the Fleets window, sent with _moveFleet (Paul 2026-11-21)
     bool _moveHq;
     List<int> _moveFighters;        // based fighters flying on their own (MoveSquadrons), null when not choosing
     string _moveFightersFrom;
@@ -50,6 +51,7 @@ public partial class GameScreen
             bool newSystem = _view.Selected != _lastSelectedSystem;
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();
+            ShowSelectedInFleets();
             if (_view.Selected >= 0 || _view.SelectedFleet >= 0)
             {
                 if (_plan != null && !_pickMission) _plan = null; // a map selection closes the planner
@@ -127,9 +129,21 @@ public partial class GameScreen
         RefreshTop();
     }
 
+    /// <summary>Several fleets to one destination: the first shows the path, every one flies its own way there and stays its own fleet.</summary>
+    void StartMoveMany(List<Fleet> fs)
+    {
+        if (fs.Count == 0) return;
+        StartMove(fs[0]);
+        _moveAlso.AddRange(fs.Skip(1).Select(f => f.Id));
+        if (_moveAlso.Count > 0) { _moveBanner = $"Move {fs.Count} fleets: click a destination system (Esc cancels)"; RefreshTop(); }
+    }
+
+    /// <summary>"Fleet 1", or "Fleet 1 and 2 other fleets" when several move together.</summary>
+    string MovingWho(Fleet f) => _moveAlso.Count == 0 ? f.Name : $"{f.Name} and {Ui.Count(_moveAlso.Count, "other fleet", "other fleets")}";
+
     void CancelMove()
     {
-        _moveFleet = -1; _moveHq = false; _moveChar = -1; _pickMission = false; _moveFighters = null; _view.PickMode = false; _view.PathPreview = null;
+        _moveFleet = -1; _moveAlso.Clear(); _moveHq = false; _moveChar = -1; _pickMission = false; _moveFighters = null; _view.PickMode = false; _view.PathPreview = null;
         _waypoints.Clear(); _view.Waypoints = null; _view.PathTraps = null; _view.PathRouteHop = null; _moveWarn = false;
         _lockedTo = null; _around = null;
         _panelDirty = true; _panelTimer = 0;
@@ -150,7 +164,7 @@ public partial class GameScreen
         if (to == null)
         {
             _view.PathPreview = null; _view.PathRouteHop = null;
-            _moveBanner = $"Move {f.Name}: click a destination system (Esc cancels)";
+            _moveBanner = $"Move {MovingWho(f)}: click a destination system (Esc cancels)";
         }
         else
         {
@@ -174,7 +188,7 @@ public partial class GameScreen
                 else
                 {
                     _view.PathColor = new Color(1f, 1f, 1f, 0.9f);
-                    _moveBanner = $"{f.Name} to {to}{through}: {trip}.\n{tail}";
+                    _moveBanner = $"{MovingWho(f)} to {to}{through}: {trip}.\n{tail}";
                 }
             }
             else { _view.PathPreview = null; _view.PathRouteHop = null; _moveBanner = $"No route from {f.At} to {to} for this fleet."; }
@@ -282,6 +296,18 @@ public partial class GameScreen
     void SendMove(string to, List<string> via)
     {
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
+        var also = _moveAlso.ToList();
+        SendFleetMove(f, to, via);
+        // the other fleets picked: each its own path to the same place (the waypoints are the first fleet's; the others take theirs)
+        foreach (var id in also)
+            if (S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != to) SendFleetMove(o, to, new List<string>());
+        CancelMove();
+        _fleetListDirty = true;
+        if (also.Count > 0) MgRefreshSoon();
+    }
+
+    void SendFleetMove(Fleet f, string to, List<string> via)
+    {
         var plan = S.Host.PlanMove(Me, f.Id, to, via);
         // the last move given wins: the core would keep the first and refuse the second (QA-99). rule: m1-clock-and-orders §Orders in (withdraw)
         ReplaceFleetMove(f.Id);
@@ -293,8 +319,6 @@ public partial class GameScreen
         S.Say($"Order sent: move {f.Name} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
         Toast(plan.Ok ? $"{f.Name} to {to}: arrives day {plan.ArrivalDay}." : $"Order sent: move {f.Name} to {to}.", plan.Red ? MsgKind.Warn : MsgKind.Info);
-        CancelMove();
-        _fleetListDirty = true;
     }
 
     // ================================================================== the Hearth's move (Collective)

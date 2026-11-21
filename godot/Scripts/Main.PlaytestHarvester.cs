@@ -44,20 +44,20 @@ public partial class Main
 
         if (me == Side.Hand)
         {
-            // ---- the Fleet window's Orders tab (opened from the fleet card): the button, the confirm dialog, the order
+            // ---- the Fleets window's order bar (opened from the fleet card): the button, the confirm dialog, the order
             SelectFleetByList(gs, fleet);
-            Expect(gs.Click("Fleet orders") && gs.MgTab($"Fleet {dsFleet}") == "Orders", "the fleet card opens the Fleet window on Orders");
-            Expect(gs.Has("Destroy System"), "the Orders tab of a harvester fleet shows Destroy System");
-            Expect(gs.Enabled("Destroy System"), "Destroy System is enabled at a system");
-            Expect(gs.Click("Destroy System"), "click Destroy System");
+            Expect(gs.Click("Fleet orders") && gs.MgmtKeys.Contains($"Fleet {dsFleet}"), "the fleet card opens the Fleets window on this fleet");
+            Expect(gs.Has("Fleets Destroy"), "the order bar of a harvester fleet shows Destroy System");
+            Expect(gs.Enabled("Fleets Destroy"), "Destroy System is enabled at a system");
+            Expect(gs.Click("Fleets Destroy"), "click Destroy System");
             Expect(gs.ConfirmVisible, "a confirm dialog opens first");
             Expect(gs.ConfirmTitle.Contains(target) && gs.ConfirmText.Contains(target) && gs.ConfirmText.Contains("destroyed for good"), "the dialog names the system and what happens: " + gs.ConfirmText);
             Expect(gs.Click("Cancel") && !gs.ConfirmVisible && !s.PendingOf(dsFleet).Any(), "Cancel sends no order");
-            Expect(gs.Click("Destroy System") && gs.ConfirmVisible, "open the dialog again");
+            Expect(gs.Click("Fleets Destroy") && gs.ConfirmVisible, "open the dialog again");
             Expect(gs.Click("Yes, destroy it"), "confirm");
             gs.PlayRefresh();
             Expect(s.PendingOf(dsFleet).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal)) && s.QueuedOrders >= 1, "the Destroy System order is queued");
-            Expect(gs.MgText($"Fleet {dsFleet}").Contains("The strike is ordered") && !gs.Enabled("Destroy System"), "the button is greyed while the order waits");
+            Expect(gs.MgText($"Fleet {dsFleet}").Contains("Ordered: Destroy System") && !gs.Enabled("Fleets Destroy") && gs.TipOf("Fleets Destroy").Contains("The strike is ordered"), "the button is greyed while the order waits, and says why");
             gs.MgCloseAll();
         }
         // an Infrastructure window left open over the target must not keep drawing its slots after the strike (Ponytail on #241)
@@ -148,9 +148,9 @@ public partial class Main
         {
             SelectFleetByList(gs, fleet);
             gs.Click("Fleet orders");
-            string orders = gs.MgText($"Fleet {dsFleet}");
-            Expect(gs.Has("Destroy System") && !gs.Enabled("Destroy System") && orders.Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
-            Expect(!gs.Has("Bombard") && !gs.Has("Invade") && orders.Contains("nothing left to attack"), "a destroyed system offers nothing to attack");
+            string orders = gs.TipOf("Fleets Destroy");
+            Expect(gs.Has("Fleets Destroy") && !gs.Enabled("Fleets Destroy") && orders.Contains("already destroyed"), "Destroy System is greyed out at a destroyed system");
+            Expect(!gs.Enabled("Fleets Bombard") && !gs.Enabled("Fleets Invade") && gs.TipOf("Fleets Bombard").Contains("nothing left to attack"), "a destroyed system offers nothing to attack");
             // the cooldown (m5-harvester §2 legality 3a): one harvest a year per side (DEFAULT) and the Orders tab says until when
             int readyOn = s.Game.State.Harvester.DestroyedDay(target).GetValueOrDefault() + ds.Params.CooldownDays;
             Expect(s.HarvesterRechargingUntil(fleet) == readyOn && orders.Contains($"your next harvest can land on day {readyOn}"),

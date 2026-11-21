@@ -318,7 +318,7 @@ public partial class FleetLayer : Control
         var list = new List<Rect2>();
         foreach (var (f, p, _, count) in DrawnOwn(layout.Own))
         {
-            float r = map.SelectedFleet == f.Id ? 10f : 8.5f;
+            float r = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id) ? 10f : 8.5f;
             list.Add(Around(p, r));
             if (count > 1) list.Add(BadgeBox(p, r));
         }
@@ -525,7 +525,7 @@ public partial class FleetLayer : Control
         foreach (var (f, p, _) in placed)
         {
             if (f.Transit is not { } t || f.At != null) continue;
-            bool sel = map.SelectedFleet == f.Id;
+            bool sel = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id);
             Dashes(t.Path, t.HopIndex + 1, p, new Color(ColorOf(f.Side), sel ? 1f : WayAlpha), sel ? WaySelWidth : WayWidth, WayDash);
         }
 
@@ -543,7 +543,7 @@ public partial class FleetLayer : Control
         foreach (var (f, p, h, count) in DrawnOwn(placed))
         {
             var col = ColorOf(f.Side);
-            bool selected = map.SelectedFleet == f.Id;
+            bool selected = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id);   // or picked in the Fleets window
             float r = selected ? 10f : 8.5f;
             var perp = new Vector2(-h.Y, h.X);
             var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };

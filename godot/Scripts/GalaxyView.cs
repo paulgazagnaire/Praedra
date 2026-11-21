@@ -29,6 +29,12 @@ public partial class GalaxyView : Control
     public int Selected { get; private set; } = -1;
     /// <summary>Fleet id of the selected fleet, or -1.</summary>
     public int SelectedFleet { get; set; } = -1;
+    /// <summary>The fleets picked in the Fleets window: drawn like the selected fleet (Paul 2026-11-21).</summary>
+    public HashSet<int> PickedFleets { get; set; } = new();
+    /// <summary>Shift+click on one of your fleets: add it to the fleets picked, or take it out.</summary>
+    public event Action<int> FleetShiftClicked;
+    /// <summary>A right-click on the map: the system under the mouse (or an enemy marker's system), or -1.</summary>
+    public event Action<int> RightClicked;
     /// <summary>Set by the owner: returns the fleet id under a screen point, or -1. Fleets win over systems on click.</summary>
     public Func<Vector2, int> FleetPicker;
 
@@ -252,6 +258,8 @@ public partial class GalaxyView : Control
     }
 
     // ---- input ----
+    Vector2? _rightAt;
+
     public override void _GuiInput(InputEvent e)
     {
         if (Galaxy == null) return;
@@ -259,6 +267,17 @@ public partial class GalaxyView : Control
         {
             if (mb.ButtonIndex == MouseButton.WheelUp && mb.Pressed) ZoomAt(mb.Position, 1.15f);
             else if (mb.ButtonIndex == MouseButton.WheelDown && mb.Pressed) ZoomAt(mb.Position, 1f / 1.15f);
+            else if (mb.ButtonIndex == MouseButton.Right)
+            {
+                if (mb.Pressed) _rightAt = mb.Position;
+                else if (_rightAt is Vector2 at && at.DistanceTo(mb.Position) < 6)
+                {
+                    int pick = Pick(mb.Position);
+                    if (pick < 0) pick = EnemyMarkerPicker?.Invoke(mb.Position) ?? -1;
+                    RightClicked?.Invoke(pick);
+                }
+                if (!mb.Pressed) _rightAt = null;
+            }
             else if (mb.ButtonIndex == MouseButton.Left || mb.ButtonIndex == MouseButton.Middle)
             {
                 if (mb.Pressed) { _dragging = true; _dragMoved = false; _pressAt = mb.Position; }
@@ -269,6 +288,8 @@ public partial class GalaxyView : Control
                         int pick = Pick(mb.Position);
                         if (pick >= 0) SystemPicked?.Invoke(pick);
                     }
+                    else if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left && mb.ShiftPressed && (FleetPicker?.Invoke(mb.Position) ?? -1) is int sf and >= 0)
+                        FleetShiftClicked?.Invoke(sf);
                     else if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left)
                     {
                         int fleet = FleetPicker?.Invoke(mb.Position) ?? -1;

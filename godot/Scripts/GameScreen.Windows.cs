@@ -111,7 +111,7 @@ public partial class GameScreen
 
     /// <summary>Your own planet's Infrastructure window is two columns wide: what stands there on the left, what it can build on the right,
     /// so it needs no scrolling (Paul 2026-11-14, impeccable critique). Someone else's planet shows only its buildings: one column.</summary>
-    bool WantsWide(MgWin w) => w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me;
+    bool WantsWide(MgWin w) => w.Kind == MgKind.Fleet || (w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me);
 
     internal int MgmtCount => _mgWins.Count;
     internal IEnumerable<string> MgmtKeys => _mgWins.Select(w => w.Key);
@@ -135,7 +135,9 @@ public partial class GameScreen
     {
         if (kind == MgKind.Fleet ? !S.Game.State.Fleets.TryGetValue(fleet, out var f0) || f0.Side != Me : system == null) return;
         if (kind == MgKind.Infra && S.IsDestroyed(system)) kind = MgKind.Ground; // a harvested world has one plain card, not two windows
-        var w = _mgWins.FirstOrDefault(x => x.Kind == kind && (kind == MgKind.Fleet ? x.Fleet == fleet : x.System == system));
+        // one Fleets window: opening a fleet shows it there, picked alone (Paul 2026-11-21)
+        var w = _mgWins.FirstOrDefault(x => x.Kind == kind && (kind == MgKind.Fleet || x.System == system));
+        if (kind == MgKind.Fleet) { _fleetPicks.Clear(); _fleetPicks.Add(fleet); }
         if (w == null)
         {
             w = new MgWin { Kind = kind, System = system, Fleet = fleet, Tab = tab };
@@ -149,6 +151,7 @@ public partial class GameScreen
         {
             Front(w);
             if (tab != null) w.Tab = tab;
+            if (kind == MgKind.Fleet) w.Fleet = fleet;
             w.Min = false;
         }
         RebuildMg(w);
@@ -161,6 +164,7 @@ public partial class GameScreen
         w.Panel.Visible = false;   // gone at once: until the frame ends a freed window still stood in the tree, buttons and all
         w.Panel.QueueFree();
         PrunePicksToShown();   // QA-112: a unit picked in a closed window is no longer picked
+        if (w.Kind == MgKind.Fleet) SyncMapPicks();
     }
 
     /// <summary>Esc: the window on top closes first.</summary>
@@ -363,7 +367,7 @@ public partial class GameScreen
         NewDay();
         if (_mgWins.Count == 0) return;
         _mgDirty = true;
-        foreach (var w in _mgWins.Where(w => w.Kind == MgKind.Fleet && (!S.Game.State.Fleets.TryGetValue(w.Fleet, out var f) || f.Side != Me)).ToList()) CloseMgmt(w);
+        if (FleetsWindow is { } fw) { SettleFleets(fw); SyncMapPicks(); }   // a fleet merged away or lost gives way at once
     }
 
     void TickMgmt(double delta)
@@ -394,7 +398,7 @@ public partial class GameScreen
         using var look = Ui.Window();   // everything built here has the window look
         w.Stale = false;
         NewDay();
-        if (w.Kind == MgKind.Fleet && (!S.Game.State.Fleets.TryGetValue(w.Fleet, out var gone) || gone.Side != Me)) { CloseMgmt(w); return; } // merged away or lost
+        if (w.Kind == MgKind.Fleet) SettleFleets(w);   // a fleet merged away or lost gives way to the next
         float keep = w.Scroll.ScrollVertical;
         if (WantsWide(w) != w.Wide)   // the planet changed hands while its window was open
         {
@@ -413,7 +417,7 @@ public partial class GameScreen
         _into = w.Body;
         try
         {
-            if (w.Kind == MgKind.Fleet) FleetWin(w, S.Game.State.Fleets[w.Fleet]);
+            if (w.Kind == MgKind.Fleet) FleetWin(w);
             else if (w.Kind == MgKind.Infra) InfraWin(w);
             else SystemWin(w);
         }

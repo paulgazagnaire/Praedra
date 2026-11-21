@@ -464,6 +464,15 @@ public partial class GameScreen
         {
             // a fleet id, or a system name: then your first fleet standing there; "any": your first fleet standing anywhere
             // "3" or "Charter", optionally ":Ships" for the tab
+            if (what.StartsWith("picks", StringComparison.Ordinal) && int.TryParse(what[5..], out int many))
+            {
+                // "picks3": the Fleets window with the first three fleets of its list picked, as Shift+clicks would
+                var order = FleetGroups(MyFleets()).SelectMany(g => g.Fleets).Take(many).ToList();
+                if (order.Count == 0) return;
+                OpenMgmt(MgKind.Fleet, fleet: order[0].Id);
+                foreach (var f in order.Skip(1)) PlayPickFleet(f.Id, true);
+                return;
+            }
             string ftab = what.Contains(':') ? what[(what.IndexOf(':') + 1)..] : null;
             if (ftab != null) what = what[..what.IndexOf(':')];
             int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values

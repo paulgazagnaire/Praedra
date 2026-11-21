@@ -77,6 +77,8 @@ public partial class GameScreen : Control
         _view.SystemPicked += OnSystemPicked;
         _view.SectorClicked += OpenSector;
         _view.FleetPicker = _fleets.Pick;
+        _view.FleetShiftClicked += ShiftPickOnMap;   // the Fleets window's pick (Paul 2026-11-21)
+        _view.RightClicked += OnMapRightClick;
         _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;
         _view.Player = S.Player;
@@ -265,7 +267,7 @@ public partial class GameScreen : Control
             case Key.Space: TogglePlay(); break;
             case Key.N: StepOne(); break;
             case Key.Q: ShowTab(DrawerTab.Needs); break;
-            case Key.F: ShowTab(DrawerTab.Fleets); break;
+            case Key.F: OpenFleets(); break;   // the Fleets window (Paul 2026-11-21)
             case Key.C: ToggleCharacters(); break;
             case Key.M: ToggleMissions(); break;
             case Key.E: ShowTab(DrawerTab.Log); break;
