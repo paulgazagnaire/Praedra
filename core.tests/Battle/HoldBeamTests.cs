@@ -11,7 +11,8 @@ namespace Praedra.Core.Tests.Battle;
 public class HoldBeamTests
 {
     private static IReadOnlyDictionary<string, ShipClass> Ships => NewBattleTests.Ships;
-    private static readonly BattleParams New = NewBattleTests.New;
+    // the hold mechanics with every Hold beam working (HoldBeamMinPower 1, the 2026-10-16 rule); the DEFAULT 6 is checked in TB12
+    private static readonly BattleParams New = new() { Ruleset = BattleRuleset.New, New = new NewBattleParams { HoldBeamMinPower = 1 } };
     private static readonly BattleParams NewNoHoldBeams = NewBattleTests.NewNoHoldBeams;
     private const string Corvette = "Dodger", Mandate = "Mandate", Ark = "Ark", Edict = "Edict",
         Interdictor = "Subpoena", Barricade = "Barricade";
@@ -37,6 +38,19 @@ public class HoldBeamTests
         Assert.Equal((3, 2, 6, 0, 0), (Ships[Mandate].HoldBeamPower, Ships[Ark].HoldBeamPower, Ships[Edict].HoldBeamPower,
             Ships[Interdictor].HoldBeamPower, Ships[Corvette].HoldBeamPower));
         Assert.True(new NewBattleParams().HoldBeamsHoldRetreat); // DEFAULT on (New)
+    }
+
+    // m4-retreat-damage-repair TB12 (Paul 2026-11-22, "Fewer Hold beams"): DEFAULT HoldBeamMinPower 6: a Mandate (power 3) no longer holds a leaving
+    // corvette, it jumps away; an Edict (power 6) still holds it
+    [Fact]
+    public void TB12_OnlyPowerSixHoldBeamsHoldByDefault()
+    {
+        Assert.Equal(6, new NewBattleParams().HoldBeamMinPower);
+        var (r, u, _) = Fight(NewBattleTests.New, new[] { (Corvette, 1) }, new[] { (Mandate, 1) }, 1, alert: CollectiveRetreats);
+        Assert.Empty(r.Steps.OfType<HoldBeamHeldStep>());
+        Assert.True(Of(u, Side.Collective, Corvette)[0].Left, "the corvette jumped away from the Mandate");
+        var (r2, u2, _) = Fight(NewBattleTests.New, new[] { (Corvette, 1) }, new[] { (Edict, 1) }, 1, alert: CollectiveRetreats);
+        Assert.Equal(Of(u2, Side.Collective, Corvette)[0], Assert.Single(r2.Steps.OfType<HoldBeamHeldStep>()).Ship);
     }
 
     // m4-retreat-damage-repair TB1: one Mandate, one corvette that would retreat: the Mandate holds it, it never leaves and the Mandate kills it
@@ -154,7 +168,7 @@ public class HoldBeamTests
     [Fact]
     public void TB9_InTheGameTheHoldIsAnEventAndTheOthersRetreat()
     {
-        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.New });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.New, New = new NewBattleParams { HoldBeamMinPower = 1 } });
         w.Fleets.SetOwner("A", Side.Collective);
         int collective = w.Fleet(Side.Collective, "A", Corvette, 4);
         int imp = w.Fleet(Side.Hand, "B", Mandate, 1);
@@ -174,7 +188,7 @@ public class HoldBeamTests
     [Fact]
     public void TB10_HeldShipThatSurvivesStaysInAFleetOfItsOwn()
     {
-        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.New, SubsystemRolls = false });
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.New, SubsystemRolls = false, New = new NewBattleParams { HoldBeamMinPower = 1 } });
         foreach (var s in new[] { "A", "C", "D" }) w.Fleets.SetOwner(s, Side.Collective); // the Hand has nowhere to go
         int collective = w.Fleet(Side.Collective, "B", Corvette, 2);
         int imp = w.Fleet(Side.Hand, "B", Mandate, 1);

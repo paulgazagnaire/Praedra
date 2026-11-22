@@ -14,7 +14,7 @@ public class PerFleetOnContactTests
 
     // Hold beams off: the plain retreat (a Mandate's Hold beam would hold the leaving ships, PF2b)
     private static BattleParams Rules(BattleRuleset r, bool holdBeams = false) =>
-        new() { Ruleset = r, SubsystemRolls = false, HandIsAi = true, New = new NewBattleParams { HoldBeamsHoldRetreat = holdBeams } };
+        new() { Ruleset = r, SubsystemRolls = false, HandIsAi = true, New = new NewBattleParams { HoldBeamsHoldRetreat = holdBeams, HoldBeamMinPower = 1 } }; // every Hold beam, so a Mandate's holds (PF2b)
 
     private static (BattleWorld W, int Elusive, int Defensive) Mixed(BattleRuleset r, string hand = Mandate, bool holdBeams = false, string defensive = Corvette)
     {

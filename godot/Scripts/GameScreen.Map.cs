@@ -181,6 +181,8 @@ public partial class GameScreen
     // Which yard families each system has, rebuilt once a day (facilities only change in the day step). Looked up by key, never iterated.
     Dictionary<string, int> _yardIndex;
     int _yardIndexDay = -1;
+    /// <summary>The playtest planted a yard mid-day (test only): read the yards again. In a game they change only when a day runs.</summary>
+    internal void ForgetYardIndex() => _yardIndexDay = -1;
 
     static readonly Praedra.Core.Construction.YardFamily[] YardFamilies =
         { Praedra.Core.Construction.YardFamily.Shipyard, Praedra.Core.Construction.YardFamily.Construction, Praedra.Core.Construction.YardFamily.Training };

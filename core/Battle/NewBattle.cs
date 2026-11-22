@@ -170,8 +170,8 @@ public sealed class NewBattle
 
     // ---------------------------------------------------------------- Hold beams hold retreat (New only). rule: m4-retreat-damage-repair §6
 
-    /// <summary>A capital ship with hold_beam_power &gt; 0 whose Hold beam counter is clear. The power is not used beyond &gt; 0 (DEFAULT). rule: m4-retreat-damage-repair §6.</summary>
-    private static bool HoldBeamWorks(NU h) => h.Capital && h.B.Class.HoldBeamPower > 0 && h.B.Hits[ObjectRegistry.HoldBeamCounter] == 0;
+    /// <summary>A capital ship with hold_beam_power &gt; 0 whose Hold beam counter is clear. Only a power of at least HoldBeamMinPower holds (DEFAULT 6, Paul 2026-11-22). rule: m4-retreat-damage-repair §6.</summary>
+    private bool HoldBeamWorks(NU h) => h.Capital && h.B.Class.HoldBeamPower > 0 && h.B.Class.HoldBeamPower >= _np.HoldBeamMinPower && h.B.Hits[ObjectRegistry.HoldBeamCounter] == 0;
 
     /// <summary>The hold lasts while the holder is alive (on the field or jumping) with a working Hold beam. rule: m4-retreat-damage-repair §6.</summary>
     private bool HoldValid(NU held) => held.HeldBy is { } h && AliveShip(h) && HoldBeamWorks(h);
