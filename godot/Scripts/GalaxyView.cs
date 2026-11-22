@@ -37,6 +37,12 @@ public partial class GalaxyView : Control
     public event Action<int> RightClicked;
     /// <summary>Set by the owner: returns the fleet id under a screen point, or -1. Fleets win over systems on click.</summary>
     public Func<Vector2, int> FleetPicker;
+    /// <summary>The fleets that share a fleet's marker (several in orbit at one system, Paul 2026-11-22), by id; just the fleet otherwise.</summary>
+    public Func<int, IReadOnlyList<int>> FleetGroup;
+    /// <summary>A click on a marker several fleets share: the fleets and the click's point (Paul's pick 2026-11-22: a list of them opens).</summary>
+    public event Action<IReadOnlyList<int>, Vector2> FleetGroupClicked;
+    /// <summary>A Shift+click on a marker several fleets share: they are all picked, or all let go.</summary>
+    public event Action<IReadOnlyList<int>> FleetGroupShiftClicked;
 
     public event Action StateChanged;
 
@@ -289,7 +295,13 @@ public partial class GalaxyView : Control
                         if (pick >= 0) SystemPicked?.Invoke(pick);
                     }
                     else if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left && mb.ShiftPressed && (FleetPicker?.Invoke(mb.Position) ?? -1) is int sf and >= 0)
-                        FleetShiftClicked?.Invoke(sf);
+                    {
+                        if (FleetGroup?.Invoke(sf) is { Count: > 1 } sg && FleetGroupShiftClicked != null) FleetGroupShiftClicked(sg);
+                        else FleetShiftClicked?.Invoke(sf);
+                    }
+                    else if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left && (FleetPicker?.Invoke(mb.Position) ?? -1) is int gf and >= 0
+                        && FleetGroup?.Invoke(gf) is { Count: > 1 } group && FleetGroupClicked != null)
+                        FleetGroupClicked(group, mb.Position);
                     else if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left)
                     {
                         int fleet = FleetPicker?.Invoke(mb.Position) ?? -1;

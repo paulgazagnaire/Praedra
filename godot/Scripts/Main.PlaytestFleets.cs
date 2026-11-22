@@ -190,5 +190,32 @@ public partial class Main
         }
         else GD.Print("  (one fleet standing still: the shared move is not checked on this side)");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // ---- several fleets in orbit at one system share one marker with their number (Paul 2026-11-22); a click lists them (his pick),
+        // Shift+click picks them all
+        Expect(Enumerable.Range(2, 12).All(n => PixelIconData.Map.ContainsKey(FleetLayer.GroupIcon(n))), "every count of fleets from 2 to 13 has its marker");
+        Expect(Enum.GetValues<MoverKind>().All(k => PixelIconData.Map.ContainsKey(FleetLayer.MoverIcon(k))), "every kind of mover has its pixel icon");
+        var pair = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).GroupBy(f => f.At).Where(g => g.Count() >= 2)
+            .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => g.OrderBy(f => f.Id).ToList()).FirstOrDefault();
+        if (pair != null)
+        {
+            var ids = pair.Select(f => f.Id).ToList();
+            string at = pair[0].At;
+            gs.PlayRefresh();
+            Expect(gs.PlayFleetGroup(ids[0]).SequenceEqual(ids), $"the {ids.Count} fleets in orbit at {at} share a marker");
+            var here = gs.PlayOwnMarkers().Where(m => ids.Contains(m.Fleet)).ToList();
+            Expect(here.Count == 1 && here[0].Count == ids.Count, $"one marker at {at}, counting {ids.Count} ({here.Count} drawn)");
+            var lines = gs.PlayClickFleetGroup(ids[0]);
+            Expect(lines.Count == ids.Count && pair.All(f => lines.Any(l => l.StartsWith(f.Name + " ", StringComparison.Ordinal) && (l.EndsWith("Defensive") || l.EndsWith("Elusive")))),
+                "a click on it lists them, each with its ships and behaviour: " + string.Join(" / ", lines));
+            var last = pair[^1];
+            Expect(gs.PlayPickFromFleetGroup(last.Name) && gs.SelectedFleetId == last.Id, $"picking {last.Name} in the list selects it");
+            gs.PlayShiftClickGroup(ids[0]);
+            Expect(ids.All(gs.View.PickedFleets.Contains), "Shift+click on the marker picks them all");
+            gs.PlayShiftClickGroup(ids[0]);
+            Expect(!ids.Any(gs.View.PickedFleets.Contains), "a second Shift+click lets them all go");
+        }
+        else GD.Print("  (no system with two fleets of yours: the shared marker is not checked on this side)");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }
 }

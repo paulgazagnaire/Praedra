@@ -41,10 +41,8 @@ public partial class FleetLayer : Control
     /// <summary>Screen rectangles the words must keep off (the boxes on the map), set by the owner.</summary>
     public Func<IEnumerable<Rect2>> Boxes { get; set; }
     const float PickRadiusPx = 13f;
-    /// <summary>Half the fleet marker's size (the 16 px pixel icon with its 1 px ring) and where its count badge sits: past the arrow's wing.</summary>
-    const float MarkerR = 8.5f, BadgeR = 11f;
-    /// <summary>Below this zoom the fleets of one side at a system share one marker with a count.</summary>
-    const float StackZoom = 2.0f;
+    /// <summary>Half the fleet marker's size (the 16 px pixel icon with its 1 px ring).</summary>
+    const float MarkerR = 8.5f;
     // One dashed style per meaning (map declutter, Paul's All A 2026-11-18): a thing on its way in its own colour at 55%, 1.2 px, dash 4
     // (the selected fleet's at 100%, 1.6 px; the moving HQ keeps its gold); an order not started yet in white at 85%, 1.6 px, dash 6.
     const float WayAlpha = 0.55f, WayWidth = 1.2f, WaySelWidth = 1.6f, WayDash = 4f;
@@ -72,9 +70,6 @@ public partial class FleetLayer : Control
     /// <summary>Blue for the player's fleets, orange for the enemy's, whichever side the player is.</summary>
     Color ColorOf(Side s) => Ui.OwnerColor(s, Player ?? Side.Hand);
 
-    /// <summary>Zoomed out, the fleets of one side at a system share one marker with a count (Tab steps through them); zoomed in, each has its own.</summary>
-    bool Stacked => Map.Zoom < StackZoom;
-
     /// <summary>Words on every fleet and mover: from the zoom where your system names come in, or while Alt is held (Paul 2026-11-18,
     /// pick 2). Otherwise only the selected fleet and the glyph under the mouse have words.</summary>
     bool WordsOn => Map.Zoom >= GalaxyView.NameZoom || Map.ShowAllNames;
@@ -82,21 +77,20 @@ public partial class FleetLayer : Control
     // how many fleets share each stacked marker, filled by Layout (looked up by key, never iterated)
     readonly Dictionary<(string System, bool Own), int> _stack = new();
 
-    int SlotFor(string system, bool own, Dictionary<string, int> slots)
+    /// <summary>
+    /// A parked marker's slot at a system: yours first, the enemy's above it. The fleets of one side in orbit at a system share one marker
+    /// at every zoom (Paul 2026-11-22: "an icon when there are more than one fleet in orbit of a system, instead of having multiple fleet
+    /// icons"; it used to be zoomed out only), and <see cref="_stack"/> counts them.
+    /// </summary>
+    int SlotFor(string system, bool own)
     {
-        if (Stacked)
-        {
-            var key = (system, own);
-            _stack[key] = (_stack.TryGetValue(key, out int n) ? n : 0) + 1;
-            return own ? 0 : 1;
-        }
-        slots.TryGetValue(system, out int slot);
-        slots[system] = slot + 1;
-        return slot;
+        var key = (system, own);
+        _stack[key] = (_stack.TryGetValue(key, out int n) ? n : 0) + 1;
+        return own ? 0 : 1;
     }
 
     /// <summary>Visual position (screen) of a fleet and its heading (unit vector), or false if it cannot be placed.</summary>
-    bool Place(Fleet f, Dictionary<string, int> slots, out Vector2 pos, out Vector2 heading)
+    bool Place(Fleet f, out Vector2 pos, out Vector2 heading)
     {
         heading = Vector2.Up; pos = Vector2.Zero;
         var map = Map;
@@ -115,7 +109,7 @@ public partial class FleetLayer : Control
         }
         if (f.At != null && _galaxy.TryFindSystem(f.At, out int s))
         {
-            int slot = SlotFor(f.At, f.Side == Player || Player == null, slots);
+            int slot = SlotFor(f.At, f.Side == Player || Player == null);
             pos = ParkedAt(s, slot);
             heading = ParkedHeading;
             return true;
@@ -129,38 +123,39 @@ public partial class FleetLayer : Control
     /// <summary>Own fleets, then the enemy markers in the slots after them at each system.</summary>
     (List<(Fleet f, Vector2 pos, Vector2 heading)> Own, List<(string System, FleetPicture Fleet, Vector2 pos)> Enemy) Layout()
     {
-        var slots = new Dictionary<string, int>(StringComparer.Ordinal); // counts only, never iterated
         _stack.Clear();
         var own = new List<(Fleet, Vector2, Vector2)>();
         foreach (var f in _game.State.Fleets.Values)               // fleet id order
-            if ((EnemyFleets == null || f.Side == Player) && Place(f, slots, out var p, out var h)) own.Add((f, p, h));
+            if ((EnemyFleets == null || f.Side == Player) && Place(f, out var p, out var h)) own.Add((f, p, h));
         var enemy = new List<(string, FleetPicture, Vector2)>();
         if (EnemyFleets != null)
             foreach (var (sys, pic) in EnemyFleets())                  // systems in ordinal order
-                if (PlaceAt(sys, slots, out var p)) enemy.Add((sys, pic, p));
+                if (PlaceAt(sys, out var p)) enemy.Add((sys, pic, p));
         return (own, enemy);
     }
 
-    bool PlaceAt(string system, Dictionary<string, int> slots, out Vector2 pos)
+    bool PlaceAt(string system, out Vector2 pos)
     {
         pos = Vector2.Zero;
         if (!_galaxy.TryFindSystem(system, out int s)) return false;
-        int slot = SlotFor(system, false, slots);
+        int slot = SlotFor(system, false);
         pos = ParkedAt(s, slot);
         return true;
     }
 
-    /// <summary>Where a parked fleet's marker goes: above the dot, stacked upwards one row per fleet, after 6 rows a new column. The first
-    /// row starts just outside the system's outermost ring: on an HQ or an uprising the triangle used to sit across the rings.</summary>
+    /// <summary>Where a parked marker goes: above the dot, just outside the system's outermost ring (on an HQ or an uprising the marker
+    /// used to sit across the rings); the enemy's (slot 1) one row above yours (slot 0).</summary>
     Vector2 ParkedAt(int system, int slot)
     {
         var map = Map;
-        const int rows = 6;
-        float colWidth = map.Zoom >= GalaxyView.NameZoom ? 80f : 14f;   // room for a short name beside each column once names show
-        // the triangle reaches about 7 px below its centre (base and outline); 2 px of air above the ring
+        // the marker reaches about 7 px below its centre (with its ring); 2 px of air above the ring
         float first = Mathf.Max(13f, map.SystemRadius + map.RingOut(system) + 9f);
-        return map.SystemScreen(system) + new Vector2(-6f + colWidth * (slot / rows), -first - 16f * (slot % rows));
+        return map.SystemScreen(system) + new Vector2(-6f, -first - 16f * slot);
     }
+
+    /// <summary>Your fleet markers drawn now: the fleet each one stands for and how many fleets share it (for the playtest).</summary>
+    public IReadOnlyList<(int Fleet, int Count)> OwnMarkers() =>
+        _game == null ? Array.Empty<(int, int)>() : DrawnOwn(Layout().Own).Select(o => (o.f.Id, o.count)).ToList();
 
     /// <summary>The systems where an enemy fleet marker is drawn now (for the playtest).</summary>
     public IReadOnlyList<string> EnemyMarkerSystems() => _game == null ? Array.Empty<string>() : Layout().Enemy.Select(e => e.System).ToList();
@@ -267,14 +262,15 @@ public partial class FleetLayer : Control
         foreach (var (f, p, _) in Placed())
         {
             float d = p.DistanceSquaredTo(screen);
-            if (d < bestD || (best < 0 && d <= bestD)) { bestD = d; best = f.Id; } // a stack picks its first fleet (lowest id)
+            if (d < bestD || (best < 0 && d <= bestD)) { bestD = d; best = f.Id; } // a group picks its first fleet (lowest id); GroupOf gives the rest
         }
         return best;
     }
 
-    // ================================================================== what is drawn: one marker per fleet (or per stack zoomed out)
+    // ================================================================== what is drawn: one marker per fleet on its way, one per system in orbit
 
-    /// <summary>The own fleet markers drawn: every fleet, or zoomed out one per stack (the selected fleet's, else the first) with its count.</summary>
+    /// <summary>The own fleet markers drawn: one per fleet on its way, one per system for the fleets in orbit there (the selected fleet's,
+    /// else the first) with their count.</summary>
     List<(Fleet f, Vector2 p, Vector2 h, int count)> DrawnOwn(List<(Fleet f, Vector2 pos, Vector2 heading)> own)
     {
         var map = Map;
@@ -283,7 +279,7 @@ public partial class FleetLayer : Control
         foreach (var (f, p, h) in own.OrderBy(x => map.SelectedFleet == x.f.Id ? 0 : 1).ThenBy(x => x.f.Id))
         {
             int count = 1;
-            if (Stacked && f.At != null)
+            if (f.At != null)
             {
                 if (!drawnStacks.Add(f.At)) continue;
                 count = _stack.TryGetValue((f.At, f.Side == Player || Player == null), out int n) ? n : 1;
@@ -293,26 +289,21 @@ public partial class FleetLayer : Control
         return list;
     }
 
-    /// <summary>The enemy markers drawn: one per system zoomed out, with its count.</summary>
+    /// <summary>The enemy markers drawn: one per system, with its count.</summary>
     List<(FleetPicture pic, Vector2 p, int count)> DrawnEnemy(List<(string System, FleetPicture Fleet, Vector2 pos)> enemy)
     {
         var list = new List<(FleetPicture, Vector2, int)>();
         var drawn = new HashSet<string>(StringComparer.Ordinal); // membership only
         foreach (var (sys, pic, p) in enemy)
         {
-            int count = 1;
-            if (Stacked)
-            {
-                if (!drawn.Add(sys)) continue;
-                count = _stack.TryGetValue((sys, false), out int n) ? n : 1;
-            }
+            if (!drawn.Add(sys)) continue;
+            int count = _stack.TryGetValue((sys, false), out int n) ? n : 1;
             list.Add((pic, p, count));
         }
         return list;
     }
 
     static Rect2 Around(Vector2 p, float r) => new(p - new Vector2(r, r), new Vector2(2 * r, 2 * r));
-    static Rect2 BadgeBox(Vector2 p, float r) => Around(p + new Vector2(r * 0.95f, -r * 0.95f), 8.5f);
 
     /// <summary>The markers' own boxes (fleets, enemy fleets, movers and their count badges).</summary>
     List<Rect2> MarkerBoxes((List<(Fleet f, Vector2 pos, Vector2 heading)> Own, List<(string System, FleetPicture Fleet, Vector2 pos)> Enemy) layout,
@@ -323,12 +314,10 @@ public partial class FleetLayer : Control
         foreach (var (f, p, _, count) in DrawnOwn(layout.Own))
         {
             list.Add(Around(p, MarkerR));
-            if (count > 1) list.Add(BadgeBox(p, BadgeR));
         }
         foreach (var (_, p, count) in DrawnEnemy(layout.Enemy))
         {
             list.Add(Around(p, MarkerR));
-            if (count > 1) list.Add(BadgeBox(p, BadgeR));
         }
         foreach (var (m, p, _) in movers)
         {
@@ -435,21 +424,31 @@ public partial class FleetLayer : Control
         }
         Color MoverColour(Mover m) => m.Kind == MoverKind.Hq ? HqGold : ColorOf(Player ?? Side.Hand);
 
+        // several fleets in orbit share a marker (Paul 2026-11-22): its words are their number, or their names when one of them is
+        // selected or under the mouse
+        bool Sel(Fleet f, int count) => count > 1 ? GroupOf(f.Id).Contains(map.SelectedFleet) : map.SelectedFleet == f.Id;
+        bool Pt(Fleet f, int count) => pointed.Kind == 0 && (count > 1 ? GroupOf(f.Id).Contains(pointed.Id) : pointed.Id == f.Id);
+        string OwnWords(Fleet f, int count, bool full)
+        {
+            if (count <= 1) return FleetWords(f, full);
+            if (!full) return $"{count} fleets";
+            var names = GroupOf(f.Id).Select(id => _game.State.Fleets[id].Name).ToList();
+            return string.Join(", ", names.Take(3)) + (names.Count > 3 ? $" +{names.Count - 3}" : "");
+        }
+        string EnemyWords((FleetPicture pic, Vector2 p, int count) e) => e.count > 1 ? $"{e.count} fleets" : EnemyText(e.pic);
+
         // the selected fleet and the pointed glyph first: they always show, with the day
         foreach (var (f, p, _, count) in own)
-        {
-            bool sel = map.SelectedFleet == f.Id, pt = pointed == (0, f.Id);
-            if (sel || pt) Put(FleetWords(f, true), p, MarkerR, ColorOf(f.Side), 13, true, f.At != null, count > 1 ? 12f : 0f);
-        }
-        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyText(e.pic), e.p, MarkerR, ColorOf(e.pic.Side), 13, true, true, e.count > 1 ? 12f : 0f); }
+            if (Sel(f, count) || Pt(f, count)) Put(OwnWords(f, count, true), p, MarkerR, ColorOf(f.Side), 13, true, f.At != null, 0f);
+        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyWords(e), e.p, MarkerR, ColorOf(e.pic.Side), 13, true, true, 0f); }
         if (pointed.Kind == 2) { var (m, p, _) = movers[pointed.Id]; Put(m.Point ?? m.Label, p, MoverRoom(m.Kind), MoverColour(m), 12, true, false, m.Count > 1 ? 12f : 0f); }
         if (!all) return outp;
 
         // then every other glyph's short name
         foreach (var (f, p, _, count) in own)
-            if (map.SelectedFleet != f.Id && pointed != (0, f.Id)) Put(FleetWords(f, false), p, MarkerR, ColorOf(f.Side), 13, false, f.At != null, count > 1 ? 12f : 0f);
+            if (!Sel(f, count) && !Pt(f, count)) Put(OwnWords(f, count, false), p, MarkerR, ColorOf(f.Side), 13, false, f.At != null, 0f);
         for (int i = 0; i < enemy.Count; i++)
-            if (pointed != (1, i)) Put(EnemyText(enemy[i].pic), enemy[i].p, MarkerR, ColorOf(enemy[i].pic.Side), 13, false, true, enemy[i].count > 1 ? 12f : 0f);
+            if (pointed != (1, i)) Put(EnemyWords(enemy[i]), enemy[i].p, MarkerR, ColorOf(enemy[i].pic.Side), 13, false, true, 0f);
         for (int i = 0; i < movers.Count; i++)
             if (pointed != (2, i)) { var (m, p, _) = movers[i]; Put(m.Name ?? m.Label, p, MoverRoom(m.Kind), MoverColour(m), 12, false, false, m.Count > 1 ? 12f : 0f); }
         return outp;
@@ -547,16 +546,15 @@ public partial class FleetLayer : Control
         {
             drawn.Add(f.Id);
             var col = ColorOf(f.Side);
-            bool selected = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id);   // or picked with Shift+click
+            // selected or picked with Shift+click: a group shows it when any fleet in it is
+            bool selected = (count > 1 ? GroupOf(f.Id) : new[] { f.Id }).Any(id => map.SelectedFleet == id || map.PickedFleets.Contains(id));
             bool own = f.Side == Player;
-            // Defensive or Elusive (Paul 2026-11-22, his sketches: a square behind the arrow, or a chevron). A stack (zoomed out) shows the
-            // chevron only when every fleet of yours in it is Elusive; the Fleets list tells them apart.
-            bool elusive = own && Elusive != null && (count > 1 && f.At != null
-                ? _game.State.Fleets.Values.Where(x => x.Side == f.Side && x.At == f.At).All(x => Elusive(x.Id))
-                : Elusive(f.Id));
+            // Defensive or Elusive (Paul 2026-11-22, his sketches: a square behind the arrow, or a chevron); several fleets in orbit here
+            // show their number in that place instead (Paul 2026-11-22), and the list a click opens tells them apart
+            bool elusive = own && Elusive != null && Elusive(f.Id);
             bool fx = h.X > 0.01f, fy = h.Y > 0.01f;   // the diagonal nearest its heading
-            DrawMarker(!own ? "fleet-unknown" : elusive ? "fleet-elusive" : "fleet-defensive", p, fx, fy, RimLight(f.Id, fx, fy), col, selected);
-            if (count > 1) Badge(font, p, BadgeR, count, col);
+            string key = count > 1 ? GroupIcon(count) : !own ? "fleet-unknown" : elusive ? "fleet-elusive" : "fleet-defensive";
+            DrawMarker(key, p, fx, fy, RimLight(f.Id, fx, fy), col, selected);
         }
         // a fleet out of sight (lost, merged, in a stack) starts afresh when it shows again: no turn from where it was last seen
         foreach (int gone in _facing.Keys.Where(k => !drawn.Contains(k)).ToList()) { _facing.Remove(gone); _turns.Remove(gone); }
@@ -565,8 +563,7 @@ public partial class FleetLayer : Control
         foreach (var (pic, p, count) in DrawnEnemy(layout.Enemy))
         {
             var col = ColorOf(pic.Side);
-            if (count > 1) Badge(font, p, BadgeR, count, col);
-            DrawMarker("fleet-unknown", p, true, false, TopLeft, col, false);   // parked up-right, as yours
+            DrawMarker(count > 1 ? GroupIcon(count) : "fleet-unknown", p, true, false, TopLeft, col, false);   // parked up-right, as yours
         }
 
         // the words last, so no line or marker paints over them
@@ -579,6 +576,18 @@ public partial class FleetLayer : Control
         // the map's system names keep off these words: when the glyph under the mouse changes, the map places its names again
         var pt = Pointed(DrawnOwn(placed), DrawnEnemy(layout.Enemy), movers);
         if (pt != _lastPointed) { _lastPointed = pt; map.QueueRedraw(); }
+    }
+
+    /// <summary>The icon of several fleets of one side in orbit at a system: the bare arrow with their number where Defensive has its square
+    /// (Paul 2026-11-22); ten or more show a plus.</summary>
+    internal static string GroupIcon(int count) => count is >= 2 and <= 9 ? $"fleet-group-{count}" : "fleet-group-many";
+
+    /// <summary>The fleets that share a fleet's marker: every fleet of its side in orbit at its system, by id; the fleet alone when it is on
+    /// its way (or unknown).</summary>
+    public IReadOnlyList<int> GroupOf(int fleet)
+    {
+        if (_game == null || !_game.State.Fleets.TryGetValue(fleet, out var f) || f.At == null) return new[] { fleet };
+        return _game.State.Fleets.Values.Where(x => x.Side == f.Side && x.At == f.At).Select(x => x.Id).OrderBy(id => id).ToList();
     }
 
     /// <summary>
@@ -703,10 +712,11 @@ public partial class FleetLayer : Control
     /// and fighters a small jet (both nose left), a building a house, the moving Hearth a gold flame. Smaller than a fleet's arrow, so fleets
     /// stay the main thing on the map.
     /// </summary>
-    static string MoverIcon(MoverKind k) => k switch
+    internal static string MoverIcon(MoverKind k) => k switch
     {
         MoverKind.Leader => "mover-leader", MoverKind.Mission => "mover-team", MoverKind.Regiment => "mover-regiment",
-        MoverKind.Ship => "mover-ship", MoverKind.Fighter => "mover-fighter", MoverKind.Facility => "mover-building", _ => "mover-hearth",
+        MoverKind.Ship => "mover-ship", MoverKind.Fighter => "mover-fighter", MoverKind.Facility => "mover-building", MoverKind.Hq => "mover-hearth",
+        _ => throw new ArgumentOutOfRangeException(nameof(k), k, "a mover kind with no icon"),
     };
 
     static readonly Dictionary<MoverKind, Vector2> HalfCache = new();

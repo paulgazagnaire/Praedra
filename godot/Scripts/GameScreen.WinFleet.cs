@@ -66,6 +66,44 @@ public partial class GameScreen
         if (picks.Count > 1) Toast($"{Ui.Count(picks.Count, "fleet", "fleets")} picked: right-click a system to send them there. Esc lets them go.", MsgKind.Info);
     }
 
+    /// <summary>Shift+click on a marker several fleets of yours share (Paul 2026-11-22): they all join the fleets picked, or all leave when
+    /// they all were. The fleet selected before counts as the first one picked, as for one fleet.</summary>
+    void ShiftPickGroup(IReadOnlyList<int> ids)
+    {
+        var mine = ids.Where(id => S.Game.State.Fleets.TryGetValue(id, out var f) && f.Side == Me).ToList();
+        if (mine.Count == 0) return;
+        var picks = _view.PickedFleets;
+        if (picks.Count == 0 && _view.SelectedFleet >= 0 && !mine.Contains(_view.SelectedFleet) && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var sel) && sel.Side == Me)
+            picks.Add(_view.SelectedFleet);
+        if (mine.All(picks.Contains)) foreach (int id in mine) picks.Remove(id);
+        else foreach (int id in mine) picks.Add(id);
+        _view.QueueRedraw(); _fleets.QueueRedraw();
+        if (picks.Count > 1) Toast($"{Ui.Count(picks.Count, "fleet", "fleets")} picked: right-click a system to send them there. Esc lets them go.", MsgKind.Info);
+    }
+
+    (string Text, Action Do)[] _groupMenu;
+    PopupMenu _groupPopup;
+
+    /// <summary>
+    /// A click on a marker several fleets of yours share (Paul's pick 2026-11-22, "Open a list of the fleets"): a short list of them by the
+    /// click, each with its ships and its behaviour; picking one selects it, as a click on its own marker did.
+    /// </summary>
+    void ShowFleetGroup(IReadOnlyList<int> ids, Vector2 at)
+    {
+        var items = ids.Select(id => S.Game.State.Fleets.TryGetValue(id, out var f) && f.Side == Me ? f : null).Where(f => f != null)
+            .Select(f => ($"{f.Name}   {Ui.Count(f.Ships.Count, "ship", "ships")} · {(IsElusive(f) ? "Elusive" : "Defensive")}", (Action)(() => SelectFleet(f.Id, false))))
+            .ToArray();
+        if (items.Length == 0) return;
+        _groupMenu = items;
+        var pm = new PopupMenu { Theme = Ui.WindowTheme };   // the windows' look, as the window menus
+        for (int i = 0; i < items.Length; i++) pm.AddItem(items[i].Item1, i);
+        pm.IdPressed += id => items[(int)id].Item2();
+        pm.PopupHide += () => { if (_groupPopup == pm) _groupPopup = null; pm.QueueFree(); };
+        AddChild(pm);
+        _groupPopup = pm;
+        pm.Popup(new Rect2I((Vector2I)(_view.GetGlobalTransform() * at + new Vector2(10, 6)), Vector2I.Zero));
+    }
+
     /// <summary>Let the fleets picked on the map go. True if there were any.</summary>
     bool ClearMapPicks()
     {
