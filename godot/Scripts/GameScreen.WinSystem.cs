@@ -150,10 +150,11 @@ public partial class GameScreen
         var lcol = Ui.VBox(Ui.Block);
         lcol.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         lcol.AddChild(Caption("Leaders on the planet", null, general ? null
-            : $"You don't hold {n}, but your leaders can stand on it: drag a passenger here to land them, or one standing here onto a fleet of yours in orbit."));
+            : $"You don't hold {n}, but your leaders can stand on it: drag a leader off a fleet of yours here to land them, or one standing here onto a fleet of yours in orbit."));
         var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
+        if (!general) lz.Box.TooltipText = Ui.Wrap("Drag a leader off a fleet of yours here to land them.");
         foreach (var c in here) lz.Flow.AddChild(LeaderChip(c, null));
-        if (here.Count == 0) lz.Flow.AddChild(EmptySlot(general ? "No leader of yours stands here" : "No leader of yours stands here. Drag a passenger here to land them"));
+        if (here.Count == 0) lz.Flow.AddChild(EmptySlot("No leader of yours stands here"));
         lcol.AddChild(lz.Box);
         row.AddChild(lcol);
         Add(row);
