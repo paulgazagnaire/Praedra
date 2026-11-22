@@ -41,9 +41,8 @@ public partial class FleetLayer : Control
     /// <summary>Screen rectangles the words must keep off (the boxes on the map), set by the owner.</summary>
     public Func<IEnumerable<Rect2>> Boxes { get; set; }
     const float PickRadiusPx = 13f;
-    /// <summary>Half the fleet marker's size (the 16 px pixel icon with its 1 px ring), and how far out an enemy group's count disc sits:
-    /// past the arrow's wing (review 10: yours carry their number in the tail, the enemy's in a disc, so the shape says whose).</summary>
-    const float MarkerR = 8.5f, EnemyBadgeR = 11f;
+    /// <summary>Half the fleet marker's size (the 16 px pixel icon with its 1 px ring).</summary>
+    const float MarkerR = 8.5f;
     // One dashed style per meaning (map declutter, Paul's All A 2026-11-18): a thing on its way in its own colour at 55%, 1.2 px, dash 4
     // (the selected fleet's at 100%, 1.6 px; the moving HQ keeps its gold); an order not started yet in white at 85%, 1.6 px, dash 6.
     const float WayAlpha = 0.55f, WayWidth = 1.2f, WaySelWidth = 1.6f, WayDash = 4f;
@@ -317,7 +316,6 @@ public partial class FleetLayer : Control
         foreach (var (_, p, count) in DrawnEnemy(layout.Enemy))
         {
             list.Add(Around(p, MarkerR));
-            if (count > 1) list.Add(Around(p + EnemyBadgeAt, 8.5f));
         }
         foreach (var (m, p, _) in movers)
         {
@@ -438,12 +436,11 @@ public partial class FleetLayer : Control
         }
         // an enemy group: how many, and the ships and squadrons seen in all of them together
         string EnemyWords((FleetPicture pic, Vector2 p, int count) e) => e.count > 1 ? $"{e.count} fleets · {EnemyText(e.pic)}" : EnemyText(e.pic);
-        float EnemyRoom(int count) => count > 1 ? 12f : 0f;   // keeps the words off the count disc
 
         // the selected fleet and the pointed glyph first: they always show, with the day
         foreach (var (f, p, _, count) in own)
             if (Sel(f) || Pt(f)) Put(OwnWords(f, count, true), p, MarkerR, ColorOf(f.Side), 13, true, f.At != null, 0f);
-        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyWords(e), e.p, MarkerR, ColorOf(e.pic.Side), 13, true, true, EnemyRoom(e.count)); }
+        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyWords(e), e.p, MarkerR, ColorOf(e.pic.Side), 13, true, true, 0f); }
         if (pointed.Kind == 2) { var (m, p, _) = movers[pointed.Id]; Put(m.Point ?? m.Label, p, MoverRoom(m.Kind), MoverColour(m), 12, true, false, m.Count > 1 ? 12f : 0f); }
         if (!all) return outp;
 
@@ -451,7 +448,7 @@ public partial class FleetLayer : Control
         foreach (var (f, p, _, count) in own)
             if (!Sel(f) && !Pt(f)) Put(OwnWords(f, count, false), p, MarkerR, ColorOf(f.Side), 13, false, f.At != null, 0f);
         for (int i = 0; i < enemy.Count; i++)
-            if (pointed != (1, i)) Put(EnemyWords(enemy[i]), enemy[i].p, MarkerR, ColorOf(enemy[i].pic.Side), 13, false, true, EnemyRoom(enemy[i].count));
+            if (pointed != (1, i)) Put(EnemyWords(enemy[i]), enemy[i].p, MarkerR, ColorOf(enemy[i].pic.Side), 13, false, true, 0f);
         for (int i = 0; i < movers.Count; i++)
             if (pointed != (2, i)) { var (m, p, _) = movers[i]; Put(m.Name ?? m.Label, p, MoverRoom(m.Kind), MoverColour(m), 12, false, false, m.Count > 1 ? 12f : 0f); }
         return outp;
@@ -552,13 +549,11 @@ public partial class FleetLayer : Control
             // selected or picked with Shift+click: a group shows it when any fleet in it is
             bool selected = Sharing(f).Any(id => map.SelectedFleet == id || map.PickedFleets.Contains(id));
             bool own = f.Side == Player;
-            // Defensive or Elusive (Paul 2026-11-22, his sketches: a square behind the arrow, or a chevron); several fleets in orbit here
-            // show their number in that place instead (Paul 2026-11-22), and the list a click opens tells them apart
-            bool elusive = own && Elusive != null && Elusive(f.Id);
+            // Defensive or Elusive (Paul 2026-11-22, his sketches: a square behind the arrow, or a chevron), for each fleet sharing the marker
+            int elusive = own && Elusive != null ? Sharing(f).Count(id => Elusive(id)) : 0;
             int light = RimLight(f.Id, h.X > 0.01f, h.Y > 0.01f);
             var (key, fx, fy) = Look(count, own, elusive, h);
-            DrawMarker(key, p, fx, fy, key.StartsWith("fleet-group-", StringComparison.Ordinal) ? TopLeft : light, col, selected);
-            if (count > 1 && !own) BadgeAt(font, p + EnemyBadgeAt, count, col);   // not yours: the bare arrow and a count disc
+            DrawMarker(key, p, fx, fy, IsNumbered(key) ? TopLeft : light, col, selected);
         }
         // a fleet out of sight (lost, merged, in a stack) starts afresh when it shows again: no turn from where it was last seen
         foreach (int gone in _facing.Keys.Where(k => !drawn.Contains(k)).ToList()) { _facing.Remove(gone); _turns.Remove(gone); }
@@ -567,8 +562,8 @@ public partial class FleetLayer : Control
         foreach (var (pic, p, count) in DrawnEnemy(layout.Enemy))
         {
             var col = ColorOf(pic.Side);
-            DrawMarker("fleet-unknown", p, true, false, TopLeft, col, false);   // parked up-right, as yours
-            if (count > 1) BadgeAt(font, p + EnemyBadgeAt, count, col);         // a group: its count in a disc past the wing (review 10)
+            var (key, fx, fy) = Look(count, false, 0, ParkedHeading);                 // parked up-right, as yours
+            DrawMarker(key, p, fx, fy, TopLeft, col, false);
         }
 
         // the words last, so no line or marker paints over them
@@ -583,21 +578,28 @@ public partial class FleetLayer : Control
         if (pt != _lastPointed) { _lastPointed = pt; map.QueueRedraw(); }
     }
 
-    /// <summary>The icon of several fleets of one side in orbit at a system: the bare arrow with their number where Defensive has its square
-    /// (Paul 2026-11-22); ten or more show a plus.</summary>
-    static Vector2 EnemyBadgeAt => new(EnemyBadgeR * 0.95f, -EnemyBadgeR * 0.95f);
-
     /// <summary>
-    /// The icon a fleet marker draws and whether it is mirrored (to the diagonal nearest its heading). Yours carry a mark in the tail: the
-    /// Defensive square, the Elusive chevron, or for several in orbit their number; the enemy's arrow is bare (review 10, rule C6). A group's
-    /// icon is drawn pointing up-right, as a parked marker shows, and is never mirrored, so its number reads upright.
+    /// The icon a fleet marker draws and whether it is mirrored (to the diagonal nearest its heading), by how many fleets share it and how
+    /// many of those are Elusive (Paul 2026-11-22, his sketches and rules):
+    /// - one of yours: the arrow with the Defensive square or the Elusive chevron in its tail; one of the enemy's: the bare arrow;
+    /// - two of yours: two marks, the one nearer the arrow in front: two squares, two chevrons, or the chevron then the square;
+    /// - more than two of yours, or more than one of the enemy's: the arrow with their number in place of the marks, the same design for both
+    ///   sides, the colour telling whose (Paul: "the color is the differenciator").
+    /// A numbered icon is drawn pointing up-right, as a parked marker shows, and is never mirrored, so its number reads upright (review 10).
     /// </summary>
-    internal static (string Key, bool Fx, bool Fy) Look(int count, bool own, bool elusive, Vector2 heading)
+    internal static (string Key, bool Fx, bool Fy) Look(int count, bool own, int elusive, Vector2 heading)
     {
-        if (count > 1 && own) return (GroupIcon(count), false, false);
-        return (!own ? "fleet-unknown" : elusive ? "fleet-elusive" : "fleet-defensive", heading.X > 0.01f, heading.Y > 0.01f);
+        bool fx = heading.X > 0.01f, fy = heading.Y > 0.01f;
+        if (count > 2 || (count > 1 && !own)) return (GroupIcon(count), false, false);
+        if (count == 2) return (elusive >= 2 ? "fleet-pair-elusive" : elusive == 1 ? "fleet-pair-mixed" : "fleet-pair-defensive", fx, fy);
+        return (!own ? "fleet-unknown" : elusive > 0 ? "fleet-elusive" : "fleet-defensive", fx, fy);
     }
 
+    /// <summary>True for a numbered group icon (drawn as is, lit from the top left).</summary>
+    static bool IsNumbered(string key) => key.StartsWith("fleet-group-", StringComparison.Ordinal);
+
+    /// <summary>The numbered icon of several fleets of one side in orbit at a system: the bare arrow with their number where Defensive has its
+    /// square (Paul 2026-11-22); ten or more show a plus.</summary>
     internal static string GroupIcon(int count) => count is >= 2 and <= 9 ? $"fleet-group-{count}" : "fleet-group-many";
 
     /// <summary>The fleets that share a fleet's marker, read fresh from the game (for a click and the playtest; drawing uses the table

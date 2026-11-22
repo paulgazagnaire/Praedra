@@ -195,16 +195,25 @@ public partial class Main
         // Shift+click picks them all
         Expect(Enumerable.Range(2, 12).All(n => PixelIconData.Map.ContainsKey(FleetLayer.GroupIcon(n))), "every count of fleets from 2 to 13 has its marker");
         Expect(Enum.GetValues<MoverKind>().All(k => PixelIconData.Map.ContainsKey(FleetLayer.MoverIcon(k))), "every kind of mover has its pixel icon");
-        // review 10: a group is parked, so its marker must not be mirrored with its number in it (2 read as 5); yours carry the number in the
-        // tail, the enemy's group stays the bare arrow (with a count disc)
-        var (gk, gfx, gfy) = FleetLayer.Look(2, true, false, FleetLayer.ParkedHeading);
+        // review 10: a numbered group is parked, so its marker must not be mirrored with its number in it (2 read as 5). Paul 2026-11-22: two
+        // of yours show two marks (two squares, two chevrons, or chevron then square); more than two of yours, or more than one of the
+        // enemy's, their number, the same design for both sides
+        var (gk, gfx, gfy) = FleetLayer.Look(2, false, 0, FleetLayer.ParkedHeading);
         var g2 = FleetLayer.MarkerTones(gk, gfx, gfy, 0);
         string[] two = { "###", "..#", "###", "#..", "###" };
         bool upright = Enumerable.Range(0, g2.Length - 4).Any(r => Enumerable.Range(0, g2[0].Length - 2).Any(c =>
             Enumerable.Range(0, 5).All(i => Enumerable.Range(0, 3).All(j => (g2[r + i][c + j] != '.') == (two[i][j] == '#')))));
-        Expect(upright, $"a parked group of 2 shows an upright 2 ({gk}, mirrored {gfx}/{gfy})");
+        Expect(upright, $"two enemy fleets parked together show an upright 2 ({gk}, mirrored {gfx}/{gfy})");
         Expect(PixelIconData.Map[gk].Length == 16 && PixelIconData.Map[gk].All(r => r.Length == 16), "the group icon is the fleet arrow's 16 x 16");
-        Expect(FleetLayer.Look(2, false, false, FleetLayer.ParkedHeading).Key == "fleet-unknown", "an enemy group is the bare arrow, not a number in the tail");
+        Expect(FleetLayer.Look(1, false, 0, FleetLayer.ParkedHeading).Key == "fleet-unknown", "one enemy fleet is the bare arrow");
+        string[] pairs = { FleetLayer.Look(2, true, 0, FleetLayer.ParkedHeading).Key, FleetLayer.Look(2, true, 1, FleetLayer.ParkedHeading).Key,
+            FleetLayer.Look(2, true, 2, FleetLayer.ParkedHeading).Key };
+        Expect(pairs.SequenceEqual(new[] { "fleet-pair-defensive", "fleet-pair-mixed", "fleet-pair-elusive" }) && pairs.All(PixelIconData.Map.ContainsKey),
+            "two of yours: two squares, chevron and square, two chevrons: " + string.Join(", ", pairs));
+        var three = FleetLayer.Look(3, true, 1, FleetLayer.ParkedHeading);
+        Expect(three == ("fleet-group-3", false, false), $"three of yours show their number, never mirrored ({three})");
+        var pairFlip = FleetLayer.Look(2, true, 0, FleetLayer.ParkedHeading);
+        Expect(pairFlip.Fx, "a pair (no number in it) is mirrored to point up-right like one fleet, light and all");
         var pair = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).GroupBy(f => f.At).Where(g => g.Count() >= 2)
             .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => g.OrderBy(f => f.Id).ToList()).FirstOrDefault();
         if (pair != null)
