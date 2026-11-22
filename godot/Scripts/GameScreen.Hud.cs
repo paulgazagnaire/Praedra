@@ -137,8 +137,7 @@ public partial class GameScreen
             CardButton(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
                 "Pick a destination on the map: the route and the arrival day show before you confirm", "Primary");
         int fid = f.Id;
-        CardButton("Window", () => OpenMgmt(MgKind.Fleet, fleet: fid), "The fleet's window: drag leaders onto its posts, troops and fighters aboard, ships between fleets");
-        _selActions.AddChild(Ui.Grow());
-        CardButton("Details →", () => ShowTab(DrawerTab.Selected), "Ships, troops, officers, split and merge in the panel; attack and the other orders one click on");
+        // one place for everything else: the fleet's window (2026-11-22; the side panel's fleet page is only a summary now)
+        CardButton("Fleet window", () => OpenMgmt(MgKind.Fleet, fleet: fid), "Its orders (attack, merge, split, scrap), its ships, loading fighters and troops, its leaders. F opens it too.");
     }
 }

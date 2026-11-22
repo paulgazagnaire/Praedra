@@ -26,8 +26,8 @@ namespace PraedraViewer;
 /// A fleet's window, Paul's Paper design (fleet-new-frame-1 and -2, 2026-11-21), in the Infrastructure window's look. One column, so four
 /// fleets stand side by side. The head: the name, the window buttons, the status with a 2 px bar (where it is, or how far along its trip).
 /// A strip of tabs: Command (its orders, its behaviour, its three posts, its passengers), Ships (one row per ship: hull and cargo),
-/// Fighters and Troops (what it carries out of its room). What the design leaves out stays reachable without new chrome: a right-click on
-/// the head merges other fleets into it or scraps it, a right-click on a ship splits it off or scraps it, a ship's hover says its damage.
+/// Fighters and Troops (what it carries out of its room, with Load and Unload). What the design left out is a plain button (2026-11-22):
+/// Merge with the actions, Split and Scrap over the ship rows; right-clicks on the head and on a ship are shortcuts to the same.
 /// Several fleets are picked on the map with Shift+click, and a right-click on a system sends them there (Paul's pick: move only). Every
 /// order is one the core already has, judged when the clock moves. Screens only.
 /// </summary>
@@ -128,8 +128,8 @@ public partial class GameScreen
 
     /// <summary>
     /// The head, on the darker surface with 24 px all round: the name in BitPotion 48 px with ⋮⋮ – × in the design's grey, then the status
-    /// line and its bar. The ⋮⋮ drags the fleet onto another fleet's window to merge them. A right-click anywhere on the head offers what
-    /// the design has no button for: merge another fleet into this one, scrap it.
+    /// line and its bar. The ⋮⋮ moves the window, as on every other window. A right-click anywhere on the head is a shortcut to Merge (also
+    /// in Command) and to scrapping the fleet (also on Ships).
     /// </summary>
     void FleetHead(MgWin w, Fleet f, bool still)
     {
@@ -142,12 +142,9 @@ public partial class GameScreen
         var parts = Boxed(new VBoxContainer(), 24);
         pad.AddChild(parts);
 
-        var grip = WindowGlyph("⋮⋮");
+        // ⋮⋮ moves the window, as on every other window (it no longer drags to merge: Merge is a button in Command, 2026-11-22)
+        var grip = MoveGrip();
         grip.AddThemeColorOverride("font_color", Look.Text);   // the design's grey (its dots stay the mono ⋮⋮: Space Grotesk has no such glyph)
-        grip.MouseFilter = MouseFilterEnum.Stop;
-        grip.TooltipText = Ui.Wrap($"Drag {f.Name} onto another fleet's window to merge it into that fleet. Right-click this head to merge other fleets into {f.Name}, or to scrap it.");
-        if (still && !_moved.ContainsKey(new Drag('M', f.Id).Key)) MakeDraggable(grip, new List<Drag> { new('M', f.Id) }, f.Name);
-        else grip.AddThemeColorOverride("font_color", Look.Dim);
 
         var row = Boxed(new HBoxContainer(), NameGap);
         string upper = f.Name.ToUpperInvariant();
@@ -241,7 +238,7 @@ public partial class GameScreen
     }
 
     /// <summary>The head's right-click: merge another fleet into this one (those here join at once, the others fly here, closest first),
-    /// then scrap the whole fleet. What the design has no button for.</summary>
+    /// then scrap the whole fleet. A shortcut: the same is on the Merge and Scrap fleet buttons.</summary>
     List<(string Text, Action Do)> HeadMenu(Fleet f)
     {
         if (!S.Game.State.Fleets.TryGetValue(f.Id, out var live) || !Still(live)) return new List<(string, Action)>();
@@ -346,8 +343,9 @@ public partial class GameScreen
             };
             col.AddChild(cap);
             var z = DropZone($"Fleet {f.Id} {post}", $"make {GameSession.PostWords(post)}", d => RefuseFleetPost(d, f, p), d => DropFleetPost(d, f, p));
-            if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(LeaderCard(holder));
-            else z.Flow.AddChild(EmptyCard(DropLeader));
+            if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(PostLeader(holder));
+            else z.Flow.AddChild(EmptyCard(PickLeader));
+            PostMenu(z.Box, f, p);
             col.AddChild(z.Box);
             posts.AddChild(col);
         }
@@ -356,8 +354,9 @@ public partial class GameScreen
         var pas = FleetSection("Passengers", 16, null, "Leaders who ride the fleet with no post: they travel with it.");
         var pz = DropZone($"Fleet {f.Id} Passengers", "take aboard", d => RefuseFleetPost(d, f, CharacterPost.None), d => DropFleetPost(d, f, CharacterPost.None));
         CardFlow(pz.Flow);
-        foreach (var c in riders) pz.Flow.AddChild(LeaderCard(c));
-        if (riders.Count == 0) pz.Flow.AddChild(EmptyCard(DropLeader));
+        foreach (var c in riders) pz.Flow.AddChild(PostLeader(c));
+        if (riders.Count == 0) pz.Flow.AddChild(EmptyCard(PickLeader));
+        PostMenu(pz.Box, f, CharacterPost.None);
         pas.AddChild(pz.Box);
 
         // leaders and fleets sent to join it from other systems (m5 §Moving a character alone, m3 §Joining a fleet on arrival)
@@ -385,33 +384,42 @@ public partial class GameScreen
     /// </summary>
     Control FleetActions(Fleet f)
     {
-        var bar = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
-        bar.AddThemeConstantOverride("h_separation", 8); bar.AddThemeConstantOverride("v_separation", 8);
+        // Paul's row (2026-11-22, Q2 B): Bombardment ▾, Invasion, Move; Merge alone under it (and the harvester's strike beside it)
+        var bar = Boxed(new VBoxContainer(), 8);
+        var hit = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+        var go = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+        foreach (var row in new[] { hit, go }) { row.AddThemeConstantOverride("h_separation", 8); row.AddThemeConstantOverride("v_separation", 8); bar.AddChild(row); }
         bool still = Still(f);
         string travelling = $"Travelling: give this order when it reaches {f.Transit?.Path[^1] ?? "its destination"}.";
         bool canHit = CanAttackHere(f);
         int regs = S.Host.Troops.RegimentsAboard(f).Count;
         string hitWhy = canHit ? null : AttackWhyNot(f);
 
-        bar.AddChild(MenuAction("Bombardment", "Fleet Bombard", !canHit ? Array.Empty<(string, Action)>() : new (string, Action)[]
+        hit.AddChild(MenuAction("Bombardment", "Fleet Bombard", !canHit ? Array.Empty<(string, Action)>() : new (string, Action)[]
         {
             ("Military targets: regiments and defences", () => { Bombard(f, BombardCategory.Military); MgRefreshSoon(); }),
             ("Civilian targets: the planet's support", () => { Bombard(f, BombardCategory.Civilian); MgRefreshSoon(); }),
             ("Everything", () => { Bombard(f, BombardCategory.General); MgRefreshSoon(); }),
         }, hitWhy ?? "Bombard the system from orbit: its regiments and defences, its support, or everything."));
-        bar.AddChild(FleetAction("Invasion", "Fleet Invade", () => { Invade(f); MgRefreshSoon(); },
+        hit.AddChild(FleetAction("Invasion", "Fleet Invade", () => { Invade(f); MgRefreshSoon(); },
             hitWhy ?? (regs > 0 ? $"Lands the {Ui.Count(regs, "regiment", "regiments")} aboard to take the planet: land more than the defenders have." : "No regiments aboard: load some at one of your planets first (Troops tab)."),
             !canHit || regs == 0));
         int fid = f.Id;
-        bar.AddChild(FleetAction("Move", "Fleet Move", () => { if (S.Game.State.Fleets.TryGetValue(fid, out var ff)) { CloseSectorView(); StartMove(ff); } },
+        hit.AddChild(FleetAction("Move", "Fleet Move", () => { if (S.Game.State.Fleets.TryGetValue(fid, out var ff)) { CloseSectorView(); StartMove(ff); } },
             still ? "Pick a destination on the map. To send several fleets at once, Shift+click them on the map and right-click a system." : travelling, !still));
+        // Merge, as Bombardment: a short list, the fleets here first (they join at once), then the others closest first (they fly here)
+        var merge = still ? MergeLines(f) : new List<(string Text, Action Do)>();
+        go.AddChild(MenuAction("Merge", "Fleet Merge", merge.Select(l => (l.Text, (Action)(() => { l.Do(); MgRefreshSoon(); }))).ToArray(),
+            !still ? travelling
+            : merge.Count == 0 ? "No other fleet of yours can join this one now: none can reach it, or each already has an order today."
+            : $"Another fleet joins {f.Name}: a fleet here joins at once, one elsewhere flies here and joins when it arrives."));
 
         // the harvester's strike
         if (still && S.HoldsHarvester(f))
         {
             bool struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
             int? readyDay = S.HarvesterRechargingUntil(f);
-            bar.AddChild(FleetAction("Destroy System...", "Fleet Destroy", () => AskDestroySystem(f.Id),
+            go.AddChild(FleetAction("Destroy System...", "Fleet Destroy", () => AskDestroySystem(f.Id),
                 S.IsDestroyed(f.At) ? $"{f.At} is already destroyed." + (readyDay is int rd0 ? " " + S.HarvestWaitText(rd0) : "") : struck ? "The strike is ordered: it happens as soon as the clock moves." : readyDay is int rd ? S.HarvestWaitText(rd) : "Wipes out the system the harvester is at. Asks first.",
                 S.IsDestroyed(f.At) || struck || readyDay != null, Ui.Danger));
         }
@@ -462,10 +470,11 @@ public partial class GameScreen
         var far = others.Where(x => x.At != f.At).Select(x => (F: x, Plan: S.Host.PlanMove(Me, x.Id, f.At, null))).Where(p => p.Plan.Ok)
             .OrderBy(p => p.Plan.HopTicks.Sum()).ThenBy(p => p.F.Id).ToList();
         var lines = new List<(string, Action)>();
-        if (here.Count > 1) lines.Add(($"Merge all {here.Count} fleets here, at once", () => MergeInto(f, here)));
-        foreach (var x in here) lines.Add(($"Merge {x.Name}: here, joins at once", () => MergeInto(f, new List<Fleet> { x })));
+        // each line says who moves and when (UI review 1, 2026-11-22): the other fleet comes to this one, this one stays
+        if (here.Count > 1) lines.Add(($"All {here.Count} fleets here join now", () => MergeInto(f, here)));
+        foreach (var x in here) lines.Add(($"{x.Name} joins now (here)", () => MergeInto(f, new List<Fleet> { x })));
         foreach (var (x, plan) in far)
-            lines.Add(($"Merge {x.Name}: at {x.At}, flies here in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? ", known trap on the way" : ""), () => MergeInto(f, new List<Fleet> { x })));
+            lines.Add(($"{x.Name} flies from {x.At}, joins in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? " (known trap on the way)" : ""), () => MergeInto(f, new List<Fleet> { x })));
         return lines;
     }
 
@@ -493,7 +502,7 @@ public partial class GameScreen
 
     /// <summary>The design's button: a 1 px #36363C outline, 8 px inside, 12 px words. Brighter outline under the mouse, the words greyed
     /// with the reason in the hover when it can't act; <paramref name="ink"/> for a meaning colour (the harvester's red).</summary>
-    static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false)
+    static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false, Color? hoverInk = null)
     {
         var b = new Button { FocusMode = FocusModeEnum.None, Disabled = disabled, TooltipText = Ui.Wrap(tip),
             MouseDefaultCursorShape = disabled ? CursorShape.Arrow : CursorShape.PointingHand };
@@ -502,8 +511,15 @@ public partial class GameScreen
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         var c = disabled ? Look.Dim : ink ?? Look.Text;
         var h = Boxed(new HBoxContainer(), 8);
-        h.AddChild(Look.Words(words, 12, c));
+        var text = Look.Words(words, 12, c);
+        h.AddChild(text);
         if (menu) { var arrow = Look.Words("▾", 12, c, true); arrow.SizeFlagsVertical = SizeFlags.ShrinkCenter; h.AddChild(arrow); }
+        if (hoverInk is Color hi && !disabled)
+        {
+            // a button whose harm is only shown at the moment you commit (Scrap: red under the mouse, normal ink at rest; UI review 1)
+            b.MouseEntered += () => text.AddThemeColorOverride("font_color", hi);
+            b.MouseExited += () => text.AddThemeColorOverride("font_color", c);
+        }
         Fill(b, h, 8, 8);
         b.Pressed += act;
         b.SetMeta(UiTest.FullName, key);
@@ -521,10 +537,12 @@ public partial class GameScreen
         return b;
     }
 
-    void PopMenu(Control at, (string Text, Action Do)[] items)
+    /// <summary>A short list under <paramref name="at"/>. With no line, <paramref name="none"/> shows greyed, so the click still answers.</summary>
+    void PopMenu(Control at, (string Text, Action Do)[] items, string none = null)
     {
-        if (items.Length == 0) return;
-        var pm = new PopupMenu();
+        if (items.Length == 0 && none == null) return;
+        var pm = new PopupMenu { Theme = ThemeAt(at) };   // the window's look
+        if (items.Length == 0) { pm.AddItem(none, 0); pm.SetItemDisabled(0, true); }
         for (int i = 0; i < items.Length; i++) pm.AddItem(items[i].Text, i);
         pm.IdPressed += id => items[(int)id].Do();
         pm.PopupHide += () => pm.QueueFree();
@@ -638,6 +656,80 @@ public partial class GameScreen
         return card;
     }
 
+    /// <summary>A leader on a post or among the passengers: their card, and a click on it goes to the post's choices (PostMenu).</summary>
+    Control PostLeader(CharacterRecord c)
+    {
+        var card = LeaderCard(c);
+        if (!card.Visible) return card;
+        card.MouseFilter = MouseFilterEnum.Pass;
+        card.TooltipText += "\nClick: give the post to someone else, or leave the fleet.";
+        return card;
+    }
+
+    /// <summary>
+    /// A click on a post or on Passengers opens its choices (the old side panel's Attach and Detach buttons, Paul's F2 2026-11-22: one way to
+    /// run a fleet): your leaders at this system who can take it now, then "leaves the fleet" for whoever is on it. Each line does what a
+    /// drop does, with the same checks and the same instant look; a drag still works, from any window. Nobody to offer: one greyed line says
+    /// why, so a click never does nothing. Strategy games give leader slots this click.
+    /// </summary>
+    void PostMenu(Control zone, Fleet f, CharacterPost post)
+    {
+        zone.MouseDefaultCursorShape = CursorShape.PointingHand;
+        zone.TooltipText = Ui.Wrap(post == CharacterPost.None
+            ? "Click to take a leader aboard or let one off. You can also drop a leader here; one from another system flies here first."
+            : $"Click to choose the {GameSession.PostWords(post)}. You can also drop a leader here; one from another system flies here first.");
+        _menus.AddOrUpdate(zone, () => PostLines(f, post));   // for the playtest: RunMenu
+        _menuNone.AddOrUpdate(zone, () => PostNobody(f, post));   // and for a screenshot of the greyed line
+        Vector2? down = null;
+        zone.GuiInput += e =>
+        {
+            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left or MouseButton.Right } mb) return;
+            if (mb.Pressed) { down = mb.Position; return; }
+            if (down is Vector2 at && at.DistanceTo(mb.Position) < 6) { PopMenu(zone, PostLines(f, post), PostNobody(f, post)); zone.AcceptEvent(); }
+            down = null;
+        };
+    }
+
+    (string Text, Action Do)[] PostLines(Fleet f, CharacterPost post)
+    {
+        var lines = new List<(string Text, Action Do)>();
+        if (!Still(f)) return lines.ToArray();
+        bool Moved(CharacterRecord c) => _moved.ContainsKey(new Drag('L', c.Id).Key);
+        void Run(Action a) { RunDrop(a); RefreshMgmt(); RefreshSectorView(); }
+        var holder = post == CharacterPost.None ? null : Cm.HolderOf(f.Id, post);
+        // who can take it: the drop's own checks (RefuseFleetPost), here at this system only, so the list stays short
+        foreach (var c in S.MyCharacters.Where(c => Cm.LocationOf(c) == f.At && !Moved(c) && RefuseFleetPost(new Drag('L', c.Id), f, post) == null)
+                     .OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal))
+        {
+            var rc = c;
+            string name = S.CharName(c.Id);
+            string now = c.AttachedFleet == f.Id ? (c.Post == CharacterPost.None ? "a passenger now" : $"{GameSession.PostWords(c.Post)} now")
+                : c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var of) ? $"in {of.Name} now"
+                : S.SystemPostOf(c) is string g ? $"General of {g} now" : null;
+            string text = post == CharacterPost.None
+                ? $"Take {name} aboard" + (now != null ? $" ({now})" : "")
+                : $"Make {name} {GameSession.PostWords(post)}{(holder != null ? " instead" : "")} (leadership {Cm.EffectiveSkill(c, Skill.Leadership)}{(now != null ? ", " + now : "")})";
+            lines.Add((text, () => Run(() => DropFleetPost(new Drag('L', rc.Id), f, post))));
+        }
+        // who can get off: the holder, or each passenger; they stay at this system (DetachCharacterOrder)
+        var off = post == CharacterPost.None ? Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None) : holder != null ? new[] { holder } : Array.Empty<CharacterRecord>();
+        foreach (var c in off.Where(c => !Moved(c)).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal))
+        {
+            var rc = c;
+            lines.Add(($"{S.CharName(c.Id)} leaves the fleet", () => Run(() =>
+            {
+                Detach(rc, f);
+                _moved[new Drag('L', rc.Id).Key] = ($"lands at {f.At}", $"Ground {f.At} Leaders");
+            })));
+        }
+        return lines.ToArray();
+    }
+
+    string PostNobody(Fleet f, CharacterPost post) =>
+        !Still(f) ? $"{f.Name} is travelling: leaders join or leave where it stops."
+        : post == CharacterPost.None ? $"No leader of yours at {f.At} can board now."
+        : $"No leader of yours at {f.At} can be {GameSession.PostWords(post)} now.";
+
     /// <summary>A squadron or regiment as a card (the Fighters and Troops tabs): its icon, its class, and a short line (a damaged hull,
     /// "flies along").</summary>
     PanelContainer UnitCard(EconObject o, string sub, bool can) =>
@@ -669,7 +761,7 @@ public partial class GameScreen
     void ShipsTab(Fleet f, bool still, List<EconObject> picked)
     {
         var eco = S.Host.Economy;
-        if (picked.Count > 1) PickedShips(f, picked, still);
+        ShipActions(f, picked, still);
         var sz = DropZone($"Fleet {f.Id} Ships", "join", d => RefuseShipsInto(d, f), d => DropShipsInto(d, f));
         sz.Flow.AddThemeConstantOverride("v_separation", 8);
         var ships = f.Ships.Select(eco.Find).Where(o => o != null && !_moved.ContainsKey(new Drag('S', o.Id).Key) && !_scrapped.Contains(o.Id)).ToList();
@@ -797,18 +889,34 @@ public partial class GameScreen
         return lines;
     }
 
-    /// <summary>Several ships of the fleet picked, over its rows: split them off into a new fleet, or scrap them.</summary>
-    void PickedShips(Fleet f, List<EconObject> ships, bool still)
+    /// <summary>
+    /// Over the ship rows, always: Split and Scrap, so nobody has to find them in a right-click (2026-11-22). With no ship picked, Split
+    /// says how to pick and Scrap takes the whole fleet; with ships picked, both act on those, and their words say how many.
+    /// rule: m3-fleets §Orders (SplitFleet), m2-maintenance §Scrapping and refunds.
+    /// </summary>
+    void ShipActions(Fleet f, List<EconObject> picked, bool still)
     {
         var bar = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
         bar.AddThemeConstantOverride("h_separation", 8); bar.AddThemeConstantOverride("v_separation", 8);
-        var ds = ships.Select(o => new Drag('S', o.Id)).ToList();
-        string n = Ui.Count(ships.Count, "ship", "ships");
-        string why = !still ? "The fleet is travelling." : ships.Count >= f.Ships.Count - ShipsLeaving(f) ? "A fleet keeps at least one ship: leave one out of the pick." : null;
-        bar.AddChild(FleetAction($"Split {n} off", "Fleet Split", () => { foreach (var d in ds) if (!_moved.ContainsKey(d.Key) && RefuseSplit(d, f) == null) DropSplit(d, f); _picked.RemoveAll(ds.Contains); RefreshMgmt(); },
-            why ?? $"They become a new fleet here: {PickedWords(ships)}. Or drag them onto another fleet's window to send them there.", why != null));
-        bar.AddChild(FleetAction($"Scrap {n}...", "Fleet Scrap ships", () => AskScrap(ships, PickedWords(ships), f.At),
-            still ? "Asks first. Half the refined cost comes back." : "The fleet is travelling.", !still, Ui.Danger));
+        string travelling = $"Travelling: give this order when it reaches {f.Transit?.Path[^1] ?? "its destination"}.";
+        if (picked.Count == 0)
+        {
+            bar.AddChild(FleetAction("Split off", "Fleet Split", () => { },
+                !still ? travelling : f.Ships.Count < 2 ? "A fleet of one ship can't be split." : "Click a ship to pick it (Shift+click for more), then split them off into a new fleet here.", true));
+            var all = f.Ships.Select(S.Host.Economy.Find).Where(o => o != null && Scrappable(o) && !_scrapped.Contains(o.Id)).ToList();
+            bar.AddChild(FleetAction("Scrap fleet...", "Fleet Scrap fleet", () => AskScrap(all, $"all {Ui.Count(all.Count, "ship", "ships")} of {f.Name}", f.At),
+                !still ? travelling : $"Scraps every ship of {f.Name}. Asks first. Half the refined cost comes back and their upkeep is freed.", !still || all.Count == 0, hoverInk: Ui.Danger));
+        }
+        else
+        {
+            var ds = picked.Select(o => new Drag('S', o.Id)).ToList();
+            string n = Ui.Count(picked.Count, "ship", "ships");
+            string why = !still ? travelling : picked.Count >= f.Ships.Count - ShipsLeaving(f) ? "A fleet keeps at least one ship: leave one out of the pick." : null;
+            bar.AddChild(FleetAction($"Split {n} off", "Fleet Split", () => { foreach (var d in ds) if (!_moved.ContainsKey(d.Key) && RefuseSplit(d, f) == null) DropSplit(d, f); _picked.RemoveAll(ds.Contains); RefreshMgmt(); },
+                why ?? $"They become a new fleet here: {PickedWords(picked)}. Or drag them onto another fleet's window to send them there.", why != null));
+            bar.AddChild(FleetAction($"Scrap {n}...", "Fleet Scrap ships", () => AskScrap(picked, PickedWords(picked), f.At),
+                still ? "Asks first. Half the refined cost comes back and their upkeep is freed." : travelling, !still, hoverInk: Ui.Danger));
+        }
         Add(bar);
     }
 
@@ -823,6 +931,7 @@ public partial class GameScreen
         UnitTiles(qz.Flow, aboard.Select(o => ((Drag?)new Drag('Q', o.Id), o, HullWords(o)))
             .Concat(f.Squadrons.Select(id => eco.Find(id)).Where(o => o != null).Select(o => ((Drag?)null, o, "flies along"))), f.At, UnitCard);
         if (aboard.Count + f.Squadrons.Count == 0) qz.Flow.AddChild(EmptyCard(berths > 0 ? "Drop squadrons here to load them" : "No carrier in this fleet"));
+        CargoActions(f, fighters: true, aboard);
         Add(qz.Box);
         GroundLink(f);
     }
@@ -844,8 +953,60 @@ public partial class GameScreen
         CardFlow(tz.Flow);
         UnitTiles(tz.Flow, aboard.Select(o => ((Drag?)new Drag('R', o.Id), o, (string)null)), f.At, UnitCard);
         if (aboard.Count == 0) tz.Flow.AddChild(EmptyCard(room > 0 ? "Drop regiments here to load them" : "No transport in this fleet"));
+        CargoActions(f, fighters: false, aboard);
         Add(tz.Box);
         GroundLink(f);
+    }
+
+    /// <summary>
+    /// Over the cards of the Fighters and Troops tabs: one click loads what stands at the planet, or lands what is aboard (these were in
+    /// the side panel's fleet page, 2026-11-22). Troops load leaving the garrison the planet needs; "Load all" takes the rest too and says
+    /// the planet may revolt. rule: m2-support (garrison), m3-fleets §Orders (load and unload).
+    /// </summary>
+    void CargoActions(Fleet f, bool fighters, List<EconObject> aboard)
+    {
+        if (!Still(f)) return;
+        string at = f.At;
+        bool mine = S.OwnerOf(at) == Me;
+        var bar = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+        bar.AddThemeConstantOverride("h_separation", 8); bar.AddThemeConstantOverride("v_separation", 8);
+        if (fighters)
+        {
+            var based = FightersBasedAt(at);
+            int berths = Fm.FreeBerths(f), n = Math.Min(based.Count, berths);
+            if (n > 0)
+                bar.AddChild(FleetAction($"Load {n}", $"Load fighters: {n}", () => { LoadFighters(f, based.Take(n).Select(o => o.Id).ToList()); MgRefreshSoon(); },
+                    $"Puts {Ui.Count(n, "squadron", "squadrons")} based at {at} aboard the fleet's carriers" + (based.Count > n ? $" ({based.Count} are based here, room for {berths})." : ".")));
+            if (aboard.Count > 0)
+                bar.AddChild(FleetAction($"Unload {aboard.Count} at {at}", "Unload fighters", () => { UnloadFighters(f, aboard.Select(o => o.Id).ToList()); MgRefreshSoon(); },
+                    mine ? $"Bases the {Ui.Count(aboard.Count, "squadron", "squadrons")} aboard on {at}." : $"Fighters are based only on a planet you hold, and {at} isn't yours.", !mine));
+        }
+        else
+        {
+            int room = Fm.FreeTroopSlots(f);
+            if (mine && room > 0)
+            {
+                var avail = S.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == Me && o.System == at && o.AboardShip == 0)
+                    .OrderBy(o => o.Id).Select(o => o.Id).ToList();
+                int nAll = Math.Min(avail.Count, room);
+                int need = S.Host.Support.RequiredGarrison(at); // rule: m2-support (garrison); taking regiments below it risks a revolt
+                int nSafe = Math.Min(Math.Max(0, avail.Count - need), room);
+                if (nAll == 0)
+                    bar.AddChild(FleetAction("Load", "Load troops: none", () => { }, $"No regiments of yours stand at {at} to load.", true));
+                if (nSafe > 0)
+                    bar.AddChild(FleetAction($"Load {nSafe}, keep the garrison", $"Load troops: {nSafe}", () => { LoadTroops(f, avail.Take(nSafe).ToList()); MgRefreshSoon(); },
+                        $"Takes {nSafe} of the {avail.Count} regiments here (room for {room}) and leaves the {need} that {at} needs to keep order."));
+                if (nAll > nSafe)
+                    bar.AddChild(FleetAction($"Load all {nAll}", $"Load every regiment: {nAll}", () => { LoadTroops(f, avail.Take(nAll).ToList()); MgRefreshSoon(); },
+                        $"Takes every regiment there is room for. {at} needs {need} to keep order: with fewer, its people can rise up and its mines and yards stop.", false, Ui.Warn));
+            }
+            if (aboard.Count > 0)
+                bar.AddChild(FleetAction($"Unload {aboard.Count} at {at}", "Unload all troops", () => { UnloadTroops(f, aboard.Select(o => o.Id).ToList()); MgRefreshSoon(); },
+                    mine ? $"Lands the {Ui.Count(aboard.Count, "regiment", "regiments")} on {at}: they join its garrison."
+                    : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
+                    : $"Regiments land only on a planet you hold. To take {at}, use Invasion in Command.", !mine));
+        }
+        if (bar.GetChildCount() > 0) Add(bar);
     }
 
     /// <summary>Who is travelling here (leaders, and fleets sent to join): name and arrival day. Not draggable while they travel.</summary>

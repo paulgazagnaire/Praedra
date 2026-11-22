@@ -311,12 +311,12 @@ public partial class GameScreen
             {
                 // a capital ship splits off, flies there and joins on arrival. rule: m3-fleets §Orders (SplitFleet: sending ships)
                 if (_moved.TryGetValue(new Drag('M', from.Id).Key, out var src)) return $"{from.Name} itself {src.Words}.";
-                if (from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: to send the whole fleet, use Merge with in the other fleet's window.";
+                if (from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: to send the whole fleet, use Merge in the other fleet's window.";
                 return Words(Fm.CheckSplitFleet(new SplitFleetOrder(0, Me, from.Id, One(d.Id), f.At, f.Id)));
             }
             return Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)).Ok ? null : $"{from.Name} can't reach {f.At}.";   // it flies there and merges on arrival
         }
-        if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: to join the fleets, use Merge with in the other fleet's window.";
+        if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: to join the fleets, use Merge in the other fleet's window.";
         // rule: m3-fleets §Orders (TransferShips, MergeFleets)
         return Words(d.Kind == 'S' ? Fm.CheckTransferShips(new TransferShipsOrder(0, Me, One(d.Id), f.Id)) : Fm.CheckMergeFleets(new MergeFleetsOrder(0, Me, from.Id, f.Id)));
     }

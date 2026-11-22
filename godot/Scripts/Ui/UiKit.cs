@@ -559,6 +559,19 @@ public static class Ui
         t.SetFont("font", "TooltipLabel", Grotesk);
         t.SetFontSize("font_size", "TooltipLabel", 14);
         t.SetColor("font_color", "TooltipLabel", WinActive);
+        // the short lists a window's buttons and cards open (Merge ▾, Bombardment ▾, a post, a right-click): the window's own look too,
+        // since they are now the main way to give those orders (UI review 1, 2026-11-22). The face and grey of the window, its edge, no
+        // fill; under the mouse the brighter outline a window button gets; a greyed line (the reason nothing can be picked) in the note grey
+        t.SetStylebox("panel", "PopupMenu", WindowBox(6, 6));
+        t.SetStylebox("hover", "PopupMenu", Box(clear, 0, WinHover, 1, 10, 6));
+        t.SetConstant("v_separation", "PopupMenu", 10);
+        t.SetConstant("item_start_padding", "PopupMenu", 10);
+        t.SetConstant("item_end_padding", "PopupMenu", 14);
+        t.SetFont("font", "PopupMenu", Grotesk);
+        t.SetFontSize("font_size", "PopupMenu", 14);
+        t.SetColor("font_color", "PopupMenu", WinActive);
+        t.SetColor("font_hover_color", "PopupMenu", WinActive);
+        t.SetColor("font_disabled_color", "PopupMenu", Look.Soft);
         return t;
     }
 

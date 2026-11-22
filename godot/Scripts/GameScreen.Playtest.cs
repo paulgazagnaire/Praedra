@@ -275,12 +275,6 @@ public partial class GameScreen
             if (c is CheckButton or CheckBox && c is Button cb && cb.Text.StartsWith(prefix, StringComparison.Ordinal)) { cb.ButtonPressed = on; return true; }
         return false;
     }
-    internal bool TickShip(int index)
-    {
-        var boxes = AllNodes(_pv).OfType<CheckBox>().ToList();
-        if (index >= boxes.Count) return false;
-        boxes[index].ButtonPressed = true; return true;
-    }
     static IEnumerable<Node> AllNodes(Node n) { foreach (var c in n.GetChildren()) { yield return c; foreach (var d in AllNodes(c)) yield return d; } }
 
     /// <summary>Click the newest log row for which <paramref name="pred"/> holds (the row click handler, as a mouse would).</summary>

@@ -172,7 +172,7 @@ public partial class Main
             {
                 gs.MgText($"Fleet {fid}");
                 int qm = s.QueuedOrders;
-                Expect(gs.RunMenu($"Fleet head {fid}", $"Merge {made.Name}: here") && s.QueuedOrders == qm + 1, $"{fleet.Name}'s head menu lists {made.Name}, standing with it: one merge order");
+                Expect(gs.RunMenu($"Fleet head {fid}", $"{made.Name} joins now (here)") && s.QueuedOrders == qm + 1, $"{fleet.Name}'s head menu lists {made.Name}, standing with it: one merge order");
                 gs.ShotWindow("fleet", made.Id.ToString()); gs.PlayRefresh();
                 Expect(gs.MgDrop($"M:{fid}", $"Fleet {made.Id} Ships") != null, "the other fleet can't be merged back into it the same day (QA)");
                 gs.PlayDay(); gs.PlayRefresh();

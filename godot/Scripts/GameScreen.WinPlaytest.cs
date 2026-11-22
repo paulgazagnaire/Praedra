@@ -61,6 +61,15 @@ public partial class GameScreen
         return Walk(this, fullName) ?? UiTest.Find<BaseButton>(this, fullName);
     }
 
+    /// <summary>For a screenshot: the list a button or a place opens (Merge ▾, a fleet's post), a few frames in, once the windows are laid
+    /// out, so it shows under its button as the mouse would open it (UI review 1: a list opened before layout drew in the wrong place).</summary>
+    public async void ShotMenu(string fullName)
+    {
+        for (int i = 0; i < 12; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        if (MenuCard(fullName) is not { } c || !_menus.TryGetValue(c, out var lines)) { GD.PrintErr("no menu " + fullName); return; }
+        PopMenu(c, lines(), _menuNone.TryGetValue(c, out var none) ? none() : "Nothing to pick here now.");
+    }
+
     /// <summary>The hover words of the card (a ship row, a leader card, a fleet's status) whose full name is exactly <paramref name="fullName"/>, on one line.</summary>
     internal string CardTip(string fullName) => (MenuCard(fullName)?.TooltipText ?? "").Replace('\n', ' ');
 

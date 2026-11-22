@@ -57,36 +57,36 @@ public partial class Main
         GD.Print($"  moving {mname} from {mover.System} to {fleet.At} (fleet {fleet.Name})");
         if (!MoveCharacterThroughUi(gs, mover, fleet.At)) return;
 
-        // ---------------------------------------------------------------- attach it to the fleet, with a second, conflicting order the same day
-        SelectFleetByList(gs, fleet);
-        Expect(!gs.CharactersOpen && gs.PanelText().Contains("Officers"), "selecting a fleet closes the list and shows its Officers");
+        // ---------------------------------------------------------------- attach it to the fleet by clicking a post in the fleet's window
+        OpenFleetTab(gs, fleet, "Command");
         var cls = cm.ClassOf(mover);
         var post = new[] { CharacterPost.Admiral, CharacterPost.Commander, CharacterPost.General }.FirstOrDefault(p => cls.Can(p) && cm.HolderOf(fleet.Id, p) == null);
-        string label = post == CharacterPost.None ? $"Attach {mname} as a passenger" : $"Attach {mname} as {GameSession.PostWords(post)}";
-        Expect(gs.Click(label), $"click '{label}'");
-        gs.PlayRefresh();
+        string zone = post == CharacterPost.None ? $"Zone Fleet {fleet.Id} Passengers" : $"Zone Fleet {fleet.Id} {post}";
+        string label = post == CharacterPost.None ? $"Take {mname} aboard" : $"Make {mname} {GameSession.PostWords(post)}";
+        Expect(gs.RunMenu(zone, label), $"click the {(post == CharacterPost.None ? "Passengers" : GameSession.PostWords(post))} place and pick '{label}': {string.Join(" | ", gs.MenuOf(zone))}");
+        gs.MgText($"Fleet {fleet.Id}");
+        Expect(!gs.MenuOf($"Zone Fleet {fleet.Id} Passengers").Any(l => l.Contains(mname)), "a leader given a post today is not offered again before the day runs");
+        Expect(gs.CardTip($"Zone Fleet {fleet.Id} Admiral").StartsWith("Click to choose the Admiral", StringComparison.Ordinal), "a post's hover says a click chooses who holds it");
+        SelectFleetByList(gs, fleet);
         Expect(gs.PanelText().Contains($"Ordered: Attach {mname} to {fleet.Name}"), "the fleet panel shows the attach as ordered");
-        Expect(gs.Click($"Attach {mname} as a passenger"), "click a second attach for the same character before the day starts");
         int before = s.Messages.Count;
         gs.PlayDay();
         var news = s.Messages.Skip(before).Select(m => m.Text).ToList();
         Expect(mover.AttachedFleet == fleet.Id && mover.Post == post, $"{mname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
-        Expect(news.Any(t => t.StartsWith($"Order refused: Attach {mname} to {fleet.Name}", StringComparison.Ordinal) && t.Contains("already aboard a fleet")),
-            "the second order is refused with a plain reason: " + string.Join(" | ", news));
         Expect(news.Any(t => t.StartsWith(mname, StringComparison.Ordinal) && (t.Contains("joined " + fleet.Name) || t.Contains("boarded " + fleet.Name))), "message: the character joined the fleet");
-        SelectFleetByList(gs, fleet);
-        string fp = gs.PanelText();
-        Expect(post == CharacterPost.None ? fp.Contains("Passengers: ") && fp.Contains(mname) : fp.Contains($"{GameSession.PostWords(post)}: {mname} (leadership"), "the fleet panel shows the character: " + fp.Replace("\n", " / "));
+        OpenFleetTab(gs, fleet, "Command");
+        Expect(gs.MenuOf(zone).Any(l => l == $"{mname} leaves the fleet"), $"the fleet's window shows {mname} {(post == CharacterPost.None ? "aboard" : "on the post")}: {string.Join(" | ", gs.MenuOf(zone))}");
         Expect(gs.Click("Leaders") && gs.CharactersOpen, "open the Leaders tab again");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"aboard fleet {fleet.Name} at {fleet.At}"), "the list says the character is aboard the fleet");
         Expect(gs.Click("Close window") && !gs.CharactersOpen, "the window's cross closes the Leaders list");
 
         // detach again (leaves the later checks a fleet without riders)
-        SelectFleetByList(gs, fleet);
-        Expect(gs.Click($"Detach {mname}"), $"click 'Detach {mname}'");
+        OpenFleetTab(gs, fleet, "Command");
+        Expect(gs.RunMenu(zone, $"{mname} leaves the fleet"), $"click the post and pick '{mname} leaves the fleet'");
         gs.PlayDay();
         Expect(mover.AttachedFleet == 0 && mover.System == fleet.At && mover.Post == CharacterPost.None, "detached: the character stays at the system");
+        gs.MgCloseAll();
 
         // ---------------------------------------------------------------- name a system General, then release the post
         bool Holdable(string sys) => s.OwnerOf(sys) == me && cm.SystemGeneralOf(sys) == null;

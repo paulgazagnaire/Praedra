@@ -83,6 +83,16 @@ public partial class Main
         gs.PlayRefresh();
     }
 
+    /// <summary>Select the fleet in the list, open its window from the side panel's button, and show one of its tabs.</summary>
+    void OpenFleetTab(GameScreen gs, Fleet f, string tab)
+    {
+        SelectFleetByList(gs, f);
+        string key = $"Fleet {f.Id}";
+        Expect(gs.Click("Fleet orders") && gs.MgmtKeys.Contains(key), $"the side panel's Open fleet window opens {f.Name}'s window");
+        Expect(tab == "Command" || gs.Click($"Tab {key} {tab}"), $"show the {tab} tab of {f.Name}'s window");
+        gs.MgText(key);   // as the next frame would
+    }
+
     void PlaytestSide(Side side)
     {
         GD.Print($"=== PLAYTEST as {side} ===");
@@ -168,8 +178,9 @@ public partial class Main
             Expect(RunUntil(gs, () => troopFleet.At == regSys, 400), $"fleet reached {regSys} (day {s.Game.Day})");
         }
 
-        // ---------------------------------------------------------------- load regiments
-        SelectFleetByList(gs, troopFleet);
+        // ---------------------------------------------------------------- load regiments (the fleet window's Troops tab, 2026-11-22)
+        gs.MgCloseAll();
+        OpenFleetTab(gs, troopFleet, "Troops");
         Expect(gs.Enabled("Load troops:") || gs.Enabled("Load every"), "a Load button is available at " + regSys);
         if (!gs.Click("Load troops:")) gs.Click("Load every");
         Expect(s.QueuedOrders >= 1, "load order queued");
@@ -177,17 +188,20 @@ public partial class Main
         var aboard = s.Host.Troops.RegimentsAboard(troopFleet);
         Expect(aboard.Count > 0, $"regiments are aboard ({aboard.Count})");
         SelectFleetByList(gs, troopFleet);
-        Expect(gs.PanelText().Contains("Regiments aboard: ") && !gs.PanelText().Contains("Regiments aboard: none"), "panel lists the regiments aboard");
+        Expect(gs.PanelText().Contains("Troops") && gs.PanelText().Contains($"{aboard.Count}/"), "the side panel's summary counts the regiments aboard");
 
         // unload and load again (the Unload button)
-        SelectFleetByList(gs, troopFleet);
+        gs.MgCloseAll();
+        OpenFleetTab(gs, troopFleet, "Troops");
         Expect(gs.Click("Unload all troops"), "click Unload all troops");
         gs.PlayDay();
         Expect(s.Host.Troops.RegimentsAboard(troopFleet).Count == 0, "regiments are back on the planet");
-        SelectFleetByList(gs, troopFleet);
+        gs.MgCloseAll();
+        OpenFleetTab(gs, troopFleet, "Troops");
         if (!gs.Click("Load troops:")) gs.Click("Load every");
         gs.PlayDay();
         Expect(s.Host.Troops.RegimentsAboard(troopFleet).Count > 0, "loaded again");
+        gs.MgCloseAll();
 
         // ---------------------------------------------------------------- go to the nearest enemy/neutral system with no enemy fleet; bombard; invade
         string target = s.Game.State.SystemOwners.Where(kv => kv.Value != me).Select(kv => kv.Key)
@@ -242,8 +256,11 @@ public partial class Main
             Expect(gs.Click("Fleet orders") && gs.Click("Behavior Elusive"), "Elusive (retreat) from the fleet window's Command tab");
             gs.MgCloseAll();
             int n0 = s.Game.State.Fleets.Values.Count(f => f.Side == me); int sid = splitFleet.Id;
-            Expect(gs.TickShip(0), "tick a ship to split off");
-            Expect(gs.Click("Split the ticked"), "click Split");
+            OpenFleetTab(gs, splitFleet, "Ships");
+            Expect(!gs.Enabled("Fleet Split") && gs.Has("Fleet Split"), "Split off is shown, greyed, until a ship is picked");
+            gs.PlayPick($"S:{splitFleet.Ships[0]}", false); gs.PlayRefresh(); gs.MgText($"Fleet {sid}");
+            Expect(gs.Click("Fleet Split"), "pick a ship, then Split 1 ship off");
+            gs.MgCloseAll();
             int refusedBefore = s.Messages.Count;
             gs.PlayDay();
             Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0 + 1, "split made a new fleet");
@@ -257,13 +274,15 @@ public partial class Main
             Expect(gs.Click("Fleet orders") && gs.Click("Behavior Defensive"), "back to Defensive (fight) from the fleet window's Command tab");
             gs.MgCloseAll();
             var newest = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderByDescending(f => f.Id).First();
-            SelectFleetByList(gs, newest);
-            if (gs.Click("Merge this fleet into"))
+            OpenFleetTab(gs, splitFleet, "Command");
+            if (gs.RunMenu("Fleet Merge", $"{newest.Name} joins now (here)"))
             {
+                gs.MgCloseAll();
                 gs.PlayDay();
                 Expect(s.Game.State.Fleets.Values.Count(f => f.Side == me) == n0, "merge folded it back");
             }
-            else Expect(false, "merge button available for the new fleet");
+            else Expect(false, $"Merge in {splitFleet.Name}'s window offers {newest.Name}: {string.Join(" | ", gs.MenuOf("Fleet Merge"))}");
+            gs.MgCloseAll();
         }
 
         // ---------------------------------------------------------------- a battle: send the strongest other fleet onto the nearest enemy fleet
@@ -412,13 +431,16 @@ public partial class Main
         if (scrapFleet != null)
         {
             int sid = scrapFleet.Id;
-            SelectFleetByList(gs, scrapFleet);
+            gs.MgCloseAll();
+            OpenFleetTab(gs, scrapFleet, "Ships");
             int ships0 = s.Game.State.Fleets[sid].Ships.Count; int scrapped = s.Game.State.Fleets[sid].Ships.First();
-            Expect(gs.TickShip(0) && gs.Click("Scrap the ticked") && gs.ConfirmVisible && gs.ConfirmTitle.StartsWith("Scrap"), "Scrap the ticked ships asks first");
+            gs.PlayPick($"S:{scrapped}", false); gs.PlayRefresh(); gs.MgText($"Fleet {sid}");
+            Expect(gs.Click("Fleet Scrap ships") && gs.ConfirmVisible && gs.ConfirmTitle.StartsWith("Scrap"), "pick a ship in the window: Scrap 1 ship... asks first");
             int scrapMsgs = s.Messages.Count;
             Expect(gs.Click("Scrap") && !gs.ConfirmVisible, "confirm the scrap");
             gs.PlayDay();
-            Expect(s.Host.Economy.Find(scrapped) == null && (!s.Game.State.Fleets.TryGetValue(sid, out var sf) || sf.Ships.Count == ships0 - 1), "the ticked ship was scrapped");
+            gs.MgCloseAll();
+            Expect(s.Host.Economy.Find(scrapped) == null && (!s.Game.State.Fleets.TryGetValue(sid, out var sf) || sf.Ships.Count == ships0 - 1), "the picked ship was scrapped");
             Expect(s.Messages.Skip(scrapMsgs).Any(m => m.Text.StartsWith("You scrapped a", StringComparison.Ordinal) && m.Text.Contains("refined back")), "the log says what was scrapped and the refund");
         }
 

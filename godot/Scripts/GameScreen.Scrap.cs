@@ -67,7 +67,6 @@ public partial class GameScreen
             if (o.Category == ObjectCategory.Regiment && o.AboardShip == 0 && o.System != null) _leaving[o.System] = (_leaving.TryGetValue(o.System, out int gone) ? gone : 0) + 1;
         }
         RefreshMgmt();
-        _splitSel.Clear();
         Sent($"scrap {what}", system);
         _panelDirty = true;
     }

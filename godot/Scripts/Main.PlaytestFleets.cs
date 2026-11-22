@@ -48,8 +48,10 @@ public partial class Main
         Expect(string.Join(",", gs.MgTabs(key)) == "Command,Ships,Fighters,Troops" && gs.MgTab(key) == "Command", $"the tabs are Command, Ships, Fighters and Troops, Command in front: {string.Join(", ", gs.MgTabs(key))}");
         Expect(text.Contains("Fleet actions") && text.Contains("Fleet behavior") && text.Contains("Fleet command") && text.Contains("Passengers"), "Command: actions, behaviour, the three posts and the passengers");
         Expect(gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Move") && gs.Has("Behavior Defensive") && gs.Has("Behavior Elusive"), "the actions Bombardment, Invasion and Move, and the behaviour Defensive or Elusive");
-        Expect(!gs.Has("Fleet Merge") && !gs.Has("Fleet Scrap"), "no Merge or Scrap button, as the design");
-        Expect(gs.MenuOf($"Fleet head {a.Id}").Any(l => l.StartsWith("Scrap the whole fleet", StringComparison.Ordinal)), "a right-click on the head scraps the fleet");
+        // merge, split and scrap are buttons, not only right-clicks (2026-11-22, follow-up 1): Merge with the actions, Split and Scrap on Ships
+        Expect(gs.Enabled("Fleet Merge") && gs.MenuOf("Fleet Merge").Any(l => l.StartsWith($"{b.Name} joins now (here)", StringComparison.Ordinal)),
+            $"Merge sits with the actions and lists {b.Name}, standing with it: {string.Join(" | ", gs.MenuOf("Fleet Merge"))}");
+        Expect(gs.MenuOf($"Fleet head {a.Id}").Any(l => l.StartsWith("Scrap the whole fleet", StringComparison.Ordinal)), "a right-click on the head still scraps the fleet (a shortcut)");
         var (want, width) = gs.MgFit(key);
         Expect(width == 344 && want <= width, $"the window is one column wide, so four stand side by side, and nothing in it is wider ({want:0} in {width:0})");
         // Move: the windows step aside while the destination is picked, and Esc brings them back
@@ -60,6 +62,7 @@ public partial class Main
         // ---- ships: one row each, with its cargo and hull; its damage in its hover; a click picks it
         var eco = s.Host.Economy;
         Expect(gs.Click($"Tab {key} Ships") && gs.MgTab(key) == "Ships", "a click on the Ships tab shows it");
+        Expect(gs.Has("Fleet Split") && !gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap fleet"), "over the rows: Split off (greyed until a ship is picked) and Scrap fleet...");
         var carrier = a.Ships.Select(eco.Find).FirstOrDefault(o => o != null && fm.ClassOf(o) is { } c && c.FighterCapacity + c.TroopCapacity > 0);
         if (carrier != null)
         {
@@ -102,20 +105,20 @@ public partial class Main
         }
         gs.ClearUnitPicks();
         gs.MgText(key);
-        Expect(!gs.Has("Fleet Split"), "with the ships let go, the split goes");
+        Expect(gs.Has("Fleet Split") && !gs.Enabled("Fleet Split") && gs.Has("Fleet Scrap fleet"), "with the ships let go, Split greys out and Scrap takes the whole fleet again");
 
         // ---- a right-click on the head merges: the fleets here first, then the others, closest first, each with its trip time
         var menu = gs.MenuOf($"Fleet head {a.Id}").ToList();
-        int hereAt = menu.FindIndex(l => l.StartsWith($"Merge {b.Name}: here", StringComparison.Ordinal));
+        int hereAt = menu.FindIndex(l => l.StartsWith($"{b.Name} joins now (here)", StringComparison.Ordinal));
         Expect(hereAt >= 0, $"the head's menu lists {b.Name}, standing with it: {string.Join(" | ", menu)}");
         var far = still.FirstOrDefault(f => f.At != a.At && s.Host.PlanMove(me, f.Id, a.At!, null) is { Ok: true });
         if (far != null)
         {
-            int farAt = menu.FindIndex(l => l.StartsWith($"Merge {far.Name}: at {far.At}, flies here in ", StringComparison.Ordinal));
+            int farAt = menu.FindIndex(l => l.StartsWith($"{far.Name} flies from {far.At}, joins in ", StringComparison.Ordinal));
             Expect(farAt > hereAt, $"and {far.Name} at {far.At}, after the fleets here, with its trip time");
         }
         int ships0 = a.Ships.Count;
-        Expect(gs.RunMenu($"Fleet head {a.Id}", $"Merge {b.Name}: here"), $"Merge {b.Name} into {a.Name}");
+        Expect(gs.RunMenu($"Fleet head {a.Id}", $"{b.Name} joins now (here)"), $"Merge {b.Name} into {a.Name}");
         gs.PlayDay(); gs.PlayRefresh();
         Expect(!s.Game.State.Fleets.ContainsKey(bid) && a.Ships.Count == ships0 + 1, $"next day {b.Name} has merged into {a.Name}");
 

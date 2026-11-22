@@ -161,51 +161,7 @@ public partial class GameScreen
     string LeaderLine(CharacterRecord c) =>
         c == null ? "none" : $"{S.CharName(c.Id)} (leadership {Cm.EffectiveSkill(c, Skill.Leadership)}){(c.Status == CharacterStatus.Free ? "" : " - " + GameSession.StatusWords(c) + ", gives no bonus")}";
 
-    // ================================================================== a fleet's officers
-
-    void OfficersSection(Fleet f)
-    {
-        Heading("Officers", "The Admiral's leadership multiplies the fleet's bombardment; the fleet General helps its regiments in an invasion; Commanders have no effect yet.");
-        foreach (var post in new[] { CharacterPost.Admiral, CharacterPost.Commander, CharacterPost.General })
-            Line($"{GameSession.PostWords(post)}: {LeaderLine(Cm.HolderOf(f.Id, post))}");
-        var riders = Cm.AttachedTo(f.Id).OrderBy(c => c.Id).ToList();
-        var passengers = riders.Where(c => c.Post == CharacterPost.None).ToList();
-        if (passengers.Count > 0) Line($"Passengers: {string.Join(", ", passengers.Select(c => S.CharName(c.Id)))}");
-        foreach (var (seq, p) in riders.SelectMany(c => S.PendingOrdersOfCharacter(c.Id))) OrderLine(seq, $"Ordered: {p}", 13);
-
-        bool moving = f.At == null || f.Transit != null;
-        foreach (var c in riders)
-        {
-            var rc = c;
-            Act($"Detach {S.CharName(c.Id)}", () => Detach(rc, f), "The character leaves the fleet and stays at this system.", moving);
-        }
-        if (moving) { Line("The fleet is travelling: officers can join or leave when it arrives.", Dim, 13); return; }
-
-        // own characters standing free at this system (the core's AttachCharacter checks the rest)
-        var here = S.MyCharacters.Where(c => c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null && c.System == f.At).ToList();
-        if (here.Count == 0) { Line($"No other character of yours is at {f.At}.", Dim, 13); return; }
-        Line($"Your leaders at {f.At} can join this fleet:", Dim, 13);
-        foreach (var c in here)
-        {
-            var rc = c;
-            var cls = Cm.ClassOf(c);
-            string name = S.CharName(c.Id);
-            if (S.SystemPostOf(c) is string gsys)
-            {
-                Line($"{name} is the General of {gsys}: release that post first.", Dim, 13);
-                continue;
-            }
-            foreach (var post in new[] { CharacterPost.Admiral, CharacterPost.Commander, CharacterPost.General, CharacterPost.None })
-            {
-                if (!cls.Can(post)) continue;
-                var pp = post;
-                var holder = post == CharacterPost.None ? null : Cm.HolderOf(f.Id, post);
-                string label = post == CharacterPost.None ? $"Attach {name} as a passenger" : $"Attach {name} as {GameSession.PostWords(post)}";
-                Act(label, () => Attach(rc, f, pp),
-                    holder != null ? $"{S.CharName(holder.Id)} already holds this post." : $"Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}. Starts as soon as the clock moves.", holder != null);
-            }
-        }
-    }
+    // ================================================================== a fleet's officers: the fleet window's posts (PostMenu) and drops use these
 
     void Attach(CharacterRecord c, Fleet f, CharacterPost post)
     {
