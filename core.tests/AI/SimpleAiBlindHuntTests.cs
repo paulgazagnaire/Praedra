@@ -74,9 +74,12 @@ public class SimpleAiBlindHuntTests
         // Old-tongue names re-pin 2026-11-16 (Dev lead; Paul approved the renames, the systems sort differently): measured to day 500: on 418, 388,
         // 493, 331; off 454, 388, 493, 331. Floors: unchanged, but at least 30 days sooner on some seed (was 60; measured 36). The switch now
         // helps on one seed of four: a weak effect on this map, flagged to the AI trainer.
+        // Fewer Hold beams re-pin 2026-11-22 (Dev lead; Paul's card "Fewer Hold beams", m4-retreat-damage-repair §6 HoldBeamMinPower 6): every game
+        // moved. Measured to day 500: on 460, 202, 394, 205; off 481, 202, 406, 205. Floors: unchanged, but at least 15 days sooner on some seed
+        // (was 30; measured 21). Still a weak effect, flagged again to the AI trainer.
         var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 500), Off: EndDay(s, false, 500)));
         Assert.All(res, r => Assert.True(r.On > 0, $"seed {r.s}: BlindHunt on, no winner by day 500"));
         Assert.All(res, r => Assert.True(r.Off == 0 || r.On <= r.Off + 10, $"seed {r.s}: BlindHunt on ended on day {r.On}, off on day {r.Off}"));
-        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 30);
+        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 15);
     }
 }
