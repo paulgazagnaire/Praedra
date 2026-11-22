@@ -196,6 +196,7 @@ public sealed class NewBattle
     /// <summary>Try to hold a ship that is about to jump; true = it stays on the field (a <see cref="HoldBeamHeldStep"/> and a log line). rule: m4-retreat-damage-repair §6.</summary>
     private bool TryHold(NU ship)
     {
+        if (HoldValid(ship)) return true; // already held (e.g. an Elusive ship held at second 0, then its side's own retreat): the hold lasts, no second report (QA-119). rule: m4-retreat-damage-repair §6
         var h = FindHolder(ship);
         if (h == null) return false;
         ship.HeldBy = h;
@@ -241,7 +242,7 @@ public sealed class NewBattle
         foreach (var side in Sides)
         {
             if (_decided[I(side)] || !_u.Any(u => u.Side == side && u.B.Elusive && (u.State == St.Active || u.State == St.Hangar)) || ShipsLive(Other(side)) == 0) continue; // squadrons too, with no Elusive ship (QA round 201 note 2)
-            if (CanRetreat(side, elusiveOnly: true) is { } r) Refuse(side, r); else ExecuteRetreat(side, elusiveOnly: true);
+            if (CanRetreat(side, elusiveOnly: true) is { } r) Refuse(side, r, elusiveOnly: true); else ExecuteRetreat(side, elusiveOnly: true);
         }
 
         var low = new double[] { double.PositiveInfinity, double.PositiveInfinity };
@@ -269,11 +270,11 @@ public sealed class NewBattle
         return Finish();
     }
 
-    private void Refuse(Side side, RetreatRefusal reason)
+    private void Refuse(Side side, RetreatRefusal reason, bool elusiveOnly = false)
     {
         if (_refusalReported) return;
         _refusalReported = true; // once per battle, at the first refusal. rule: m4-retreat-damage-repair §1
-        _steps.Add(new RetreatRefusedStep(side, reason));
+        _steps.Add(new RetreatRefusedStep(side, reason, elusiveOnly));
     }
 
     private void RefreshCombatants()

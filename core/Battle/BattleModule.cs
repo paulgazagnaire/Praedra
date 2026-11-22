@@ -363,7 +363,7 @@ public sealed class BattleModule
             switch (step)
             {
                 case UnitDestroyedStep d: DestroyUnit(ctx, day, sys, d); break;
-                case RetreatRefusedStep r: { var side = r.Side; var why = r.Reason; ctx.Emit((i, _) => new RetreatRefused(i, day, sys, side, why)); break; }
+                case RetreatRefusedStep r: { var side = r.Side; var why = r.Reason; bool el = r.ElusiveOnly; ctx.Emit((i, _) => new RetreatRefused(i, day, sys, side, why, el)); break; }
                 case HoldBeamHeldStep h: { int ship = h.Ship.ObjectId, holder = h.Holder.ObjectId, sec = h.Second; ctx.Emit((i, _) => new RetreatHeldByHoldBeam(i, day, sys, ship, holder, sec)); break; } // rule: m4-retreat-damage-repair §6
                 case SideRetreatedStep r: left[r.Side] = true; break;
                 case ElusiveLeftStep r: left[r.Side] = true; break; // only the fleets whose ships all left relocate (Relocate keeps the others)
