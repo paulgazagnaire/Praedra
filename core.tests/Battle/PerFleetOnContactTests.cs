@@ -62,7 +62,10 @@ public class PerFleetOnContactTests
     public void PF2b_AHoldBeamHoldsAnElusiveShip()
     {
         var (w, _, _) = Mixed(BattleRuleset.New, holdBeams: true);
-        Assert.NotEmpty(w.Events<RetreatHeldByHoldBeam>());
+        var held = w.Events<RetreatHeldByHoldBeam>();
+        Assert.NotEmpty(held);
+        // QA-119: a held Elusive ship stays held when its side's own retreat runs the same second; it is reported once, not twice
+        Assert.All(held.GroupBy(h => (h.Ship, h.Second)), g => Assert.Single(g));
     }
 
     // m4-battle-classic PF2c (QA round 201 note 2): under New, Elusive squadrons with a hyperdrive leave at second 0 even with no Elusive ship; the Ark fights on

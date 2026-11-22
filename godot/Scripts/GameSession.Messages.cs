@@ -34,7 +34,7 @@ public sealed partial class GameSession
         for (int k = _printed; k < events.Count; k++) if (events[k] is FleetJoined fj) _joinedNow.Add(fj.Fleet);
         for (; _printed < events.Count; _printed++)
         {
-            bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or BattleEnded or SystemCaptured
+            bool combat = events[_printed] is Contact or ForcedStop or FleetRetreated or RetreatRefused or RetreatHeldByHoldBeam or BattleEnded or SystemCaptured
                 or BombardmentStarted or BombardmentResolved or BombardCancelled or AssaultStarted or AssaultResolved or AssaultCancelled
                 or Praedra.Core.Harvester.SystemDestroyed or Praedra.Core.Harvester.FleetDestroyedByHarvester;
             var cat = CategoryOf(events[_printed], combat);
@@ -196,6 +196,23 @@ public sealed partial class GameSession
             case BattleEnded be:
                 yield return BattleReport(be, o);
                 break;
+            // QA-119: say why a fleet could not leave a battle (rule: m4-retreat-damage-repair §1 refusal, §6 Hold beam)
+            case RetreatRefused rr:
+            {
+                string why = RefusalWords(rr.Reason);
+                if (_battles.TryGetValue(rr.System, out var rbd)) rbd.Retreats.Add($"{You(rr.Side)} could not retreat: {why}");
+                if (Mine(rr.Side)) yield return new Message(d, $"Your ships at {rr.System} could not leave the battle: {why}.", rr.System, MsgKind.Bad);
+                break;
+            }
+            case RetreatHeldByHoldBeam hb:
+            {
+                if (_battles.TryGetValue(hb.System, out var hbd) && !hbd.Held.Add(hb.Ship)) break; // told once per ship and battle
+                Side heldSide = hbd != null && hbd.Collective.Contains(hb.Ship) ? Side.Collective : Side.Hand;
+                string line = $"{ClassName(hb.Ship)} ({NameOf(heldSide)}) was held by the Hold beam of {ClassName(hb.Holder)} and could not jump";
+                hbd?.Retreats.Add(line);
+                if (Mine(heldSide)) yield return new Message(d, $"At {hb.System}, your {ClassName(hb.Ship)} was held by an enemy {ClassName(hb.Holder)}'s Hold beam and could not leave the battle.", hb.System, MsgKind.Bad);
+                break;
+            }
 
             // ---- characters: only the feed the player's side may see (rule: m5-fog-and-hq §N8 event audience; m5-characters-and-talent §Events)
             case CharacterCreated c:
@@ -426,6 +443,15 @@ public sealed partial class GameSession
         DestroyReason.Assault => "invasion",
         DestroyReason.Sabotage => "sabotage by enemy agents",
         DestroyReason.Harvester => "harvester",
+        _ => r.ToString(),
+    };
+
+    /// <summary>Why a side could not retreat, in player words. rule: m4-retreat-damage-repair §1.</summary>
+    static string RefusalWords(RetreatRefusal r) => r switch
+    {
+        RetreatRefusal.GravityWell => "an enemy interdictor ship blocks the jump",
+        RetreatRefusal.NoHyperdrive => "no ship there has a working hyperdrive",
+        RetreatRefusal.NoDestination => "there is no friendly system to jump to",
         _ => r.ToString(),
     };
 

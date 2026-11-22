@@ -196,6 +196,7 @@ public sealed class NewBattle
     /// <summary>Try to hold a ship that is about to jump; true = it stays on the field (a <see cref="HoldBeamHeldStep"/> and a log line). rule: m4-retreat-damage-repair §6.</summary>
     private bool TryHold(NU ship)
     {
+        if (HoldValid(ship)) return true; // already held (e.g. an Elusive ship held at second 0, then its side's own retreat): the hold lasts, no second report (QA-119). rule: m4-retreat-damage-repair §6
         var h = FindHolder(ship);
         if (h == null) return false;
         ship.HeldBy = h;
