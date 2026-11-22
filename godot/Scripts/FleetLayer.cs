@@ -586,7 +586,8 @@ public partial class FleetLayer : Control
     /// <summary>
     /// A fleet's marker: a 16 x 16 pixel icon from <see cref="PixelIconData.Map"/> (code only, Paul 2026-11-18), drawn up-left and mirrored to
     /// the diagonal nearest its heading (whole pixels only: a turned pixel icon smears), its rim lit by <see cref="RimLight"/>. The middle of
-    /// its shape sits on the fleet's point. A 1 px ring around the shape keeps it off routes and dots: dark, or white when the fleet is selected.
+    /// its shape sits on the fleet's point. A 1 px dark ring around the shape keeps it off routes and dots; a selected (or picked) fleet gets
+    /// a second, white ring outside it, so it stands 2 px larger, as the old triangle grew when selected.
     /// </summary>
     void DrawMarker(string key, Vector2 p, bool fx, bool fy, int light, Color col, bool selected)
     {
@@ -599,22 +600,25 @@ public partial class FleetLayer : Control
                 if (Tone(x, y) != '.') { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
         if (x1 < 0) return;
         var at = (p - new Vector2((x0 + x1 + 1) / 2f, (y0 + y1 + 1) / 2f)).Round();
-        var ring = selected ? Colors.White : new Color(0, 0, 0, 0.85f);
-        for (int y = y0 - 1; y <= y1 + 1; y++)
-            for (int x = x0 - 1; x <= x1 + 1; x++)
+        // how far an empty pixel is from the shape (1 = touching, 2 = one pixel further out), up to `rings`
+        int rings = selected ? 2 : 1;
+        int Gap(int x, int y)
+        {
+            for (int r = 1; r <= rings; r++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                        if (Tone(x + dx, y + dy) != '.') return r;
+            return 0;
+        }
+        var dark = new Color(0, 0, 0, 0.85f);
+        for (int y = y0 - rings; y <= y1 + rings; y++)
+            for (int x = x0 - rings; x <= x1 + rings; x++)
             {
                 if (Tone(x, y) != '.') continue;
-                bool edge = false;
-                for (int dy = -1; dy <= 1 && !edge; dy++) for (int dx = -1; dx <= 1 && !edge; dx++) edge = Tone(x + dx, y + dy) != '.';
-                if (edge) DrawRect(new Rect2(at.X + x, at.Y + y, 1, 1), ring);
+                int g = Gap(x, y);
+                if (g > 0) DrawRect(new Rect2(at.X + x, at.Y + y, 1, 1), g == 1 ? dark : Colors.White);
             }
-        var ramp = PixelIcons.RampOf(col);
-        for (int y = y0; y <= y1; y++)
-            for (int x = x0; x <= x1; x++)
-            {
-                int t = Tone(x, y) - '0';
-                if (t >= 1 && t <= 4) DrawRect(new Rect2(at.X + x, at.Y + y, 1, 1), ramp?[t] ?? col);
-            }
+        PixelIcons.Draw(this, grid, at, 1, PixelIcons.RampOf(col), col);
     }
 
     // ------------------------------------------------------------------ the markers' light
