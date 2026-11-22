@@ -61,10 +61,11 @@ public partial class GameScreen
 
         var eco = S.Host.Economy;
         int fighters = FightersAboard(f).Count + f.Squadrons.Count, regiments = S.Host.Troops.RegimentsAboard(f).Count;
-        int damaged = f.Ships.Select(eco.Find).Count(o => o != null && Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull);
+        var hull = HullState(f);
         using (Card())
         {
-            Stat("Ships", f.Ships.Count + (damaged > 0 ? $"  ({damaged} damaged)" : ""), damaged > 0 ? Ui.Warn : null);
+            Stat("Ships", f.Ships.Count + (hull.Low > 0 ? $"  ({hull.Low} damaged)" : ""), hull.Critical > 0 ? Ui.Danger : hull.Low > 0 ? Ui.Warn : null,
+                HullWords(hull) is { Length: > 0 } hw ? hw.Trim() + " Damaged: under half its hull, the Ships tab's amber." : null);
             // what it is made of, in one line (UI review 1, 2026-11-22: Strength alone doesn't say it); words, not stacked cards
             string makeup = string.Join(", ", f.Ships.Select(eco.Find).Where(o => o != null).GroupBy(o => o.Class)
                 .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} {g.Key}"));
@@ -154,10 +155,35 @@ public partial class GameScreen
         Sent($"{f.Name} invades {f.At}", f.At);
     }
 
+    /// <summary>How a fleet's ships stand by the Ships tab's hull marks (amber under half its hull, red under a quarter): how many are
+    /// under half, how many of those under a quarter, and how many have lighter damage (said in hovers only, so one fight doesn't turn
+    /// every fleet amber; UI review 2, 2026-11-22).</summary>
+    (int Low, int Critical, int Light) HullState(Fleet f)
+    {
+        int low = 0, critical = 0, light = 0;
+        foreach (var o in f.Ships.Select(S.Host.Economy.Find))
+        {
+            if (o == null || Fm.ClassOf(o) is not { } sc || sc.Hull <= 0 || o.Hull >= sc.Hull) continue;
+            float r = o.Hull / (float)sc.Hull;
+            if (r < 0.5f) { low++; if (r < 0.25f) critical++; } else light++;
+        }
+        return (low, critical, light);
+    }
+
+    /// <summary>The hover words for <see cref="HullState"/>, or "" when every hull is whole.</summary>
+    static string HullWords((int Low, int Critical, int Light) h) =>
+        (h.Low > 0 ? $" {Ui.Count(h.Low, "ship", "ships")} under half hull" + (h.Critical > 0 ? $" ({h.Critical} under a quarter)" : "") + "." : "")
+        + (h.Light > 0 ? $" {Ui.Count(h.Light, "ship", "ships")} lightly damaged." : "");
+
+    /// <summary>Whether a fleet of yours is Elusive (pulls back when an enemy fleet arrives), counting a change ordered today, which the
+    /// day applies first. rule: m4-battle-classic §1.3 (SetFleetOnContact).</summary>
+    bool IsElusive(Fleet f) => _retreatPending.TryGetValue(f.Id, out var p) ? p : S.Host.Battles.OnContactOfFleet(f.Id) == OnContactMode.Retreat;
+
     /// <summary>One fleet's answer when an enemy fleet arrives: Elusive (Retreat) or Defensive (Fight). rule: m4-battle-classic §1.3 (SetFleetOnContact {fleet, mode}, per fleet, Paul 2026-11-21).</summary>
     void SetRetreat(Fleet f, bool on)
     {
         _retreatPending[f.Id] = on;
+        _fleets.QueueRedraw();   // its marker turns into an arrowhead (or back) at once
         S.Track(S.Host.Battles.SubmitSetFleetOnContact(Me, f.Id, on ? OnContactMode.Retreat : OnContactMode.Fight), $"Change the battle behaviour of {f.Name}");
         S.Say(on ? $"Order sent: {f.Name} will pull back when an enemy arrives." : $"Order sent: {f.Name} will stay and fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);

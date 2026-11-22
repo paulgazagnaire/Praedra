@@ -310,15 +310,46 @@ public partial class GameScreen
     void FleetRow(Fleet f)
     {
         var fl = f;
-        var b = Ui.Button($"{f.Name}\n{StatusOf(f)}", () => SelectFleet(fl.Id, true), $"{f.Name}: {StatusOf(f)}. Strength {Fm.StrengthOf(f):0}. Click to select it.", "Row");
+        // what you'd open the fleet to learn (backlog F3, F4, 2026-11-22): its damaged ships, its troops out of its room, and whether it
+        // is Elusive; each part only when it says something
+        var hull = HullState(f);
+        int regs = S.Host.Troops.RegimentsAboard(f).Count, room = Fm.FreeTroopSlots(f) + regs;
+        bool elusive = IsElusive(f);
+        string tip = $"{f.Name}: {StatusOf(f)}. Strength {Fm.StrengthOf(f):0}."
+            + HullWords(hull)
+            + (room > 0 ? $" Troops {regs} of {room}." : "")
+            + (elusive ? " Elusive: it pulls back when an enemy fleet arrives." : "") + " Click to select it.";
+        var b = Ui.Button($"{f.Name}\n{StatusOf(f)}", () => SelectFleet(fl.Id, true), tip, "Row");
         b.Alignment = HorizontalAlignment.Left;
         b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         b.ClipText = true;
-        var stats = Ui.Label($"{f.Ships.Count} ships   {Fm.StrengthOf(f):0}", null, Ui.Text3, Ui.Small, wrap: false);
-        stats.HorizontalAlignment = HorizontalAlignment.Right;
-        stats.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
-        stats.OffsetLeft = -120; stats.OffsetRight = -12; stats.OffsetTop = 9;
-        b.AddChild(stats);
+        // the right-hand words, one or two lines, centred in the row's height so they never spill out of it at a bigger text size
+        var corner = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        corner.AddThemeConstantOverride("separation", 0);
+        corner.AnchorLeft = corner.AnchorRight = 1; corner.AnchorTop = 0; corner.AnchorBottom = 1;
+        corner.OffsetLeft = -220; corner.OffsetRight = -12; corner.OffsetTop = 4; corner.OffsetBottom = -4;
+        b.AddChild(corner);
+        HBoxContainer Corner()
+        {
+            var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
+            h.AddThemeConstantOverride("separation", 0);
+            corner.AddChild(h);
+            return h;
+        }
+        void Part(HBoxContainer h, string words, Color ink) => h.AddChild(Ui.Label(words, null, ink, Ui.Small, wrap: false));
+        // line 1: ships (those under half their hull in amber, red when one is under a quarter: the Ships tab's marks), then strength
+        var top = Corner();
+        Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Ui.Text3);
+        if (hull.Low > 0) Part(top, $", {hull.Low} damaged", hull.Critical > 0 ? Ui.Danger : Ui.Warn);
+        Part(top, $"   {Fm.StrengthOf(f):0}", Ui.Text3);
+        // line 2: Elusive, then troops aboard out of room (when it has transports)
+        if (elusive || room > 0)
+        {
+            var low = Corner();
+            if (elusive) Part(low, "Elusive", Look.Muted);
+            if (elusive && room > 0) Part(low, " · ", Ui.Text3);
+            if (room > 0) Part(low, $"Troops {regs}/{room}", Ui.Text3);
+        }
         // the selected fleet: the window look's "chosen" line (#BABABA), kept under the mouse; no fill, the row's own padding
         // (ui-inspo review 2026-11-14: one ladder everywhere, rest line, #676767 under the mouse, #BABABA chosen)
         if (_view.SelectedFleet == f.Id)
