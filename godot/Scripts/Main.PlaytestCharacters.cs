@@ -92,6 +92,28 @@ public partial class Main
         Expect(mover.AttachedFleet == 0 && mover.System == fleet.At && mover.Post == CharacterPost.None, "detached: the character stays at the system");
         gs.MgCloseAll();
 
+        // a passenger lands at a planet you don't hold too (QA on #357: the core lets them off anywhere the fleet stands still, rule:
+        // m5-characters §Posts, DetachCharacter): that planet's Ground window has a Leaders tab, with no General post. Test only: the system
+        // is made nobody's for the drop, then given back before the day runs.
+        OpenFleetTab(gs, fleet, "Command");
+        Expect(gs.MgDrop($"L:{mover.Id}", $"Fleet {fleet.Id} Passengers") == null, $"{mname} boards {fleet.Name} as a passenger");
+        gs.PlayDay();
+        if (mover.AttachedFleet == fleet.Id)
+        {
+            string here = fleet.At!;
+            fm.SetOwner(here, null);
+            gs.MgCloseAll(); OpenFleetTab(gs, fleet, "Command"); gs.ShotWindow("ground", here); gs.PlayRefresh();
+            var tabs = gs.MgTabs($"Ground {here}");
+            Expect(tabs.Contains("Leaders") && !tabs.Contains("Troops"), $"a planet you don't hold: its Ground window has Leaders (and no Troops): {string.Join(", ", tabs)}");
+            Expect(!gs.MgPageText($"Ground {here}", "Leaders").Contains("General"), "no General post on a planet you don't hold");
+            why = gs.MgDrop($"L:{mover.Id}", $"Ground {here} Leaders");
+            Expect(why == null, $"drag {mname} off the fleet onto the Leaders of a planet you don't hold: {why ?? "sent"}");
+            fm.SetOwner(here, me);
+            gs.PlayDay();
+            Expect(mover.AttachedFleet == 0 && mover.System == here, "landed there");
+        }
+        gs.MgCloseAll();
+
         // ---------------------------------------------------------------- name a system General, then release the post
         bool Holdable(string sys) => s.OwnerOf(sys) == me && cm.SystemGeneralOf(sys) == null;
         var gen = s.MyCharacters.Where(c => Standing(c) && cm.ClassOf(c).CanGeneral && Holdable(c.System)).OrderBy(c => c.Id).FirstOrDefault();

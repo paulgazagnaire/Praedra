@@ -829,13 +829,15 @@ public partial class GameScreen
     {
         var card = LeaderCard(c);
         if (!card.Visible) return card;
-        card.TooltipText += LeadersHere(f) is { } at ? $"\nTo land them, drag them onto {at}." : "\nLeaders leave a fleet only at a planet you hold.";
+        card.TooltipText += LeadersHere(f) is { } at ? $"\nTo land them, drag them onto {at}."
+            : Still(f) ? $"\nNothing is left of {f.At} to land on." : "\nThey can land once the fleet stops.";
         return card;
     }
 
     /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Leaders in Ground at Charter"): the Leaders tab of
-    /// the Ground window of a planet you hold where the fleet stands. Null in flight or at a planet you don't hold: no leader lands there.</summary>
-    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me ? $"Leaders in Ground at {f.At}" : null;
+    /// the Ground window of the planet where the fleet stands, yours or not (the core lets a passenger off anywhere a fleet stands still,
+    /// rule: m5-characters §Posts, DetachCharacter; QA on #357). Null in flight or at a harvested world: no leader lands there.</summary>
+    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) ? $"Leaders in Ground at {f.At}" : null;
 
     /// <summary>
     /// A post or Passengers takes a leader only by a drag, never by a click or a menu (Paul 2026-11-22: moving a leader is too important to
@@ -1056,11 +1058,13 @@ public partial class GameScreen
     void GroundLink(Fleet f, string tab)
     {
         if (!Still(f)) return;
-        bool held = LeadersHere(f) != null;
+        // leaders land and board on any planet; troops and fighters only on one you hold (its window has those tabs only then)
+        bool held = tab == "Leaders" ? LeadersHere(f) != null : !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me;
         string what = tab == "Leaders" ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
         var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: held ? tab : null),
             held ? $"Opens {tab} in Ground at {f.At}: drag its {what} onto this fleet, and this fleet's back onto the planet."
-                 : $"The Ground window of {f.At}. You don't hold this planet: nothing on its ground lands or boards.");
+                 : S.IsDestroyed(f.At) ? $"Nothing is left of {f.At}: nothing lands or boards here."
+                 : $"The Ground window of {f.At}. You don't hold this planet: your {what} don't land on it or board from it (your leaders do, in its Leaders tab).");
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         Add(b);
     }
