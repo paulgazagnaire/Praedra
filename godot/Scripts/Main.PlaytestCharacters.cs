@@ -114,7 +114,7 @@ public partial class Main
         Expect(gs.PanelText().Contains("System General: none"), $"the panel of {gsys} says it has no General");
         Expect(gs.PanelText().Contains("Fighters based here"), $"the Forces tab of {gsys} lists the fighters based there");
         // a General is seated only by a drag in Ground at the system, never by a click in the side panel (Paul 2026-11-22, UI review 4)
-        Expect(!gs.PanelText().Contains($"Make {gname} the General") && gs.PanelText().Contains($"Seat or release a General by dragging them in Leaders, Ground at {gsys}"),
+        Expect(!gs.PanelText().Contains($"Make {gname} the General") && gs.PanelText().Contains($"To seat or release a General, drag them in Leaders, Ground at {gsys}"),
             "the Forces tab has no click to seat a General, and says where to drag");
         gs.ShotWindow("ground", gsys); gs.PlayRefresh();
         why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} General");

@@ -893,7 +893,7 @@ public partial class GameScreen
         string what = tab == "Leaders" ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
         var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: held ? tab : null),
             held ? $"Opens {tab} in Ground at {f.At}: drag its {what} onto this fleet, and this fleet's back onto the planet."
-                 : $"The Ground window of {f.At}. You don't hold this planet: nothing lands or boards here.");
+                 : $"The Ground window of {f.At}. You don't hold this planet: nothing on its ground lands or boards.");
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         Add(b);
     }

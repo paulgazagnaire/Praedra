@@ -194,7 +194,7 @@ public partial class GameScreen
             Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good);
             if (gen != null) foreach (var (seq, p) in S.PendingOrdersOfCharacter(gen.Id)) OrderLine(seq, $"Ordered: {p}", 13);
             // a General takes or leaves the post only by a drag in Ground at the system, never by a click here (Paul 2026-11-22, UI review 4)
-            if (mine) Line($"Seat or release a General by dragging them in Leaders, Ground at {name}.", Dim, 13);
+            if (mine) Line($"To seat or release a General, drag them in Leaders, Ground at {name}.", Dim, 13);
         }
         if (here.Count == 0) { Line("None of your characters is here.", Dim, 13); return; }
         foreach (var c in here)
