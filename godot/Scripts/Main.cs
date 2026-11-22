@@ -156,6 +156,7 @@ public partial class Main : Control
                 case "--goal": gs.ShotGoal(); break;
                 case "--dialog" when i + 1 < _args.Length: gs.ShotDialog(_args[i + 1]); break;
                 case "--strike" when i + 1 < _args.Length: gs.ShotStrike(_args[i + 1]); break;
+                case "--damage" when i + 1 < _args.Length: gs.ShotDamage(float.Parse(_args[i + 1], CultureInfo.InvariantCulture)); break;
                 case "--sectorhover" when i + 1 < _args.Length: gs.ShotSectorHover(_args[i + 1]); break;
                 case "--routes" when i + 1 < _args.Length: gs.SetRoutesShown(_args[i + 1] != "off"); break;
                 case "--deselect": gs.View.Select(-1); break;

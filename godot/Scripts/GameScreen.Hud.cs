@@ -64,10 +64,11 @@ public partial class GameScreen
         else SystemCard(_view.Selected);
     }
 
-    void Fact(string caption, string value, Color? color = null)
+    void Fact(string caption, string value, Color? color = null, string tip = null)
     {
         var box = Ui.VBox(1);
         box.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        if (tip != null) { box.MouseFilter = MouseFilterEnum.Stop; box.TooltipText = Ui.Wrap(tip); }
         box.AddChild(Ui.Label(caption, "StatLabel", wrap: false));
         var l = Ui.Label(value, null, color ?? Ui.Text, Ui.Small, wrap: false);
         l.AddThemeFontOverride("font", Ui.Mono);
@@ -131,8 +132,8 @@ public partial class GameScreen
         if (f.At != null) Fact("AT", f.At);
         if (f.Transit is { } t && f.At == null) { Fact("TO", t.Path[^1]); Fact("ARRIVES", $"day {GameSession.ArrivalDay(t)}"); }
         else if (S.PlannedMoveOf(f.Id) is { } pm) { Fact("TO", pm.To, Ui.Warn); Fact("ARRIVES", $"day {pm.ArrivalDay}", Ui.Warn); }
-        Fact("SHIPS", f.Ships.Count.ToString());
-        Fact("STRENGTH", $"{Fm.StrengthOf(f):0}");
+        // the strength number is not shown bare (Paul 2026-11-22, F7 answer B); it stays in the hover
+        Fact("SHIPS", f.Ships.Count.ToString(), tip: $"Strength {Fm.StrengthOf(f):0}: how hard the fleet hits, its damage rate against three Mandates with its damage counted (three Decrees score about 65).");
         if (f.At != null)
             CardButton(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
                 "Pick a destination on the map: the route and the arrival day show before you confirm", "Primary");

@@ -113,12 +113,18 @@ public partial class GameScreen
         var eco = S.Host.Economy;
         var picked = LivePicks().Where(d => d.Kind == 'S' && f.Ships.Contains(d.Id)).Select(d => eco.Find(d.Id)).Where(o => o != null).ToList();
         int fighters = aboardF.Count + f.Squadrons.Count, regiments = aboardR.Count;
-        // the tab counts, as the design: ships, and fighters and troops out of their room ("8/16")
+        // the tab counts, as the design: ships, and fighters and troops out of their room ("8/16"). The ship count takes the colour of its
+        // most damaged ship (amber under half its hull, red under a quarter), as the ship rows do, so damage shows on any tab (UI review 6)
+        float worst = WorstHull(f);
+        Color? shipsInk = worst < 0.25f ? Ui.Danger : worst < 0.5f ? Ui.Warn : null;
         FleetStrip(w,
-            ("Command", null, () => CommandTab(f, riders)),
-            ("Ships", f.Ships.Count.ToString(), () => ShipsTab(f, still, picked)),
-            ("Fighters", RoomCount(fighters, Fm.FreeBerths(f) + aboardF.Count), () => FightersAboardTab(f, aboardF)),
-            ("Troops", RoomCount(regiments, Fm.FreeTroopSlots(f) + regiments), () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
+            ("Command", null, null, () => CommandTab(f, riders)),
+            ("Ships", f.Ships.Count.ToString(), shipsInk, () => ShipsTab(f, still, picked)),
+            ("Fighters", RoomCount(fighters, Fm.FreeBerths(f) + aboardF.Count), null, () => FightersAboardTab(f, aboardF)),
+            ("Troops", RoomCount(regiments, Fm.FreeTroopSlots(f) + regiments), null, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
+        // the tinted count is never colour alone (C6, UI review 7): its cell says the damage in words, as the side panel's Ships line
+        if (shipsInk != null && w.Pages.TryGetValue("Ships", out var shipsTab))
+            shipsTab.Tab.TooltipText = Ui.Wrap(HullWords(HullState(f)).Trim() + " Amber: a ship under half its hull. Red: under a quarter.");
     }
 
     /// <summary>"8/16" (what it carries out of its room); just the number with no room; nothing with neither.</summary>
@@ -137,7 +143,7 @@ public partial class GameScreen
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
         head.SetMeta(UiTest.FullName, $"Fleet head {f.Id}");
         RightClickMenu(head, () => HeadMenu(f).ToArray());
-        var pad = Pad(24, 24, 24, 24);
+        var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
         head.AddChild(pad);
         var parts = Boxed(new VBoxContainer(), 24);
         pad.AddChild(parts);
@@ -148,7 +154,7 @@ public partial class GameScreen
 
         var row = Boxed(new HBoxContainer(), NameGap);
         string upper = f.Name.ToUpperInvariant();
-        float room = WidthOf(w) - 2 - 48 - NameGap - 3 * WinButton - 2 * 4;
+        float room = WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad - NameGap - 3 * WinButton - 2 * 4;
         int size = Ui.NameSize(upper, room);
         var name = Look.Words(upper, size, Look.Text);
         name.AddThemeFontOverride("font", Ui.NameFont(size, upper));
@@ -159,39 +165,60 @@ public partial class GameScreen
         row.AddChild(name);
         row.AddChild(WinButtons(w, grip, grey: true));
         parts.AddChild(row);
-        if (!w.Min) parts.AddChild(FleetStatus(f, still));
+        if (!w.Min) parts.AddChild(FleetStatus(f, still, WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad));
         w.Head.AddChild(head);
     }
 
     /// <summary>
-    /// "Status:" on the left and what the fleet is doing on the right ("Moving to Tiryal / ETA: 29 days"), the 2 px bar under it (how far
-    /// along its trip, in your blue), then each order it has, with Cancel. Its strength and slowest ship are in the hover.
+    /// "Status:" on the left and what the fleet is doing on the right, then at most one countdown ("Moving to Tiryal / ETA: 29 days",
+    /// "Repairing at Charter / 8 days left"). The 2 px bar shows only under a countdown and measures it (Paul 2026-11-22: "In orbit shouldn't
+    /// have a progress bar... Damaged, should display a repair progress bar"); with none its 2 px stay empty so the tabs never jump. Then each
+    /// order it has, with Cancel. Its strength, slowest ship and anything else that holds are in the hover. Design:
+    /// praedra/specs/ui/fleet-status-2026-11-22/status-design.md (UI review 6).
     /// </summary>
-    Control FleetStatus(Fleet f, bool still)
+    /// <summary>The fleet head's padding all round (the design's 24 px), the window's edge (1 px each side) and the gap between the status words.</summary>
+    const int FleetHeadPad = 24, EdgeW = 1, StatusGap = 8;
+
+    Control FleetStatus(Fleet f, bool still, float lineW)
     {
-        var (words, share, tip) = StatusOf(f, still);
+        var st = StatusOf(f, still);
         var v = Boxed(new VBoxContainer(), 4);
         v.MouseFilter = MouseFilterEnum.Pass;
-        v.TooltipText = Ui.Wrap(tip);
+        v.TooltipText = Ui.Wrap(st.Tip);
         v.SetMeta(UiTest.FullName, $"Fleet status {f.Id}");
-        var line = Boxed(new HBoxContainer(), 8);
+        var line = Boxed(new HBoxContainer(), StatusGap);
         line.AddChild(Look.Words("Status:", 12, Look.Text, true));
-        for (int i = 0; i < words.Count; i++)
+        // what and where, then the countdown on the same line when both fit ("Repairing at Charter / 12 days left"); when they don't
+        // ("Blockading Brushfield / Repair: 240 days"), the countdown drops to a line of its own, so the place is never cut for it
+        float Wide(string t, bool medium = false) => (medium ? Ui.GroteskMedium : Ui.Grotesk).GetStringSize(t, HorizontalAlignment.Left, -1, 12).X;
+        float need = Wide("Status:", true) + st.Words.Select((t, i) => StatusGap + Wide(t) + (i > 0 ? Wide("/") + StatusGap : 0)).Sum();
+        bool split = st.Words.Count > 1 && need > lineW;
+        Label Part(int i)
         {
-            if (i > 0) line.AddChild(Look.Words("/", 12, Look.Muted));
-            var l = Look.Words(words[i], 12, Look.Muted);
+            var l = Look.Words(st.Words[i], 12, i == 0 && st.Note ? Ui.Warn : Look.Muted);
+            l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            l.HorizontalAlignment = HorizontalAlignment.Right;
             if (i == 0)
             {
                 // the first part takes the room left, against the right edge, and is cut with "…" rather than widen the window
-                l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-                l.HorizontalAlignment = HorizontalAlignment.Right;
                 l.ClipText = true;
                 l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             }
-            line.AddChild(l);
+            else l.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+            return l;
+        }
+        line.AddChild(Part(0));
+        for (int i = 1; i < st.Words.Count && !split; i++)
+        {
+            line.AddChild(Look.Words("/", 12, Look.Muted));
+            line.AddChild(Part(i));
         }
         v.AddChild(line);
-        v.AddChild(new ThinBar { Share = share, Fill = Ui.You, Track = Look.Divider, CustomMinimumSize = new Vector2(0, 2) });
+        for (int i = 1; i < st.Words.Count && split; i++) v.AddChild(Part(i));
+        var bar = new ThinBar { Share = st.Share ?? 0, Fill = st.Ink, Track = st.Share == null ? Colors.Transparent : Look.Divider, CustomMinimumSize = new Vector2(0, 2) };
+        bar.SetMeta(UiTest.FullName, $"Fleet status bar {f.Id}");
+        bar.SetMeta("shown", st.Share != null);
+        v.AddChild(bar);
         var orders = S.PendingOrdersOf(f.Id).ToList();
         if (orders.Count > 0)
         {
@@ -203,10 +230,20 @@ public partial class GameScreen
         return v;
     }
 
-    /// <summary>What the fleet is doing, in a few words; how far along its trip (0 to 1); and the hover, with its strength and slowest ship.</summary>
-    (List<string> Words, float Share, string Tip) StatusOf(Fleet f, bool still)
+    /// <summary>A fleet's status: the words (what and where, then one countdown), the bar's share (null = no bar) and colour, whether the
+    /// first words are today's amber note, and the hover.</summary>
+    record struct FleetState(List<string> Words, float? Share, Color Ink, bool Note, string Tip);
+
+    /// <summary>
+    /// What the fleet is doing. The first part is the first that holds: moving, merging, leaving, today's note (retreated, held, stopped,
+    /// could not join), blockading, repairing, in orbit. The countdown is the trip, else the repair, else the harvest wait. Everything else
+    /// that holds goes in the hover. Design: specs/ui/fleet-status-2026-11-22/status-design.md §2.
+    /// </summary>
+    FleetState StatusOf(Fleet f, bool still)
     {
         string slow = SlowestShip(f);
+        var rep = RepairOf(f);
+        int hurt = DamagedShips(f);
         string more = $"\nStrength {Fm.StrengthOf(f):0}: how hard it hits, its damage rate against three Mandates with its damage counted (three Decrees score about 65)."
             + (slow != null ? $"\nSlowest ship: {slow}, which sets the fleet's speed." : "");
         if (f.Transit is { } t)
@@ -214,17 +251,142 @@ public partial class GameScreen
             string to = t.Path[^1];
             int total = Math.Max(1, t.HopTicks.Sum()), left = DaysLeft(t);
             string go = f.JoinFleet is int j && j > 0 && S.Game.State.Fleets.TryGetValue(j, out var jf) && jf.Side == Me ? $"Moving to join {jf.Name}" : $"Moving to {to}";
-            return (new List<string> { go, left <= 1 ? "ETA: tomorrow" : $"ETA: {left} days" }, 1f - left / (float)total,
-                $"{f.Name} is flying to {to}: it arrives on day {GameSession.ArrivalDay(t)}. The bar shows how far along it is." + more);
+            // rule: m4-retreat-damage-repair §5: no repair while moving
+            string hurtWords = hurt > 0 ? $" Its {Ui.Count(hurt, "damaged ship", "damaged ships")} repair only once it stops." : "";
+            return new(new List<string> { go, left <= 1 ? "ETA: tomorrow" : $"ETA: {left} days" }, 1f - left / (float)total, Ui.You, false,
+                $"{f.Name} is flying to {to}: it arrives on day {GameSession.ArrivalDay(t)}. The bar shows how far along it is." + hurtWords + more);
         }
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto))
-            return (new List<string> { char.ToUpperInvariant(mto.Words[0]) + mto.Words[1..] }, 0, $"{f.Name} {mto.Words} when the clock moves." + more);
+            return new(new List<string> { char.ToUpperInvariant(mto.Words[0]) + mto.Words[1..] }, null, Ui.You, false, $"{f.Name} {mto.Words} when the clock moves." + more);
         if (S.PlannedMoveOf(f.Id) is { } pm)
         {
             int days = Math.Max(1, pm.ArrivalDay - S.Game.Day);
-            return (new List<string> { $"Leaves for {pm.To}", $"ETA: {days} days" }, 0, $"{f.Name} leaves for {pm.To} when the clock moves and arrives on day {pm.ArrivalDay}." + more);
+            string stops = rep is { } r0 && Math.Max(r0.Days, r0.FighterDays) > 0 ? $" Leaving stops its repairs ({Ui.Count(Math.Max(r0.Days, r0.FighterDays), "day", "days")} from whole here)." : "";
+            return new(new List<string> { $"Leaves for {pm.To}", $"ETA: {Ui.Count(days, "day", "days")}" }, null, Ui.You, false,
+                $"{f.Name} leaves for {pm.To} when the clock moves and arrives on day {pm.ArrivalDay}." + stops + more);
         }
-        return (new List<string> { $"In orbit at {f.At}" }, 0, $"{f.Name} is in orbit at {f.At}." + more);
+
+        // at a system: the first words, then the countdown (the repair, else the harvest wait)
+        string first, tip;
+        bool note = false;
+        if (TodayNote(f) is { } tn) { first = tn.Words; tip = tn.Tip; note = true; }
+        else if (Blockading(f)) { first = $"Blockading {f.At}"; tip = $"{f.Name} blockades {f.At}: the enemy's mines, refineries and yards there are stopped while it stays."; }
+        else if (rep != null) { first = $"Repairing at {f.At}"; tip = ""; }
+        else { first = $"In orbit at {f.At}"; tip = $"{f.Name} is in orbit at {f.At}."; }
+        var words = new List<string> { first };
+        float? share = null;
+        var ink = Ui.You;
+        if (rep is { } r)
+        {
+            string where = r.Fast ? $"{f.Name} is repaired at your shipyard at {f.At}, every {Ui.Count(r.Period, "day", "days")}"
+                : $"No working shipyard of yours at {f.At}, so a repair comes only every {r.Period} days";
+            string Countdown(int d) => first.StartsWith("Repairing", StringComparison.Ordinal) ? $"{Ui.Count(d, "day", "days")} left" : $"Repair: {Ui.Count(d, "day", "days")}";
+            string craft = r.FighterDays > 0 ? $" Its fighters get one craft back per repair: {Ui.Count(r.CraftLost, "craft", "craft")} short, all back on day {S.Game.Day + r.FighterDays}." : "";
+            // the design's order (UI review 7): the hull's days with the most damaged ship's bar; else the broken parts, no bar; else the
+            // fighters' days, no bar (the bar is a ship's hull, never the fighters)
+            if (r.Days > 0)
+            {
+                // the bar is the most damaged ship's hull: the one the days count for, coloured as the Ships tab and the side panel (UI review 6)
+                words.Add(Countdown(r.Days));
+                share = r.Worst;
+                ink = r.Worst < 0.25f ? Ui.Danger : r.Worst < 0.5f ? Ui.Warn : Ui.You;
+                tip += (tip == "" ? "" : " ") + $"{where}: its hull is whole on day {S.Game.Day + r.Days}. The bar is its most damaged ship's hull." + (r.Fast ? " Leaving stops the repairs." : "")
+                    + (r.Broken > 0 ? $" {Ui.Count(r.Broken, "broken part", "broken parts")}: each repair may fix one, by chance." : "") + craft;
+            }
+            else if (r.Broken > 0)
+            {
+                // hull whole, only broken parts: each repair fixes one only on a dice roll (rule: m4-retreat-damage-repair §5), so no day
+                words.Add(Ui.Count(r.Broken, "part broken", "parts broken"));
+                tip += (tip == "" ? "" : " ") + $"The hull is whole. {where}, and each may fix one broken part, by chance." + craft;
+            }
+            else
+            {
+                words.Add(Countdown(r.FighterDays));
+                tip += (tip == "" ? "" : " ") + $"Every ship is whole. {where}." + craft;
+            }
+        }
+        else if (S.HarvesterRechargingUntil(f) is int ready && ready > S.Game.Day)
+        {
+            int cd = Math.Max(1, S.Host.Harvester.Params.CooldownDays);
+            words.Add($"Harvest in {Ui.Count(ready - S.Game.Day, "day", "days")}");
+            share = 1f - (ready - S.Game.Day) / (float)cd;
+            tip += " " + S.HarvestWaitText(ready);
+        }
+        return new(words, share, ink, note, tip + more);
+    }
+
+    /// <summary>The lowest hull share among the fleet's ships (1 when all are whole or it has none).</summary>
+    float WorstHull(Fleet f) => f.Ships.Select(S.Host.Economy.Find)
+        .Select(o => o != null && Fm.ClassOf(o) is { } c && c.Hull > 0 ? o.Hull / (float)c.Hull : 1f).DefaultIfEmpty(1f).Min();
+
+    /// <summary>Ships of the fleet that have lost hull or have a broken part.</summary>
+    int DamagedShips(Fleet f) => f.Ships.Select(S.Host.Economy.Find).Count(o => o != null && Fm.ClassOf(o) is { } c && (o.Hull < c.Hull || (o.Hits?.Any(h => h > 0) ?? false)));
+
+    /// <summary>
+    /// The fleet's repair, read from the core: none while moving; a ship mends a tenth of its class hull per repair, every 2 days at a
+    /// working shipyard of yours and every 30 days anywhere else; fighters get one craft back per repair; broken parts come back only by
+    /// chance. Days = until its slowest ship's hull is whole (0 when only parts are broken); FighterDays = until every craft is back;
+    /// Worst = the lowest hull share of its ships. rule: m4-retreat-damage-repair §5 (RepairModule.DaysToRepair, FastRepair, Period).
+    /// </summary>
+    (int Days, float Worst, int Broken, int FighterDays, int CraftLost, bool Fast, int Period)? RepairOf(Fleet f)
+    {
+        if (!Still(f)) return null;
+        var rp = S.Host.Repair;
+        var eco = S.Host.Economy;
+        bool fast = rp.FastRepair(f.At, f.Side);
+        if (rp.Rules.RepairNeedsYard && !fast) return null;
+        int days = 0, broken = 0, fdays = 0, lost = 0;
+        float worst = 1f;
+        bool any = false;
+        // the days come from the core's own repair query (Ponytail on #358: the screen never copies the timer)
+        foreach (var o in f.Ships.Select(eco.Find))
+        {
+            if (o == null || Fm.ClassOf(o) is not { Hull: > 0 } c) continue;
+            int hits = o.Hits?.Sum() ?? 0;
+            broken += hits;
+            if (hits > 0) any = true;
+            if (o.Hull >= c.Hull) continue;
+            any = true;
+            days = Math.Max(days, rp.DaysToRepair(o, f.At) ?? 0);
+            worst = Math.Min(worst, o.Hull / (float)c.Hull);
+        }
+        foreach (var q in FightersAboard(f).Concat(f.Squadrons.Select(eco.Find)))
+        {
+            if (q == null || q.CraftLost <= 0) continue;
+            any = true;
+            lost += q.CraftLost;
+            fdays = Math.Max(fdays, rp.DaysToRepair(q, f.At) ?? 0);
+        }
+        return any ? (days, worst, broken, fdays, lost, fast, rp.Period(true, fast)) : null;
+    }
+
+    /// <summary>Your fleet stops the enemy's economy where it stands. rule: m1-forced-stop-and-blockade §Update 2026-10-12 (economic blockade).</summary>
+    bool Blockading(Fleet f) => Still(f) && S.OwnerOf(f.At) is Side owner && owner != Me && S.Host.Fleets.IsEconomicBlockade(f.At, owner);
+
+    /// <summary>
+    /// What happened to the fleet on the last day, in amber words, until the clock moves on: it retreated, Hold beams kept it in a battle,
+    /// an enemy stopped it, or the fleet it was to join had gone. The news keeps the story after that.
+    /// </summary>
+    (string Words, string Tip)? TodayNote(Fleet f)
+    {
+        var events = S.Fog.EventsFor(Me);
+        int day = S.Game.Day - 1;
+        (int Rank, string Words, string Tip)? best = null;
+        void Take(int rank, string words, string tip) { if (best == null || rank < best.Value.Rank) best = (rank, words, tip); }
+        for (int k = events.Count - 1; k >= 0 && events[k].Day >= day; k--)
+            switch (events[k])
+            {
+                case FleetRetreated r when r.Fleet == f.Id:
+                    Take(0, $"Retreated to {r.To}", $"{f.Name} left the battle at {r.From} today and jumped to {r.To}. Its order is cancelled."); break;
+                case FleetCreated c when c.Fleet == f.Id && c.Cause == FleetCreateCause.HoldBeamHeld:
+                    Take(1, $"Held at {c.System}", $"Enemy Hold beams kept these ships in the battle at {c.System} when the rest of their fleet jumped away. They are now {f.Name}."); break;
+                case ForcedStop x when x.Fleet == f.Id:
+                    Take(2, $"Stopped at {x.System}", $"An enemy fleet stopped {f.Name} at {x.System} today. Its trip is cancelled: give it a new order."); break;
+                case FleetJoinFailed j when j.Fleet == f.Id:
+                    string into = S.Game.State.Fleets.TryGetValue(j.Into, out var jf) ? jf.Name : "its fleet";
+                    Take(3, $"Could not join {into}", $"{f.Name} reached {j.System}, but {into} was not there, so they did not merge."); break;
+            }
+        return best is { } b ? (b.Words, b.Tip) : null;
     }
 
     /// <summary>Days until a trip ends: what is left of this hop and the hops after it.</summary>
@@ -255,7 +417,7 @@ public partial class GameScreen
     /// it; the name, and its count in the dim grey. Every page is built (so every drop place exists), only the open one shows. While a unit
     /// is dragged over a cell, it opens, so a drop can reach a page that was hidden.
     /// </summary>
-    void FleetStrip(MgWin w, params (string Name, string Count, Action Build)[] tabs)
+    void FleetStrip(MgWin w, params (string Name, string Count, Color? Ink, Action Build)[] tabs)
     {
         if (w.Tab == null || !tabs.Any(t => t.Name == w.Tab)) w.Tab = tabs[0].Name;
         var strip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -266,7 +428,7 @@ public partial class GameScreen
         strip.AddChild(h);
         var group = new ButtonGroup();
         var prev = _into;
-        foreach (var (name, count, build) in tabs)
+        foreach (var (name, count, ink, build) in tabs)
         {
             string tabName = name;
             var b = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = name == w.Tab, FocusMode = FocusModeEnum.None,
@@ -281,7 +443,12 @@ public partial class GameScreen
             var l = Look.Words(name, 12, Look.Text);
             l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             row.AddChild(l);
-            if (count != null) row.AddChild(Look.Words(count, 12, Look.Dim));
+            if (count != null)
+            {
+                var c = Look.Words(count, 12, ink ?? Look.Dim);
+                c.SetMeta(UiTest.FullName, $"Tab {w.Key} {name} count");
+                row.AddChild(c);
+            }
             // as the design: Command and Ships fit their words (Ships at least 72 px), Fighters and Troops share the rest
             Fill(b, row, 8, 8, name == "Ships" ? new Vector2(72, 0) : null);
             b.SizeFlagsHorizontal = name is "Fighters" or "Troops" ? SizeFlags.ExpandFill : SizeFlags.Fill;
@@ -662,13 +829,15 @@ public partial class GameScreen
     {
         var card = LeaderCard(c);
         if (!card.Visible) return card;
-        card.TooltipText += LeadersHere(f) is { } at ? $"\nTo land them, drag them onto {at}." : "\nLeaders leave a fleet only at a planet you hold.";
+        card.TooltipText += LeadersHere(f) is { } at ? $"\nTo land them, drag them onto {at}."
+            : Still(f) ? $"\nNothing is left of {f.At} to land on." : "\nThey can land once the fleet stops.";
         return card;
     }
 
     /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Leaders in Ground at Charter"): the Leaders tab of
-    /// the Ground window of a planet you hold where the fleet stands. Null in flight or at a planet you don't hold: no leader lands there.</summary>
-    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me ? $"Leaders in Ground at {f.At}" : null;
+    /// the Ground window of the planet where the fleet stands, yours or not (the core lets a passenger off anywhere a fleet stands still,
+    /// rule: m5-characters §Posts, DetachCharacter; QA on #357). Null in flight or at a harvested world: no leader lands there.</summary>
+    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) ? $"Leaders in Ground at {f.At}" : null;
 
     /// <summary>
     /// A post or Passengers takes a leader only by a drag, never by a click or a menu (Paul 2026-11-22: moving a leader is too important to
@@ -889,11 +1058,13 @@ public partial class GameScreen
     void GroundLink(Fleet f, string tab)
     {
         if (!Still(f)) return;
-        bool held = LeadersHere(f) != null;
+        // leaders land and board on any planet; troops and fighters only on one you hold (its window has those tabs only then)
+        bool held = tab == "Leaders" ? LeadersHere(f) != null : !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me;
         string what = tab == "Leaders" ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
         var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: held ? tab : null),
             held ? $"Opens {tab} in Ground at {f.At}: drag its {what} onto this fleet, and this fleet's back onto the planet."
-                 : $"The Ground window of {f.At}. You don't hold this planet: nothing on its ground lands or boards.");
+                 : S.IsDestroyed(f.At) ? $"Nothing is left of {f.At}: nothing lands or boards here."
+                 : $"The Ground window of {f.At}. You don't hold this planet: your {what} don't land on it or board from it (your leaders do, in its Leaders tab).");
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         Add(b);
     }

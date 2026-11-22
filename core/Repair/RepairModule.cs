@@ -57,6 +57,40 @@ public sealed class RepairModule
         ? (fast ? Rules.FastRepairPeriodDays : Rules.RepairPeriodDays)
         : (fast ? Rules.SquadronFastRepairPeriodDays : Rules.SquadronRepairPeriodDays);
 
+    /// <summary>
+    /// Read only, for the screens: days until a unit standing still at <paramref name="system"/> has its whole hull back (a ship) or every craft
+    /// (a squadron), if nothing changes: the running timer's due day for its first turn, else a full period from the next day (as
+    /// <see cref="Repair"/> starts it), then a period per further turn. 0 when nothing is to mend (a ship with only broken parts: those
+    /// come back by chance, not by a day); null when it would never come (RepairNeedsYard away from a yard, or a hull too small to mend).
+    /// rule: m4-retreat-damage-repair §5 (timer, FastRepair, hull / RepairHullDivisor per turn, one craft per turn).
+    /// </summary>
+    public int? DaysToRepair(EconObject o, string system)
+    {
+        var cls = _fleets.ClassOf(o);
+        if (cls == null || !o.Completed) return null;
+        bool capital = o.Category == ObjectCategory.CapitalShip;
+        int turns;
+        if (capital)
+        {
+            if (o.Hull >= cls.Hull) return 0;
+            int per = cls.Hull / Rules.RepairHullDivisor;
+            if (per <= 0) return null;
+            turns = (cls.Hull - o.Hull + per - 1) / per;
+        }
+        else if (o.Category == ObjectCategory.Fighter)
+        {
+            if (o.CraftLost <= 0) return 0;
+            turns = o.CraftLost;
+        }
+        else return null;
+        if (o.Side is not Side side) return null;
+        bool fast = FastRepair(system, side);
+        if (Rules.RepairNeedsYard && !fast) return null;
+        int period = Period(capital, fast);
+        int first = o.RepairMode == (fast ? 2 : 1) && o.RepairDue > _game.Day ? o.RepairDue - _game.Day : period;
+        return first + (turns - 1) * period;
+    }
+
     // rule: m4-retreat-damage-repair §5: side Collective then Hand, object id ascending; per unit the damage-control roll, then the pick
     private void Repair(StepContext ctx)
     {

@@ -41,20 +41,22 @@ public partial class GameScreen
         }
         MgHead(w, $"Ground · {RegionOf(n)}", n, NameInk(n, mine), sub, badge);
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
+        var gen = mine ? Cm.SystemGeneralOf(n) : null;
+        if (gen != null && gen.Side != Me) gen = null;
+        var here = S.MyCharacters.Where(c => c.Status != CharacterStatus.Dead && c.AttachedFleet == 0 && c.Transit == null && Cm.LocationOf(c) == n && c.Id != gen?.Id)
+            .OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
         if (!mine)
         {
-            // what your side knows of a planet it doesn't hold
+            // what your side knows of a planet it doesn't hold; and its Leaders, with no General post: a passenger lands here, a leader
+            // here boards a fleet of yours in orbit, as on your own planets (the core allows both anywhere a fleet stands still; QA on #357)
             Tabs(w, w.Body,
                 ("Ground", null, () => PaneForces(n)),
+                ("Leaders", here.Count, () => LeadersTab(n, null, here, general: false)),
                 ("Fleets", own.Count, () => OrbitList(n, own)),
                 ("Lore", null, () => LoreTab(n)));
             InfraLink(n);
             return;
         }
-        var gen = Cm.SystemGeneralOf(n);
-        if (gen != null && gen.Side != Me) gen = null;
-        var here = S.MyCharacters.Where(c => c.Status != CharacterStatus.Dead && c.AttachedFleet == 0 && c.Transit == null && Cm.LocationOf(c) == n && c.Id != gen?.Id)
-            .OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal).ToList();
         var regs = S.Host.Troops.RegimentsOnSystem(n).Where(o => o.Side == Me).OrderBy(o => o.Id).ToList();
         var sf = MySpecialForcesAt(n);
         var based = FightersBasedAt(n);
@@ -138,10 +140,30 @@ public partial class GameScreen
 
     void GroundLink(string n) => MgLinks(($"Ground at {n}", () => OpenMgmt(MgKind.Ground, n), "Leaders, troops and fighters on the planet, and the fleets in orbit"));
 
-    void LeadersTab(string n, CharacterRecord gen, List<CharacterRecord> here)
+    void LeadersTab(string n, CharacterRecord gen, List<CharacterRecord> here, bool general = true)
     {
         var row = Ui.HBox(Ui.Block);
-        // the system's General: one post, held by a leader standing here
+        // the system's General: one post, held by a leader standing here; only on a planet you hold (rule: m5-characters §Posts,
+        // AssignSystemGeneral needs the system's holder)
+        if (general) GeneralColumn(n, gen, row);
+        // leaders standing here (not on a fleet, not the General)
+        var lcol = Ui.VBox(Ui.Block);
+        lcol.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        lcol.AddChild(Caption("Leaders on the planet", null, general ? null
+            : $"You don't hold {n}, but your leaders can stand on it: drag a leader off a fleet of yours here to land them, or one standing here onto a fleet of yours in orbit."));
+        var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
+        if (!general) lz.Box.TooltipText = Ui.Wrap("Drag a leader off a fleet of yours here to land them.");
+        foreach (var c in here) lz.Flow.AddChild(LeaderChip(c, null));
+        if (here.Count == 0) lz.Flow.AddChild(EmptySlot("No leader of yours stands here"));
+        lcol.AddChild(lz.Box);
+        row.AddChild(lcol);
+        Add(row);
+        OnTheWay(S.MyCharacters.Where(c => c.Transit is { } t && t.Path.Count > 0 && t.Path[^1] == n && c.JoinFleet == 0), n);
+        if (CanSendFrom(n)) MgLinks(("Send a mission...", () => { CloseSectorView(); OpenPlanner(n); }, "Pick a team standing here, the kind of mission and the target."));
+    }
+
+    void GeneralColumn(string n, CharacterRecord gen, HBoxContainer row)
+    {
         var gcol = Ui.VBox(Ui.Block);
         gcol.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         gcol.AddChild(Caption("General", null, "The system's General adds their leadership to the defenders when the planet is invaded."));
@@ -151,18 +173,6 @@ public partial class GameScreen
         else gz.Flow.AddChild(EmptySlot(DropLeader, slot: true));
         gcol.AddChild(gz.Box);
         row.AddChild(gcol);
-        // leaders standing here (not on a fleet, not the General)
-        var lcol = Ui.VBox(Ui.Block);
-        lcol.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        lcol.AddChild(Caption("Leaders on the planet", null));
-        var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
-        foreach (var c in here) lz.Flow.AddChild(LeaderChip(c, null));
-        if (here.Count == 0) lz.Flow.AddChild(EmptySlot("No leader of yours stands here"));
-        lcol.AddChild(lz.Box);
-        row.AddChild(lcol);
-        Add(row);
-        OnTheWay(S.MyCharacters.Where(c => c.Transit is { } t && t.Path.Count > 0 && t.Path[^1] == n && c.JoinFleet == 0), n);
-        if (CanSendFrom(n)) MgLinks(("Send a mission...", () => { CloseSectorView(); OpenPlanner(n); }, "Pick a team standing here, the kind of mission and the target."));
     }
 
     void TroopsTab(string n, List<EconObject> regs, List<EconObject> sf)
@@ -242,8 +252,9 @@ public partial class GameScreen
         nm.AddThemeFontOverride("font", Ui.SemiBold);
         nm.ClipText = true;
         v.AddChild(nm);
-        string state = f.Transit is { } t ? $"to {t.Path[^1]}" : pick != null ? $"str {Fm.StrengthOf(f):0}" : $"strength {Fm.StrengthOf(f):0}";
-        var sl = Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")} · {state}", null, Ui.Text3, Ui.Tiny, wrap: false);
+        // no bare strength number (Paul 2026-11-22, F7 answer B): the row says its ships, and where it goes when it moves
+        string state = f.Transit is { } t ? $" · to {t.Path[^1]}" : "";
+        var sl = Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")}{state}", null, Ui.Text3, Ui.Tiny, wrap: false);
         sl.ClipText = true;
         v.AddChild(sl);
         h.AddChild(v);
@@ -258,7 +269,8 @@ public partial class GameScreen
         z.Flow.AddChild(h);
         z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         z.Box.MouseDefaultCursorShape = CursorShape.PointingHand;
-        z.Box.TooltipText = Ui.Wrap($"{f.Name}. Drop ships, troops, fighters or leaders here to send them to it." + (pick != null && !selected ? " Click to show it." : ""));
+        z.Box.TooltipText = Ui.Wrap($"{f.Name}. Strength {Fm.StrengthOf(f):0}: how hard it hits (three Decrees score about 65). Drop ships, troops, fighters or leaders here to send them to it."
+            + (pick != null && !selected ? " Click to show it." : ""));
         z.Box.GuiInput += e =>
         {
             if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) return;
