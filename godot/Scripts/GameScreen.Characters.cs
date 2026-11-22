@@ -192,12 +192,9 @@ public partial class GameScreen
         if (mine || gen != null)
         {
             Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good);
-            if (gen != null)
-            {
-                var g = gen;
-                foreach (var (seq, p) in S.PendingOrdersOfCharacter(g.Id)) OrderLine(seq, $"Ordered: {p}", 13);
-                Act($"Release {S.CharName(g.Id)} as General of {name}", () => ReleaseGeneral(g, name), "The post becomes empty; the character stays here.");
-            }
+            if (gen != null) foreach (var (seq, p) in S.PendingOrdersOfCharacter(gen.Id)) OrderLine(seq, $"Ordered: {p}", 13);
+            // a General takes or leaves the post only by a drag in Ground at the system, never by a click here (Paul 2026-11-22, UI review 4)
+            if (mine) Line($"Seat or release a General by dragging them in Leaders, Ground at {name}.", Dim, 13);
         }
         if (here.Count == 0) { Line("None of your characters is here.", Dim, 13); return; }
         foreach (var c in here)
@@ -207,9 +204,6 @@ public partial class GameScreen
             string where = c.Status == CharacterStatus.Captured ? "prisoner of the enemy" : c.AttachedFleet != 0 ? S.RoleOf(c) : S.RoleOf(c) == "no post" ? "standing here" : S.RoleOf(c);
             Line($"{cname} - {GameSession.StatusWords(c)}, {where}. Leadership {Cm.EffectiveSkill(c, Skill.Leadership)}.", c.Status == CharacterStatus.Free ? null : Bad, 13);
             if (c.Id != gen?.Id) foreach (var (seq, p) in S.PendingOrdersOfCharacter(c.Id)) OrderLine(seq, $"Ordered: {p}", 13);
-            bool standing = c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null;
-            if (mine && gen == null && standing && Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) == null)
-                Act($"Make {cname} the General of {name}", () => AssignGeneral(rc, name), "Starts as soon as the clock moves.");
             if (CanMoveAlone(c)) Act($"Move {cname}...", () => StartCharMove(rc.Id), "Then click a destination system. The route and the arrival day are shown before you confirm.");
         }
     }

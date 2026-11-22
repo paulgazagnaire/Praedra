@@ -113,7 +113,13 @@ public partial class Main
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains("System General: none"), $"the panel of {gsys} says it has no General");
         Expect(gs.PanelText().Contains("Fighters based here"), $"the Forces tab of {gsys} lists the fighters based there");
-        Expect(gs.Click($"Make {gname} the General of {gsys}"), $"click 'Make {gname} the General of {gsys}'");
+        // a General is seated only by a drag in Ground at the system, never by a click in the side panel (Paul 2026-11-22, UI review 4)
+        Expect(!gs.PanelText().Contains($"Make {gname} the General") && gs.PanelText().Contains($"Seat or release a General by dragging them in Leaders, Ground at {gsys}"),
+            "the Forces tab has no click to seat a General, and says where to drag");
+        gs.ShotWindow("ground", gsys); gs.PlayRefresh();
+        why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} General");
+        Expect(why == null, $"drag {gname} onto the General post of {gsys}: {why ?? "sent"}");
+        gs.MgCloseAll();
         before = s.Messages.Count;
         gs.PlayDay();
         Expect(cm.SystemGeneralOf(gsys)?.Id == gen.Id, $"{gname} is the General of {gsys}");
@@ -121,7 +127,11 @@ public partial class Main
         gs.SelectSystem(gsys); gs.PlayRefresh();
         gs.Click("Forces"); gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"System General: {gname} (leadership"), "the system panel shows the General");
-        Expect(gs.Click($"Release {gname} as General of {gsys}"), "click Release");
+        Expect(!gs.PanelText().Contains($"Release {gname} as General"), "the Forces tab has no click to release the General");
+        gs.ShotWindow("ground", gsys); gs.PlayRefresh();
+        why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} Leaders");
+        Expect(why == null, $"drag {gname} off the General post onto {gsys}'s Leaders: {why ?? "sent"}");
+        gs.MgCloseAll();
         before = s.Messages.Count;
         gs.PlayDay();
         Expect(cm.SystemGeneralOf(gsys) == null, "the post is empty again");
