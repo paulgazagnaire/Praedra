@@ -480,7 +480,12 @@ public sealed partial class GameSession
 
     public CharacterModule Chars => Host.Characters;
 
-    public string CharName(int id) => Chars.Data.TryGet(id, out var c) ? c.Name : $"character {id}";
+    /// <summary>A leader's name as shown everywhere: without their rank ("Lucan Mordant", Paul 2026-11-22). The rank is in <see cref="CharTitle"/>.</summary>
+    public string CharName(int id) => Chars.Data.TryGet(id, out var c) ? c.ShownName : $"character {id}";
+    /// <summary>Rank and name ("Admiral Lucan Mordant") for a leader's hover; just the name when they have no rank.</summary>
+    public string CharTitle(int id) => Chars.Data.TryGet(id, out var c) ? c.Name : $"character {id}";   // the data name is rank + shown name (CharacterData.ApplyRanks)
+    /// <summary>A leader's name for a card: first name on top, last name under it (Paul 2026-11-22); a one-word name stays on one line.</summary>
+    public static string CardName(string name) { int i = name.LastIndexOf(' '); return i > 0 ? name[..i] + "\n" + name[(i + 1)..] : name; }
 
     /// <summary>The player's characters in play, by name. Characters of the other side are never listed: the fog API does not say where they are.</summary>
     public IReadOnlyList<CharacterRecord> MyCharacters =>

@@ -22,6 +22,14 @@ public sealed record CharacterClass(
     int NavigatorSpeed, bool Added, bool InGame, bool NeverTalented = false)
 {
     public const int SkillCount = 7;
+
+    /// <summary>The rank or title the record's name starts with ("Admiral", "Project Director"), or "" when it has none. Display only: rules,
+    /// saves and victory keys use <see cref="Name"/>. Source: data/design/character-ranks.csv (the lore heading is the name without it; Paul 2026-11-22).</summary>
+    public string Rank { get; init; } = "";
+    private readonly string? _shownName;
+    /// <summary>The name shown to the player: <see cref="Name"/> without <see cref="Rank"/> ("Lucan Mordant"). Display only.</summary>
+    public string ShownName { get => _shownName ?? Name; init => _shownName = value; }
+
     public bool Can(CharacterPost post) => post switch
     {
         CharacterPost.Admiral => CanAdmiral, CharacterPost.Commander => CanCommander, CharacterPost.General => CanGeneral, _ => true,
@@ -46,7 +54,8 @@ public sealed record HeroLimitViolation(int Character, string Name, int Rule, st
 public sealed class CharacterData
 {
     public const string OriginalFile = "characters.csv", AddedFile = "added-heroes.csv", RosterFile = "roster.csv",
-        NavigatorFile = "navigator_speed.csv", StartCastFile = "start-cast.csv", VictoryFile = "victory-rules.csv";
+        NavigatorFile = "navigator_speed.csv", StartCastFile = "start-cast.csv", VictoryFile = "victory-rules.csv",
+        RanksFile = "character-ranks.csv";
 
     /// <summary>Every record (in the game or not), by id ascending.</summary>
     public IReadOnlyList<CharacterClass> All { get; }
@@ -92,6 +101,7 @@ public sealed class CharacterData
         if (all.Select(c => c.Id).Distinct().Count() != all.Count) throw new DataLoadException("characters: a character id appears twice.");
         foreach (var id in nav.Keys.Concat(inGame.Keys))
             if (!all.Any(c => c.Id == id)) throw new DataLoadException($"characters: id {id} in {RosterFile} or {NavigatorFile} has no record.");
+        ApplyRanks(all, Path.Combine(design, RanksFile));
 
         var cast = new List<StartCastRow>();
         var ct = CsvTable.Load(Path.Combine(design, StartCastFile));
@@ -115,6 +125,25 @@ public sealed class CharacterData
             keys.Add(new VictoryKey(vt.Get(r, "mode").Trim() == "Standard", ParseSide(vt.Get(r, "side"), vt, r), id));
         }
         return new CharacterData(all, cast, keys);
+    }
+
+    /// <summary>Splits the rank off the shown name: each row of character-ranks.csv must be "rank name" = the record's name exactly, so a renamed
+    /// record fails the load instead of showing a wrong name. A missing file leaves every name whole. Display only (Paul 2026-11-22).</summary>
+    private static void ApplyRanks(List<CharacterClass> all, string path)
+    {
+        if (!File.Exists(path)) return;
+        var t = CsvTable.Load(path);
+        t.Require("id", "rank", "name");
+        for (int r = 0; r < t.RowCount; r++)
+        {
+            int id = t.GetInt(r, "id");
+            string rank = t.Get(r, "rank").Trim(), name = t.Get(r, "name").Trim();
+            int i = all.FindIndex(c => c.Id == id);
+            if (i < 0) throw new DataLoadException($"{t.Where(r)}: character {id} has no record.");
+            if (rank.Length == 0 || name.Length == 0 || all[i].Name != rank + " " + name)
+                throw new DataLoadException($"{t.Where(r)}: '{rank} {name}' is not the name of character {id} ('{all[i].Name}').");
+            all[i] = all[i] with { Rank = rank, ShownName = name };
+        }
     }
 
     private static Side ParseSide(string s, CsvTable t, int r) => s.Trim() switch

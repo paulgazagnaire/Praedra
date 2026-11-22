@@ -575,7 +575,7 @@ public partial class GameScreen
             foreach (var c in ls)
             {
                 string name = S.CharName(c.Id);
-                flow.AddChild(FleetCard(Avatar(name, Ui.You), name, Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), ghost: true));
+                flow.AddChild(FleetCard(Avatar(name, Ui.You), GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), ghost: true));
             }
             foreach (var x in fs) flow.AddChild(FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), ghost: true));
             way.AddChild(flow);
@@ -852,9 +852,9 @@ public partial class GameScreen
         if (_moved.ContainsKey(d.Key)) return new Control { Visible = false };   // it already stands where it was dropped
         bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id);
         string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : null;
-        var card = FleetCard(Avatar(name, can ? Ui.You : Look.Soft), name, sub);
+        var card = FleetCard(Avatar(name, can ? Ui.You : Look.Soft), GameSession.CardName(name), sub);
         bool mission = CanJoin(c);
-        card.TooltipText = Ui.Wrap($"{name}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}." + (can ? "\nDrag onto a post or a fleet." : "")
+        card.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}." + (can ? "\nDrag onto a post or a fleet." : "")
             + (mission ? " Right-click to send them on a mission." : ""));
         card.SetMeta(UiTest.FullName, "Leader " + name);
         if (can) MakeDraggable(card, new List<Drag> { d }, name);
@@ -896,7 +896,7 @@ public partial class GameScreen
         bool hand = Me == Side.Hand;
         switch (d.Kind)
         {
-            case 'L': string name = S.CharName(d.Id); return FleetCard(Avatar(name, Ui.You), name, sub, ghost: true);
+            case 'L': string name = S.CharName(d.Id); return FleetCard(Avatar(name, Ui.You), GameSession.CardName(name), sub, ghost: true);
             case 'M': return FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), ThingName(d), sub, ghost: true);
             case 'S' when S.Host.Economy.Find(d.Id) is { } ship: { var r = ShipRow(ship); r.Modulate = new Color(1, 1, 1, 0.62f); return r; }
             default:
@@ -1182,7 +1182,7 @@ public partial class GameScreen
         foreach (var c in ls)
         {
             string name = S.CharName(c.Id);
-            var t = Tile(null, false, 0, name, Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: Initials(name));
+            var t = Tile(null, false, 0, GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: Initials(name));
             flow.AddChild(t);
         }
         foreach (var x in fs) flow.AddChild(Tile(UnitIcon.Kind.Ship, Me == Side.Hand, 2, x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), 1, Ui.You, ghost: true));

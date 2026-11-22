@@ -182,7 +182,7 @@ public partial class GameScreen
         {
             case 'L':
                 string name = S.CharName(d.Id);
-                return Tile(null, hand, 0, name, sub, count, Ui.You, ghost, Initials(name));
+                return Tile(null, hand, 0, GameSession.CardName(name), sub, count, Ui.You, ghost, Initials(name));
             case 'M':
                 return Tile(UnitIcon.Kind.Ship, hand, 2, ThingName(d), sub ?? "whole fleet", 1, Ui.You, ghost);
             case 'F':

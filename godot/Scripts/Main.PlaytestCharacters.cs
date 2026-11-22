@@ -77,7 +77,8 @@ public partial class Main
         Expect(mover.AttachedFleet == fleet.Id && mover.Post == post, $"{mname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
         Expect(news.Any(t => t.StartsWith(mname, StringComparison.Ordinal) && (t.Contains("joined " + fleet.Name) || t.Contains("boarded " + fleet.Name))), "message: the character joined the fleet");
         OpenFleetTab(gs, fleet, "Command");
-        Expect(gs.MgText($"Fleet {fleet.Id}").Contains(mname), $"the fleet's window shows {mname} {(post == CharacterPost.None ? "aboard" : "on the post")}");
+        // the leader's card shows the first name over the last name (Paul 2026-11-22)
+        Expect(gs.MgText($"Fleet {fleet.Id}").Contains(GameSession.CardName(mname)), $"the fleet's window shows {mname} {(post == CharacterPost.None ? "aboard" : "on the post")}");
         Expect(gs.Click("Leaders") && gs.CharactersOpen, "open the Leaders tab again");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"aboard fleet {fleet.Name} at {fleet.At}"), "the list says the character is aboard the fleet");
