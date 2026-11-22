@@ -324,25 +324,29 @@ public partial class GameScreen
         b.Alignment = HorizontalAlignment.Left;
         b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         b.ClipText = true;
-        HBoxContainer Corner(float top)
+        // the right-hand words, one or two lines, centred in the row's height so they never spill out of it at a bigger text size
+        var corner = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        corner.AddThemeConstantOverride("separation", 0);
+        corner.AnchorLeft = corner.AnchorRight = 1; corner.AnchorTop = 0; corner.AnchorBottom = 1;
+        corner.OffsetLeft = -220; corner.OffsetRight = -12; corner.OffsetTop = 4; corner.OffsetBottom = -4;
+        b.AddChild(corner);
+        HBoxContainer Corner()
         {
             var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
             h.AddThemeConstantOverride("separation", 0);
-            h.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
-            h.OffsetLeft = -200; h.OffsetRight = -12; h.OffsetTop = top;
-            b.AddChild(h);
+            corner.AddChild(h);
             return h;
         }
         void Part(HBoxContainer h, string words, Color ink) => h.AddChild(Ui.Label(words, null, ink, Ui.Small, wrap: false));
         // line 1: ships (the damaged ones in amber), then strength
-        var top = Corner(9);
+        var top = Corner();
         Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Ui.Text3);
         if (damaged > 0) Part(top, $", {damaged} damaged", Ui.Warn);
         Part(top, $"   {Fm.StrengthOf(f):0}", Ui.Text3);
         // line 2: Elusive, then troops aboard out of room (when it has transports)
         if (elusive || room > 0)
         {
-            var low = Corner(29);
+            var low = Corner();
             if (elusive) Part(low, "Elusive", Look.Muted);
             if (elusive && room > 0) Part(low, "   ", Ui.Text3);
             if (room > 0) Part(low, $"troops {regs}/{room}", Ui.Text3);
