@@ -331,17 +331,35 @@ public partial class GameScreen
         b.AddChild(lines);
         void Fit() => b.CustomMinimumSize = new Vector2(0, lines.GetCombinedMinimumSize().Y + 12);
         lines.MinimumSizeChanged += Fit;
-        HBoxContainer Line(string left)
+        HBoxContainer Line(string left, (string To, int Day)? trip = null)
         {
             var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-            h.AddThemeConstantOverride("separation", 12);
-            var l = Ui.Label(left, null, Ui.WinActive, Ui.Body, wrap: false);
-            l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            l.ClipText = true;
-            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            h.AddChild(l);
+            h.AddThemeConstantOverride("separation", 0);
             var right = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End, SizeFlagsVertical = SizeFlags.ShrinkCenter };
             right.AddThemeConstantOverride("separation", 0);
+            var words = Ui.Label(left, null, Ui.WinActive, Ui.Body, wrap: false);
+            words.ClipText = true;
+            words.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            words.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            h.AddChild(words);
+            h.AddChild(new Control { CustomMinimumSize = new Vector2(12, 0), MouseFilter = MouseFilterEnum.Ignore });
+            if (trip is { } tr)
+            {
+                // a trip, "to Thousand Mouths, day 123": when it is too long only the system's name gives way, so the arrival day always
+                // shows (UI review 3)
+                void FitTrip()
+                {
+                    var font = words.GetThemeFont("font");
+                    int size = words.GetThemeFontSize("font_size");
+                    float room = words.Size.X;
+                    string Say(string to) => $"to {to}, day {tr.Day}";
+                    string text = Say(tr.To);
+                    for (int n = tr.To.Length - 1; n > 0 && room > 0 && font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X > room; n--)
+                        text = Say(tr.To[..n].TrimEnd() + "…");
+                    if (words.Text != text) words.Text = text;
+                }
+                words.Resized += FitTrip;
+            }
             h.AddChild(right);
             lines.AddChild(h);
             return right;
@@ -353,7 +371,7 @@ public partial class GameScreen
         if (hull.Low > 0) Part(top, $", {hull.Low} damaged", hull.Critical > 0 ? Ui.Danger : Ui.Warn);
         Part(top, $"   {Fm.StrengthOf(f):0}", Ui.Text3);
         // line 2: where it is or goes, then Elusive and troops aboard out of room (when it has transports)
-        var low = Line(RowStatus(f));
+        var low = Line(RowStatus(f), RowTrip(f));
         if (elusive) Part(low, "Elusive", Look.Muted);
         if (elusive && room > 0) Part(low, " · ", Ui.Text3);
         if (room > 0) Part(low, $"Troops {regs}/{room}", Ui.Text3);
@@ -368,14 +386,14 @@ public partial class GameScreen
         Fit();
     }
 
-    /// <summary>A Fleets list row's second line: short, since the group above it already says moving or where (the hover has it all).</summary>
-    string RowStatus(Fleet f)
-    {
-        if (f.Transit is { } t && f.At == null) return $"moving to {t.Path[^1]}, arrives day {GameSession.ArrivalDay(t)}";
-        if (S.PlannedMoveOf(f.Id) is { } pm) return $"leaving for {pm.To}, arrives day {pm.ArrivalDay}";
-        if (S.PendingOf(f.Id).Any()) return $"at {f.At}; order given";
-        return $"at {f.At}";
-    }
+    /// <summary>Where a Fleets list row's fleet goes and the day it arrives, if it is moving or about to leave.</summary>
+    (string To, int Day)? RowTrip(Fleet f) =>
+        f.Transit is { } t && f.At == null ? (t.Path[^1], GameSession.ArrivalDay(t))
+        : S.PlannedMoveOf(f.Id) is { } pm ? (pm.To, pm.ArrivalDay) : null;
+
+    /// <summary>A Fleets list row's second line: short, since the group above it already says Moving or where (the hover has it all).</summary>
+    string RowStatus(Fleet f) =>
+        RowTrip(f) is { } tr ? $"to {tr.To}, day {tr.Day}" : S.PendingOf(f.Id).Any() ? $"at {f.At}; order given" : $"at {f.At}";
 
     internal IEnumerable<string> FleetListTexts() =>
         S.Game.State.Fleets.Values.Where(f => f.Side == Me).Select(f => $"{f.Name}\n{RowStatus(f)}");

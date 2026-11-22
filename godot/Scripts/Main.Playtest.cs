@@ -167,14 +167,14 @@ public partial class Main
             gs.PickSystem(regSys);
             Expect(s.QueuedOrders == 1, "the move is given again");
             gs.PlayRefresh();
-            Expect(gs.FleetListTexts().Any(t => t.Contains(troopFleet.Name) && t.Contains("moving to " + regSys)), "fleet list says 'moving to " + regSys + ", arrives day N'");
+            Expect(gs.FleetListTexts().Any(t => t.Contains(troopFleet.Name) && t.Contains("to " + regSys + ", day ")), "fleet list says 'to " + regSys + ", day N'");
             Expect(gs.PanelText().Contains($"Ordered: Move {troopFleet.Name} to {regSys}") && gs.PanelText().Contains($"Leaving for {regSys}, arrives day"), "fleet panel shows the move as given: leaving, with its arrival day");
             Expect(s.PlannedMoves.Any(), "planned route recorded for drawing");
             gs.PlayDay();
             Expect(troopFleet.Transit != null || troopFleet.At == regSys, "fleet is under way after the day starts");
             Expect(!s.PlannedMoves.Any(), "plan cleared once the move started");
             gs.PlayRefresh();
-            Expect(gs.FleetListTexts().Any(t => t.Contains("moving to " + regSys)), "fleet list still shows the trip while under way");
+            Expect(gs.FleetListTexts().Any(t => t.Contains("to " + regSys + ", day ")), "fleet list still shows the trip while under way");
             Expect(RunUntil(gs, () => troopFleet.At == regSys, 400), $"fleet reached {regSys} (day {s.Game.Day})");
         }
 
