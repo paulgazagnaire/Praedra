@@ -384,7 +384,7 @@ public partial class GameScreen
     /// </summary>
     Control FleetActions(Fleet f)
     {
-        // two rows, as the four buttons don't fit one column: the attacks (and the harvester's strike), then Move and Merge
+        // Paul's row (2026-11-22, Q2 B): Bombardment ▾, Invasion, Move; Merge alone under it (and the harvester's strike beside it)
         var bar = Boxed(new VBoxContainer(), 8);
         var hit = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
         var go = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -405,7 +405,7 @@ public partial class GameScreen
             hitWhy ?? (regs > 0 ? $"Lands the {Ui.Count(regs, "regiment", "regiments")} aboard to take the planet: land more than the defenders have." : "No regiments aboard: load some at one of your planets first (Troops tab)."),
             !canHit || regs == 0));
         int fid = f.Id;
-        go.AddChild(FleetAction("Move", "Fleet Move", () => { if (S.Game.State.Fleets.TryGetValue(fid, out var ff)) { CloseSectorView(); StartMove(ff); } },
+        hit.AddChild(FleetAction("Move", "Fleet Move", () => { if (S.Game.State.Fleets.TryGetValue(fid, out var ff)) { CloseSectorView(); StartMove(ff); } },
             still ? "Pick a destination on the map. To send several fleets at once, Shift+click them on the map and right-click a system." : travelling, !still));
         // Merge, as Bombardment: a short list, the fleets here first (they join at once), then the others closest first (they fly here)
         var merge = still ? MergeLines(f) : new List<(string Text, Action Do)>();
@@ -419,7 +419,7 @@ public partial class GameScreen
         {
             bool struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
             int? readyDay = S.HarvesterRechargingUntil(f);
-            hit.AddChild(FleetAction("Destroy System...", "Fleet Destroy", () => AskDestroySystem(f.Id),
+            go.AddChild(FleetAction("Destroy System...", "Fleet Destroy", () => AskDestroySystem(f.Id),
                 S.IsDestroyed(f.At) ? $"{f.At} is already destroyed." + (readyDay is int rd0 ? " " + S.HarvestWaitText(rd0) : "") : struck ? "The strike is ordered: it happens as soon as the clock moves." : readyDay is int rd ? S.HarvestWaitText(rd) : "Wipes out the system the harvester is at. Asks first.",
                 S.IsDestroyed(f.At) || struck || readyDay != null, Ui.Danger));
         }

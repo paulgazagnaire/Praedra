@@ -63,9 +63,8 @@ public partial class GameScreen
     /// <summary>An empty post says what to do with it (impeccable critique 2026-11-14: "Empty" taught nothing).</summary>
     const string DropLeader = "Drop a leader here";
 
-    /// <summary>A fleet's empty post or Passengers also answers a click (PostMenu), so its words say both (UI review 1, 2026-11-22: a
-    /// dashed box that says only "Drop" hides the click; Paul's Q3).</summary>
-    const string PickLeader = "Click or drop a leader";
+    /// <summary>A fleet's empty post or Passengers: Paul kept his words (2026-11-22, Q3 B). It also answers a click (PostMenu); its hover says so.</summary>
+    const string PickLeader = DropLeader;
 
     /// <summary>A place nobody fills yet: its words in the darkest grey in a dashed frame (Paul 2026-11-14). <paramref name="slot"/>: one
     /// post (the General, an Admiral), drawn the size of a tile.</summary>
