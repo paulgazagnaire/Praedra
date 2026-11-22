@@ -103,6 +103,7 @@ public sealed partial class GameSession
         public List<(int Unit, Side Side)> Lost = new();
         public List<string> Retreats = new();
         public HashSet<int> Held = new(); // ships already told as held by a Hold beam in this battle (QA-119: one line per ship)
+        public List<int> MineHeld = new(); // the player's ships held, told as one news line when the battle ends (QA round 204)
     }
 
     public GameSession(GameHost host, Side player, AiLevel level = AiLevel.Medium)

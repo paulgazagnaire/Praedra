@@ -194,6 +194,11 @@ public sealed partial class GameSession
                 bd.Lost.Add((u.Unit, bd.Collective.Contains(u.Unit) ? Side.Collective : Side.Hand));
                 break;
             case BattleEnded be:
+                // QA round 204: the player's held ships are one news line per battle, not one per ship
+                if (_battles.TryGetValue(be.Result.System, out var ebd) && ebd.MineHeld.Count > 0)
+                    yield return new Message(d, ebd.MineHeld.Count == 1
+                        ? $"At {be.Result.System}, your {Group(ebd.MineHeld)} was held by an enemy Hold beam and could not leave the battle."
+                        : $"At {be.Result.System}, {ebd.MineHeld.Count} of your ships ({Group(ebd.MineHeld)}) were held by enemy Hold beams and could not leave the battle.", be.Result.System, MsgKind.Bad);
                 yield return BattleReport(be, o);
                 break;
             // QA-119: say why a fleet could not leave a battle (rule: m4-retreat-damage-repair §1 refusal, §6 Hold beam)
@@ -214,7 +219,8 @@ public sealed partial class GameSession
                 if (heldSide is not Side hs) break;
                 string line = $"{ClassName(hb.Ship)} ({NameOf(hs)}) was held by the Hold beam of {ClassName(hb.Holder)} and could not jump";
                 hbd?.Retreats.Add(line);
-                if (Mine(hs)) yield return new Message(d, $"At {hb.System}, your {ClassName(hb.Ship)} was held by an enemy {ClassName(hb.Holder)}'s Hold beam and could not leave the battle.", hb.System, MsgKind.Bad);
+                if (Mine(hs) && hbd != null) hbd.MineHeld.Add(hb.Ship); // told at the battle's end
+                else if (Mine(hs)) yield return new Message(d, $"At {hb.System}, your {ClassName(hb.Ship)} was held by an enemy {ClassName(hb.Holder)}'s Hold beam and could not leave the battle.", hb.System, MsgKind.Bad);
                 break;
             }
 
