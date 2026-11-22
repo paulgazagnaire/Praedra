@@ -195,6 +195,16 @@ public partial class Main
         // Shift+click picks them all
         Expect(Enumerable.Range(2, 12).All(n => PixelIconData.Map.ContainsKey(FleetLayer.GroupIcon(n))), "every count of fleets from 2 to 13 has its marker");
         Expect(Enum.GetValues<MoverKind>().All(k => PixelIconData.Map.ContainsKey(FleetLayer.MoverIcon(k))), "every kind of mover has its pixel icon");
+        // review 10: a group is parked, so its marker must not be mirrored with its number in it (2 read as 5); yours carry the number in the
+        // tail, the enemy's group stays the bare arrow (with a count disc)
+        var (gk, gfx, gfy) = FleetLayer.Look(2, true, false, FleetLayer.ParkedHeading);
+        var g2 = FleetLayer.MarkerTones(gk, gfx, gfy, 0);
+        string[] two = { "###", "..#", "###", "#..", "###" };
+        bool upright = Enumerable.Range(0, g2.Length - 4).Any(r => Enumerable.Range(0, g2[0].Length - 2).Any(c =>
+            Enumerable.Range(0, 5).All(i => Enumerable.Range(0, 3).All(j => (g2[r + i][c + j] != '.') == (two[i][j] == '#')))));
+        Expect(upright, $"a parked group of 2 shows an upright 2 ({gk}, mirrored {gfx}/{gfy})");
+        Expect(PixelIconData.Map[gk].Length == 16 && PixelIconData.Map[gk].All(r => r.Length == 16), "the group icon is the fleet arrow's 16 x 16");
+        Expect(FleetLayer.Look(2, false, false, FleetLayer.ParkedHeading).Key == "fleet-unknown", "an enemy group is the bare arrow, not a number in the tail");
         var pair = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).GroupBy(f => f.At).Where(g => g.Count() >= 2)
             .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => g.OrderBy(f => f.Id).ToList()).FirstOrDefault();
         if (pair != null)
@@ -210,6 +220,10 @@ public partial class Main
                 "a click on it lists them, each with its ships and behaviour: " + string.Join(" / ", lines));
             var last = pair[^1];
             Expect(gs.PlayPickFromFleetGroup(last.Name) && gs.SelectedFleetId == last.Id, $"picking {last.Name} in the list selects it");
+            if (gs.G.TryFindSystem(at, out int atIdx)) gs.View.FocusOn(atIdx, 2.4f);   // the words show only on screen
+            gs.PlayRefresh();
+            Expect(gs.MapWords.Any(w => w.StartsWith(last.Name, StringComparison.Ordinal) && w.EndsWith($" +{ids.Count - 1}", StringComparison.Ordinal)),
+                $"the group's words name the selected fleet and count the others ({last.Name} ... +{ids.Count - 1}): " + string.Join(" | ", gs.MapWords));
             gs.PlayShiftClickGroup(ids[0]);
             Expect(ids.All(gs.View.PickedFleets.Contains), "Shift+click on the marker picks them all");
             gs.PlayShiftClickGroup(ids[0]);

@@ -64,7 +64,7 @@ public partial class Main
         {
             // several fleets in orbit share one marker (Paul 2026-11-22): selected, it names them all; otherwise it says how many
             int together = gs.PlayFleetGroup(parked.Id).Count;
-            static bool Names(string w, string name) => w.Split(", ").Any(n => n == name || n.StartsWith(name + " +", StringComparison.Ordinal));
+            static bool Names(string w, string name) => w.Split(", ").Any(n => n == name || n.StartsWith(name + " +", StringComparison.Ordinal) || n.StartsWith(name + " ·", StringComparison.Ordinal));
             gs.SelectFleet(parked.Id, false);
             Expect(gs.MapWords.Any(w => Names(w, parked.Name)), $"the selected fleet is named ({parked.Name}): " + string.Join(" | ", gs.MapWords));
             view.SelectedFleet = -1;
