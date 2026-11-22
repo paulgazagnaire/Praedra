@@ -65,6 +65,10 @@ public partial class GameScreen
         using (Card())
         {
             Stat("Ships", f.Ships.Count + (damaged > 0 ? $"  ({damaged} damaged)" : ""), damaged > 0 ? Ui.Warn : null);
+            // what it is made of, in one line (UI review 1, 2026-11-22: Strength alone doesn't say it); words, not stacked cards
+            string makeup = string.Join(", ", f.Ships.Select(eco.Find).Where(o => o != null).GroupBy(o => o.Class)
+                .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} {g.Key}"));
+            if (makeup != "") Line(makeup, Dim, Ui.Small);
             Stat("Strength", $"{Fm.StrengthOf(f):0}", null, "How hard the fleet hits: its damage rate against a reference force of three Mandates, with its damage counted. Three Decrees score about 65.");
             Stat("Fighters", RoomCount(fighters, Fm.FreeBerths(f) + FightersAboard(f).Count) ?? "none");
             Stat("Troops", RoomCount(regiments, Fm.FreeTroopSlots(f) + regiments) ?? "none");

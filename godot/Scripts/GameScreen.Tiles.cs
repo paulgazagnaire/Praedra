@@ -262,7 +262,7 @@ public partial class GameScreen
             if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }) return;
             var items = lines();
             if (items.Length == 0) return;
-            var pm = new PopupMenu();
+            var pm = new PopupMenu { Theme = ThemeAt(c) };   // a window's card: the window's look
             for (int i = 0; i < items.Length; i++) pm.AddItem(items[i].Text, i);
             pm.IdPressed += id => items[(int)id].Do();
             pm.PopupHide += () => pm.QueueFree();
@@ -274,7 +274,16 @@ public partial class GameScreen
 
     void MgRefreshSoon() { _mgDirty = true; _mgTimer = 0; }
 
+    /// <summary>The theme a control draws with: the nearest one set on it or above it (a window sets <see cref="Ui.WindowTheme"/>), or none.
+    /// A popup is a window of its own and does not inherit it, so the menus a window opens take it from here.</summary>
+    static Theme ThemeAt(Control c)
+    {
+        for (Node n = c; n != null; n = n.GetParent()) if (n is Control k && k.Theme != null) return k.Theme;
+        return null;
+    }
+
     readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, Func<(string Text, Action Do)[]>> _menus = new();
+    readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, Func<string>> _menuNone = new();   // the greyed line when a list is empty
 }
 
 /// <summary>Slots as dots: filled for used, hollow for free (the sector tiles draw them the same way).</summary>

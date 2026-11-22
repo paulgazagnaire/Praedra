@@ -344,7 +344,7 @@ public partial class GameScreen
             col.AddChild(cap);
             var z = DropZone($"Fleet {f.Id} {post}", $"make {GameSession.PostWords(post)}", d => RefuseFleetPost(d, f, p), d => DropFleetPost(d, f, p));
             if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(PostLeader(holder));
-            else z.Flow.AddChild(EmptyCard(DropLeader));
+            else z.Flow.AddChild(EmptyCard(PickLeader));
             PostMenu(z.Box, f, p);
             col.AddChild(z.Box);
             posts.AddChild(col);
@@ -355,7 +355,7 @@ public partial class GameScreen
         var pz = DropZone($"Fleet {f.Id} Passengers", "take aboard", d => RefuseFleetPost(d, f, CharacterPost.None), d => DropFleetPost(d, f, CharacterPost.None));
         CardFlow(pz.Flow);
         foreach (var c in riders) pz.Flow.AddChild(PostLeader(c));
-        if (riders.Count == 0) pz.Flow.AddChild(EmptyCard(DropLeader));
+        if (riders.Count == 0) pz.Flow.AddChild(EmptyCard(PickLeader));
         PostMenu(pz.Box, f, CharacterPost.None);
         pas.AddChild(pz.Box);
 
@@ -470,10 +470,11 @@ public partial class GameScreen
         var far = others.Where(x => x.At != f.At).Select(x => (F: x, Plan: S.Host.PlanMove(Me, x.Id, f.At, null))).Where(p => p.Plan.Ok)
             .OrderBy(p => p.Plan.HopTicks.Sum()).ThenBy(p => p.F.Id).ToList();
         var lines = new List<(string, Action)>();
-        if (here.Count > 1) lines.Add(($"Merge all {here.Count} fleets here, at once", () => MergeInto(f, here)));
-        foreach (var x in here) lines.Add(($"Merge {x.Name}: here, joins at once", () => MergeInto(f, new List<Fleet> { x })));
+        // each line says who moves and when (UI review 1, 2026-11-22): the other fleet comes to this one, this one stays
+        if (here.Count > 1) lines.Add(($"All {here.Count} fleets here join now", () => MergeInto(f, here)));
+        foreach (var x in here) lines.Add(($"{x.Name} joins now (here)", () => MergeInto(f, new List<Fleet> { x })));
         foreach (var (x, plan) in far)
-            lines.Add(($"Merge {x.Name}: at {x.At}, flies here in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? ", known trap on the way" : ""), () => MergeInto(f, new List<Fleet> { x })));
+            lines.Add(($"{x.Name} flies from {x.At}, joins in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? " (known trap on the way)" : ""), () => MergeInto(f, new List<Fleet> { x })));
         return lines;
     }
 
@@ -501,7 +502,7 @@ public partial class GameScreen
 
     /// <summary>The design's button: a 1 px #36363C outline, 8 px inside, 12 px words. Brighter outline under the mouse, the words greyed
     /// with the reason in the hover when it can't act; <paramref name="ink"/> for a meaning colour (the harvester's red).</summary>
-    static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false)
+    static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false, Color? hoverInk = null)
     {
         var b = new Button { FocusMode = FocusModeEnum.None, Disabled = disabled, TooltipText = Ui.Wrap(tip),
             MouseDefaultCursorShape = disabled ? CursorShape.Arrow : CursorShape.PointingHand };
@@ -510,8 +511,15 @@ public partial class GameScreen
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         var c = disabled ? Look.Dim : ink ?? Look.Text;
         var h = Boxed(new HBoxContainer(), 8);
-        h.AddChild(Look.Words(words, 12, c));
+        var text = Look.Words(words, 12, c);
+        h.AddChild(text);
         if (menu) { var arrow = Look.Words("▾", 12, c, true); arrow.SizeFlagsVertical = SizeFlags.ShrinkCenter; h.AddChild(arrow); }
+        if (hoverInk is Color hi && !disabled)
+        {
+            // a button whose harm is only shown at the moment you commit (Scrap: red under the mouse, normal ink at rest; UI review 1)
+            b.MouseEntered += () => text.AddThemeColorOverride("font_color", hi);
+            b.MouseExited += () => text.AddThemeColorOverride("font_color", c);
+        }
         Fill(b, h, 8, 8);
         b.Pressed += act;
         b.SetMeta(UiTest.FullName, key);
@@ -533,7 +541,7 @@ public partial class GameScreen
     void PopMenu(Control at, (string Text, Action Do)[] items, string none = null)
     {
         if (items.Length == 0 && none == null) return;
-        var pm = new PopupMenu();
+        var pm = new PopupMenu { Theme = ThemeAt(at) };   // the window's look
         if (items.Length == 0) { pm.AddItem(none, 0); pm.SetItemDisabled(0, true); }
         for (int i = 0; i < items.Length; i++) pm.AddItem(items[i].Text, i);
         pm.IdPressed += id => items[(int)id].Do();
@@ -671,6 +679,7 @@ public partial class GameScreen
             ? "Click to take a leader aboard or let one off. You can also drop a leader here; one from another system flies here first."
             : $"Click to choose the {GameSession.PostWords(post)}. You can also drop a leader here; one from another system flies here first.");
         _menus.AddOrUpdate(zone, () => PostLines(f, post));   // for the playtest: RunMenu
+        _menuNone.AddOrUpdate(zone, () => PostNobody(f, post));   // and for a screenshot of the greyed line
         Vector2? down = null;
         zone.GuiInput += e =>
         {
@@ -896,7 +905,7 @@ public partial class GameScreen
                 !still ? travelling : f.Ships.Count < 2 ? "A fleet of one ship can't be split." : "Click a ship to pick it (Shift+click for more), then split them off into a new fleet here.", true));
             var all = f.Ships.Select(S.Host.Economy.Find).Where(o => o != null && Scrappable(o) && !_scrapped.Contains(o.Id)).ToList();
             bar.AddChild(FleetAction("Scrap fleet...", "Fleet Scrap fleet", () => AskScrap(all, $"all {Ui.Count(all.Count, "ship", "ships")} of {f.Name}", f.At),
-                !still ? travelling : $"Scraps every ship of {f.Name}. Asks first. Half the refined cost comes back and their upkeep is freed.", !still || all.Count == 0));
+                !still ? travelling : $"Scraps every ship of {f.Name}. Asks first. Half the refined cost comes back and their upkeep is freed.", !still || all.Count == 0, hoverInk: Ui.Danger));
         }
         else
         {
@@ -906,7 +915,7 @@ public partial class GameScreen
             bar.AddChild(FleetAction($"Split {n} off", "Fleet Split", () => { foreach (var d in ds) if (!_moved.ContainsKey(d.Key) && RefuseSplit(d, f) == null) DropSplit(d, f); _picked.RemoveAll(ds.Contains); RefreshMgmt(); },
                 why ?? $"They become a new fleet here: {PickedWords(picked)}. Or drag them onto another fleet's window to send them there.", why != null));
             bar.AddChild(FleetAction($"Scrap {n}...", "Fleet Scrap ships", () => AskScrap(picked, PickedWords(picked), f.At),
-                still ? "Asks first. Half the refined cost comes back and their upkeep is freed." : travelling, !still));
+                still ? "Asks first. Half the refined cost comes back and their upkeep is freed." : travelling, !still, hoverInk: Ui.Danger));
         }
         Add(bar);
     }

@@ -275,7 +275,7 @@ public partial class Main
             gs.MgCloseAll();
             var newest = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderByDescending(f => f.Id).First();
             OpenFleetTab(gs, splitFleet, "Command");
-            if (gs.RunMenu("Fleet Merge", $"Merge {newest.Name}: here"))
+            if (gs.RunMenu("Fleet Merge", $"{newest.Name} joins now (here)"))
             {
                 gs.MgCloseAll();
                 gs.PlayDay();

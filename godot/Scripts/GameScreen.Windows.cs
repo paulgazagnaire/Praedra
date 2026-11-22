@@ -445,7 +445,8 @@ public partial class GameScreen
             if (z.Flow.GetChildren().OfType<Control>().Any(c => c.Visible && !c.IsQueuedForDeletion())) continue;
             bool post = z.Key.EndsWith(" General", StringComparison.Ordinal) || z.Key.EndsWith(" Admiral", StringComparison.Ordinal)
                 || z.Key.EndsWith(" Commander", StringComparison.Ordinal);
-            z.Flow.AddChild(w.Kind == MgKind.Fleet ? EmptyCard(post ? DropLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
+            bool riders = z.Key.EndsWith(" Passengers", StringComparison.Ordinal);
+            z.Flow.AddChild(w.Kind == MgKind.Fleet ? EmptyCard(post || riders ? PickLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
         }
         Fit(w, keep);
     }
