@@ -34,10 +34,24 @@ public static class UiDump
         var keys = roots.Where(r => r.Node != null && GodotObject.IsInstanceValid(r.Node) && ids.ContainsKey(r.Node.GetInstanceId()))
             .Select(r => new { key = r.Key, i = ids[r.Node.GetInstanceId()] }).ToList();
         var vp = root.GetViewport().GetVisibleRect().Size;
-        var doc = new { width = vp.X, height = vp.Y, roots = keys, nodes = list };
+        // open popup menus are windows that draw their own lines, so they are not controls: their lines are written out here
+        var menus = new List<object>();
+        Menus(root, menus);
+        var doc = new { width = vp.X, height = vp.Y, roots = keys, nodes = list, menus };
         using var f = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         f.StoreString(JsonSerializer.Serialize(doc, new JsonSerializerOptions { IncludeFields = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }));
         GD.Print($"Saved UI dump {path}: {list.Count} nodes, {keys.Count} roots");
+    }
+
+    static void Menus(Node n, List<object> acc)
+    {
+        if (n is PopupMenu pm && pm.Visible)
+            acc.Add(new
+            {
+                x = pm.Position.X, y = pm.Position.Y, w = pm.Size.X, h = pm.Size.Y,
+                items = Enumerable.Range(0, pm.ItemCount).Select(i => new { t = pm.GetItemText(i), dis = pm.IsItemDisabled(i), sep = pm.IsItemSeparator(i) }).ToList(),
+            });
+        foreach (var c in n.GetChildren()) Menus(c, acc);
     }
 
     /// <summary>Hide everything on screen but this control and its parents (the map alone, for the background picture of a frame).</summary>
