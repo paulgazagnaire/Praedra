@@ -36,6 +36,7 @@ public partial class Main
         if (dest == null) return;
         var clean = host.PlanMove(me, mover.Id, dest);
         string trap = clean.Path[clean.Path.Count / 2];
+        string origin = mover.At!;
         GD.Print($"  {mover.Name}: {mover.At} -> {dest} by {string.Join(", ", clean.Path)}; interdictor planted at {trap}");
 
         var before = gs.PlanWithWaypoints(mover.Id, Array.Empty<string>(), dest, confirm: false);
@@ -82,5 +83,37 @@ public partial class Main
         gs.PlayDay();
         var f = s.Game.State.Fleets.GetValueOrDefault(mover.Id);
         Expect(f?.Transit != null && planned != null && f.Transit.Path.SequenceEqual(plannedPath), $"the fleet flies the previewed path: {string.Join(", ", f?.Transit?.Path ?? new List<string>())}");
+
+        // several fleets sent together (picked on the map, sent by a right-click): each flies its own path, so each is checked; one on a
+        // red path keeps the click from sending, and the bar can send only the ones with no trap (test only: two fleets of the mover's
+        // first ship class, one where the mover started, so its path crosses the trap, one at the waypoint that steered around it)
+        if (around == null) return;
+        string cls = s.Host.Economy.Find(mover.Ships[0])?.Class ?? "";
+        int cid = fm.AddFleet(me, "Clear Way", new[] { cls }, around);
+        int rid = fm.AddFleet(me, "Red Way", new[] { cls }, origin);
+        if (host.PlanMove(me, cid, dest) is not { Ok: true, Red: false } || host.PlanMove(me, rid, dest) is not { Ok: true, Red: true })
+        {
+            GD.Print("  (no clean and red pair for the several-fleets trap check on this map)");
+            return;
+        }
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        SelectFleetByList(gs, s.Game.State.Fleets[cid]);
+        gs.HoverTextFor(dest);   // the map takes in the selection before the Shift+click
+        gs.PlayShiftClickFleet(rid);
+        Expect(gs.View.PickedFleets.SetEquals(new[] { cid, rid }), "Shift+click a second fleet on the map: both are picked, the selected one first");
+        queued = s.QueuedOrders;
+        gs.PlayRightClick(dest);
+        Expect(s.QueuedOrders == queued && gs.OrderBarText.Contains("TRAP") && gs.OrderBarText.Contains("Red Way") && !gs.OrderBarText.Contains("Clear Way out"),
+            "the second fleet's own path crosses the trap: the click sends nothing and the bar names it: " + gs.OrderBarText.Replace("\n", " / "));
+        Expect(gs.Has("Go anyway") && gs.Has("Send only the 1 fleet with no trap") && !gs.Has("Go around via"),
+            "the bar offers Go anyway and Send only the fleet with no trap: " + string.Join(" | ", gs.ButtonTexts().Where(t => t.StartsWith("Go") || t.StartsWith("Send"))));
+        Expect(gs.Click("Send only the 1 fleet with no trap") && s.PlannedMoveOf(cid)?.To == dest && s.PlannedMoveOf(rid) == null && s.QueuedOrders == queued + 1,
+            "Send only the safe ones sends Clear Way and keeps Red Way where it is");
+        gs.ShotWindow("fleet", cid.ToString()); gs.MgText($"Fleet {cid}");
+        Expect(gs.Click($"Cancel: Move Clear Way to {dest}") && s.QueuedOrders == queued, "and its order can be cancelled in its window");
+        int open = gs.MgmtCount;
+        gs.PressKey(Key.Escape);
+        Expect(gs.View.PickedFleets.Count == 0 && gs.MgmtCount == open, "Esc lets the fleets picked on the map go before it closes a window");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }
 }

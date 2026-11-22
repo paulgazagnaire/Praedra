@@ -65,7 +65,7 @@ public partial class GameScreen
         var fightersAboard = FightersAboard(f);
         using (Card())
         {
-            Stat("Strength", $"{Fm.StrengthOf(f):0.0}", null, "How hard the fleet hits, measured against a reference force of three Mandates (1.0 = as strong as that). It counts ships and fighters with their damage.");
+            Stat("Strength", $"{Fm.StrengthOf(f):0}", null, "How hard the fleet hits: its damage rate against a reference force of three Mandates, with its damage counted. Three Decrees score about 65.");
             Stat("Speed rating", $"{Fm.SpeedOf(f)}  (lower is faster)", null, "The slowest ship sets the fleet's speed. Routes multiply it: major routes 3x, minor 1.5x.");
             Stat("Ships", f.Ships.Count.ToString());
             int sq = fightersAboard.Count + f.Squadrons.Count, berths0 = Fm.FreeBerths(f), room0 = Fm.FreeTroopSlots(f);
@@ -80,9 +80,9 @@ public partial class GameScreen
             "Then click a destination system (or a row of a sector window). The route and arrival day show before anything is sent.", !atSystem, "Primary");
         move.Alignment = HorizontalAlignment.Center;
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
-        // attack, the harvester's strike, fight or retreat and scrap live in the Fleet window's Orders tab only (Paul 2026-11-14, pick 5)
-        Act(S.HoldsHarvester(f) ? "Destroy System, attack, retreat..." : "Attack, retreat, scrap...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Orders"),
-            "Opens the fleet's window on its Orders tab: bombard, invade, the harvester's strike, fight or retreat when an enemy arrives, and scrap the fleet.")
+        // attack, the harvester's strike, merge, fight or retreat and scrap live in the fleet's window only (Paul 2026-11-14 pick 5, 2026-11-21)
+        Act("Fleet window: attack, merge, ships...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
+            "Opens the fleet's window: bombard, invade" + (S.HoldsHarvester(f) ? ", the harvester's strike" : "") + ", merge with another fleet, its ships one by one, what they carry, fight or retreat, and scrap.")
             .SetMeta(UiTest.FullName, "Fleet orders");
 
         if (atSystem)
@@ -108,7 +108,7 @@ public partial class GameScreen
                 Act($"Unload all troops at {at}", () => UnloadTroops(f, aboard.Select(a => a.Regiment.Id).ToList()),
                     owner == Me ? "Lands the regiments on the planet: they join its garrison."
                     : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
-                    : "Lands the regiments only on a system you hold. To land them here, invade it: Attack, retreat, scrap...", owner != Me);
+                    : "Lands the regiments only on a system you hold. To land them here, invade it from the fleet's window.", owner != Me);
 
             // fighters (C7)
             var based = FightersBasedAt(at);
@@ -239,11 +239,12 @@ public partial class GameScreen
         Sent($"{f.Name} invades {f.At}", f.At);
     }
 
-    void SetRetreat(bool on)
+    /// <summary>One fleet's answer when an enemy fleet arrives: Elusive (Retreat) or Defensive (Fight). rule: m4-battle-classic §1.3 (SetFleetOnContact {fleet, mode}, per fleet, Paul 2026-11-21).</summary>
+    void SetRetreat(Fleet f, bool on)
     {
-        _retreatPending = on;
-        S.Track(S.Host.Battles.SubmitSetOnContact(Me, on ? OnContactMode.Retreat : OnContactMode.Fight), "Change the battle behaviour");
-        S.Say(on ? "Order sent: your fleets will retreat when an enemy arrives." : "Order sent: your fleets will fight when an enemy arrives.");
+        _retreatPending[f.Id] = on;
+        S.Track(S.Host.Battles.SubmitSetFleetOnContact(Me, f.Id, on ? OnContactMode.Retreat : OnContactMode.Fight), $"Change the battle behaviour of {f.Name}");
+        S.Say(on ? $"Order sent: {f.Name} will pull back when an enemy arrives." : $"Order sent: {f.Name} will stay and fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
         // the setting shows in the Fleet window's Orders tab; the panel redraws too, so nothing shows the old setting

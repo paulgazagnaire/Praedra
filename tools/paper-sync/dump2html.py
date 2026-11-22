@@ -169,10 +169,13 @@ class Window:
             return [e] if e else []
         if k == "color":
             c = n.get("color")
-            if not c or c[3] < 0.005:
-                return []
-            st = ["position:absolute", "left:" + px(n["x"] - ox), "top:" + px(n["y"] - oy), "width:" + px(n["w"]), "height:" + px(n["h"]), "background-color:" + hexc(c)]
-            return ['<div layer-name="Fill" style="%s"></div>' % ";".join(st)]
+            out = []
+            if c and c[3] >= 0.005:
+                st = ["position:absolute", "left:" + px(n["x"] - ox), "top:" + px(n["y"] - oy), "width:" + px(n["w"]), "height:" + px(n["h"]), "background-color:" + hexc(c)]
+                out.append('<div layer-name="Fill" style="%s"></div>' % ";".join(st))
+            for ch in self.kids.get(n["i"], []):   # a bar's fill drawn inside its track (a ship's hull bar)
+                out.extend(self.emit(ch, ox, oy, clip, rect))
+            return out
         if k == "line":
             ln = n.get("line")
             if ln:

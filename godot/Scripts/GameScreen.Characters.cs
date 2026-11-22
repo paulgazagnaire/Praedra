@@ -279,6 +279,7 @@ public partial class GameScreen
     {
         _moveChar = id; _moveFleet = -1; _moveHq = false;
         _view.PickMode = true;
+        _mgLayer.Visible = true;   // only a fleet's move sets the windows aside (Ponytail on #348)
         _moveBanner = $"Move {S.CharName(id)}: click a destination system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();

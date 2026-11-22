@@ -198,7 +198,8 @@ public partial class GameScreen
     /// Identical units (same class, same state, both movable or both not) still sit side by side. A drag takes that unit; Shift takes it
     /// and every identical one beside it. A right-click offers to scrap. Units already dropped elsewhere today are left out (they show there).
     /// </summary>
-    void UnitTiles(HFlowContainer flow, IEnumerable<(Drag? D, EconObject O, string Sub)> units, string system)
+    /// <paramref name="card"/>: the card to draw instead of a tile (a fleet's window draws Paul's cards of 2026-11-21).
+    void UnitTiles(HFlowContainer flow, IEnumerable<(Drag? D, EconObject O, string Sub)> units, string system, Func<EconObject, string, bool, PanelContainer> card = null)
     {
         var list = units.Where(u => !(u.D is { } d && _moved.ContainsKey(d.Key)) && !_scrapped.Contains(u.O.Id)).ToList();
         foreach (var g in list.GroupBy(u => (u.O.Class, u.Sub, Can: u.D != null)))
@@ -209,7 +210,8 @@ public partial class GameScreen
             var scrapAll = members.Select(u => u.O).Where(o => o.Side == Me && Scrappable(o)).ToList();
             foreach (var u in members)
             {
-                var tile = Tile(KindOf(u.O.Category, cls), Me == Side.Hand, SizeOfClass(cls), cls, g.Key.Sub, 1, g.Key.Can ? Ui.You : Ui.Text3);   // yours but not movable now: the readable grey, not the greyed-out one
+                var tile = card?.Invoke(u.O, g.Key.Sub, g.Key.Can)
+                    ?? Tile(KindOf(u.O.Category, cls), Me == Side.Hand, SizeOfClass(cls), cls, g.Key.Sub, 1, g.Key.Can ? Ui.You : Ui.Text3);   // yours but not movable now: the readable grey, not the greyed-out one
                 string tip = ClassTip(cls) is string ct ? ct + "\n" : "";
                 if (u.D is { } own)
                 {

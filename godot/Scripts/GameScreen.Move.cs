@@ -15,11 +15,12 @@ namespace PraedraViewer;
 public partial class GameScreen
 {
     int _moveFleet = -1;
+    readonly List<int> _moveAlso = new();   // the other fleets picked on the map, sent with _moveFleet (Paul 2026-11-21)
     bool _moveHq;
     List<int> _moveFighters;        // based fighters flying on their own (MoveSquadrons), null when not choosing
     string _moveFightersFrom;
     string _moveBanner;
-    bool? _retreatPending;
+    readonly Dictionary<int, bool> _retreatPending = new();   // fleet id -> Elusive chosen today, shown before the day runs the order
     int _lastSelectedSystem = -2, _lastSelectedFleet = -2;
 
     // Waypoints of the fleet move being planned (shift-click adds one, Backspace drops the last).
@@ -50,6 +51,7 @@ public partial class GameScreen
             bool newSystem = _view.Selected != _lastSelectedSystem;
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();
+            if (!Input.IsKeyPressed(Key.Shift)) ClearMapPicks();   // a plain click lets the fleets picked on the map go
             if (_view.Selected >= 0 || _view.SelectedFleet >= 0)
             {
                 if (_plan != null && !_pickMission) _plan = null; // a map selection closes the planner
@@ -122,14 +124,38 @@ public partial class GameScreen
         _moveFleet = f.Id;
         _waypoints.Clear(); _view.Waypoints = null;
         _view.PickMode = true;
+        _mgLayer.Visible = false;   // the windows step aside while a destination is picked: four fleet windows side by side cover the map
         _moveBanner = $"Move {f.Name}: click a destination system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
 
+    /// <summary>Several fleets to one destination: the first shows the path, every one flies its own way there and stays its own fleet.</summary>
+    void StartMoveMany(List<Fleet> fs)
+    {
+        if (fs.Count == 0) return;
+        StartMove(fs[0]);
+        _moveAlso.AddRange(fs.Skip(1).Select(f => f.Id));
+        if (_moveAlso.Count > 0) { _moveBanner = $"Move {fs.Count} fleets: click a destination system (Esc cancels)"; RefreshTop(); }
+    }
+
+    /// <summary>
+    /// The other fleets picked whose own path to `to` crosses a known trap: each flies its own path, so each is checked, and none is sent
+    /// into a trap by the click alone. rule: m1-travel §Path rule.
+    /// </summary>
+    List<(Fleet F, MovePlan Plan)> RedOthers(string to) => _moveAlso
+        .Select(id => S.Game.State.Fleets.TryGetValue(id, out var o) ? o : null)
+        .Where(o => o != null && Still(o) && o.At != to)
+        .Select(o => (o, S.Host.PlanMove(Me, o.Id, to, new List<string>())))
+        .Where(x => x.Item2.Ok && x.Item2.Red).ToList();
+
+    /// <summary>"Fleet 1", or "Fleet 1 and 2 other fleets" when several move together.</summary>
+    string MovingWho(Fleet f) => _moveAlso.Count == 0 ? f.Name : $"{f.Name} and {Ui.Count(_moveAlso.Count, "other fleet", "other fleets")}";
+
     void CancelMove()
     {
-        _moveFleet = -1; _moveHq = false; _moveChar = -1; _pickMission = false; _moveFighters = null; _view.PickMode = false; _view.PathPreview = null;
+        if (_mgLayer != null) _mgLayer.Visible = true;
+        _moveFleet = -1; _moveAlso.Clear(); _moveHq = false; _moveChar = -1; _pickMission = false; _moveFighters = null; _view.PickMode = false; _view.PathPreview = null;
         _waypoints.Clear(); _view.Waypoints = null; _view.PathTraps = null; _view.PathRouteHop = null; _moveWarn = false;
         _lockedTo = null; _around = null;
         _panelDirty = true; _panelTimer = 0;
@@ -150,31 +176,38 @@ public partial class GameScreen
         if (to == null)
         {
             _view.PathPreview = null; _view.PathRouteHop = null;
-            _moveBanner = $"Move {f.Name}: click a destination system (Esc cancels)";
+            _moveBanner = $"Move {MovingWho(f)}: click a destination system (Esc cancels)";
         }
         else
         {
             var plan = S.Host.PlanMove(Me, f.Id, to, via);
-            if (plan.Ok)
+            // the other fleets picked are checked even when the first has no route there (Ponytail on #348)
+            var redOthers = _moveAlso.Count == 0 ? new List<(Fleet F, MovePlan Plan)>() : RedOthers(to);
+            bool leadRed = plan.Ok && plan.Red;
+            if (plan.Ok || redOthers.Count > 0)
             {
-                _view.PathPreview = plan.Path.Select(n => G.TryFindSystem(n, out int i) ? i : -1).ToList();
-                _view.PathRouteHop = plan.RouteHop;
-                string trip = $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}";
+                _view.PathPreview = plan.Ok ? plan.Path.Select(n => G.TryFindSystem(n, out int i) ? i : -1).ToList() : null;
+                _view.PathRouteHop = plan.Ok ? plan.RouteHop : null;
+                string trip = plan.Ok ? $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}" : $"{f.Name} has no route there and stays";
                 string through = via.Count == 0 ? "" : " via " + string.Join(", ", via);
-                if (plan.Red)
+                if (leadRed || redOthers.Count > 0)
                 {
                     _moveWarn = true;
-                    _view.PathColor = TrapRed;
-                    _view.PathTraps = plan.Traps.Select(t => G.TryFindSystem(t.System, out int i) ? i : -1).Where(i => i >= 0).ToList();
-                    string where = string.Join(", ", plan.Traps.Select(t => $"{t.System} (seen day {t.SeenDay})"));
-                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {f.Name} out of hyperspace there.\n"
-                        + $"{f.Name} to {to}{through}: {trip}. " + (_lockedTo != null ? "Choose below." : "Click to choose, or Shift-click a waypoint to steer around it.");
-                    if (_lockedTo != null) _around = GoAround(f, to, via, plan);
+                    _view.PathColor = leadRed ? TrapRed : new Color(1f, 1f, 1f, 0.9f);
+                    var reds = (leadRed ? new[] { (F: f, Plan: plan) } : Array.Empty<(Fleet F, MovePlan Plan)>()).Concat(redOthers).ToList();
+                    var traps = reds.SelectMany(r => r.Plan.Traps).GroupBy(t => t.System).Select(g => g.First()).OrderBy(t => t.System, StringComparer.Ordinal).ToList();
+                    _view.PathTraps = traps.Select(t => G.TryFindSystem(t.System, out int i) ? i : -1).Where(i => i >= 0).ToList();
+                    string where = string.Join(", ", traps.Select(t => $"{t.System} (seen day {t.SeenDay})"));
+                    string who = reds.Count == 1 ? reds[0].F.Name : string.Join(", ", reds.Take(reds.Count - 1).Select(r => r.F.Name)) + " and " + reds[^1].F.Name;
+                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {who} out of hyperspace there.\n"
+                        + $"{MovingWho(f)} to {to}{through}: {trip}. " + (_lockedTo != null ? "Choose below." : "Click to choose, or Shift-click a waypoint to steer around it.");
+                    // a waypoint steers the first fleet only: offered when it alone is in danger
+                    if (_lockedTo != null && leadRed && redOthers.Count == 0) _around = GoAround(f, to, via, plan);
                 }
                 else
                 {
                     _view.PathColor = new Color(1f, 1f, 1f, 0.9f);
-                    _moveBanner = $"{f.Name} to {to}{through}: {trip}.\n{tail}";
+                    _moveBanner = $"{MovingWho(f)} to {to}{through}: {trip}.\n{tail}";
                 }
             }
             else { _view.PathPreview = null; _view.PathRouteHop = null; _moveBanner = $"No route from {f.At} to {to} for this fleet."; }
@@ -222,8 +255,20 @@ public partial class GameScreen
         Ui.Clear(_orderActions);
         if (_moveFleet >= 0 && _lockedTo != null && red)
         {
-            var anyway = Ui.Button($"Go anyway", () => SendMove(_lockedTo, _waypoints.ToList()), "Send the fleet on the red path: it may be pulled out of hyperspace at the trap.", "DangerButton");
+            bool many = _moveAlso.Count > 0;
+            var anyway = Ui.Button($"Go anyway", () => SendMove(_lockedTo, _waypoints.ToList()),
+                many ? "Send every fleet picked, the ones on a red path too: they may be pulled out of hyperspace at the trap." : "Send the fleet on the red path: it may be pulled out of hyperspace at the trap.", "DangerButton");
             _orderActions.AddChild(anyway);
+            if (many && S.Game.State.Fleets.TryGetValue(_moveFleet, out var first))
+            {
+                // the fleets with a route there and no known trap on it
+                int safe = (S.Host.PlanMove(Me, first.Id, _lockedTo, _waypoints.ToList()) is { Ok: true, Red: false } ? 1 : 0)
+                    + _moveAlso.Count(id => S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != _lockedTo
+                        && S.Host.PlanMove(Me, o.Id, _lockedTo, new List<string>()) is { Ok: true, Red: false });
+                if (safe > 0)
+                    _orderActions.AddChild(Ui.Button($"Send only the {Ui.Count(safe, "fleet", "fleets")} with no trap", () => SendMove(_lockedTo, _waypoints.ToList(), safeOnly: true),
+                        "The fleets whose path crosses a known trap stay where they are.", "Primary"));
+            }
             if (_around is { } a)
             {
                 string w = a.Via.Count == _waypoints.Count + 1 ? a.Via[^1] : string.Join(", ", a.Via.Skip(_waypoints.Count));
@@ -269,9 +314,10 @@ public partial class GameScreen
         if (to == f.At) return;
         var via = _waypoints.ToList();
         var plan = S.Host.PlanMove(Me, f.Id, to, via); // the same path the order will fly
-        if (plan.Ok && plan.Red)
+        if ((plan.Ok && plan.Red) || (_moveAlso.Count > 0 && RedOthers(to).Count > 0))
         {
-            // a known trap on the way: never sent by the click alone (the bar offers Go anyway / Go around / Cancel)
+            // a known trap on the way of any fleet picked: never sent by the click alone (the bar offers Go anyway / Go around or
+            // Send only the fleets with no trap / Cancel)
             _lockedTo = to;
             UpdatePreview(to);
             return;
@@ -279,9 +325,29 @@ public partial class GameScreen
         SendMove(to, via);
     }
 
-    void SendMove(string to, List<string> via)
+    /// <summary>Sends the move; with safeOnly, a fleet whose path crosses a known trap stays where it is.</summary>
+    void SendMove(string to, List<string> via, bool safeOnly = false)
     {
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
+        var also = _moveAlso.ToList();
+        // with several fleets, one with no route there stays (and says so); with safeOnly, so does one whose path crosses a known trap
+        bool Stays(Fleet x, List<string> v)
+        {
+            var p = S.Host.PlanMove(Me, x.Id, to, v);
+            if (also.Count > 0 && !p.Ok) { Toast($"{x.Name} has no route to {to}: it stays.", MsgKind.Warn); return true; }
+            return safeOnly && p is { Ok: true, Red: true };
+        }
+        if (!Stays(f, via)) SendFleetMove(f, to, via);
+        // the other fleets picked: each its own path to the same place (the waypoints are the first fleet's; the others take theirs)
+        foreach (var id in also)
+            if (S.Game.State.Fleets.TryGetValue(id, out var o) && Still(o) && o.At != to && !Stays(o, new List<string>())) SendFleetMove(o, to, new List<string>());
+        CancelMove();
+        _fleetListDirty = true;
+        if (also.Count > 0) MgRefreshSoon();
+    }
+
+    void SendFleetMove(Fleet f, string to, List<string> via)
+    {
         var plan = S.Host.PlanMove(Me, f.Id, to, via);
         // the last move given wins: the core would keep the first and refuse the second (QA-99). rule: m1-clock-and-orders §Orders in (withdraw)
         ReplaceFleetMove(f.Id);
@@ -293,8 +359,6 @@ public partial class GameScreen
         S.Say($"Order sent: move {f.Name} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
         Toast(plan.Ok ? $"{f.Name} to {to}: arrives day {plan.ArrivalDay}." : $"Order sent: move {f.Name} to {to}.", plan.Red ? MsgKind.Warn : MsgKind.Info);
-        CancelMove();
-        _fleetListDirty = true;
     }
 
     // ================================================================== the Hearth's move (Collective)

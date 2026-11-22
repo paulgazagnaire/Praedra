@@ -444,7 +444,7 @@ public partial class GameScreen
     public void ShotSector(string name) => OpenSector(name.Replace('_', ' '));
     internal void TileClick(string system, string hot) => OpenFromTile(system, hot);
 
-    /// <summary>--window ground|troops|fighters|fleets|infra Charter[:Ships], or --window fleet 3[:Ships]: open a management window (for
+    /// <summary>--window ground|troops|fighters|fleets|infra Charter[:Ships], or --window fleet 3[:Ships] (or top4: your four biggest): open a management window (for
     /// infra, the build tab to show).</summary>
     public void ShotWindow(string kind, string what)
     {
@@ -466,6 +466,15 @@ public partial class GameScreen
             // "3" or "Charter", optionally ":Ships" for the tab
             string ftab = what.Contains(':') ? what[(what.IndexOf(':') + 1)..] : null;
             if (ftab != null) what = what[..what.IndexOf(':')];
+            // "top4": your four biggest fleets, side by side ("top4:Command,Ships,Fighters,Troops": a tab for each, in that order)
+            if (what.StartsWith("top", StringComparison.Ordinal) && int.TryParse(what[3..], out int top))
+            {
+                var each = ftab?.Split(',');
+                int k = 0;
+                foreach (var tf in S.Game.State.Fleets.Values.Where(f => f.Side == S.Player && f.Ships.Count > 0).OrderByDescending(f => f.Ships.Count).ThenBy(f => f.Id).Take(top).ToList())
+                    OpenMgmt(MgKind.Fleet, fleet: tf.Id, tab: each?[Math.Min(k++, each.Length - 1)]);
+                return;
+            }
             int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values
                 .Where(f => f.Side == S.Player && f.At != null && f.Transit == null && (what == "any" || f.At == what.Replace('_', ' ')))
                 .OrderByDescending(f => f.Ships.Count).ThenBy(f => f.Id).Select(f => f.Id).FirstOrDefault();

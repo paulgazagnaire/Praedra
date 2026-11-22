@@ -111,6 +111,7 @@ public partial class GameScreen
 
     /// <summary>Your own planet's Infrastructure window is two columns wide: what stands there on the left, what it can build on the right,
     /// so it needs no scrolling (Paul 2026-11-14, impeccable critique). Someone else's planet shows only its buildings: one column.</summary>
+    /// A fleet's window is one column, so four fleets stand side by side (Paul 2026-11-21).
     bool WantsWide(MgWin w) => w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me;
 
     internal int MgmtCount => _mgWins.Count;
@@ -230,7 +231,7 @@ public partial class GameScreen
     /// windows keep the "styles" layout, in the design's colours (Paul 2026-11-19).</summary>
     void ApplyLook(MgWin w)
     {
-        bool look = w.Kind == MgKind.Infra && w.Wide;
+        bool look = w.Kind == MgKind.Infra && w.Wide || w.Kind == MgKind.Fleet;   // and a fleet's window: Paul's design of 2026-11-21
         if (look == w.NewLook && w.Panel.HasThemeStyleboxOverride("panel")) return;
         w.NewLook = look;
         void Margins(MarginContainer m, int l, int r, int t, int b)
@@ -425,12 +426,14 @@ public partial class GameScreen
             var arriving = _moved.Where(kv => kv.Value.Zone == z.Key).OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => (D: Drag.Parse(kv.Key), kv.Value.Words)).Where(x => x.D != null).ToList();
             if (arriving.Count == 0) continue;
+            if (z.Box.HasMeta("dragonly")) { z.Box.SetMeta("ghosts", true); z.Box.Visible = true; }   // ships split off today show there
             foreach (var empty in z.Flow.GetChildren().OfType<Label>().ToList()) empty.QueueFree(); // "Empty" gives way
             foreach (var x in arriving)   // one tile per unit, never stacked (Paul 2026-11-14)
             {
                 var gd = x.D.Value;
                 string words = x.Words;
-                var ghost = DragTile(gd, Travels(words) ? words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : "moved", 1, ghost: true);
+                string sub = Travels(words) ? words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : "moved";
+                var ghost = w.Kind == MgKind.Fleet ? FleetGhost(gd, sub) : DragTile(gd, sub, 1, ghost: true);   // a fleet's window: its own cards and rows
                 ghost.TooltipText = Ui.Wrap($"{ThingName(gd)}: {words}. It can move again tomorrow.");
                 ghost.SetMeta(UiTest.FullName, "Arriving " + gd.Key);
                 z.Flow.AddChild(ghost);
@@ -442,7 +445,7 @@ public partial class GameScreen
             if (z.Flow.GetChildren().OfType<Control>().Any(c => c.Visible && !c.IsQueuedForDeletion())) continue;
             bool post = z.Key.EndsWith(" General", StringComparison.Ordinal) || z.Key.EndsWith(" Admiral", StringComparison.Ordinal)
                 || z.Key.EndsWith(" Commander", StringComparison.Ordinal);
-            z.Flow.AddChild(EmptySlot(post ? DropLeader : "Empty", slot: post));
+            z.Flow.AddChild(w.Kind == MgKind.Fleet ? EmptyCard(post ? DropLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
         }
         Fit(w, keep);
     }
@@ -536,8 +539,9 @@ public partial class GameScreen
         w.Head.AddChild(block);
     }
 
-    /// <summary>The window buttons ⋮⋮ – ×, 24 px each and 4 px apart, pinned to the right of the head.</summary>
-    HBoxContainer WinButtons(MgWin w, Control grip = null)
+    /// <summary>The window buttons ⋮⋮ – ×, 24 px each and 4 px apart, pinned to the right of the head. <paramref name="grey"/>: in Space
+    /// Grotesk and the words' grey, as Paul's fleet window design has them (2026-11-21).</summary>
+    HBoxContainer WinButtons(MgWin w, Control grip = null, bool grey = false)
     {
         var buttons = Ui.HBox(4);
         buttons.MouseFilter = MouseFilterEnum.Ignore;
@@ -552,6 +556,12 @@ public partial class GameScreen
         close.SetMeta(UiTest.FullName, "Close " + w.Key);
         close.CustomMinimumSize = new Vector2(WinButton, WinButton);
         buttons.AddChild(close);
+        if (grey)
+            foreach (var b in new[] { fold, close })
+            {
+                b.AddThemeFontOverride("font", Ui.Grotesk);
+                foreach (var k in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" }) b.AddThemeColorOverride(k, Look.Text);
+            }
         return buttons;
     }
 

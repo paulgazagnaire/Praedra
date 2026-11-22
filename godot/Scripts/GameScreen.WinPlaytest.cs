@@ -61,7 +61,22 @@ public partial class GameScreen
         return Walk(this, fullName) ?? UiTest.Find<BaseButton>(this, fullName);
     }
 
+    /// <summary>The hover words of the card (a ship row, a leader card, a fleet's status) whose full name is exactly <paramref name="fullName"/>, on one line.</summary>
+    internal string CardTip(string fullName) => (MenuCard(fullName)?.TooltipText ?? "").Replace('\n', ' ');
+
     /// <summary>Right-click the button named <paramref name="fullName"/> and pick the menu line starting with <paramref name="item"/>.</summary>
+    /// <summary>Shift+click on a fleet's marker on the map, as the mouse would (several fleets picked on the map).</summary>
+    internal void PlayShiftClickFleet(int id) => ShiftPickOnMap(id);
+
+    /// <summary>A right-click on a system on the map, as the mouse would.</summary>
+    internal void PlayRightClick(string system) { if (G.TryFindSystem(system, out int i)) OnMapRightClick(i); }
+
+    /// <summary>Let every picked unit card go, as Esc would.</summary>
+    internal void ClearUnitPicks() => ClearPicks();
+
+    /// <summary>The hover words of the first button whose words or full name start with <paramref name="prefix"/>, on one line.</summary>
+    internal string TipOf(string prefix) => (UiTest.Find<BaseButton>(ClickRoot, prefix)?.TooltipText ?? "").Replace('\n', ' ');
+
     internal bool RunMenu(string fullName, string item)
     {
         if (MenuCard(fullName) is not { } b || !_menus.TryGetValue(b, out var lines)) return false;
@@ -84,6 +99,17 @@ public partial class GameScreen
 
     /// <summary>The yards that can build for a planet with no construction yard, soonest first, and the one picked.</summary>
     internal (List<string> Yards, string Picked) InfraSuppliers(string dest) => (SuppliersFor(dest).Select(x => x.Yard).ToList(), PickedSupplier(dest)?.Yard);
+
+    /// <summary>A window's width, and how wide its head and its shown page want to be (a page wider than the window would widen it).</summary>
+    internal (float Want, float Width) MgFit(string key)
+    {
+        if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return (0, 0);
+        RebuildMg(w);
+        return (Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
+    }
+
+    /// <summary>The windows are shown (they step aside while a fleet's destination is picked).</summary>
+    internal bool MgShown => _mgLayer.Visible;
 
     internal bool MgHasZone(string zoneKey) => _zones.Any(x => x.Key == zoneKey && IsInstanceValid(x.Box));
 
@@ -176,6 +202,9 @@ public partial class GameScreen
         // "L:?" picks the first leader of yours standing where the first window is (screenshots don't know ids)
         if (chipKey == "L:?" && _mgWins.FirstOrDefault(x => x.System != null) is { } w)
             chipKey = S.MyCharacters.Where(c => S.Host.Characters.LocationOf(c) == w.System && c.AttachedFleet == 0).OrderBy(c => c.Id).Select(c => $"L:{c.Id}").FirstOrDefault() ?? chipKey;
+        // "S:?" the first ship of the first fleet window
+        if (chipKey == "S:?" && _mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet) is { } fw && S.Game.State.Fleets.TryGetValue(fw.Fleet, out var ff) && ff.Ships.Count > 0)
+            chipKey = $"S:{ff.Ships[0]}";
         if (Drag.Parse(chipKey) is { } d) { _dragging = d; _dragTake = Drag.ParseAll(chipKey).ToList(); _dragCount = _dragTake.Count; _shotDrag = d; LightZones(d); }
     }
     Drag? _shotDrag;
