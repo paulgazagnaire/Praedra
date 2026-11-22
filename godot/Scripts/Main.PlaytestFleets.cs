@@ -92,6 +92,17 @@ public partial class Main
         ship.Hull = Math.Max(1, sc.Hull / 5);
         Expect(gs.FleetStatusNow(a).ShipsInk == Ui.Danger, "a ship under a quarter of its hull turns the Ships tab's count red");
         ship.Hull = hull0; if (hits0 != null) ship.Hits = hits0;
+        // only fighters short (every hull whole): the days, but no bar, which is a ship's hull (UI review 7)
+        if (a.Ships.SelectMany(id => fm.UnitsAboard(id, ObjectCategory.Fighter)).OrderBy(q => q.Id).FirstOrDefault() is { } wing)
+        {
+            int lost0 = wing.CraftLost;
+            wing.CraftLost = 2;
+            gs.MgText(key);
+            var stF = gs.FleetStatusNow(a);
+            Expect(!stF.Bar && stF.Words.Contains(" day") && gs.CardTip($"Fleet status {a.Id}").Contains("fighters get one craft back"),
+                $"only fighters short: the days, no bar, the fighters in the hover ({stF.Words}, bar {stF.Bar})");
+            wing.CraftLost = lost0;
+        }
         foreach (var (o, h0, k0) in whole) { o.Hull = h0; if (k0 != null) o.Hits = k0; }
         Expect(gs.MenuOf($"S:{ship.Id}").Any(l => l.StartsWith("Split it off", StringComparison.Ordinal)) && gs.MenuOf($"S:{ship.Id}").Any(l => l.StartsWith("Scrap this one", StringComparison.Ordinal)),
             $"a right-click on a ship splits it off or scraps it: {string.Join(" | ", gs.MenuOf($"S:{ship.Id}"))}");

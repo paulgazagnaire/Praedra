@@ -171,6 +171,33 @@ public class RepairTests
         Assert.Equal(hash, GameSave.StateHash(GameSave.Load(GameSave.Save(h.Game))));
     }
 
+    // m4-retreat-damage-repair section 5 (B3-24, B3-25, B3-26 timings): the screens' read-only DaysToRepair says the day the steps make
+    // the hull or the squadron whole, counting down by one a day, at a yard (2 days) and away from one (30 days)
+    [Fact]
+    public void DaysToRepairMatchesTheSteps()
+    {
+        var h = Host();
+        h.Economy.AddFacility(Yard, FacilityKind.OrbitalShipyard);
+        var atYard = Damaged(h, Side.Hand, Yard).mandate;
+        var away = Damaged(h, Side.Hand, Other).mandate;
+        var sq = h.Game.State.Economy.Objects[h.Economy.AddObject(Side.Hand, "Gleaner", Yard)];
+        sq.CraftLost = 3;
+        // 1790 of 2750, 275 a turn: four turns; at the yard 2 + 3 x 2 = 8 days, away 30 + 3 x 30 = 120; three craft at 2 days: 6
+        Assert.Equal(8, h.Repair.DaysToRepair(atYard, Yard));
+        Assert.Equal(120, h.Repair.DaysToRepair(away, Other));
+        Assert.Equal(6, h.Repair.DaysToRepair(sq, Yard));
+        for (int day = 1; day <= 120; day++)
+        {
+            h.Game.Step();
+            Assert.Equal(Math.Max(0, 8 - day), h.Repair.DaysToRepair(atYard, Yard));
+            Assert.Equal(120 - day, h.Repair.DaysToRepair(away, Other));
+            Assert.Equal(Math.Max(0, 6 - day), h.Repair.DaysToRepair(sq, Yard));
+            Assert.Equal(day >= 8, atYard.Hull == 2750);
+            Assert.Equal(day >= 120, away.Hull == 2750);
+            Assert.Equal(day >= 6, sq.CraftLost == 0);
+        }
+    }
+
     // m4-retreat-damage-repair section 5: craft lost is saved and hashed
     [Fact]
     public void CraftLostIsSavedAndHashed()

@@ -259,7 +259,8 @@ public partial class GameScreen
         z.Flow.AddChild(h);
         z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         z.Box.MouseDefaultCursorShape = CursorShape.PointingHand;
-        z.Box.TooltipText = Ui.Wrap($"{f.Name}. Drop ships, troops, fighters or leaders here to send them to it." + (pick != null && !selected ? " Click to show it." : ""));
+        z.Box.TooltipText = Ui.Wrap($"{f.Name}. Strength {Fm.StrengthOf(f):0}: how hard it hits (three Decrees score about 65). Drop ships, troops, fighters or leaders here to send them to it."
+            + (pick != null && !selected ? " Click to show it." : ""));
         z.Box.GuiInput += e =>
         {
             if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) return;

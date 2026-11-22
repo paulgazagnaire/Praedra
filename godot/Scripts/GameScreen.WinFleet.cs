@@ -122,6 +122,9 @@ public partial class GameScreen
             ("Ships", f.Ships.Count.ToString(), shipsInk, () => ShipsTab(f, still, picked)),
             ("Fighters", RoomCount(fighters, Fm.FreeBerths(f) + aboardF.Count), null, () => FightersAboardTab(f, aboardF)),
             ("Troops", RoomCount(regiments, Fm.FreeTroopSlots(f) + regiments), null, () => TroopsAboardTab(f, aboardR.Select(a => a.Regiment).ToList())));
+        // the tinted count is never colour alone (C6, UI review 7): its cell says the damage in words, as the side panel's Ships line
+        if (shipsInk != null && w.Pages.TryGetValue("Ships", out var shipsTab))
+            shipsTab.Tab.TooltipText = Ui.Wrap(HullWords(HullState(f)).Trim() + " Amber: a ship under half its hull. Red: under a quarter.");
     }
 
     /// <summary>"8/16" (what it carries out of its room); just the number with no room; nothing with neither.</summary>
@@ -140,7 +143,7 @@ public partial class GameScreen
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
         head.SetMeta(UiTest.FullName, $"Fleet head {f.Id}");
         RightClickMenu(head, () => HeadMenu(f).ToArray());
-        var pad = Pad(24, 24, 24, 24);
+        var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
         head.AddChild(pad);
         var parts = Boxed(new VBoxContainer(), 24);
         pad.AddChild(parts);
@@ -151,7 +154,7 @@ public partial class GameScreen
 
         var row = Boxed(new HBoxContainer(), NameGap);
         string upper = f.Name.ToUpperInvariant();
-        float room = WidthOf(w) - 2 - 48 - NameGap - 3 * WinButton - 2 * 4;
+        float room = WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad - NameGap - 3 * WinButton - 2 * 4;
         int size = Ui.NameSize(upper, room);
         var name = Look.Words(upper, size, Look.Text);
         name.AddThemeFontOverride("font", Ui.NameFont(size, upper));
@@ -162,7 +165,7 @@ public partial class GameScreen
         row.AddChild(name);
         row.AddChild(WinButtons(w, grip, grey: true));
         parts.AddChild(row);
-        if (!w.Min) parts.AddChild(FleetStatus(f, still, WidthOf(w) - 2 - 48));
+        if (!w.Min) parts.AddChild(FleetStatus(f, still, WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad));
         w.Head.AddChild(head);
     }
 
@@ -173,6 +176,9 @@ public partial class GameScreen
     /// order it has, with Cancel. Its strength, slowest ship and anything else that holds are in the hover. Design:
     /// praedra/specs/ui/fleet-status-2026-11-22/status-design.md (UI review 6).
     /// </summary>
+    /// <summary>The fleet head's padding all round (the design's 24 px), the window's edge (1 px each side) and the gap between the status words.</summary>
+    const int FleetHeadPad = 24, EdgeW = 1, StatusGap = 8;
+
     Control FleetStatus(Fleet f, bool still, float lineW)
     {
         var st = StatusOf(f, still);
@@ -180,12 +186,12 @@ public partial class GameScreen
         v.MouseFilter = MouseFilterEnum.Pass;
         v.TooltipText = Ui.Wrap(st.Tip);
         v.SetMeta(UiTest.FullName, $"Fleet status {f.Id}");
-        var line = Boxed(new HBoxContainer(), 8);
+        var line = Boxed(new HBoxContainer(), StatusGap);
         line.AddChild(Look.Words("Status:", 12, Look.Text, true));
         // what and where, then the countdown on the same line when both fit ("Repairing at Charter / 12 days left"); when they don't
         // ("Blockading Brushfield / Repair: 240 days"), the countdown drops to a line of its own, so the place is never cut for it
         float Wide(string t, bool medium = false) => (medium ? Ui.GroteskMedium : Ui.Grotesk).GetStringSize(t, HorizontalAlignment.Left, -1, 12).X;
-        float need = Wide("Status:", true) + st.Words.Select((t, i) => 8 + Wide(t) + (i > 0 ? Wide("/") + 8 : 0)).Sum();
+        float need = Wide("Status:", true) + st.Words.Select((t, i) => StatusGap + Wide(t) + (i > 0 ? Wide("/") + StatusGap : 0)).Sum();
         bool split = st.Words.Count > 1 && need > lineW;
         Label Part(int i)
         {
@@ -255,8 +261,8 @@ public partial class GameScreen
         if (S.PlannedMoveOf(f.Id) is { } pm)
         {
             int days = Math.Max(1, pm.ArrivalDay - S.Game.Day);
-            string stops = rep is { Days: > 0 } r0 ? $" Leaving stops its repairs ({Ui.Count(r0.Days, "day", "days")} from whole here)." : "";
-            return new(new List<string> { $"Leaves for {pm.To}", $"ETA: {days} days" }, null, Ui.You, false,
+            string stops = rep is { } r0 && Math.Max(r0.Days, r0.FighterDays) > 0 ? $" Leaving stops its repairs ({Ui.Count(Math.Max(r0.Days, r0.FighterDays), "day", "days")} from whole here)." : "";
+            return new(new List<string> { $"Leaves for {pm.To}", $"ETA: {Ui.Count(days, "day", "days")}" }, null, Ui.You, false,
                 $"{f.Name} leaves for {pm.To} when the clock moves and arrives on day {pm.ArrivalDay}." + stops + more);
         }
 
@@ -274,26 +280,35 @@ public partial class GameScreen
         {
             string where = r.Fast ? $"{f.Name} is repaired at your shipyard at {f.At}, every {Ui.Count(r.Period, "day", "days")}"
                 : $"No working shipyard of yours at {f.At}, so a repair comes only every {r.Period} days";
+            string Countdown(int d) => first.StartsWith("Repairing", StringComparison.Ordinal) ? $"{Ui.Count(d, "day", "days")} left" : $"Repair: {Ui.Count(d, "day", "days")}";
+            string craft = r.FighterDays > 0 ? $" Its fighters get one craft back per repair: {Ui.Count(r.CraftLost, "craft", "craft")} short, all back on day {S.Game.Day + r.FighterDays}." : "";
+            // the design's order (UI review 7): the hull's days with the most damaged ship's bar; else the broken parts, no bar; else the
+            // fighters' days, no bar (the bar is a ship's hull, never the fighters)
             if (r.Days > 0)
             {
                 // the bar is the most damaged ship's hull: the one the days count for, coloured as the Ships tab and the side panel (UI review 6)
-                words.Add(first.StartsWith("Repairing", StringComparison.Ordinal) ? (r.Days <= 1 ? "tomorrow" : $"{r.Days} days left") : $"Repair: {r.Days} days");
+                words.Add(Countdown(r.Days));
                 share = r.Worst;
                 ink = r.Worst < 0.25f ? Ui.Danger : r.Worst < 0.5f ? Ui.Warn : Ui.You;
                 tip += (tip == "" ? "" : " ") + $"{where}: its hull is whole on day {S.Game.Day + r.Days}. The bar is its most damaged ship's hull." + (r.Fast ? " Leaving stops the repairs." : "")
-                    + (r.Broken > 0 ? $" {Ui.Count(r.Broken, "broken part", "broken parts")}: each repair may fix one, by chance." : "");
+                    + (r.Broken > 0 ? $" {Ui.Count(r.Broken, "broken part", "broken parts")}: each repair may fix one, by chance." : "") + craft;
             }
-            else
+            else if (r.Broken > 0)
             {
                 // hull whole, only broken parts: each repair fixes one only on a dice roll (rule: m4-retreat-damage-repair §5), so no day
                 words.Add(Ui.Count(r.Broken, "part broken", "parts broken"));
-                tip += (tip == "" ? "" : " ") + $"The hull is whole. {where}, and each may fix one broken part, by chance.";
+                tip += (tip == "" ? "" : " ") + $"The hull is whole. {where}, and each may fix one broken part, by chance." + craft;
+            }
+            else
+            {
+                words.Add(Countdown(r.FighterDays));
+                tip += (tip == "" ? "" : " ") + $"Every ship is whole. {where}." + craft;
             }
         }
         else if (S.HarvesterRechargingUntil(f) is int ready && ready > S.Game.Day)
         {
             int cd = Math.Max(1, S.Host.Harvester.Params.CooldownDays);
-            words.Add($"Harvest in {ready - S.Game.Day} days");
+            words.Add($"Harvest in {Ui.Count(ready - S.Game.Day, "day", "days")}");
             share = 1f - (ready - S.Game.Day) / (float)cd;
             tip += " " + S.HarvestWaitText(ready);
         }
@@ -310,21 +325,20 @@ public partial class GameScreen
     /// <summary>
     /// The fleet's repair, read from the core: none while moving; a ship mends a tenth of its class hull per repair, every 2 days at a
     /// working shipyard of yours and every 30 days anywhere else; fighters get one craft back per repair; broken parts come back only by
-    /// chance. Days = until its slowest unit is whole (0 when only parts are broken); Worst = the lowest hull share of its ships.
-    /// rule: m4-retreat-damage-repair §5 (RepairModule: FastRepair, Period, RepairDue; RepairHullDivisor).
+    /// chance. Days = until its slowest ship's hull is whole (0 when only parts are broken); FighterDays = until every craft is back;
+    /// Worst = the lowest hull share of its ships. rule: m4-retreat-damage-repair §5 (RepairModule.DaysToRepair, FastRepair, Period).
     /// </summary>
-    (int Days, float Worst, int Broken, bool Fast, int Period)? RepairOf(Fleet f)
+    (int Days, float Worst, int Broken, int FighterDays, int CraftLost, bool Fast, int Period)? RepairOf(Fleet f)
     {
         if (!Still(f)) return null;
         var rp = S.Host.Repair;
         var eco = S.Host.Economy;
         bool fast = rp.FastRepair(f.At, f.Side);
         if (rp.Rules.RepairNeedsYard && !fast) return null;
-        int period = rp.Period(true, fast), days = 0, broken = 0;
+        int days = 0, broken = 0, fdays = 0, lost = 0;
         float worst = 1f;
         bool any = false;
-        // the next turn: the running timer's due day, or a full period when it has not started or restarts (a new period restarts it)
-        int First(EconObject o, int p) => o.RepairMode == (fast ? 2 : 1) && o.RepairDue > S.Game.Day ? o.RepairDue - S.Game.Day : p;
+        // the days come from the core's own repair query (Ponytail on #358: the screen never copies the timer)
         foreach (var o in f.Ships.Select(eco.Find))
         {
             if (o == null || Fm.ClassOf(o) is not { Hull: > 0 } c) continue;
@@ -333,18 +347,17 @@ public partial class GameScreen
             if (hits > 0) any = true;
             if (o.Hull >= c.Hull) continue;
             any = true;
-            int per = Math.Max(1, c.Hull / Math.Max(1, rp.Rules.RepairHullDivisor)), turns = (c.Hull - o.Hull + per - 1) / per;
-            days = Math.Max(days, First(o, period) + (turns - 1) * period);
+            days = Math.Max(days, rp.DaysToRepair(o, f.At) ?? 0);
             worst = Math.Min(worst, o.Hull / (float)c.Hull);
         }
-        int sp = rp.Period(false, fast);
         foreach (var q in FightersAboard(f).Concat(f.Squadrons.Select(eco.Find)))
         {
             if (q == null || q.CraftLost <= 0) continue;
             any = true;
-            days = Math.Max(days, First(q, sp) + (q.CraftLost - 1) * sp);
+            lost += q.CraftLost;
+            fdays = Math.Max(fdays, rp.DaysToRepair(q, f.At) ?? 0);
         }
-        return any ? (days, worst, broken, fast, period) : null;
+        return any ? (days, worst, broken, fdays, lost, fast, rp.Period(true, fast)) : null;
     }
 
     /// <summary>Your fleet stops the enemy's economy where it stands. rule: m1-forced-stop-and-blockade §Update 2026-10-12 (economic blockade).</summary>
