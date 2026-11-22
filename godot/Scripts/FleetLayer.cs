@@ -24,7 +24,7 @@ public partial class FleetLayer : Control
     public Side? Player { get; set; }
     /// <summary>Move orders given but not started yet (fleet id to plan); drawn as a route so the player sees what is pending.</summary>
     public Func<IEnumerable<KeyValuePair<int, GameSession.PlannedMove>>> Planned { get; set; }
-    /// <summary>Whether one of the player's fleets is Elusive (it pulls back when an enemy fleet arrives): its marker trails two short lines.</summary>
+    /// <summary>Whether one of the player's fleets is Elusive (it pulls back when an enemy fleet arrives): its marker is an arrowhead.</summary>
     public Func<int, bool> Elusive { get; set; }
     /// <summary>The enemy fleets the player's side sees now (system, class counts). Null = no fog (every fleet drawn from the core).</summary>
     public Func<IReadOnlyList<(string System, FleetPicture Fleet)>> EnemyFleets { get; set; }
@@ -556,7 +556,7 @@ public partial class FleetLayer : Control
                 ? _game.State.Fleets.Values.Where(x => x.Side == f.Side && x.At == f.At).All(x => Elusive(x.Id))
                 : Elusive(f.Id));
             var tri = elusive
-                ? new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.75f, p - h * r * 0.15f, p - h * r * 0.7f - perp * r * 0.75f }
+                ? new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.8f, p + h * r * 0.15f, p - h * r * 0.7f - perp * r * 0.8f }   // cut 0.85 r deep: a chevron even at the opening zoom (UI review 2)
                 : new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
             DrawColoredPolygon(tri, col);
             DrawPolyline(tri.Append(tri[0]).ToArray(), selected ? Colors.White : own ? new Color(1, 1, 1, 0.9f) : new Color(0, 0, 0, 0.85f), selected ? 2.5f : own ? 1.6f : 1.2f, true);

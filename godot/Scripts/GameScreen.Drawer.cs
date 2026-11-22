@@ -312,12 +312,11 @@ public partial class GameScreen
         var fl = f;
         // what you'd open the fleet to learn (backlog F3, F4, 2026-11-22): its damaged ships, its troops out of its room, and whether it
         // is Elusive; each part only when it says something
-        var eco = S.Host.Economy;
-        int damaged = f.Ships.Select(eco.Find).Count(o => o != null && Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull);
+        var hull = HullState(f);
         int regs = S.Host.Troops.RegimentsAboard(f).Count, room = Fm.FreeTroopSlots(f) + regs;
         bool elusive = IsElusive(f);
         string tip = $"{f.Name}: {StatusOf(f)}. Strength {Fm.StrengthOf(f):0}."
-            + (damaged > 0 ? $" {damaged} of {Ui.Count(f.Ships.Count, "ship", "ships")} damaged." : "")
+            + HullWords(hull)
             + (room > 0 ? $" Troops {regs} of {room}." : "")
             + (elusive ? " Elusive: it pulls back when an enemy fleet arrives." : "") + " Click to select it.";
         var b = Ui.Button($"{f.Name}\n{StatusOf(f)}", () => SelectFleet(fl.Id, true), tip, "Row");
@@ -338,18 +337,18 @@ public partial class GameScreen
             return h;
         }
         void Part(HBoxContainer h, string words, Color ink) => h.AddChild(Ui.Label(words, null, ink, Ui.Small, wrap: false));
-        // line 1: ships (the damaged ones in amber), then strength
+        // line 1: ships (those under half their hull in amber, red when one is under a quarter: the Ships tab's marks), then strength
         var top = Corner();
         Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Ui.Text3);
-        if (damaged > 0) Part(top, $", {damaged} damaged", Ui.Warn);
+        if (hull.Low > 0) Part(top, $", {hull.Low} damaged", hull.Critical > 0 ? Ui.Danger : Ui.Warn);
         Part(top, $"   {Fm.StrengthOf(f):0}", Ui.Text3);
         // line 2: Elusive, then troops aboard out of room (when it has transports)
         if (elusive || room > 0)
         {
             var low = Corner();
             if (elusive) Part(low, "Elusive", Look.Muted);
-            if (elusive && room > 0) Part(low, "   ", Ui.Text3);
-            if (room > 0) Part(low, $"troops {regs}/{room}", Ui.Text3);
+            if (elusive && room > 0) Part(low, " · ", Ui.Text3);
+            if (room > 0) Part(low, $"Troops {regs}/{room}", Ui.Text3);
         }
         // the selected fleet: the window look's "chosen" line (#BABABA), kept under the mouse; no fill, the row's own padding
         // (ui-inspo review 2026-11-14: one ladder everywhere, rest line, #676767 under the mouse, #BABABA chosen)
