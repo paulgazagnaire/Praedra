@@ -41,6 +41,8 @@ public partial class FleetLayer : Control
     /// <summary>Screen rectangles the words must keep off (the boxes on the map), set by the owner.</summary>
     public Func<IEnumerable<Rect2>> Boxes { get; set; }
     const float PickRadiusPx = 13f;
+    /// <summary>Half the fleet marker's size (the 16 px pixel icon with its 1 px ring) and where its count badge sits: past the arrow's wing.</summary>
+    const float MarkerR = 8.5f, BadgeR = 11f;
     const float MoverR = 5.5f;
     /// <summary>Below this zoom the fleets of one side at a system share one marker with a count.</summary>
     const float StackZoom = 2.0f;
@@ -116,6 +118,7 @@ public partial class FleetLayer : Control
         {
             int slot = SlotFor(f.At, f.Side == Player || Player == null, slots);
             pos = ParkedAt(s, slot);
+            heading = ParkedHeading;
             return true;
         }
         return false;
@@ -320,14 +323,13 @@ public partial class FleetLayer : Control
         var list = new List<Rect2>();
         foreach (var (f, p, _, count) in DrawnOwn(layout.Own))
         {
-            float r = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id) ? 10f : 8.5f;
-            list.Add(Around(p, r));
-            if (count > 1) list.Add(BadgeBox(p, r));
+            list.Add(Around(p, MarkerR));
+            if (count > 1) list.Add(BadgeBox(p, BadgeR));
         }
         foreach (var (_, p, count) in DrawnEnemy(layout.Enemy))
         {
-            list.Add(Around(p, 8.5f));
-            if (count > 1) list.Add(BadgeBox(p, 8.5f));
+            list.Add(Around(p, MarkerR));
+            if (count > 1) list.Add(BadgeBox(p, BadgeR));
         }
         foreach (var (m, p, _) in movers)
         {
@@ -438,18 +440,18 @@ public partial class FleetLayer : Control
         foreach (var (f, p, _, count) in own)
         {
             bool sel = map.SelectedFleet == f.Id, pt = pointed == (0, f.Id);
-            if (sel || pt) Put(FleetWords(f, true), p, sel ? 10f : 8.5f, ColorOf(f.Side), 13, true, f.At != null, count > 1 ? 12f : 0f);
+            if (sel || pt) Put(FleetWords(f, true), p, MarkerR, ColorOf(f.Side), 13, true, f.At != null, count > 1 ? 12f : 0f);
         }
-        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyText(e.pic), e.p, 8.5f, ColorOf(e.pic.Side), 13, true, true, e.count > 1 ? 12f : 0f); }
+        if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyText(e.pic), e.p, MarkerR, ColorOf(e.pic.Side), 13, true, true, e.count > 1 ? 12f : 0f); }
         float MoverRoom(Mover m) => MoverR + (m.Kind == MoverKind.Mission ? 4f : 1f);   // a mission team's ring is wider than its diamond
         if (pointed.Kind == 2) { var (m, p, _) = movers[pointed.Id]; Put(m.Point ?? m.Label, p, MoverRoom(m), MoverColour(m), 12, true, false, m.Count > 1 ? 12f : 0f); }
         if (!all) return outp;
 
         // then every other glyph's short name
         foreach (var (f, p, _, count) in own)
-            if (map.SelectedFleet != f.Id && pointed != (0, f.Id)) Put(FleetWords(f, false), p, 8.5f, ColorOf(f.Side), 13, false, f.At != null, count > 1 ? 12f : 0f);
+            if (map.SelectedFleet != f.Id && pointed != (0, f.Id)) Put(FleetWords(f, false), p, MarkerR, ColorOf(f.Side), 13, false, f.At != null, count > 1 ? 12f : 0f);
         for (int i = 0; i < enemy.Count; i++)
-            if (pointed != (1, i)) Put(EnemyText(enemy[i].pic), enemy[i].p, 8.5f, ColorOf(enemy[i].pic.Side), 13, false, true, enemy[i].count > 1 ? 12f : 0f);
+            if (pointed != (1, i)) Put(EnemyText(enemy[i].pic), enemy[i].p, MarkerR, ColorOf(enemy[i].pic.Side), 13, false, true, enemy[i].count > 1 ? 12f : 0f);
         for (int i = 0; i < movers.Count; i++)
             if (pointed != (2, i)) { var (m, p, _) = movers[i]; Put(m.Name ?? m.Label, p, MoverRoom(m), MoverColour(m), 12, false, false, m.Count > 1 ? 12f : 0f); }
         return outp;
@@ -542,37 +544,31 @@ public partial class FleetLayer : Control
 
         DrawMovers(font, movers);
 
+        var drawn = new HashSet<int>();
         foreach (var (f, p, h, count) in DrawnOwn(placed))
         {
+            drawn.Add(f.Id);
             var col = ColorOf(f.Side);
             bool selected = map.SelectedFleet == f.Id || map.PickedFleets.Contains(f.Id);   // or picked with Shift+click
-            float r = selected ? 10f : 8.5f;
-            var perp = new Vector2(-h.Y, h.X);
             bool own = f.Side == Player;
-            // Elusive (backlog F4, 2026-11-22): the marker's base is cut in, an arrowhead instead of a wedge, a fleet built to slip away.
-            // Drawn in code inside the marker's own footprint, no glyph. A stack (zoomed out) is cut only when every fleet of yours in it
-            // is Elusive; the Fleets list tells them apart.
+            // Defensive or Elusive (Paul 2026-11-22, his sketches: a square behind the arrow, or a chevron). A stack (zoomed out) shows the
+            // chevron only when every fleet of yours in it is Elusive; the Fleets list tells them apart.
             bool elusive = own && Elusive != null && (count > 1 && f.At != null
                 ? _game.State.Fleets.Values.Where(x => x.Side == f.Side && x.At == f.At).All(x => Elusive(x.Id))
                 : Elusive(f.Id));
-            var tri = elusive
-                ? new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.8f, p + h * r * 0.15f, p - h * r * 0.7f - perp * r * 0.8f }   // cut 0.85 r deep: a chevron even at the opening zoom (UI review 2)
-                : new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
-            DrawColoredPolygon(tri, col);
-            DrawPolyline(tri.Append(tri[0]).ToArray(), selected ? Colors.White : own ? new Color(1, 1, 1, 0.9f) : new Color(0, 0, 0, 0.85f), selected ? 2.5f : own ? 1.6f : 1.2f, true);
-            if (count > 1) Badge(font, p, r, count, col);
+            bool fx = h.X > 0.01f, fy = h.Y > 0.01f;   // the diagonal nearest its heading
+            DrawMarker(!own ? "fleet-unknown" : elusive ? "fleet-elusive" : "fleet-defensive", p, fx, fy, RimLight(f.Id, fx, fy), col, selected);
+            if (count > 1) Badge(font, p, BadgeR, count, col);
         }
+        // a fleet out of sight (lost, merged, in a stack) starts afresh when it shows again: no turn from where it was last seen
+        foreach (int gone in _facing.Keys.Where(k => !drawn.Contains(k)).ToList()) { _facing.Remove(gone); _turns.Remove(gone); }
 
-        // enemy fleets the player's side sees now: a pointed-down triangle with a dark outline (no name: what was seen is in its words)
+        // enemy fleets the player's side sees now: the bare arrow (their orders are hidden), no name: what was seen is in its words
         foreach (var (pic, p, count) in DrawnEnemy(layout.Enemy))
         {
             var col = ColorOf(pic.Side);
-            const float r = 8.5f;
-            if (count > 1) Badge(font, p, r, count, col);
-            var h = Vector2.Down; var perp = new Vector2(-h.Y, h.X);
-            var tri = new[] { p + h * r, p - h * r * 0.7f + perp * r * 0.7f, p - h * r * 0.7f - perp * r * 0.7f };
-            DrawColoredPolygon(tri, col);
-            DrawPolyline(new[] { tri[0], tri[1], tri[2], tri[0] }, new Color(0, 0, 0, 0.85f), 1.2f, true);
+            if (count > 1) Badge(font, p, BadgeR, count, col);
+            DrawMarker("fleet-unknown", p, true, false, TopLeft, col, false);   // parked up-right, as yours
         }
 
         // the words last, so no line or marker paints over them
@@ -585,6 +581,122 @@ public partial class FleetLayer : Control
         // the map's system names keep off these words: when the glyph under the mouse changes, the map places its names again
         var pt = Pointed(DrawnOwn(placed), DrawnEnemy(layout.Enemy), movers);
         if (pt != _lastPointed) { _lastPointed = pt; map.QueueRedraw(); }
+    }
+
+    /// <summary>
+    /// A fleet's marker: a 16 x 16 pixel icon from <see cref="PixelIconData.Map"/> (code only, Paul 2026-11-18), drawn up-left and mirrored to
+    /// the diagonal nearest its heading (whole pixels only: a turned pixel icon smears), its rim lit by <see cref="RimLight"/>. The middle of
+    /// its shape sits on the fleet's point. A 1 px dark ring around the shape keeps it off routes and dots; a selected (or picked) fleet gets
+    /// a second, white ring outside it, so it stands 2 px larger, as the old triangle grew when selected.
+    /// </summary>
+    void DrawMarker(string key, Vector2 p, bool fx, bool fy, int light, Color col, bool selected)
+    {
+        var grid = MarkerTones(key, fx, fy, light);
+        int n = grid.Length;
+        char Tone(int x, int y) => x < 0 || y < 0 || x >= n || y >= n ? '.' : grid[y][x];
+        int x0 = n, y0 = n, x1 = -1, y1 = -1;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+                if (Tone(x, y) != '.') { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
+        if (x1 < 0) return;
+        var at = (p - new Vector2((x0 + x1 + 1) / 2f, (y0 + y1 + 1) / 2f)).Round();
+        // how far an empty pixel is from the shape (1 = touching, 2 = one pixel further out), up to `rings`
+        int rings = selected ? 2 : 1;
+        int Gap(int x, int y)
+        {
+            for (int r = 1; r <= rings; r++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                        if (Tone(x + dx, y + dy) != '.') return r;
+            return 0;
+        }
+        var dark = new Color(0, 0, 0, 0.85f);
+        for (int y = y0 - rings; y <= y1 + rings; y++)
+            for (int x = x0 - rings; x <= x1 + rings; x++)
+            {
+                if (Tone(x, y) != '.') continue;
+                int g = Gap(x, y);
+                if (g > 0) DrawRect(new Rect2(at.X + x, at.Y + y, 1, 1), g == 1 ? dark : Colors.White);
+            }
+        PixelIcons.Draw(this, grid, at, 1, PixelIcons.RampOf(col), col);
+    }
+
+    // ------------------------------------------------------------------ the markers' light
+    // Paul 2026-11-22: parked fleets point up-right; a moving one points along its route; "a very subtle movement in the pixels to reflect the
+    // light changing orientation when a moving fleet icon turns". The light stays where every pixel icon has it, the top left of the screen
+    // (pixel-icons skill). The tones inside a marker turn with it (the look Paul approved); only its outline answers the screen's light, so a
+    // turn moves a few rim pixels, never the whole shading. On a turn the rim's light starts where it was on the ship and steps round to the top
+    // left, 45 degrees every LightStepMs: the few pixels slide instead of jumping.
+
+    /// <summary>Where a parked fleet points: up-right (Paul 2026-11-22).</summary>
+    static readonly Vector2 ParkedHeading = new Vector2(1, -1).Normalized();
+    /// <summary>The light's eight directions, clockwise from the top left (screen y grows down).</summary>
+    static readonly Vector2I[] LightDirs = { new(-1, -1), new(0, -1), new(1, -1), new(1, 0), new(1, 1), new(0, 1), new(-1, 1), new(-1, 0) };
+    const int TopLeft = 0;
+    /// <summary>Each 45-degree step of the rim's light after a turn: a quarter turn takes two steps, about a fifth of a second.</summary>
+    const double LightStepMs = 90;
+    /// <summary>How square an outline pixel must face the light (or away from it) to be lit (or dark); cosine of about 68 degrees.</summary>
+    const float RimFacing = 0.38f;
+    readonly Dictionary<int, (bool Fx, bool Fy)> _facing = new();
+    readonly Dictionary<int, (int From, int Dir, int Steps, ulong Start)> _turns = new();
+    static readonly Dictionary<(string Key, bool Fx, bool Fy, int Light), string[]> ToneCache = new();
+
+    /// <summary>The light on a fleet's rim this frame (an index in <see cref="LightDirs"/>), starting a turn's steps when its marker flips.</summary>
+    internal int RimLight(int fleet, bool fx, bool fy, ulong? at = null)
+    {
+        ulong now = at ?? Time.GetTicksMsec();
+        if (_facing.TryGetValue(fleet, out var was) && was != (fx, fy))
+        {
+            // the light as it lay on the ship before the turn, carried onto the new drawing, then round to the top left the short way
+            var from = new Vector2I(was.Fx != fx ? 1 : -1, was.Fy != fy ? 1 : -1);
+            int i = Array.IndexOf(LightDirs, from), cw = (TopLeft - i + 8) % 8;
+            if (cw != 0) _turns[fleet] = (i, cw <= 4 ? 1 : -1, cw <= 4 ? cw : 8 - cw, now);
+        }
+        _facing[fleet] = (fx, fy);
+        if (!_turns.TryGetValue(fleet, out var t)) return TopLeft;
+        int k = (int)((now - t.Start) / LightStepMs);
+        if (k >= t.Steps) { _turns.Remove(fleet); return TopLeft; }
+        return ((t.From + t.Dir * k) % 8 + 8) % 8;
+    }
+
+    /// <summary>
+    /// A marker's tones pointing along fx/fy with the rim's light from LightDirs[light]: the icon's own tones mirrored with it, then each outline
+    /// pixel that faces the light differently from the light it was drawn with takes the light's tone (3 facing it, 1 facing away, 2 side on).
+    /// Pointing up-left with the light at the top left it is the icon as drawn. Cached: three icons, four ways, eight lights.
+    /// </summary>
+    internal static string[] MarkerTones(string key, bool fx, bool fy, int light)
+    {
+        if (ToneCache.TryGetValue((key, fx, fy, light), out var done)) return done;
+        var grid = PixelIconData.Map[key];
+        int n = grid.Length;
+        var rows = new char[n][];
+        for (int y = 0; y < n; y++)
+        {
+            rows[y] = new char[n];
+            for (int x = 0; x < n; x++) rows[y][x] = grid[fy ? n - 1 - y : y][fx ? n - 1 - x : x];
+        }
+        bool On(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && rows[y][x] != '.';
+        int? Facing(int x, int y, Vector2I l)
+        {
+            // the outline's outward direction: the sum of the steps to the empty pixels around it
+            int nx = 0, ny = 0;
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                    if ((dx != 0 || dy != 0) && !On(x + dx, y + dy)) { nx += dx; ny += dy; }
+            if (nx == 0 && ny == 0) return null;
+            float d = (nx * l.X + ny * l.Y) / (Mathf.Sqrt(nx * nx + ny * ny) * Mathf.Sqrt(l.X * l.X + l.Y * l.Y));
+            return d > RimFacing ? 1 : d < -RimFacing ? -1 : 0;
+        }
+        var drawn = new Vector2I(fx ? 1 : -1, fy ? 1 : -1);   // the light the icon's tones were drawn with, mirrored with it
+        var output = rows.Select(r => (char[])r.Clone()).ToArray();
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                if (rows[y][x] is '.' or '4') continue;   // the shine on the nose stays
+                if (Facing(x, y, LightDirs[light]) is not int now || now == Facing(x, y, drawn)) continue;
+                output[y][x] = now > 0 ? '3' : now < 0 ? '1' : '2';
+            }
+        return ToneCache[(key, fx, fy, light)] = output.Select(r => new string(r)).ToArray();
     }
 
     /// <summary>

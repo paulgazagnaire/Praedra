@@ -695,6 +695,69 @@ public static partial class PixelIconData
         },
     };
 
+    /// <summary>Set "map". Tone of each pixel, row 0 at the top: '.' empty, '1' dark, '2' mid, '3' light, '4' shine.
+    /// Draw each pixel as a square, size 1 or 2 (never a fraction). Greyed out: every tone in one grey.</summary>
+    public static readonly IReadOnlyDictionary<string, string[]> Map = new Dictionary<string, string[]>
+    {
+        ["fleet-defensive"] = new[]
+        {
+            "43..............",
+            "32333...........",
+            ".322233.........",
+            ".32222233.......",
+            ".3222222233.....",
+            "..3222222223....",
+            "..32222111113...",
+            "...3221.........",
+            "...3221.........",
+            "....321..33333..",
+            "....321..32221..",
+            ".....31..32221..",
+            "......3..32221..",
+            ".........31111..",
+            "................",
+            "................",
+        },
+        ["fleet-elusive"] = new[]
+        {
+            "43..............",
+            "32333...........",
+            ".322233.........",
+            ".32222233.......",
+            ".3222222233.....",
+            "..3222222223....",
+            "..32222111113...",
+            "...3221.........",
+            "...3221.333333..",
+            "....321.3311113.",
+            "....321.31......",
+            ".....31.31......",
+            "......3.31......",
+            "........31......",
+            ".........3......",
+            "................",
+        },
+        ["fleet-unknown"] = new[]
+        {
+            "43..............",
+            "32333...........",
+            ".322233.........",
+            ".32222233.......",
+            ".3222222233.....",
+            "..3222222223....",
+            "..32222111113...",
+            "...3221.........",
+            "...3221.........",
+            "....321.........",
+            "....321.........",
+            ".....31.........",
+            "......3.........",
+            "................",
+            "................",
+            "................",
+        },
+    };
+
     /// <summary>Colours for tones 1-4 per meaning colour (index 0 = tone 1). Tone 2 is the UiKit colour itself;
     /// dark leans cooler, light and shine warmer, at most 10 degrees of hue (pixel-icons skill, ramp()).</summary>
     public static readonly IReadOnlyDictionary<string, string[]> Ramps = new Dictionary<string, string[]>
