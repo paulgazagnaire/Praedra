@@ -22,15 +22,16 @@ public partial class Main
         // a fleet standing still with a free leader of yours at a system you hold. This runs after 400 days against the real AI, which may have
         // sunk every fleet that stood by a leader (QA-98), so the test plants its own two-transport fleet by the first free leader (test only,
         // like the harvester fleet): the checks no longer depend on what the AI did.
-        var lead = s.MyCharacters.Where(c => Free(c) && c.AttachedFleet == 0 && s.OwnerOf(cm.LocationOf(c)) == me).OrderBy(c => c.Id).FirstOrDefault();
+        // and at a system no enemy fleet stands at or flies to: a battle there in the next days would sink the planted fleet (Hold beams 2026-11-22:
+        // the Collective then attacked Charter on day 401). Falls back to any such leader.
+        bool Safe(string? at) => at != null && !s.Game.State.Fleets.Values.Any(f => f.Side != me
+            && (f.At == at || f.Transit is { } tr && tr.Path.Skip(tr.HopIndex + 1).Contains(at)));
+        var leads = s.MyCharacters.Where(c => Free(c) && c.AttachedFleet == 0 && s.OwnerOf(cm.LocationOf(c)) == me).OrderBy(c => c.Id).ToList();
+        var lead = leads.FirstOrDefault(c => Safe(cm.LocationOf(c))) ?? leads.FirstOrDefault();
         Expect(lead != null, "a free leader of yours stands on a system you hold");
         if (lead == null) return;
         string transport = me == Praedra.Core.Clock.Side.Hand ? "Bond II" : "Barge";
         var fleet = s.Game.State.Fleets[fm.AddFleet(me, "Window Test", new[] { transport, transport }, cm.LocationOf(lead))];
-        // the Lictors' build card below needs a Training facility at Charter, which 400 AI days may have destroyed (QA-98): plant one (test only)
-        string capital = Praedra.Core.Control.ControlModule.CapitalSystem;
-        if (me == Praedra.Core.Clock.Side.Hand && s.OwnerOf(capital) == me && s.Host.Economy.FreeEnergy(capital) > 0)
-            s.Host.Economy.AddFacility(capital, FacilityKind.TrainingFacility);
         string sys = fleet.At, lname = s.CharName(lead.Id);
         int fid = fleet.Id;
         GD.Print($"  {lname} and {fleet.Name} at {sys}");
@@ -278,6 +279,10 @@ public partial class Main
         string cap = Praedra.Core.Control.ControlModule.CapitalSystem;
         if (me == Praedra.Core.Clock.Side.Hand && s.OwnerOf(cap) == Praedra.Core.Clock.Side.Hand)
         {
+            // the Lictors' build card needs a Training facility at Charter, which 400 AI days, or a raid in the days above, may have destroyed
+            // (QA-98): plant one right here, with no day between (test only)
+            if (s.Host.Economy.OfKindAt(cap, FacilityKind.TrainingFacility) == 0 && s.Host.Economy.FreeEnergy(cap) > 0)
+            { s.Host.Economy.AddFacility(cap, FacilityKind.TrainingFacility); gs.ForgetYardIndex(); }
             gs.OpenMgmt(GameScreen.MgKind.Infra, cap); gs.PlayRefresh(); gs.Click($"Yard {cap} Training"); gs.PlayRefresh();
             string troops = gs.MgText($"Infra {cap}"); // rebuilds the window as the next frame would, so the Troops tab's cards exist
             var lictors = UiTest.Find<Button>(gs, "Build Lictors") as InfoButton;
