@@ -446,7 +446,7 @@ public partial class GameScreen
             bool post = z.Key.EndsWith(" General", StringComparison.Ordinal) || z.Key.EndsWith(" Admiral", StringComparison.Ordinal)
                 || z.Key.EndsWith(" Commander", StringComparison.Ordinal);
             bool riders = z.Key.EndsWith(" Passengers", StringComparison.Ordinal);
-            z.Flow.AddChild(w.Kind == MgKind.Fleet ? EmptyCard(post || riders ? PickLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
+            z.Flow.AddChild(w.Kind == MgKind.Fleet ? EmptyCard(post || riders ? DropLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
         }
         Fit(w, keep);
     }

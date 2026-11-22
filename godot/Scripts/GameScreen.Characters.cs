@@ -161,7 +161,7 @@ public partial class GameScreen
     string LeaderLine(CharacterRecord c) =>
         c == null ? "none" : $"{S.CharName(c.Id)} (leadership {Cm.EffectiveSkill(c, Skill.Leadership)}){(c.Status == CharacterStatus.Free ? "" : " - " + GameSession.StatusWords(c) + ", gives no bonus")}";
 
-    // ================================================================== a fleet's officers: the fleet window's posts (PostMenu) and drops use these
+    // ================================================================== a fleet's officers: the fleet window's posts take a leader by drag only (Paul 2026-11-22)
 
     void Attach(CharacterRecord c, Fleet f, CharacterPost post)
     {
