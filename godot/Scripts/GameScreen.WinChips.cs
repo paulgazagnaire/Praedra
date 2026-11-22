@@ -33,9 +33,9 @@ public partial class GameScreen
         if (_moved.ContainsKey(d.Key)) return new Control { Visible = false };   // it already stands where it was dropped
         bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id);
         string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : LeaderPosts(c);
-        var tile = Tile(null, false, 0, name, sub, 1, can ? Ui.You : Ui.Text3, avatar: Initials(name));
+        var tile = Tile(null, false, 0, GameSession.CardName(name), sub, 1, can ? Ui.You : Ui.Text3, avatar: Initials(name));
         bool mission = CanJoin(c);
-        tile.TooltipText = Ui.Wrap($"{name}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : "")
+        tile.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : "")
             + (mission ? " Right-click to send them on a mission." : ""));
         tile.SetMeta(UiTest.FullName, "Leader " + name);
         if (can) MakeDraggable(tile, new List<Drag> { d }, name);
