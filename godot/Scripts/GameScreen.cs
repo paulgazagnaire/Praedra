@@ -85,6 +85,7 @@ public partial class GameScreen : Control
         _view.LabelObstacles = MapLabelObstacles;
         _fleets.Boxes = MapBoxes;
         _fleets.Planned = () => S.PlannedMoves;
+        _fleets.Elusive = id => S.Game.State.Fleets.TryGetValue(id, out var ef) && ef.Side == Me && IsElusive(ef);
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
         _fleets.CharacterRoutes = CharacterRoutes;
         _fleets.Movers = Movers;

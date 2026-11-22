@@ -431,7 +431,7 @@ public partial class GameScreen
     Control BehaviorRow(Fleet f)
     {
         var row = Boxed(new HBoxContainer(), 8);
-        bool Elusive() => _retreatPending.TryGetValue(f.Id, out var p) ? p : S.Host.Battles.OnContactOfFleet(f.Id) == OnContactMode.Retreat;
+        bool Elusive() => IsElusive(f);
         bool retreat = Elusive();
         foreach (var (word, on, tip) in new[]
         {

@@ -255,6 +255,8 @@ public partial class Main
             SelectFleetByList(gs, splitFleet);
             Expect(gs.Click("Fleet orders") && gs.Click("Behavior Elusive"), "Elusive (retreat) from the fleet window's Command tab");
             gs.MgCloseAll();
+            gs.OpenTab("Fleets"); gs.PlayRefresh();
+            Expect(gs.PanelText().Contains("Elusive"), "the Fleets list marks the fleet Elusive at once (backlog F4)");
             int n0 = s.Game.State.Fleets.Values.Count(f => f.Side == me); int sid = splitFleet.Id;
             OpenFleetTab(gs, splitFleet, "Ships");
             Expect(!gs.Enabled("Fleet Split") && gs.Has("Fleet Split"), "Split off is shown, greyed, until a ship is picked");

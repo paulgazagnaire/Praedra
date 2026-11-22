@@ -154,10 +154,15 @@ public partial class GameScreen
         Sent($"{f.Name} invades {f.At}", f.At);
     }
 
+    /// <summary>Whether a fleet of yours is Elusive (pulls back when an enemy fleet arrives), counting a change ordered today, which the
+    /// day applies first. rule: m4-battle-classic §1.3 (SetFleetOnContact).</summary>
+    bool IsElusive(Fleet f) => _retreatPending.TryGetValue(f.Id, out var p) ? p : S.Host.Battles.OnContactOfFleet(f.Id) == OnContactMode.Retreat;
+
     /// <summary>One fleet's answer when an enemy fleet arrives: Elusive (Retreat) or Defensive (Fight). rule: m4-battle-classic §1.3 (SetFleetOnContact {fleet, mode}, per fleet, Paul 2026-11-21).</summary>
     void SetRetreat(Fleet f, bool on)
     {
         _retreatPending[f.Id] = on;
+        _fleets.QueueRedraw();   // its marker's Elusive lines show at once
         S.Track(S.Host.Battles.SubmitSetFleetOnContact(Me, f.Id, on ? OnContactMode.Retreat : OnContactMode.Fight), $"Change the battle behaviour of {f.Name}");
         S.Say(on ? $"Order sent: {f.Name} will pull back when an enemy arrives." : $"Order sent: {f.Name} will stay and fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
