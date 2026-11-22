@@ -32,10 +32,11 @@ public partial class GameScreen
         var d = new Drag('L', c.Id);
         if (_moved.ContainsKey(d.Key)) return new Control { Visible = false };   // it already stands where it was dropped
         bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id);
-        string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : LeaderPosts(c);
+        // no posts line under a free leader's name: right under the name it read as their rank (UI review 12); the posts are in the hover
+        string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : null;
         var tile = Tile(null, false, 0, GameSession.CardName(name), sub, 1, can ? Ui.You : Ui.Text3, avatar: Initials(name));
         bool mission = CanJoin(c);
-        tile.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : "")
+        tile.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}.{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : "")
             + (mission ? " Right-click to send them on a mission." : ""));
         tile.SetMeta(UiTest.FullName, "Leader " + name);
         if (can) MakeDraggable(tile, new List<Drag> { d }, name);

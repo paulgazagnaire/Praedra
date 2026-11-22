@@ -1,23 +1,24 @@
 id,rank,name,source
-839,Captain,Oz Gantry,lore: specs/creative/14-characters.md heading
-840,Admiral,Mara Keel,lore: specs/creative/14-characters.md heading
-851,Captain,Nikan Sev,lore: specs/creative/14-characters.md heading
-896,Project Director,Cyprian Galena,lore: specs/creative/14-characters.md heading
-897,Admiral,Lucan Mordant,lore: specs/creative/14-characters.md heading
-898,Admiral,Decimus Varo,lore: specs/creative/14-characters.md heading
-900,Captain,Quintus Ferro,lore: specs/creative/14-characters.md heading
-901,General,Constans Ordo,lore: specs/creative/14-characters.md heading
-902,Captain,Junia Arca,lore: specs/creative/14-characters.md heading
-903,Approval Director,Placida Ren,lore: specs/creative/14-characters.md heading
-908,Captain,Ilian Venia,lore: specs/creative/14-characters.md heading
-909,Admiral,Spurius Cato,lore: specs/creative/14-characters.md heading
-910,Director,Perpetua Stabil,lore: specs/creative/14-characters.md heading
-912,Admiral,Hostilia Saxa,lore: specs/creative/14-characters.md heading
-916,Commodore,Fidelis Censor,lore: specs/creative/14-characters.md heading
-917,Chief Engineer,Tullia Cinnabar,lore: specs/creative/14-characters.md heading
-918,Senior Auditor,Mantis Doran,lore: specs/creative/14-characters.md heading
-921,Notary,Lethe,lore: specs/creative/14-characters.md heading
-922,Notary,Obol,lore: specs/creative/14-characters.md heading
-924,Commander,Terminus Rade,lore: specs/creative/14-characters.md heading
-926,Director,Pythia Kallos,lore: specs/creative/14-characters.md heading
-927,Captain,Aurelia Quell,lore: specs/creative/14-characters.md heading
+839,Captain,Oz Gantry,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+840,Admiral,Mara Keel,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+851,Captain,Nikan Sev,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+860,Captain,Sunday,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+896,Project Director,Cyprian Galena,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+897,Admiral,Lucan Mordant,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+898,Admiral,Decimus Varo,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+900,Captain,Quintus Ferro,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+901,General,Constans Ordo,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+902,Captain,Junia Arca,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+903,Approval Director,Placida Ren,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+908,Captain,Ilian Venia,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+909,Admiral,Spurius Cato,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+910,Director,Perpetua Stabil,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+912,Admiral,Hostilia Saxa,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+916,Commodore,Fidelis Censor,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+917,Chief Engineer,Tullia Cinnabar,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+918,Senior Auditor,Mantis Doran,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+921,Notary,Lethe,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+922,Notary,Obol,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+924,Commander,Terminus Rade,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+926,Director,Pythia Kallos,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)
+927,Captain,Aurelia Quell,rank: start of the data name (roster.csv); name: lore heading without rank (specs/creative/14-characters.md)

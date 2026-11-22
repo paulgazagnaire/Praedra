@@ -31,15 +31,13 @@ public class CharacterRankTests
         Assert.Equal("Mae Abara", c.ShownName);
     }
 
-    // no shown name still starts with a known rank word, except where the rank is the name itself in the lore ("Captain Sunday",
-    // specs/creative/14-characters.md heading; he is no ship's captain)
+    // no shown name still starts with a known rank word
     [Fact]
     public void NoShownNameStartsWithARank()
     {
         var d = Real();
         var ranks = d.All.Select(c => c.Rank).Where(r => r.Length > 0).Distinct().ToList();
-        var loreNames = new[] { "Captain Sunday" };
-        foreach (var c in d.Roster.Where(c => !loreNames.Contains(c.ShownName)))
+        foreach (var c in d.Roster)
             Assert.False(ranks.Any(r => c.ShownName.StartsWith(r + " ", StringComparison.Ordinal)), $"{c.Id} '{c.ShownName}' still starts with a rank");
     }
 
