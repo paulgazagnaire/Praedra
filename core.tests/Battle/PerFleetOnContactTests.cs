@@ -65,6 +65,16 @@ public class PerFleetOnContactTests
         Assert.NotEmpty(w.Events<RetreatHeldByHoldBeam>());
     }
 
+    // m4-battle-classic PF2c (QA round 201 note 2): under New, Elusive squadrons with a hyperdrive leave at second 0 even with no Elusive ship; the Ark fights on
+    [Fact]
+    public void PF2c_NewElusiveSquadronsLeaveAlone()
+    {
+        var (r, u) = NewBattleTests.Fight(NewBattleTests.NewNoHoldBeams, new[] { ("Ark", 1), ("Swift", 3) }, new[] { (Mandate, 1) },
+            prepare: us => { foreach (var x in us.Where(x => x.Side == Side.Collective && !x.IsCapital)) x.Elusive = true; });
+        Assert.All(u.Where(x => x.Side == Side.Collective && !x.IsCapital), x => Assert.True(x.Left && x.JumpedAlone));
+        Assert.False(u.Single(x => x.Side == Side.Collective && x.IsCapital).Left && r.Seconds <= 5, "the Ark did not leave with them");
+    }
+
     // m4-battle-classic PF3: an enemy gravity well holds the Elusive fleet too: the refusal is reported and it fights on
     [Theory]
     [InlineData(BattleRuleset.Classic)]

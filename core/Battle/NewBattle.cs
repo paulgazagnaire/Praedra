@@ -240,7 +240,7 @@ public sealed class NewBattle
         // rule: m4-battle-classic §1.3 (per fleet, Paul 2026-11-21): a fighting side's Elusive units leave at second 0 on their own if they can; the rest fights
         foreach (var side in Sides)
         {
-            if (_decided[I(side)] || !_u.Any(u => u.Side == side && u.B.Elusive && u.Capital && u.State == St.Active) || ShipsLive(Other(side)) == 0) continue;
+            if (_decided[I(side)] || !_u.Any(u => u.Side == side && u.B.Elusive && (u.State == St.Active || u.State == St.Hangar)) || ShipsLive(Other(side)) == 0) continue; // squadrons too, with no Elusive ship (QA round 201 note 2)
             if (CanRetreat(side, elusiveOnly: true) is { } r) Refuse(side, r); else ExecuteRetreat(side, elusiveOnly: true);
         }
 
