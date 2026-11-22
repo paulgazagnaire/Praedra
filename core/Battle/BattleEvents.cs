@@ -31,8 +31,9 @@ public sealed record BattleChoice(int Index, int Day, string System, Side Side, 
 public sealed record UnitDestroyed(int Index, int Day, string System, int Unit, int Second, UnitLossReason Reason)
     : GameEvent(Index, Day, nameof(UnitDestroyed));
 
-/// <summary>First refused retreat of the battle.</summary>
-public sealed record RetreatRefused(int Index, int Day, string System, Side Side, RetreatRefusal Reason)
+/// <summary>First refused retreat of the battle. <paramref name="ElusiveOnly"/>: only the side's Elusive units were trying to leave (rule: m4-battle-classic §1.3, per fleet), not the whole side.</summary>
+public sealed record RetreatRefused(int Index, int Day, string System, Side Side, RetreatRefusal Reason,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool ElusiveOnly = false)
     : GameEvent(Index, Day, nameof(RetreatRefused));
 
 /// <summary>New rules: an enemy Hold beam held a ship that tried to retreat; it stays in the battle. Fields: ship, holder, battle second. rule: m4-retreat-damage-repair §6.</summary>

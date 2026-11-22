@@ -67,7 +67,7 @@ public abstract record BattleStep;
 /// <summary>A unit was destroyed in second <paramref name="Second"/> (0 = at the alert).</summary>
 public sealed record UnitDestroyedStep(BattleUnit Unit, int Second, UnitLossReason Reason) : BattleStep;
 /// <summary>The first refusal of a retreat in this battle. rule: m4-retreat-damage-repair §1.</summary>
-public sealed record RetreatRefusedStep(Side Side, RetreatRefusal Reason) : BattleStep;
+public sealed record RetreatRefusedStep(Side Side, RetreatRefusal Reason, bool ElusiveOnly = false) : BattleStep;
 /// <summary>New rules: a ship of a retreating side was held by an enemy Hold beam and stays on the field. rule: m4-retreat-damage-repair §6.</summary>
 public sealed record HoldBeamHeldStep(BattleUnit Ship, BattleUnit Holder, int Second) : BattleStep;
 /// <summary>A side retreated (its units are marked <see cref="BattleUnit.Left"/>). rule: m4-retreat-damage-repair §2.</summary>
@@ -512,7 +512,7 @@ public sealed class ClassicBattle
         RetreatRefusal? why = AliveOf(Other(side)).Any(u => u.IsCapital && u.Class.GravityWellProjector > 0) ? RetreatRefusal.GravityWell
             : !AliveOf(side).Any(u => u.Elusive && !u.Docked && ClassicRates.CanJump(_p, u)) ? RetreatRefusal.NoHyperdrive
             : !_hasDestination[I(side)] ? RetreatRefusal.NoDestination : null;
-        if (why is { } r) { Refuse(side, r); return false; }
+        if (why is { } r) { Refuse(side, r, elusiveOnly: true); return false; }
         return true;
     }
 
@@ -525,11 +525,11 @@ public sealed class ClassicBattle
         return true;
     }
 
-    private void Refuse(Side side, RetreatRefusal reason)
+    private void Refuse(Side side, RetreatRefusal reason, bool elusiveOnly = false)
     {
         if (_refusalReported) return;
         _refusalReported = true; // once per battle, at the first refusal. rule: m4-retreat-damage-repair §1
-        _steps.Add(new RetreatRefusedStep(side, reason));
+        _steps.Add(new RetreatRefusedStep(side, reason, elusiveOnly));
     }
 
     // ---------------------------------------------------------------- targeting. rule: m4-battle-classic §5, §6 (B3 §8, §9)

@@ -85,7 +85,9 @@ public class PerFleetOnContactTests
     public void PF3_GravityWellKeepsTheElusiveFleet(BattleRuleset r)
     {
         var (w, el, _) = Mixed(r, Interdictor);
-        Assert.Equal(RetreatRefusal.GravityWell, w.Events<RetreatRefused>().First().Reason);
+        var refused = w.Events<RetreatRefused>().First();
+        Assert.Equal(RetreatRefusal.GravityWell, refused.Reason);
+        Assert.True(refused.ElusiveOnly, "only the Elusive fleet was trying to leave"); // the news says "Elusive fleets" (QA-119)
         Assert.DoesNotContain(w.Events<FleetRetreated>(), e => e.Fleet == el);
     }
 

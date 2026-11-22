@@ -200,17 +200,21 @@ public sealed partial class GameSession
             case RetreatRefused rr:
             {
                 string why = RefusalWords(rr.Reason);
-                if (_battles.TryGetValue(rr.System, out var rbd)) rbd.Retreats.Add($"{You(rr.Side)} could not retreat: {why}");
-                if (Mine(rr.Side)) yield return new Message(d, $"Your ships at {rr.System} could not leave the battle: {why}.", rr.System, MsgKind.Bad);
+                string who = rr.ElusiveOnly ? "Elusive fleets" : "ships"; // per fleet: often only the Elusive ones tried (m4-battle-classic §1.3)
+                if (_battles.TryGetValue(rr.System, out var rbd)) rbd.Retreats.Add($"{You(rr.Side)}{(rr.ElusiveOnly ? " Elusive fleets" : "")} could not retreat: {why}");
+                if (Mine(rr.Side)) yield return new Message(d, $"Your {who} at {rr.System} could not leave the battle: {why}.", rr.System, MsgKind.Bad);
                 break;
             }
             case RetreatHeldByHoldBeam hb:
             {
                 if (_battles.TryGetValue(hb.System, out var hbd) && !hbd.Held.Add(hb.Ship)) break; // told once per ship and battle
-                Side heldSide = hbd != null && hbd.Collective.Contains(hb.Ship) ? Side.Collective : Side.Hand;
-                string line = $"{ClassName(hb.Ship)} ({NameOf(heldSide)}) was held by the Hold beam of {ClassName(hb.Holder)} and could not jump";
+                // the event has no side: read it from the battle's unit lists, else from the ship itself; unknown = no news line
+                Side? heldSide = hbd != null && hbd.Collective.Contains(hb.Ship) ? Side.Collective : hbd != null && hbd.Hand.Contains(hb.Ship) ? Side.Hand
+                    : Host.Economy.Find(hb.Ship)?.Side;
+                if (heldSide is not Side hs) break;
+                string line = $"{ClassName(hb.Ship)} ({NameOf(hs)}) was held by the Hold beam of {ClassName(hb.Holder)} and could not jump";
                 hbd?.Retreats.Add(line);
-                if (Mine(heldSide)) yield return new Message(d, $"At {hb.System}, your {ClassName(hb.Ship)} was held by an enemy {ClassName(hb.Holder)}'s Hold beam and could not leave the battle.", hb.System, MsgKind.Bad);
+                if (Mine(hs)) yield return new Message(d, $"At {hb.System}, your {ClassName(hb.Ship)} was held by an enemy {ClassName(hb.Holder)}'s Hold beam and could not leave the battle.", hb.System, MsgKind.Bad);
                 break;
             }
 
