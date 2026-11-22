@@ -499,8 +499,8 @@ public partial class GameScreen
     /// <summary>
     /// The head of a window (Paul's "styles" frame): on the left the line saying where it is, the name in pixel capitals and a line of key
     /// numbers under it (Paul kept both lines, 2026-11-14); on the right, pinned to the edge, the window buttons ⋮⋮ – ×. The name is #BABABA
-    /// whoever's it is, red when harvested, darkest grey when unexplored (the caller says which). <paramref name="grip"/> is the fleet's own
-    /// ⋮⋮ (drag it to merge); any other window gets a ⋮⋮ that moves the window (Paul 2026-11-14), as its whole head does.
+    /// whoever's it is, red when harvested, darkest grey when unexplored (the caller says which). <paramref name="grip"/> is a ⋮⋮ the caller
+    /// made; any other window gets a ⋮⋮ that moves the window (Paul 2026-11-14), as its whole head does.
     /// </summary>
     void MgHead(MgWin w, string caption, string title, Color titleColor, string sub = null, Control badge = null, Control grip = null)
     {

@@ -47,7 +47,6 @@ public partial class GameScreen
 
         if (_view.Selected != _lastSelectedSystem || _view.SelectedFleet != _lastSelectedFleet)
         {
-            if (_view.SelectedFleet != _lastSelectedFleet) _splitSel.Clear();
             bool newSystem = _view.Selected != _lastSelectedSystem;
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();

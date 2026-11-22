@@ -12,15 +12,12 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The fleet panel (user stories C1, C2, C6, C7): where the fleet is and where it goes, its strength and speed, what it is made of (each ship
-/// class explained on hover), its orders (move, troops, fighters; attack, the harvester, fight or retreat and scrap are in the Fleet window's Orders tab, one
-/// click away), its officers, and split, transfer and merge with the fleets at the
-/// same system. Only the player's own fleets can be selected.
+/// The side panel's page for a fleet (user stories C1, C2): where it is and where it goes, its orders with Cancel, a few numbers, Move and
+/// Open fleet window. Every other fleet order lives in the fleet's own window (GameScreen.WinFleet.cs); the order helpers below are shared
+/// with it. Only the player's own fleets can be selected.
 /// </summary>
 public partial class GameScreen
 {
-    readonly HashSet<int> _splitSel = new();
-
     string WhereIs(Fleet f)
     {
         if (f.Transit is { } t && f.At == null)
@@ -35,13 +32,15 @@ public partial class GameScreen
     List<EconObject> FightersBasedAt(string system) => system == null ? new List<EconObject>() :
         S.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.Fighter && o.Side == Me && o.Completed && o.AboardShip == 0 && o.System == system).OrderBy(o => o.Id).ToList();
 
+    /// <summary>
+    /// The side panel's page for a fleet you selected: where it is, its orders with Cancel, a few numbers, and two buttons, Move and Open
+    /// fleet window. Everything else (attack, merge, split, scrap, load, unload, its leaders) is in the fleet's own window, so there is one
+    /// way to do each thing (2026-11-22, the fleet follow-ups 1, 2 and 8).
+    /// </summary>
     void FleetPanel(Fleet f)
     {
-        var troops = S.Host.Troops;
-        var eco = S.Host.Economy;
         bool atSystem = f.At != null;
         string at = f.At;
-        var owner = at == null ? null : S.OwnerOf(at);
         var tags = new List<(string, Color)> { ("YOUR FLEET", Ui.You) };
         if (!atSystem) tags.Add(("MOVING", Ui.Text2));
         else if (S.PlannedMoveOf(f.Id) != null) tags.Add(("LEAVING", Ui.Warn));
@@ -60,113 +59,25 @@ public partial class GameScreen
         }
         foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
 
-        // ---- numbers
-        var aboard = troops.RegimentsAboard(f);
-        var fightersAboard = FightersAboard(f);
+        var eco = S.Host.Economy;
+        int fighters = FightersAboard(f).Count + f.Squadrons.Count, regiments = S.Host.Troops.RegimentsAboard(f).Count;
+        int damaged = f.Ships.Select(eco.Find).Count(o => o != null && Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull);
         using (Card())
         {
+            Stat("Ships", f.Ships.Count + (damaged > 0 ? $"  ({damaged} damaged)" : ""), damaged > 0 ? Ui.Warn : null);
             Stat("Strength", $"{Fm.StrengthOf(f):0}", null, "How hard the fleet hits: its damage rate against a reference force of three Mandates, with its damage counted. Three Decrees score about 65.");
-            Stat("Speed rating", $"{Fm.SpeedOf(f)}  (lower is faster)", null, "The slowest ship sets the fleet's speed. Routes multiply it: major routes 3x, minor 1.5x.");
-            Stat("Ships", f.Ships.Count.ToString());
-            int sq = fightersAboard.Count + f.Squadrons.Count, berths0 = Fm.FreeBerths(f), room0 = Fm.FreeTroopSlots(f);
-            Stat("Fighter squadrons", sq == 0 && berths0 == 0 ? "none (no hangar)" : berths0 > 0 ? $"{sq}  (room for {berths0} more)" : sq.ToString());
-            if (aboard.Count == 0 && room0 == 0) Line("No troop room: transports carry regiments.", Ui.Text3, Ui.Small);
-            else Line($"Regiments aboard: {(aboard.Count == 0 ? "none" : Counts(aboard.Select(a => a.Regiment.Class)))}   (room for {room0} more)", Ui.Text2, Ui.Small);
+            Stat("Fighters", RoomCount(fighters, Fm.FreeBerths(f) + FightersAboard(f).Count) ?? "none");
+            Stat("Troops", RoomCount(regiments, Fm.FreeTroopSlots(f) + regiments) ?? "none");
         }
 
-        // ---- orders
-        Heading("Orders");
         var move = Act(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
-            "Then click a destination system (or a row of a sector window). The route and arrival day show before anything is sent.", !atSystem, "Primary");
+            "Then click a destination system (or a row of a sector window). The route and arrival day show before anything is sent. A right-click on a system sends it there at once.", !atSystem, "Primary");
         move.Alignment = HorizontalAlignment.Center;
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
-        // attack, the harvester's strike, merge, fight or retreat and scrap live in the fleet's window only (Paul 2026-11-14 pick 5, 2026-11-21)
-        Act("Fleet window: attack, merge, ships...", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
-            "Opens the fleet's window: bombard, invade" + (S.HoldsHarvester(f) ? ", the harvester's strike" : "") + ", merge with another fleet, its ships one by one, what they carry, fight or retreat, and scrap.")
-            .SetMeta(UiTest.FullName, "Fleet orders");
-
-        if (atSystem)
-        {
-            // troops (C7)
-            if (owner == Me)
-            {
-                var avail = eco.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == Me && o.System == at && o.AboardShip == 0)
-                    .OrderBy(o => o.Id).Select(o => o.Id).ToList();
-                int room = Fm.FreeTroopSlots(f);
-                int nAll = Math.Min(avail.Count, room);
-                int need = S.Host.Support.RequiredGarrison(at!); // rule: m2-support (garrison); taking regiments below it risks a revolt
-                int nSafe = Math.Min(Math.Max(0, avail.Count - need), room);
-                if (nAll == 0 && room > 0) Note($"No regiments at {at} to load.");
-                if (nSafe > 0)
-                    Act($"Load troops: {nSafe}, the garrison stays", () => LoadTroops(f, avail.Take(nSafe).ToList()),
-                        $"Takes {nSafe} of the {avail.Count} regiment(s) here onto this fleet (room for {room}) and leaves enough to keep order.");
-                if (nAll > nSafe)
-                    Act($"Load every regiment: {nAll} (the planet may revolt)", () => LoadTroops(f, avail.Take(nAll).ToList()),
-                        "Takes all the regiments you have room for. Fewer than the garrison the planet needs can make the people rise up (yards and mines stop).", false, "WarnButton");
-            }
-            if (aboard.Count > 0)
-                Act($"Unload all troops at {at}", () => UnloadTroops(f, aboard.Select(a => a.Regiment.Id).ToList()),
-                    owner == Me ? "Lands the regiments on the planet: they join its garrison."
-                    : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
-                    : "Lands the regiments only on a system you hold. To land them here, invade it from the fleet's window.", owner != Me);
-
-            // fighters (C7)
-            var based = FightersBasedAt(at);
-            int berths = Fm.FreeBerths(f);
-            if (based.Count > 0 && berths > 0)
-                Act($"Load fighters: {Math.Min(based.Count, berths)} of {based.Count} based here", () => LoadFighters(f, based.Take(Math.Min(based.Count, berths)).Select(o => o.Id).ToList()),
-                    "Puts fighter squadrons based on this planet aboard the fleet's carriers.");
-            if (fightersAboard.Count > 0 && owner == Me)
-                Act($"Unload fighters at {at} ({fightersAboard.Count})", () => UnloadFighters(f, fightersAboard.Select(o => o.Id).ToList()), "Bases the squadrons aboard on this planet.");
-        }
-
-        // ---- what it is made of (C2)
-        Heading("Ships and fighters");
-        var byClass = f.Ships.Select(id => eco.Find(id)).Where(o => o != null).GroupBy(o => o.Class).OrderBy(g => g.Key, StringComparer.Ordinal);
-        foreach (var g in byClass)
-        {
-            var damaged = g.Count(o => Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull);
-            var r = Ui.Row($"{g.Key}", $"{g.Count()}{(damaged > 0 ? $"  ({damaged} damaged)" : "")}", damaged > 0 ? Ui.Warn : null, ClassTip(g.Key));
-            Add(r);
-        }
-        foreach (var g in fightersAboard.Concat(f.Squadrons.Select(id => eco.Find(id)).Where(o => o != null)).GroupBy(o => o.Class).OrderBy(g => g.Key, StringComparer.Ordinal))
-            Add(Ui.Row($"{g.Key} (fighters)", g.Count().ToString(), null, ClassTip(g.Key)));
-        if (f.Ships.Count == 0 && fightersAboard.Count == 0 && f.Squadrons.Count == 0) Line("none", Dim);
-
-        OfficersSection(f);
-
-        // split, transfer, merge (C6)
-        if (atSystem)
-        {
-            Heading("Split, transfer, merge or scrap", "Tick ships, then split them into a new fleet, move them into another fleet here, or scrap them.");
-            var others = here.Where(o => o.Id != f.Id).ToList();
-            foreach (int id in f.Ships)
-            {
-                int sid = id;
-                var o = eco.Find(id);
-                var cbs = new CheckBox { Text = $"{o?.Class ?? "?"} #{id}", ButtonPressed = _splitSel.Contains(id), FocusMode = FocusModeEnum.None };
-                if (o != null && Fm.ClassOf(o) is { } sc) cbs.TooltipText = Ui.Wrap($"Hull {o.Hull} of {sc.Hull}. Upkeep {UpkeepOf(o)}. " + ClassTip(o.Class));
-                cbs.Toggled += on => { if (on) _splitSel.Add(sid); else _splitSel.Remove(sid); };
-                Add(cbs);
-            }
-            if (f.Ships.Count > 1)
-            {
-                Act("Split the ticked ships into a new fleet", () => Split(f), "The ticked ships form a new fleet at this system.");
-                foreach (var o in others)
-                {
-                    var other = o;
-                    Act($"Move the ticked ships into {o.Name}", () => Transfer(f, other), "The ticked ships join that fleet; this fleet keeps the rest.");
-                }
-            }
-            else Note("A fleet of one ship cannot be split.");
-            foreach (var o in others)
-            {
-                var other = o;
-                Act($"Merge this fleet into {o.Name}", () => Merge(f, other), "Every ship, fighter, regiment and officer joins that fleet.");
-            }
-            // scrapping cuts upkeep (story C9; rule: m2-maintenance §Scrapping and refunds)
-            Act("Scrap the ticked ships...", () => ScrapTicked(f), "Asks first. Half the refined cost comes back and their upkeep is freed.", false, "DangerButton");
-        }
+        var open = Act("Open fleet window", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
+            "Its orders (attack, merge, split, scrap), its ships one by one, loading fighters and troops, its leaders, and whether it fights or pulls back. F opens it too.");
+        open.Alignment = HorizontalAlignment.Center;
+        open.SetMeta(UiTest.FullName, "Fleet orders");
     }
 
     // ================================================================== the harvester (rule: m5-harvester §2)
@@ -250,34 +161,6 @@ public partial class GameScreen
         // the setting shows in the Fleet window's Orders tab; the panel redraws too, so nothing shows the old setting
         _panelDirty = true; _panelTimer = 0;
         MgRefreshSoon();
-    }
-
-    List<int> Ticked(Fleet f) => _splitSel.Where(f.Ships.Contains).OrderBy(x => x).ToList();
-
-    void ScrapTicked(Fleet f)
-    {
-        var ids = Ticked(f);
-        if (ids.Count == 0) { Toast("Tick at least one ship first.", MsgKind.Warn); return; }
-        var objs = ids.Select(S.Host.Economy.Find).Where(o => o != null).ToList();
-        AskScrap(objs, objs.Count == 1 ? $"the {objs[0].Class} #{objs[0].Id}" : $"{objs.Count} ships of {f.Name}", f.At);
-    }
-
-    void Split(Fleet f)
-    {
-        var ids = Ticked(f);
-        if (ids.Count == 0) { Toast("Tick at least one ship first.", MsgKind.Warn); return; }
-        S.TrackFleet(f.Id, Fm.SubmitSplitFleet(Me, f.Id, ids), $"Split {f.Name}");
-        _splitSel.Clear();
-        Sent($"split {Ui.Count(ids.Count, "ship", "ships")} off {f.Name}", f.At);
-    }
-
-    void Transfer(Fleet f, Fleet into)
-    {
-        var ids = Ticked(f);
-        if (ids.Count == 0) { Toast("Tick at least one ship first.", MsgKind.Warn); return; }
-        S.TrackFleet(f.Id, Fm.SubmitTransferShips(Me, ids, into.Id), $"Move ships from {f.Name} into {into.Name}");
-        _splitSel.Clear();
-        Sent($"move {Ui.Count(ids.Count, "ship", "ships")} from {f.Name} into {into.Name}", f.At);
     }
 
     void Merge(Fleet f, Fleet into)
