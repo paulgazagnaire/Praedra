@@ -660,7 +660,7 @@ public partial class FleetLayer : Control
     /// <summary>
     /// A marker's tones pointing along fx/fy with the rim's light from LightDirs[light]: the icon's own tones mirrored with it, then each outline
     /// pixel that faces the light differently from the light it was drawn with takes the light's tone (3 facing it, 1 facing away, 2 side on).
-    /// Pointing up-left with the light at the top left it is the icon as drawn. Cached: three icons, four ways, eight lights.
+    /// Pointing up-left with the light at the top left it is the icon as drawn. Cached per icon (fleets and movers), way it faces and light.
     /// </summary>
     internal static string[] MarkerTones(string key, bool fx, bool fy, int light)
     {
