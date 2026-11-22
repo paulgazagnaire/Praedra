@@ -43,7 +43,6 @@ public partial class FleetLayer : Control
     const float PickRadiusPx = 13f;
     /// <summary>Half the fleet marker's size (the 16 px pixel icon with its 1 px ring) and where its count badge sits: past the arrow's wing.</summary>
     const float MarkerR = 8.5f, BadgeR = 11f;
-    const float MoverR = 5.5f;
     /// <summary>Below this zoom the fleets of one side at a system share one marker with a count.</summary>
     const float StackZoom = 2.0f;
     // One dashed style per meaning (map declutter, Paul's All A 2026-11-18): a thing on its way in its own colour at 55%, 1.2 px, dash 4
@@ -51,7 +50,7 @@ public partial class FleetLayer : Control
     const float WayAlpha = 0.55f, WayWidth = 1.2f, WaySelWidth = 1.6f, WayDash = 4f;
     static readonly Color PlannedColor = new(1f, 1f, 1f, 0.85f);
     const float PlannedWidth = 1.6f, PlannedDash = 6f;
-    static readonly Color HqGold = new(1f, 0.95f, 0.5f);
+    static readonly Color HqGold = Ui.Gold;   // the capital gold, so the Hearth's pixel icon gets its four tones
 
     Game _game;
     Galaxy _galaxy;
@@ -333,8 +332,8 @@ public partial class FleetLayer : Control
         }
         foreach (var (m, p, _) in movers)
         {
-            list.Add(Around(p, MoverR + (m.Kind == MoverKind.Mission ? 3.5f : 1f)));
-            if (m.Count > 1) list.Add(BadgeBox(p, MoverR));
+            list.Add(Around(p, MoverRoom(m.Kind)));
+            if (m.Count > 1) list.Add(Around(p + MoverBadgeAt(m.Kind), 8.5f));
         }
         return list;
     }
@@ -443,8 +442,7 @@ public partial class FleetLayer : Control
             if (sel || pt) Put(FleetWords(f, true), p, MarkerR, ColorOf(f.Side), 13, true, f.At != null, count > 1 ? 12f : 0f);
         }
         if (pointed.Kind == 1) { var e = enemy[pointed.Id]; Put(EnemyText(e.pic), e.p, MarkerR, ColorOf(e.pic.Side), 13, true, true, e.count > 1 ? 12f : 0f); }
-        float MoverRoom(Mover m) => MoverR + (m.Kind == MoverKind.Mission ? 4f : 1f);   // a mission team's ring is wider than its diamond
-        if (pointed.Kind == 2) { var (m, p, _) = movers[pointed.Id]; Put(m.Point ?? m.Label, p, MoverRoom(m), MoverColour(m), 12, true, false, m.Count > 1 ? 12f : 0f); }
+        if (pointed.Kind == 2) { var (m, p, _) = movers[pointed.Id]; Put(m.Point ?? m.Label, p, MoverRoom(m.Kind), MoverColour(m), 12, true, false, m.Count > 1 ? 12f : 0f); }
         if (!all) return outp;
 
         // then every other glyph's short name
@@ -453,7 +451,7 @@ public partial class FleetLayer : Control
         for (int i = 0; i < enemy.Count; i++)
             if (pointed != (1, i)) Put(EnemyText(enemy[i].pic), enemy[i].p, MarkerR, ColorOf(enemy[i].pic.Side), 13, false, true, enemy[i].count > 1 ? 12f : 0f);
         for (int i = 0; i < movers.Count; i++)
-            if (pointed != (2, i)) { var (m, p, _) = movers[i]; Put(m.Name ?? m.Label, p, MoverRoom(m), MoverColour(m), 12, false, false, m.Count > 1 ? 12f : 0f); }
+            if (pointed != (2, i)) { var (m, p, _) = movers[i]; Put(m.Name ?? m.Label, p, MoverRoom(m.Kind), MoverColour(m), 12, false, false, m.Count > 1 ? 12f : 0f); }
         return outp;
     }
 
@@ -700,9 +698,40 @@ public partial class FleetLayer : Control
     }
 
     /// <summary>
-    /// The player's own movers: a small glyph per kind (leader diamond, mission team diamond in a ring, regiment square, building hexagon, ship or
-    /// fighter hollow triangle, HQ gold disc), moving like a fleet, and the rest of the route as a dashed line. Their words are placed with
-    /// the fleets' (<see cref="Words"/>).
+    /// Each mover's pixel icon in <see cref="PixelIconData.Map"/> (Paul 2026-11-22, "using the same style as the fleet icon, draw all the
+    /// others", max 16 px): a leader is one person, a mission team two (Paul: not the same diamond), a regiment a helmet, a lone ship a hull
+    /// and fighters a small jet (both nose left), a building a house, the moving Hearth a gold flame. Smaller than a fleet's arrow, so fleets
+    /// stay the main thing on the map.
+    /// </summary>
+    static string MoverIcon(MoverKind k) => k switch
+    {
+        MoverKind.Leader => "mover-leader", MoverKind.Mission => "mover-team", MoverKind.Regiment => "mover-regiment",
+        MoverKind.Ship => "mover-ship", MoverKind.Fighter => "mover-fighter", MoverKind.Facility => "mover-building", _ => "mover-hearth",
+    };
+
+    static readonly Dictionary<MoverKind, Vector2> HalfCache = new();
+    /// <summary>Half a mover icon's width and height with its 1 px ring.</summary>
+    static Vector2 MoverHalf(MoverKind k)
+    {
+        if (HalfCache.TryGetValue(k, out var half)) return half;
+        var g = PixelIconData.Map[MoverIcon(k)];
+        int x0 = 99, y0 = 99, x1 = -1, y1 = -1;
+        for (int y = 0; y < g.Length; y++)
+            for (int x = 0; x < g[y].Length; x++)
+                if (g[y][x] != '.') { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
+        return HalfCache[k] = new Vector2((x1 - x0 + 1) / 2f + 1f, (y1 - y0 + 1) / 2f + 1f);
+    }
+
+    /// <summary>The room a mover's words keep from its middle: half its icon's larger side.</summary>
+    static float MoverRoom(MoverKind k) => Math.Max(MoverHalf(k).X, MoverHalf(k).Y);
+
+    /// <summary>Where a mover's count badge sits: off its icon's top right corner, the 7.5 px disc overlapping it by at most 2 px, so the
+    /// badge never hides the icon (a lone ship is wide and flat).</summary>
+    static Vector2 MoverBadgeAt(MoverKind k) => new Vector2(MoverHalf(k).X + 3.9f, -MoverHalf(k).Y - 3.9f);
+
+    /// <summary>
+    /// The player's own movers: a pixel icon per kind (<see cref="MoverIcon"/>), moving like a fleet, and the rest of the route as a dashed
+    /// line. Their words are placed with the fleets' (<see cref="Words"/>).
     /// </summary>
     void DrawMovers(Font font, List<(Mover m, Vector2 pos, Vector2 heading)> movers)
     {
@@ -710,7 +739,6 @@ public partial class FleetLayer : Control
         foreach (var (m, p, h) in movers)
         {
             var col = m.Kind == MoverKind.Hq ? HqGold : ColorOf(Player ?? Side.Hand);
-            var edge = new Color(1, 1, 1, 0.9f);
             // the route still ahead (a lone leader, with its hop times, and the HQ already have their own route line; a Move group does not)
             bool ownLine = m.Kind == MoverKind.Hq || (m.Kind == MoverKind.Leader && m.HopTicks != null);
             if (!m.Held && !ownLine && m.Path.Count > 1)
@@ -726,49 +754,11 @@ public partial class FleetLayer : Control
                     from = to;
                 }
             }
-            float r = MoverR;
-            switch (m.Kind)
-            {
-                case MoverKind.Leader:
-                case MoverKind.Mission:
-                {
-                    var d = new[] { p + new Vector2(0, -r), p + new Vector2(r, 0), p + new Vector2(0, r), p + new Vector2(-r, 0) };
-                    DrawColoredPolygon(d, col);
-                    DrawPolyline(new[] { d[0], d[1], d[2], d[3], d[0] }, edge, 1.2f, true);
-                    if (m.Kind == MoverKind.Mission) DrawArc(p, r + 3f, 0, Mathf.Tau, 20, col, 1.3f, true);
-                    break;
-                }
-                case MoverKind.Regiment:
-                {
-                    var q = new[] { p + new Vector2(-r * 0.8f, -r * 0.8f), p + new Vector2(r * 0.8f, -r * 0.8f), p + new Vector2(r * 0.8f, r * 0.8f), p + new Vector2(-r * 0.8f, r * 0.8f) };
-                    DrawColoredPolygon(q, col);
-                    DrawPolyline(new[] { q[0], q[1], q[2], q[3], q[0] }, edge, 1.2f, true);
-                    break;
-                }
-                case MoverKind.Facility:
-                {
-                    var hex = new Vector2[7];
-                    for (int i = 0; i < 6; i++) hex[i] = p + Vector2.FromAngle(Mathf.Pi / 6f + i * Mathf.Pi / 3f) * r;
-                    hex[6] = hex[0];
-                    DrawColoredPolygon(hex[..6], col);
-                    DrawPolyline(hex, edge, 1.2f, true);
-                    break;
-                }
-                case MoverKind.Hq:
-                    DrawCircle(p, r + 0.5f, col);
-                    DrawArc(p, r + 0.5f, 0, Mathf.Tau, 20, new Color(0, 0, 0, 0.85f), 1.2f, true);
-                    break;
-                default: // ships and fighters flying alone: a hollow triangle, smaller for fighters
-                {
-                    float rr = m.Kind == MoverKind.Fighter ? r * 0.85f : r * 1.1f;
-                    var perp = new Vector2(-h.Y, h.X);
-                    var tri = new[] { p + h * rr, p - h * rr * 0.7f + perp * rr * 0.7f, p - h * rr * 0.7f - perp * rr * 0.7f, p + h * rr };
-                    DrawColoredPolygon(tri[..3], Ui.MapBg);
-                    DrawPolyline(tri, col, 1.6f, true);
-                    break;
-                }
-            }
-            if (m.Count > 1) Badge(font, p, r, m.Count, col);
+            // its pixel icon (Paul 2026-11-22: every mover in the fleet icon's style, max 16 px). Ships and fighters face the way they go
+            // (drawn nose left, mirrored when heading right, their rim re-lit from the top left); the others stand upright.
+            bool faceRight = m.Kind is MoverKind.Ship or MoverKind.Fighter && h.X > 0.01f;
+            DrawMarker(MoverIcon(m.Kind), p, faceRight, false, TopLeft, col, false);
+            if (m.Count > 1) BadgeAt(font, p + MoverBadgeAt(m.Kind), m.Count, col);
         }
     }
 
@@ -796,9 +786,10 @@ public partial class FleetLayer : Control
     }
 
     /// <summary>The number of fleets in a stacked marker, in a small dark disc at its top right.</summary>
-    void Badge(Font font, Vector2 p, float r, int count, Color col)
+    void Badge(Font font, Vector2 p, float r, int count, Color col) => BadgeAt(font, p + new Vector2(r * 0.95f, -r * 0.95f), count, col);
+
+    void BadgeAt(Font font, Vector2 at, int count, Color col)
     {
-        var at = p + new Vector2(r * 0.95f, -r * 0.95f);
         DrawCircle(at, 7.5f, Ui.MapBg);
         DrawArc(at, 7.5f, 0, Mathf.Tau, 16, col, 1.4f, true);
         string t = count > 9 ? "9+" : count.ToString();
