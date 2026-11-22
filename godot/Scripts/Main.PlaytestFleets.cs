@@ -25,6 +25,18 @@ public partial class Main
         var me = s.Player;
         for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // ---- the map marker (Paul 2026-11-22): pointing up-left in the top-left light it is the icon as drawn; a quarter turn steps the
+        // rim's light round in two 45-degree steps, then it settles in the top left
+        foreach (var k in new[] { "fleet-defensive", "fleet-elusive", "fleet-unknown" })
+            Expect(FleetLayer.MarkerTones(k, false, false, 0).SequenceEqual(PixelIconData.Map[k]), $"{k} pointing up-left is the icon as drawn");
+        Expect(!FleetLayer.MarkerTones("fleet-defensive", true, true, 0).SequenceEqual(FleetLayer.MarkerTones("fleet-defensive", true, true, 6)),
+            "the rim's light changes the pixels of a turned marker");
+        var layer = new FleetLayer();
+        var lights = new[] { layer.RimLight(1, true, false, 1000), layer.RimLight(1, true, true, 2000), layer.RimLight(1, true, true, 2090),
+            layer.RimLight(1, true, true, 2180), layer.RimLight(1, true, true, 9000) };
+        layer.Free();
+        Expect(lights.SequenceEqual(new[] { 0, 6, 7, 0, 0 }), $"parked up-right then down-right: the light steps bottom-left, left, top-left ({string.Join(",", lights)})");
         List<Fleet> Still() => s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && f.Ships.Count > 0).OrderBy(f => f.Id).ToList();
         var still = Still();
         Expect(still.Count > 0, "you have a fleet standing at a system");
