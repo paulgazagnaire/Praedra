@@ -190,5 +190,55 @@ public partial class Main
         }
         else GD.Print("  (one fleet standing still: the shared move is not checked on this side)");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // ---- several fleets in orbit at one system share one marker with their number (Paul 2026-11-22); a click lists them (his pick),
+        // Shift+click picks them all
+        Expect(Enumerable.Range(2, 12).All(n => PixelIconData.Map.ContainsKey(FleetLayer.GroupIcon(n))), "every count of fleets from 2 to 13 has its marker");
+        Expect(Enum.GetValues<MoverKind>().All(k => PixelIconData.Map.ContainsKey(FleetLayer.MoverIcon(k))), "every kind of mover has its pixel icon");
+        // review 10: a numbered group is parked, so its marker must not be mirrored with its number in it (2 read as 5). Paul 2026-11-22: two
+        // of yours show two marks (two squares, two chevrons, or chevron then square); more than two of yours, or more than one of the
+        // enemy's, their number, the same design for both sides
+        var (gk, gfx, gfy) = FleetLayer.Look(2, false, 0, FleetLayer.ParkedHeading);
+        var g2 = FleetLayer.MarkerTones(gk, gfx, gfy, 0);
+        string[] two = { "###", "..#", "###", "#..", "###" };
+        bool upright = Enumerable.Range(0, g2.Length - 4).Any(r => Enumerable.Range(0, g2[0].Length - 2).Any(c =>
+            Enumerable.Range(0, 5).All(i => Enumerable.Range(0, 3).All(j => (g2[r + i][c + j] != '.') == (two[i][j] == '#')))));
+        Expect(upright, $"two enemy fleets parked together show an upright 2 ({gk}, mirrored {gfx}/{gfy})");
+        Expect(PixelIconData.Map[gk].Length == 16 && PixelIconData.Map[gk].All(r => r.Length == 16), "the group icon is the fleet arrow's 16 x 16");
+        Expect(FleetLayer.Look(1, false, 0, FleetLayer.ParkedHeading).Key == "fleet-unknown", "one enemy fleet is the bare arrow");
+        string[] pairs = { FleetLayer.Look(2, true, 0, FleetLayer.ParkedHeading).Key, FleetLayer.Look(2, true, 1, FleetLayer.ParkedHeading).Key,
+            FleetLayer.Look(2, true, 2, FleetLayer.ParkedHeading).Key };
+        Expect(pairs.SequenceEqual(new[] { "fleet-pair-defensive", "fleet-pair-mixed", "fleet-pair-elusive" }) && pairs.All(PixelIconData.Map.ContainsKey),
+            "two of yours: two squares, chevron and square, two chevrons: " + string.Join(", ", pairs));
+        var three = FleetLayer.Look(3, true, 1, FleetLayer.ParkedHeading);
+        Expect(three == ("fleet-group-3", false, false), $"three of yours show their number, never mirrored ({three})");
+        var pairFlip = FleetLayer.Look(2, true, 0, FleetLayer.ParkedHeading);
+        Expect(pairFlip.Fx, "a pair (no number in it) is mirrored to point up-right like one fleet, light and all");
+        var pair = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).GroupBy(f => f.At).Where(g => g.Count() >= 2)
+            .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => g.OrderBy(f => f.Id).ToList()).FirstOrDefault();
+        if (pair != null)
+        {
+            var ids = pair.Select(f => f.Id).ToList();
+            string at = pair[0].At;
+            gs.PlayRefresh();
+            Expect(gs.PlayFleetGroup(ids[0]).SequenceEqual(ids), $"the {ids.Count} fleets in orbit at {at} share a marker");
+            var here = gs.PlayOwnMarkers().Where(m => ids.Contains(m.Fleet)).ToList();
+            Expect(here.Count == 1 && here[0].Count == ids.Count, $"one marker at {at}, counting {ids.Count} ({here.Count} drawn)");
+            var lines = gs.PlayClickFleetGroup(ids[0]);
+            Expect(lines.Count == ids.Count && pair.All(f => lines.Any(l => l.StartsWith(f.Name + " ", StringComparison.Ordinal) && (l.EndsWith("Defensive") || l.EndsWith("Elusive")))),
+                "a click on it lists them, each with its ships and behaviour: " + string.Join(" / ", lines));
+            var last = pair[^1];
+            Expect(gs.PlayPickFromFleetGroup(last.Name) && gs.SelectedFleetId == last.Id, $"picking {last.Name} in the list selects it");
+            if (gs.G.TryFindSystem(at, out int atIdx)) gs.View.FocusOn(atIdx, 2.4f);   // the words show only on screen
+            gs.PlayRefresh();
+            Expect(gs.MapWords.Any(w => w.StartsWith(last.Name, StringComparison.Ordinal) && w.EndsWith($" +{ids.Count - 1}", StringComparison.Ordinal)),
+                $"the group's words name the selected fleet and count the others ({last.Name} ... +{ids.Count - 1}): " + string.Join(" | ", gs.MapWords));
+            gs.PlayShiftClickGroup(ids[0]);
+            Expect(ids.All(gs.View.PickedFleets.Contains), "Shift+click on the marker picks them all");
+            gs.PlayShiftClickGroup(ids[0]);
+            Expect(!ids.Any(gs.View.PickedFleets.Contains), "a second Shift+click lets them all go");
+        }
+        else GD.Print("  (no system with two fleets of yours: the shared marker is not checked on this side)");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }
 }

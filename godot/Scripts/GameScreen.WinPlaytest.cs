@@ -77,6 +77,30 @@ public partial class GameScreen
     /// <summary>Shift+click on a fleet's marker on the map, as the mouse would (several fleets picked on the map).</summary>
     internal void PlayShiftClickFleet(int id) => ShiftPickOnMap(id);
 
+    /// <summary>The fleets sharing a fleet's marker on the map, and the markers drawn for your fleets with how many share each.</summary>
+    internal IReadOnlyList<int> PlayFleetGroup(int id) => _fleets.GroupOf(id);
+    internal IReadOnlyList<(int Fleet, int Count)> PlayOwnMarkers() => _fleets.OwnMarkers();
+
+    /// <summary>A click on the marker a fleet shares, as the mouse would: the lines of the list that opens.</summary>
+    internal IReadOnlyList<string> PlayClickFleetGroup(int id)
+    {
+        ShowFleetGroup(_fleets.GroupOf(id), Vector2.Zero);
+        return _groupMenu?.Select(x => x.Text).ToList() ?? new List<string>();
+    }
+
+    /// <summary>Picks the line of the open fleet list that starts with a fleet's name, as a click would; false if none.</summary>
+    internal bool PlayPickFromFleetGroup(string name)
+    {
+        var line = _groupMenu?.FirstOrDefault(x => x.Text.StartsWith(name + " ", StringComparison.Ordinal));
+        if (line?.Text == null) return false;
+        line.Value.Do();
+        _groupPopup?.Hide();
+        return true;
+    }
+
+    /// <summary>A Shift+click on the marker a fleet shares, as the mouse would.</summary>
+    internal void PlayShiftClickGroup(int id) => ShiftPickGroup(_fleets.GroupOf(id));
+
     /// <summary>A right-click on a system on the map, as the mouse would.</summary>
     internal void PlayRightClick(string system) { if (G.TryFindSystem(system, out int i)) OnMapRightClick(i); }
 

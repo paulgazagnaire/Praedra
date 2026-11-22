@@ -62,12 +62,16 @@ public partial class Main
         Expect(gs.MapWords.Count == 0, "at the opening zoom fleets and movers carry no words: " + string.Join(" | ", gs.MapWords));
         if (parked != null)
         {
+            // several fleets in orbit share one marker (Paul 2026-11-22): selected, it names them all; otherwise it says how many
+            int together = gs.PlayFleetGroup(parked.Id).Count;
+            static bool Names(string w, string name) => w.Split(", ").Any(n => n == name || n.StartsWith(name + " +", StringComparison.Ordinal) || n.StartsWith(name + " ·", StringComparison.Ordinal));
             gs.SelectFleet(parked.Id, false);
-            Expect(gs.MapWords.Contains(parked.Name), $"the selected fleet is named ({parked.Name}): " + string.Join(" | ", gs.MapWords));
+            Expect(gs.MapWords.Any(w => Names(w, parked.Name)), $"the selected fleet is named ({parked.Name}): " + string.Join(" | ", gs.MapWords));
             view.SelectedFleet = -1;
             view.SetZoom(3.6f);
             var words = gs.MapWords;
-            Expect(words.Contains(parked.Name), $"from zoom 3.4 each fleet has its short name ({parked.Name}): " + string.Join(" | ", words));
+            string shortWords = together > 1 ? $"{together} fleets" : parked.Name;
+            Expect(words.Contains(shortWords), $"from zoom 3.4 each fleet marker has its short words ({shortWords}): " + string.Join(" | ", words));
             Expect(words.All(w => !w.Contains(" to ") && !w.Contains("arrives") && !w.Contains("ship(s)")), "short names, no sentences: " + string.Join(" | ", words));
             string overlap = gs.MapWordsProblem();
             Expect(overlap == null, "no word on the map prints over another or past the screen's edge" + (overlap != null ? ": " + overlap : ""));
