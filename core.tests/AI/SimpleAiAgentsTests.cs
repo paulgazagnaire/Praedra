@@ -115,7 +115,10 @@ public class SimpleAiAgentsTests
         // Per-fleet OnContact re-pin 2026-11-21 (Dev lead; Paul: Defensive / Elusive per fleet, m4-battle-classic §1.3): the side-wide HandOnContact and
         // CollectiveOnContact left the battle state, so the state JSON changed; the AI always fights, so the game is the same (with the two fields
         // put back the hash is exactly the previous pin 79c342d3...2a4d, checked when re-pinned).
-        Assert.Equal("f07c1ab5ad1a68b4c1cba59bb5f0ffa5e21c254d1a7a19b1f3ca4300373d64b2", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
+        // Fewer Hold beams re-pin 2026-11-22 (Dev lead; Paul's card "Fewer Hold beams", m4-retreat-damage-repair §6 HoldBeamMinPower DEFAULT 6): in this
+        // game's New battles a Mandate or Decree no longer holds a leaving ship, so the game changes; the AI code does not. With HoldBeamMinPower 1
+        // the hash is exactly the previous pin f07c1ab5...64b2 (checked when re-pinned).
+        Assert.Equal("af96c35ef5dc0b40d6973abf23b001a4a573a4ef47dbe4c029445beb560bc734", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...) // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

@@ -21,6 +21,11 @@ public sealed record NewBattleParams
     /// block retreat). Decided Paul 2026-10-16 (battle only); DEFAULT on. rule: m4-retreat-damage-repair §6.
     /// </summary>
     public bool HoldBeamsHoldRetreat { get; init; } = true;
+    /// <summary>
+    /// The least hold_beam_power that holds a leaving ship (capital-ships.csv). DEFAULT 6 (Paul 2026-11-22, "Fewer Hold beams"): only the Edict, the
+    /// Barricade and the harvester hold; Mandates and Decrees no longer pin Elusive fleets. 1 = every Hold beam (the 2026-10-16 rule). rule: m4-retreat-damage-repair §6.
+    /// </summary>
+    public int HoldBeamMinPower { get; init; } = 6;
 
     // ---- distances and movement. rule: m4-battle-new §3, §5 (Proposal value, tune), Lead update 2
     /// <summary>The start distance is the longest weapon range present + this. Lead.</summary>
