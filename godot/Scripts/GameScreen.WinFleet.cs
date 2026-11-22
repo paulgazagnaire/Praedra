@@ -343,9 +343,9 @@ public partial class GameScreen
             };
             col.AddChild(cap);
             var z = DropZone($"Fleet {f.Id} {post}", $"make {GameSession.PostWords(post)}", d => RefuseFleetPost(d, f, p), d => DropFleetPost(d, f, p));
-            if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(PostLeader(holder));
-            else z.Flow.AddChild(EmptyCard(PickLeader));
-            PostMenu(z.Box, f, p);
+            if (Cm.HolderOf(f.Id, post) is { } holder) z.Flow.AddChild(PostLeader(holder, f));
+            else z.Flow.AddChild(EmptyCard(DropLeader));
+            DragOnly(z.Box, f, $"to make them {GameSession.PostWords(post)}");
             col.AddChild(z.Box);
             posts.AddChild(col);
         }
@@ -354,9 +354,9 @@ public partial class GameScreen
         var pas = FleetSection("Passengers", 16, null, "Leaders who ride the fleet with no post: they travel with it.");
         var pz = DropZone($"Fleet {f.Id} Passengers", "take aboard", d => RefuseFleetPost(d, f, CharacterPost.None), d => DropFleetPost(d, f, CharacterPost.None));
         CardFlow(pz.Flow);
-        foreach (var c in riders) pz.Flow.AddChild(PostLeader(c));
-        if (riders.Count == 0) pz.Flow.AddChild(EmptyCard(PickLeader));
-        PostMenu(pz.Box, f, CharacterPost.None);
+        foreach (var c in riders) pz.Flow.AddChild(PostLeader(c, f));
+        if (riders.Count == 0) pz.Flow.AddChild(EmptyCard(DropLeader));
+        DragOnly(pz.Box, f, "to take them aboard");
         pas.AddChild(pz.Box);
 
         // leaders and fleets sent to join it from other systems (m5 §Moving a character alone, m3 §Joining a fleet on arrival)
@@ -375,6 +375,7 @@ public partial class GameScreen
             foreach (var x in fs) flow.AddChild(FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), ghost: true));
             way.AddChild(flow);
         }
+        GroundLink(f, "Leaders");   // where the leaders to drag stand, and where they land (UI review 4)
     }
 
     /// <summary>
@@ -656,79 +657,26 @@ public partial class GameScreen
         return card;
     }
 
-    /// <summary>A leader on a post or among the passengers: their card, and a click on it goes to the post's choices (PostMenu).</summary>
-    Control PostLeader(CharacterRecord c)
+    /// <summary>A leader on a post or among the passengers: their card; they leave the fleet by being dragged off it.</summary>
+    Control PostLeader(CharacterRecord c, Fleet f)
     {
         var card = LeaderCard(c);
         if (!card.Visible) return card;
-        card.MouseFilter = MouseFilterEnum.Pass;
-        card.TooltipText += "\nClick: give the post to someone else, or leave the fleet.";
+        card.TooltipText += LeadersHere(f) is { } at ? $"\nTo land them, drag them onto {at}." : "\nLeaders leave a fleet only at a planet you hold.";
         return card;
     }
 
+    /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Leaders in Ground at Charter"): the Leaders tab of
+    /// the Ground window of a planet you hold where the fleet stands. Null in flight or at a planet you don't hold: no leader lands there.</summary>
+    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me ? $"Leaders in Ground at {f.At}" : null;
+
     /// <summary>
-    /// A click on a post or on Passengers opens its choices (the old side panel's Attach and Detach buttons, Paul's F2 2026-11-22: one way to
-    /// run a fleet): your leaders at this system who can take it now, then "leaves the fleet" for whoever is on it. Each line does what a
-    /// drop does, with the same checks and the same instant look; a drag still works, from any window. Nobody to offer: one greyed line says
-    /// why, so a click never does nothing. Strategy games give leader slots this click.
+    /// A post or Passengers takes a leader only by a drag, never by a click or a menu (Paul 2026-11-22: moving a leader is too important to
+    /// be quick or automatic). Its hover says how.
     /// </summary>
-    void PostMenu(Control zone, Fleet f, CharacterPost post)
-    {
-        zone.MouseDefaultCursorShape = CursorShape.PointingHand;
-        zone.TooltipText = Ui.Wrap(post == CharacterPost.None
-            ? "Click to take a leader aboard or let one off. You can also drop a leader here; one from another system flies here first."
-            : $"Click to choose the {GameSession.PostWords(post)}. You can also drop a leader here; one from another system flies here first.");
-        _menus.AddOrUpdate(zone, () => PostLines(f, post));   // for the playtest: RunMenu
-        _menuNone.AddOrUpdate(zone, () => PostNobody(f, post));   // and for a screenshot of the greyed line
-        Vector2? down = null;
-        zone.GuiInput += e =>
-        {
-            if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left or MouseButton.Right } mb) return;
-            if (mb.Pressed) { down = mb.Position; return; }
-            if (down is Vector2 at && at.DistanceTo(mb.Position) < 6) { PopMenu(zone, PostLines(f, post), PostNobody(f, post)); zone.AcceptEvent(); }
-            down = null;
-        };
-    }
-
-    (string Text, Action Do)[] PostLines(Fleet f, CharacterPost post)
-    {
-        var lines = new List<(string Text, Action Do)>();
-        if (!Still(f)) return lines.ToArray();
-        bool Moved(CharacterRecord c) => _moved.ContainsKey(new Drag('L', c.Id).Key);
-        void Run(Action a) { RunDrop(a); RefreshMgmt(); RefreshSectorView(); }
-        var holder = post == CharacterPost.None ? null : Cm.HolderOf(f.Id, post);
-        // who can take it: the drop's own checks (RefuseFleetPost), here at this system only, so the list stays short
-        foreach (var c in S.MyCharacters.Where(c => Cm.LocationOf(c) == f.At && !Moved(c) && RefuseFleetPost(new Drag('L', c.Id), f, post) == null)
-                     .OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal))
-        {
-            var rc = c;
-            string name = S.CharName(c.Id);
-            string now = c.AttachedFleet == f.Id ? (c.Post == CharacterPost.None ? "a passenger now" : $"{GameSession.PostWords(c.Post)} now")
-                : c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var of) ? $"in {of.Name} now"
-                : S.SystemPostOf(c) is string g ? $"General of {g} now" : null;
-            string text = post == CharacterPost.None
-                ? $"Take {name} aboard" + (now != null ? $" ({now})" : "")
-                : $"Make {name} {GameSession.PostWords(post)}{(holder != null ? " instead" : "")} (leadership {Cm.EffectiveSkill(c, Skill.Leadership)}{(now != null ? ", " + now : "")})";
-            lines.Add((text, () => Run(() => DropFleetPost(new Drag('L', rc.Id), f, post))));
-        }
-        // who can get off: the holder, or each passenger; they stay at this system (DetachCharacterOrder)
-        var off = post == CharacterPost.None ? Cm.AttachedTo(f.Id).Where(c => c.Post == CharacterPost.None) : holder != null ? new[] { holder } : Array.Empty<CharacterRecord>();
-        foreach (var c in off.Where(c => !Moved(c)).OrderBy(c => S.CharName(c.Id), StringComparer.Ordinal))
-        {
-            var rc = c;
-            lines.Add(($"{S.CharName(c.Id)} leaves the fleet", () => Run(() =>
-            {
-                Detach(rc, f);
-                _moved[new Drag('L', rc.Id).Key] = ($"lands at {f.At}", $"Ground {f.At} Leaders");
-            })));
-        }
-        return lines.ToArray();
-    }
-
-    string PostNobody(Fleet f, CharacterPost post) =>
-        !Still(f) ? $"{f.Name} is travelling: leaders join or leave where it stops."
-        : post == CharacterPost.None ? $"No leader of yours at {f.At} can board now."
-        : $"No leader of yours at {f.At} can be {GameSession.PostWords(post)} now.";
+    void DragOnly(Control zone, Fleet f, string what) =>
+        zone.TooltipText = Ui.Wrap(LeadersHere(f) is { } at ? $"Drag a leader here from {at} {what}. One from another system flies here first."
+            : $"Drag a leader here {what}. One from another system flies here first.");
 
     /// <summary>A squadron or regiment as a card (the Fighters and Troops tabs): its icon, its class, and a short line (a damaged hull,
     /// "flies along").</summary>
@@ -933,15 +881,19 @@ public partial class GameScreen
         if (aboard.Count + f.Squadrons.Count == 0) qz.Flow.AddChild(EmptyCard(berths > 0 ? "Drop squadrons here to load them" : "No carrier in this fleet"));
         CargoActions(f, fighters: true, aboard);
         Add(qz.Box);
-        GroundLink(f);
+        GroundLink(f, "Fighters");
     }
 
-    /// <summary>The planet's window, where the fleet loads its fighters and troops from.</summary>
-    void GroundLink(Fleet f)
+    /// <summary>The planet's window, where the fleet takes its leaders, fighters and troops from, opened on the matching tab (the tab exists
+    /// only at a planet you hold).</summary>
+    void GroundLink(Fleet f, string tab)
     {
         if (!Still(f)) return;
-        var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At),
-            $"The Ground window of {f.At}: drag its leaders, troops and fighters onto this fleet, or this fleet's onto the planet.");
+        bool held = LeadersHere(f) != null;
+        string what = tab == "Leaders" ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
+        var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: held ? tab : null),
+            held ? $"Opens {tab} in Ground at {f.At}: drag its {what} onto this fleet, and this fleet's back onto the planet."
+                 : $"The Ground window of {f.At}. You don't hold this planet: nothing on its ground lands or boards.");
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         Add(b);
     }
@@ -955,7 +907,7 @@ public partial class GameScreen
         if (aboard.Count == 0) tz.Flow.AddChild(EmptyCard(room > 0 ? "Drop regiments here to load them" : "No transport in this fleet"));
         CargoActions(f, fighters: false, aboard);
         Add(tz.Box);
-        GroundLink(f);
+        GroundLink(f, "Troops");
     }
 
     /// <summary>

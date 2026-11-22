@@ -57,16 +57,18 @@ public partial class Main
         GD.Print($"  moving {mname} from {mover.System} to {fleet.At} (fleet {fleet.Name})");
         if (!MoveCharacterThroughUi(gs, mover, fleet.At)) return;
 
-        // ---------------------------------------------------------------- attach it to the fleet by clicking a post in the fleet's window
+        // ---------------------------------------------------------------- attach it to the fleet: drag it onto a post of the fleet's window
+        // (the only way: Paul 2026-11-22, moving a leader is never a click in a menu)
         OpenFleetTab(gs, fleet, "Command");
         var cls = cm.ClassOf(mover);
         var post = new[] { CharacterPost.Admiral, CharacterPost.Commander, CharacterPost.General }.FirstOrDefault(p => cls.Can(p) && cm.HolderOf(fleet.Id, p) == null);
-        string zone = post == CharacterPost.None ? $"Zone Fleet {fleet.Id} Passengers" : $"Zone Fleet {fleet.Id} {post}";
-        string label = post == CharacterPost.None ? $"Take {mname} aboard" : $"Make {mname} {GameSession.PostWords(post)}";
-        Expect(gs.RunMenu(zone, label), $"click the {(post == CharacterPost.None ? "Passengers" : GameSession.PostWords(post))} place and pick '{label}': {string.Join(" | ", gs.MenuOf(zone))}");
-        gs.MgText($"Fleet {fleet.Id}");
-        Expect(!gs.MenuOf($"Zone Fleet {fleet.Id} Passengers").Any(l => l.Contains(mname)), "a leader given a post today is not offered again before the day runs");
-        Expect(gs.CardTip($"Zone Fleet {fleet.Id} Admiral").StartsWith("Click to choose the Admiral", StringComparison.Ordinal), "a post's hover says a click chooses who holds it");
+        string zone = post == CharacterPost.None ? $"Fleet {fleet.Id} Passengers" : $"Fleet {fleet.Id} {post}";
+        Expect(gs.MenuOf($"Zone {zone}").Count == 0 && !gs.CardTip($"Zone {zone}").Contains("Click", StringComparison.Ordinal)
+            && gs.CardTip($"Zone {zone}").StartsWith("Drag a leader here", StringComparison.Ordinal),
+            $"a post offers no click menu, and its hover says to drag a leader onto it: {gs.CardTip($"Zone {zone}")}");
+        string why = gs.MgDrop($"L:{mover.Id}", zone);
+        Expect(why == null, $"drag {mname} onto the {(post == CharacterPost.None ? "Passengers" : GameSession.PostWords(post))} place: {why ?? "sent"}");
+        Expect(gs.MgDrop($"L:{mover.Id}", $"Fleet {fleet.Id} Passengers") != null, "a leader given a post today can't be moved again before the day runs");
         SelectFleetByList(gs, fleet);
         Expect(gs.PanelText().Contains($"Ordered: Attach {mname} to {fleet.Name}"), "the fleet panel shows the attach as ordered");
         int before = s.Messages.Count;
@@ -75,15 +77,17 @@ public partial class Main
         Expect(mover.AttachedFleet == fleet.Id && mover.Post == post, $"{mname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
         Expect(news.Any(t => t.StartsWith(mname, StringComparison.Ordinal) && (t.Contains("joined " + fleet.Name) || t.Contains("boarded " + fleet.Name))), "message: the character joined the fleet");
         OpenFleetTab(gs, fleet, "Command");
-        Expect(gs.MenuOf(zone).Any(l => l == $"{mname} leaves the fleet"), $"the fleet's window shows {mname} {(post == CharacterPost.None ? "aboard" : "on the post")}: {string.Join(" | ", gs.MenuOf(zone))}");
+        Expect(gs.MgText($"Fleet {fleet.Id}").Contains(mname), $"the fleet's window shows {mname} {(post == CharacterPost.None ? "aboard" : "on the post")}");
         Expect(gs.Click("Leaders") && gs.CharactersOpen, "open the Leaders tab again");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"aboard fleet {fleet.Name} at {fleet.At}"), "the list says the character is aboard the fleet");
         Expect(gs.Click("Close window") && !gs.CharactersOpen, "the window's cross closes the Leaders list");
 
-        // detach again (leaves the later checks a fleet without riders)
+        // detach again by dragging onto the planet's Leaders (leaves the later checks a fleet without riders)
         OpenFleetTab(gs, fleet, "Command");
-        Expect(gs.RunMenu(zone, $"{mname} leaves the fleet"), $"click the post and pick '{mname} leaves the fleet'");
+        gs.ShotWindow("ground", fleet.At); gs.PlayRefresh();
+        why = gs.MgDrop($"L:{mover.Id}", $"Ground {fleet.At} Leaders");
+        Expect(why == null, $"drag {mname} off the fleet onto {fleet.At}'s Leaders: {why ?? "sent"}");
         gs.PlayDay();
         Expect(mover.AttachedFleet == 0 && mover.System == fleet.At && mover.Post == CharacterPost.None, "detached: the character stays at the system");
         gs.MgCloseAll();
@@ -109,7 +113,13 @@ public partial class Main
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains("System General: none"), $"the panel of {gsys} says it has no General");
         Expect(gs.PanelText().Contains("Fighters based here"), $"the Forces tab of {gsys} lists the fighters based there");
-        Expect(gs.Click($"Make {gname} the General of {gsys}"), $"click 'Make {gname} the General of {gsys}'");
+        // a General is seated only by a drag in Ground at the system, never by a click in the side panel (Paul 2026-11-22, UI review 4)
+        Expect(!gs.PanelText().Contains($"Make {gname} the General") && gs.PanelText().Contains($"To seat or release a General, drag them in Leaders, Ground at {gsys}"),
+            "the Forces tab has no click to seat a General, and says where to drag");
+        gs.ShotWindow("ground", gsys); gs.PlayRefresh();
+        why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} General");
+        Expect(why == null, $"drag {gname} onto the General post of {gsys}: {why ?? "sent"}");
+        gs.MgCloseAll();
         before = s.Messages.Count;
         gs.PlayDay();
         Expect(cm.SystemGeneralOf(gsys)?.Id == gen.Id, $"{gname} is the General of {gsys}");
@@ -117,7 +127,11 @@ public partial class Main
         gs.SelectSystem(gsys); gs.PlayRefresh();
         gs.Click("Forces"); gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"System General: {gname} (leadership"), "the system panel shows the General");
-        Expect(gs.Click($"Release {gname} as General of {gsys}"), "click Release");
+        Expect(!gs.PanelText().Contains($"Release {gname} as General"), "the Forces tab has no click to release the General");
+        gs.ShotWindow("ground", gsys); gs.PlayRefresh();
+        why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} Leaders");
+        Expect(why == null, $"drag {gname} off the General post onto {gsys}'s Leaders: {why ?? "sent"}");
+        gs.MgCloseAll();
         before = s.Messages.Count;
         gs.PlayDay();
         Expect(cm.SystemGeneralOf(gsys) == null, "the post is empty again");
