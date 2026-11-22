@@ -203,6 +203,15 @@ public partial class GameScreen
     }
 
     internal string MgTab(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Tab;
+
+    /// <summary>A fleet's status line as its window says it ("In orbit at Charter / Repair: 4 days"), whether its bar shows, and the colour of
+    /// the ship count on its Ships tab (null when the count is in the usual grey).</summary>
+    internal (string Words, bool Bar, Color? ShipsInk) FleetStatusNow(Fleet f)
+    {
+        var st = StatusOf(f, Still(f));
+        float worst = WorstHull(f);
+        return (string.Join(" / ", st.Words), st.Share != null, worst < 0.25f ? Ui.Danger : worst < 0.5f ? Ui.Warn : null);
+    }
     internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();
 
     /// <summary>For screenshots: show the drop zones lit as if this chip were being dragged.</summary>

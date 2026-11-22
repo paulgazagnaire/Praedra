@@ -43,7 +43,16 @@ public partial class Main
         Expect(gs.MgmtKeys.Contains(key), $"F opens the selected fleet's window ({string.Join(", ", gs.MgmtKeys)})");
         if (!gs.MgmtKeys.Contains(key)) return;
         string text = gs.MgText(key);
-        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("Status:") && text.Contains($"In orbit at {a.At}"), "the head: the fleet's name, and its status saying where it is");
+        // the status line (Paul 2026-11-22: "In orbit shouldn't have a progress bar", a damaged fleet shows its repair): put its ships whole
+        // first, test only, so it is plainly in orbit; put back after
+        var eco = s.Host.Economy;
+        var whole = a.Ships.Select(eco.Find).Where(o => o != null).Select(o => (o!, o!.Hull, o.Hits?.ToList())).ToList();
+        foreach (var (o, _, _) in whole) { o.Hull = fm.ClassOf(o)!.Hull; if (o.Hits != null) for (int k = 0; k < o.Hits.Count; k++) o.Hits[k] = 0; }
+        text = gs.MgText(key);
+        var stNow = gs.FleetStatusNow(a);
+        Expect(text.Contains(a.Name.ToUpperInvariant()) && text.Contains("Status:") && stNow.Words.Contains(a.At!), $"the head: the fleet's name, and its status saying where it is ({stNow.Words})");
+        Expect(stNow.Words.StartsWith("In orbit at", StringComparison.Ordinal) || stNow.Words.StartsWith("Blockading", StringComparison.Ordinal) ? !stNow.Bar : true,
+            $"standing still and whole, it has no bar ({stNow.Words}, bar {stNow.Bar})");
         Expect(gs.CardTip($"Fleet status {a.Id}").Contains("Strength") && gs.CardTip($"Fleet status {a.Id}").Contains("Slowest ship"), "the status's hover gives its strength and its slowest ship");
         Expect(string.Join(",", gs.MgTabs(key)) == "Command,Ships,Fighters,Troops" && gs.MgTab(key) == "Command", $"the tabs are Command, Ships, Fighters and Troops, Command in front: {string.Join(", ", gs.MgTabs(key))}");
         Expect(text.Contains("Fleet actions") && text.Contains("Fleet behavior") && text.Contains("Fleet command") && text.Contains("Passengers"), "Command: actions, behaviour, the three posts and the passengers");
@@ -60,7 +69,6 @@ public partial class Main
         Expect(!gs.InMoveMode && gs.MgShown && gs.MgmtKeys.Contains(key), "Esc cancels the move and the windows come back, none closed");
 
         // ---- ships: one row each, with its cargo and hull; its damage in its hover; a click picks it
-        var eco = s.Host.Economy;
         Expect(gs.Click($"Tab {key} Ships") && gs.MgTab(key) == "Ships", "a click on the Ships tab shows it");
         Expect(gs.Has("Fleet Split") && !gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap fleet"), "over the rows: Split off (greyed until a ship is picked) and Scrap fleet...");
         var carrier = a.Ships.Select(eco.Find).FirstOrDefault(o => o != null && fm.ClassOf(o) is { } c && c.FighterCapacity + c.TroopCapacity > 0);
@@ -79,7 +87,12 @@ public partial class Main
         gs.MgText(key);
         Expect(gs.MgPageText(key, "Ships").Contains($"{sc.Hull / 2}/{sc.Hull}"), "its row shows the hull it has left");
         Expect(ship.Hits is not { Count: > 1 } || gs.CardTip($"S:{ship.Id}").Contains("weapons (2)"), $"its hover says its damage in words ({gs.CardTip($"S:{ship.Id}")})");
+        var stHurt = gs.FleetStatusNow(a);
+        Expect(stHurt.Words.Contains("Repair") && stHurt.Bar, $"a damaged fleet standing still shows its repair: the days and a bar ({stHurt.Words}, bar {stHurt.Bar})");
+        ship.Hull = Math.Max(1, sc.Hull / 5);
+        Expect(gs.FleetStatusNow(a).ShipsInk == Ui.Danger, "a ship under a quarter of its hull turns the Ships tab's count red");
         ship.Hull = hull0; if (hits0 != null) ship.Hits = hits0;
+        foreach (var (o, h0, k0) in whole) { o.Hull = h0; if (k0 != null) o.Hits = k0; }
         Expect(gs.MenuOf($"S:{ship.Id}").Any(l => l.StartsWith("Split it off", StringComparison.Ordinal)) && gs.MenuOf($"S:{ship.Id}").Any(l => l.StartsWith("Scrap this one", StringComparison.Ordinal)),
             $"a right-click on a ship splits it off or scraps it: {string.Join(" | ", gs.MenuOf($"S:{ship.Id}"))}");
         gs.PlayPick($"S:{ship.Id}", false); gs.PlayRefresh();

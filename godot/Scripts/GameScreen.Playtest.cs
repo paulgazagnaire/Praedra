@@ -469,7 +469,8 @@ public partial class GameScreen
                     OpenMgmt(MgKind.Fleet, fleet: tf.Id, tab: each?[Math.Min(k++, each.Length - 1)]);
                 return;
             }
-            int id = int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values
+            // "sel": the fleet selected on the map (--fleet NAME first)
+            int id = what == "sel" ? _view.SelectedFleet : int.TryParse(what, out int n) ? n : S.Game.State.Fleets.Values
                 .Where(f => f.Side == S.Player && f.At != null && f.Transit == null && (what == "any" || f.At == what.Replace('_', ' ')))
                 .OrderByDescending(f => f.Ships.Count).ThenBy(f => f.Id).Select(f => f.Id).FirstOrDefault();
             if (id > 0) OpenMgmt(MgKind.Fleet, fleet: id, tab: ftab);
@@ -516,6 +517,14 @@ public partial class GameScreen
         S.SubmitDestroySystem(S.Game.State.Fleets[id]);
         StepOne();
         HideModal(_reportPanel);   // the shot shows the window, not the harvest report the strike opens
+    }
+    /// <summary>For a screenshot: the selected fleet's first ship down to SHARE of its hull and its second (if any) to three quarters.</summary>
+    public void ShotDamage(float share)
+    {
+        if (_view.SelectedFleet < 0 || !S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f)) { GD.PrintErr("--damage: no fleet selected"); return; }
+        for (int k = 0; k < Math.Min(2, f.Ships.Count); k++)
+            if (S.Host.Economy.Find(f.Ships[k]) is { } o && Fm.ClassOf(o) is { } c) o.Hull = Math.Max(1, (int)(c.Hull * (k == 0 ? share : 0.75f)));
+        PlayRefresh();
     }
     public void ShotClick(string prefix) { PlayRefresh(); if (!Click(prefix)) GD.PrintErr("no button " + prefix); PlayRefresh(); }
 

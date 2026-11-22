@@ -64,13 +64,14 @@ public partial class GameScreen
         var hull = HullState(f);
         using (Card())
         {
+            // the strength number is not shown bare (Paul 2026-11-22, F7 answer B: a number with no scale); it stays in this hover
             Stat("Ships", f.Ships.Count + (hull.Low > 0 ? $"  ({hull.Low} damaged)" : ""), hull.Critical > 0 ? Ui.Danger : hull.Low > 0 ? Ui.Warn : null,
-                HullWords(hull) is { Length: > 0 } hw ? hw.Trim() + " Damaged: under half its hull, the Ships tab's amber." : null);
+                (HullWords(hull) is { Length: > 0 } hw ? hw.Trim() + " Damaged: under half its hull, the Ships tab's amber.\n" : "")
+                + $"Strength {Fm.StrengthOf(f):0}: how hard the fleet hits, its damage rate against three Mandates with its damage counted (three Decrees score about 65).");
             // what it is made of, in one line (UI review 1, 2026-11-22: Strength alone doesn't say it); words, not stacked cards
             string makeup = string.Join(", ", f.Ships.Select(eco.Find).Where(o => o != null).GroupBy(o => o.Class)
                 .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} {g.Key}"));
             if (makeup != "") Line(makeup, Dim, Ui.Small);
-            Stat("Strength", $"{Fm.StrengthOf(f):0}", null, "How hard the fleet hits: its damage rate against a reference force of three Mandates, with its damage counted. Three Decrees score about 65.");
             Stat("Fighters", RoomCount(fighters, Fm.FreeBerths(f) + FightersAboard(f).Count) ?? "none");
             Stat("Troops", RoomCount(regiments, Fm.FreeTroopSlots(f) + regiments) ?? "none");
         }

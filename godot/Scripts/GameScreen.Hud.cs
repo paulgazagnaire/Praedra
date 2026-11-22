@@ -132,7 +132,6 @@ public partial class GameScreen
         if (f.Transit is { } t && f.At == null) { Fact("TO", t.Path[^1]); Fact("ARRIVES", $"day {GameSession.ArrivalDay(t)}"); }
         else if (S.PlannedMoveOf(f.Id) is { } pm) { Fact("TO", pm.To, Ui.Warn); Fact("ARRIVES", $"day {pm.ArrivalDay}", Ui.Warn); }
         Fact("SHIPS", f.Ships.Count.ToString());
-        Fact("STRENGTH", $"{Fm.StrengthOf(f):0}");
         if (f.At != null)
             CardButton(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
                 "Pick a destination on the map: the route and the arrival day show before you confirm", "Primary");

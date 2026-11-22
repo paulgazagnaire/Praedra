@@ -369,7 +369,7 @@ public partial class GameScreen
         var top = Line(f.Name);
         Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Ui.Text3);
         if (hull.Low > 0) Part(top, $", {hull.Low} damaged", hull.Critical > 0 ? Ui.Danger : Ui.Warn);
-        Part(top, $"   {Fm.StrengthOf(f):0}", Ui.Text3);
+        // no bare strength number: it had no scale (Paul 2026-11-22, F7 answer B); it stays in the row's hover
         // line 2: where it is or goes, then Elusive and troops aboard out of room (when it has transports)
         var low = Line(RowStatus(f), RowTrip(f));
         if (elusive) Part(low, "Elusive", Look.Muted);

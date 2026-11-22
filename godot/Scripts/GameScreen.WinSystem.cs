@@ -242,8 +242,9 @@ public partial class GameScreen
         nm.AddThemeFontOverride("font", Ui.SemiBold);
         nm.ClipText = true;
         v.AddChild(nm);
-        string state = f.Transit is { } t ? $"to {t.Path[^1]}" : pick != null ? $"str {Fm.StrengthOf(f):0}" : $"strength {Fm.StrengthOf(f):0}";
-        var sl = Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")} · {state}", null, Ui.Text3, Ui.Tiny, wrap: false);
+        // no bare strength number (Paul 2026-11-22, F7 answer B): the row says its ships, and where it goes when it moves
+        string state = f.Transit is { } t ? $" · to {t.Path[^1]}" : "";
+        var sl = Ui.Label($"{Ui.Count(f.Ships.Count, "ship", "ships")}{state}", null, Ui.Text3, Ui.Tiny, wrap: false);
         sl.ClipText = true;
         v.AddChild(sl);
         h.AddChild(v);
