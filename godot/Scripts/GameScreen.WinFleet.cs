@@ -982,23 +982,24 @@ public partial class GameScreen
         cap.Alignment = BoxContainer.AlignmentMode.Center;
         cap.CustomMinimumSize = new Vector2(CardW, 16);
         string side = Me == Side.Hand ? "hand" : "collective";
+        var ink = Look.Muted;   // Paul 2026-11-23 picked the readable grey of the status line over the frame's #454545
         void Cargo(string icon, int have, int room)
         {
             if (room <= 0) return;
             if (cap.GetChildCount() > 0) cap.AddChild(new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(6, 0) });
-            var i = IconPic.Of(PixelIconData.Units[$"{icon}-{side}"], 1, Look.Dim, flat: true);   // the design's flat dim silhouettes
+            var i = IconPic.Of(PixelIconData.Units[$"{icon}-{side}"], 1, ink, flat: true);   // the design's flat silhouettes
             i.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             cap.AddChild(i);
-            cap.AddChild(Look.Words($"{have}/{room}", 12, Look.Dim));
+            cap.AddChild(Look.Words($"{have}/{room}", 12, ink));
         }
         if (sc != null)
         {
             Cargo("fighter", Fm.UnitsAboard(o.Id, ObjectCategory.Fighter).Count(), sc.FighterCapacity);
             Cargo("regiment", Fm.UnitsAboard(o.Id, ObjectCategory.Regiment).Count(), sc.TroopCapacity);
         }
-        if (cap.GetChildCount() == 0) cap.AddChild(Look.Words("no cargo", 12, Look.Dim));   // every card the same height, so the rows line up
+        if (cap.GetChildCount() == 0) cap.AddChild(Look.Words("no cargo", 12, ink));   // every card the same height, so the rows line up
         int max = sc?.Hull ?? o.Hull;
-        var hull = CardLine($"{o.Hull}/{max}", HullInk(max <= 0 ? 1 : o.Hull / (float)max) ?? Look.Dim, 1);
+        var hull = CardLine($"{o.Hull}/{max}", HullInk(max <= 0 ? 1 : o.Hull / (float)max) ?? ink, 1);
         // the class on one line (cut with "…"), so every ship card has the same height and the rows line up
         return FleetCard(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You), o.Class, nameLines: 1, more: new Control[] { cap, hull });
     }
