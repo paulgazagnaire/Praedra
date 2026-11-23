@@ -302,6 +302,23 @@ public partial class Main
             Expect(missing.Count == 0, "every class that can be built or trained has a role and a description: missing " + string.Join(", ", missing));
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
+        // every unit class has its own pixel picture, and every leader the picture of their side and role (Paul 2026-11-23: "a ship has a
+        // ship icon, a hero a character icon", one picture per class, for the whole game)
+        {
+            static System.Collections.Generic.IReadOnlyDictionary<string, string[]> SetOf(Praedra.Core.Economy.ObjectCategory c) => c switch
+            {
+                Praedra.Core.Economy.ObjectCategory.CapitalShip => PixelIconData.Ships, Praedra.Core.Economy.ObjectCategory.Fighter => PixelIconData.Craft,
+                Praedra.Core.Economy.ObjectCategory.Regiment => PixelIconData.Troops, _ => PixelIconData.Agents,
+            };
+            var noSprite = s.Host.Economy.Costs.Rows.Where(r => r.Category != Praedra.Core.Economy.ObjectCategory.Facility)
+                .Where(r => !SetOf(r.Category).ContainsKey(PixelIcons.Slug(r.Name))).Select(r => r.Name).ToList();
+            Expect(noSprite.Count == 0, "every ship, fighter, regiment and special force class has its own pixel picture: missing " + string.Join(", ", noSprite));
+            var noFace = s.Host.Characters.Data.All.Where(k => PixelIcons.Leader(k.Side == Praedra.Core.Clock.Side.Hand, PixelIcons.RoleOf(k.Rank, k.CanAdmiral, k.CanGeneral)) == null)
+                .Select(k => k.Name).ToList();
+            Expect(noFace.Count == 0, "every leader has a picture for their side and role: missing " + string.Join(", ", noFace));
+            var roles = s.Host.Characters.Data.All.GroupBy(k => (k.Side, PixelIcons.RoleOf(k.Rank, k.CanAdmiral, k.CanGeneral))).Select(g => $"{g.Key.Side} {g.Key.Item2} {g.Count()}");
+            GD.Print("  leader pictures by side and role: " + string.Join(", ", roles.OrderBy(x => x, StringComparer.Ordinal)));
+        }
 
         // ---------------------------------------------------------------- a stack of regiments dragged with Shift: every one boards (Paul 2026-11-03)
         var stackFleet = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && s.OwnerOf(f.At) == me && fm.FreeTroopSlots(f) >= 2)

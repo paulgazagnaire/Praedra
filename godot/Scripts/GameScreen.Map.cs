@@ -67,7 +67,7 @@ public partial class GameScreen
             "Show or hide your new ships, troops and buildings on their way from the yard, and troops sent alone (leaders, mission teams and the HQ always show)");
         _deliveriesChip.ToggleMode = true; _deliveriesChip.ButtonPressed = UiSettings.ShowDeliveries;
         shows.AddChild(_deliveriesChip);
-        _legendButton = DropRow("Legend", ToggleLegend, "What the dots, rings, lines and triangles on the map mean");
+        _legendButton = DropRow("Legend", ToggleLegend, "What the dots, rings, lines and icons on the map mean");
         _legendButton.ToggleMode = true;
         shows.AddChild(_legendButton);
         // the key of the current layer, on its own small card at the top left so the map's names do not run through it

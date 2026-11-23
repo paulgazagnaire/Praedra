@@ -189,7 +189,7 @@ public partial class GameScreen
         {
             Drag? d = SfReady(o) ? new Drag('F', o.Id) : null;
             if (d is { } dd && _moved.ContainsKey(dd.Key)) continue;
-            var t = Tile(UnitIcon.Kind.Agent, Me == Side.Hand, 1, S.SpecialForceName(o.Id), SpecialForceState(o), 1, d == null ? Ui.Text3 : Ui.You);
+            var t = Tile(UnitIcon.Kind.Agent, Me == Side.Hand, 1, S.SpecialForceName(o.Id), SpecialForceState(o), 1, d == null ? Ui.Text3 : Ui.You, cls: o.Class);
             t.TooltipText = Ui.Wrap(S.SpecialForceName(o.Id) + (d != null ? "\nRight-click to send it on a mission. Drag it onto another system to move it there." : ""));
             if (d is { } drag) { t.SetMeta(UiTest.FullName, drag.Key); MakeDraggable(t, new List<Drag> { drag }, S.SpecialForceName(o.Id)); MissionMenu(t, n, null, o.Id); }
             sz.Flow.AddChild(t);
@@ -241,8 +241,10 @@ public partial class GameScreen
         var h = Ui.HBox(8);
         h.MouseFilter = MouseFilterEnum.Ignore;
         h.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var size = f.Ships.Select(id => S.Host.Economy.Find(id)?.Class).Where(c => c != null).Select(SizeOfClass).DefaultIfEmpty(1).Max();
-        var icon = UnitIcon.For(UnitIcon.Kind.Ship, Me == Side.Hand, Ui.You, size, new Vector2(46, 26));
+        // the fleet's biggest ship, by its own picture (Paul 2026-11-23, one picture per class); ties go to the first class by name
+        var big = f.Ships.Select(id => S.Host.Economy.Find(id)?.Class).Where(c => c != null)
+            .OrderByDescending(SizeOfClass).ThenBy(c => c, StringComparer.Ordinal).FirstOrDefault();
+        var icon = UnitIcon.For(UnitIcon.Kind.Ship, Me == Side.Hand, Ui.You, big != null ? SizeOfClass(big) : 1, new Vector2(46, 26), cls: big);
         icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(icon);
         var v = Ui.VBox(0);

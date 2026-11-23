@@ -71,6 +71,47 @@ public static class PixelIcons
         return true;
     }
 
+    /// <summary>
+    /// A unit's picture: its class's own sprite (Paul 2026-11-23, "one picture per class": a ship has a ship picture, a regiment its
+    /// soldier), else the kind's picture for its side and size. Sprites are drawn on a transparent background (Paul, a hard rule).
+    /// </summary>
+    public static string[] Unit(UnitIcon.Kind k, bool hand, int size4, string cls)
+    {
+        var set = k switch
+        {
+            UnitIcon.Kind.Ship => PixelIconData.Ships, UnitIcon.Kind.Fighter => PixelIconData.Craft,
+            UnitIcon.Kind.Regiment => PixelIconData.Troops, UnitIcon.Kind.Agent => PixelIconData.Agents, _ => null,
+        };
+        return set != null && cls != null && set.TryGetValue(Slug(cls), out var g) ? g : Unit(k, hand, size4);
+    }
+
+    /// <summary>A class name as its sprite's name: "Decree II" is "decree-ii", "Nhal Lookouts" is "nhal-lookouts".</summary>
+    public static string Slug(string cls) => cls.Trim().ToLowerInvariant().Replace(' ', '-');
+
+    /// <summary>The roles a leader's picture shows: a fleet officer, a general, an official (Paul 2026-11-23: a hero gets a character).</summary>
+    public enum LeaderRole { Admiral, General, Civil }
+
+    /// <summary>A leader's picture by side and role (one picture per role, not a face per person: Paul's pick 2026-11-23).</summary>
+    public static string[] Leader(bool hand, LeaderRole role) =>
+        PixelIconData.Leaders.TryGetValue($"{(hand ? "hand" : "collective")}-{role.ToString().ToLowerInvariant()}", out var g) ? g : null;
+
+    /// <summary>
+    /// A leader's role for the picture: their rank says it first (character-ranks.csv: Admiral, Captain, Commodore and Commander command
+    /// fleets; General commands troops; the others are officials), else what they can command: fleets, or fleets and troops both, is the
+    /// fleet officer; troops only is the general; neither is the official, who commands nothing (UI review 15). Screens only.
+    /// </summary>
+    public static LeaderRole RoleOf(string rank, bool canAdmiral, bool canGeneral)
+    {
+        switch (rank ?? "")
+        {
+            case "Admiral": case "Captain": case "Commodore": case "Commander": return LeaderRole.Admiral;
+            case "General": return LeaderRole.General;
+            case "": break;
+            default: return LeaderRole.Civil;
+        }
+        return canAdmiral ? LeaderRole.Admiral : canGeneral ? LeaderRole.General : LeaderRole.Civil;
+    }
+
     /// <summary>The unit icon for a picture kind and side (ships by size class 0 small to 3 huge), or null.</summary>
     public static string[] Unit(UnitIcon.Kind k, bool hand, int size4)
     {

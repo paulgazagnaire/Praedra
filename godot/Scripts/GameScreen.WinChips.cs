@@ -25,7 +25,7 @@ public partial class GameScreen
 {
     // ================================================================== chips and zones
 
-    /// <summary>A leader as a tile: initials, name, the posts they can hold. Drags unless an order already moves them today, or they cannot act.</summary>
+    /// <summary>A leader as a tile: their picture, name, the posts they can hold. Drags unless an order already moves them today, or they cannot act.</summary>
     Control LeaderChip(CharacterRecord c, string role)
     {
         string name = S.CharName(c.Id);
@@ -34,7 +34,7 @@ public partial class GameScreen
         bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id);
         // no posts line under a free leader's name: right under the name it read as their rank (UI review 12); the posts are in the hover
         string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : null;
-        var tile = Tile(null, false, 0, GameSession.CardName(name), sub, 1, can ? Ui.You : Ui.Text3, avatar: Initials(name));
+        var tile = Tile(null, false, 0, GameSession.CardName(name), sub, 1, can ? Ui.You : Ui.Text3, avatar: LeaderSprite(c.Id));
         bool mission = CanJoin(c);
         tile.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}.{(role != null ? $"\n{role}." : "")}" + (can ? "\nDrag onto a post or a fleet." : "")
             + (mission ? " Right-click to send them on a mission." : ""));
@@ -53,10 +53,12 @@ public partial class GameScreen
         return can3.Length == 3 ? "any post" : can3.Length == 0 ? "passenger" : string.Join(", ", can3);
     }
 
-    static string Initials(string name)
+    /// <summary>A leader's picture: their side's sprite for their role, a fleet officer, a general or an official (Paul 2026-11-23: a hero
+    /// gets a character picture; one per role, not a face per person). It replaced the initials in a ring.</summary>
+    string[] LeaderSprite(int id)
     {
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length == 0 ? "?" : parts.Length == 1 ? parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant() : $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+        if (!Cm.Data.TryGet(id, out var k)) return null;
+        return PixelIcons.Leader(k.Side == Side.Hand, PixelIcons.RoleOf(k.Rank, k.CanAdmiral, k.CanGeneral));
     }
 
     string HullWords(EconObject o) => Fm.ClassOf(o) is { } sc && o.Hull < sc.Hull ? $"hull {o.Hull * 100 / Math.Max(1, sc.Hull)}%" : null;

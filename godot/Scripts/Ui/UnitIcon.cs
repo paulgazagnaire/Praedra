@@ -19,12 +19,14 @@ public partial class UnitIcon : Control
     public int Size4 = 1;
     public bool Hand = true;
     public Color Ink = Ui.You;
+    /// <summary>The unit's class ("Mandate", "Nhal Lookouts"): its own sprite when one is drawn (Paul 2026-11-23, one picture per class).</summary>
+    public string Cls;
 
     public UnitIcon() { MouseFilter = MouseFilterEnum.Ignore; CustomMinimumSize = new Vector2(56, 34); }
 
-    public static UnitIcon For(Kind what, bool hand, Color ink, int size4 = 1, Vector2? min = null)
+    public static UnitIcon For(Kind what, bool hand, Color ink, int size4 = 1, Vector2? min = null, string cls = null)
     {
-        var i = new UnitIcon { What = what, Hand = hand, Ink = ink, Size4 = Math.Clamp(size4, 0, 3) };
+        var i = new UnitIcon { What = what, Hand = hand, Ink = ink, Size4 = Math.Clamp(size4, 0, 3), Cls = cls };
         if (min is Vector2 m) i.CustomMinimumSize = m;
         return i;
     }
@@ -60,7 +62,7 @@ public partial class UnitIcon : Control
         var r = new Rect2(Vector2.Zero, Size);
         // the pixel icon where one is drawn (Paul 2026-11-18, code only); a greyed-out one is flat in its grey. A spot too small for it
         // keeps the drawn picture below.
-        if ((PixelIcons.Unit(What, Hand, Size4) ?? PixelIcons.Building(What)) is { } grid && PixelIcons.DrawCentred(this, grid, r, Ink)) return;
+        if ((PixelIcons.Unit(What, Hand, Size4, Cls) ?? PixelIcons.Building(What)) is { } grid && PixelIcons.DrawCentred(this, grid, r, Ink)) return;
         switch (What)
         {
             case Kind.Ship: if (Hand) HandShip(r); else CollectiveShip(r); break;

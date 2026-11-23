@@ -468,14 +468,18 @@ public partial class GameScreen
         var v = Ui.VBox(3);
         card.AddChild(v);
         v.AddChild(Ui.Section("Map legend"));
-        void Item(Glyph g, string text)
+        void Item(Control g, string text)
         {
             var h = Ui.HBox(8);
-            g.CustomMinimumSize = new Vector2(22, 18);
-            h.AddChild(g);
+            if (g is Glyph) g.CustomMinimumSize = new Vector2(22, 18);
+            var slot = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(22, 18) };
+            slot.AddChild(g);
+            h.AddChild(slot);
             h.AddChild(Ui.Label(text, null, Ui.Text2, Ui.Small, wrap: false));
             v.AddChild(h);
         }
+        // the map's own pixel icons, as the map draws them (Paul 2026-11-23: no placeholder pictures anywhere; the map icons are #359-#361)
+        Control Map(string key, Color ink) => IconPic.Of(PixelIconData.Map[key], 1, ink);
         Item(new Glyph(Glyph.Kind.Dot, Ui.You, 11), "Your system");
         Item(new Glyph(Glyph.Kind.Dot, Ui.Enemy, 11), "Enemy system (as last seen)");
         Item(new Glyph(Glyph.Kind.Dot, Ui.Neutral, 8), "Nobody's system");
@@ -484,15 +488,19 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the dot");   // as the map draws it
         Item(new Glyph(Glyph.Kind.Ring, Ui.Danger, 14), "Uprising: yards and mines stop");
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
-        Item(new Glyph(Glyph.Kind.Triangle, Colors.White, 11, Ui.You), "Your fleet (a number = several here)");
-        Item(new Glyph(Glyph.Kind.TriangleDown, Ui.Enemy, 11), "Enemy fleet you see now");
-        Item(new Glyph(Glyph.Kind.Diamond, Ui.You, 11), "Your leader travelling alone");
-        Item(new Glyph(Glyph.Kind.DiamondRing, Ui.You, 13), "Your mission team travelling");
-        if (S.Player == Side.Collective) Item(new Glyph(Glyph.Kind.Dot, Ui.Gold, 11), "Your HQ on the move");
+        Item(Map("fleet-defensive", Ui.You), "Your fleet, Defensive (it fights)");
+        Item(Map("fleet-elusive", Ui.You), "Your fleet, Elusive (it slips away)");
+        Item(Map("fleet-pair-defensive", Ui.You), "Two of your fleets here: two marks");
+        Item(Map("fleet-group-3", Ui.You), "More of your fleets here: their number");
+        Item(Map("fleet-unknown", Ui.Enemy), "Enemy fleet you see now");
+        Item(Map("mover-leader", Ui.You), "Your leader travelling alone");
+        Item(Map("mover-team", Ui.You), "Your mission team travelling");
+        if (S.Player == Side.Collective) Item(Map("mover-hearth", Ui.Gold), "Your HQ on the move");
         v.AddChild(Ui.Label("On the way from the yard (Layers > Deliveries):", null, Ui.Text3, Ui.Small, wrap: false));
-        Item(new Glyph(Glyph.Kind.Square, Ui.You, 10), "Troops");
-        Item(new Glyph(Glyph.Kind.Hexagon, Ui.You, 11), "A building");
-        Item(new Glyph(Glyph.Kind.Triangle, Ui.You, 11, Ui.MapBg), "A ship or fighter");
+        Item(Map("mover-regiment", Ui.You), "Troops");
+        Item(Map("mover-building", Ui.You), "A building");
+        Item(Map("mover-ship", Ui.You), "A ship");
+        Item(Map("mover-fighter", Ui.You), "Fighters");
         Item(new Glyph(Glyph.Kind.Bar, new Color(0.72f, 0.75f, 0.80f), 16), "Major route: 3x speed");
         Item(new Glyph(Glyph.Kind.Bar, new Color(Ui.Text3, 0.7f), 16), "Minor route: 1.5x speed");
         v.AddChild(Ui.Label("Off the routes, ships jump through open space at normal speed. A move preview is solid on a route and dashed off it; red rings mark a known trap. Each sector is drawn a little tighter than it is, so the sectors stand apart: the arrival day in a move preview is the real distance.", "Hint", size: Ui.Tiny));
