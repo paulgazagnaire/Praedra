@@ -9,8 +9,9 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// Two of the floating pieces of Paul's mockup (2026-10-28). Bottom centre, the selection card: what you clicked in one glance (owner,
-/// support, troops, fleets; for a fleet where it is and where it goes), with its main action and Details, which opens the window.
+/// Two of the floating pieces of Paul's mockup (2026-10-28). Bottom centre, the selection card: the system you clicked in one glance
+/// (owner, support, troops, fleets), with its windows and Details, which opens the window on the right. A fleet has no card any more
+/// (Paul 2026-11-23): a click selects it, a right-click on a system sends it, a double-click (or F) opens its Fleet window.
 /// Bottom right, the message corner: one short card with the latest message. The kind strip that was over it (BAT FLT SYS PRD MSN) is
 /// gone (Paul 2026-11-14, impeccable critique): the whole log, sorted by kind, is one key away (E, or Log in the menu).
 /// </summary>
@@ -47,8 +48,8 @@ public partial class GameScreen
         v.AddChild(_selActions);
     }
 
-    /// <summary>The card shows when something is selected, the window is closed and no move is being planned.</summary>
-    bool SelectionCardWanted => !_drawer.Visible && (_view.Selected >= 0 || OwnSelectedFleet() != null);
+    /// <summary>The card shows when a system is selected (no fleet of yours), the window is closed and no move is being planned.</summary>
+    bool SelectionCardWanted => !_drawer.Visible && _view.Selected >= 0 && OwnSelectedFleet() == null;
 
     Fleet OwnSelectedFleet() =>
         _view.SelectedFleet >= 0 && S.Game.State.Fleets.TryGetValue(_view.SelectedFleet, out var f) && f.Side == Me ? f : null;
@@ -60,8 +61,7 @@ public partial class GameScreen
         if (!_selCard.Visible) return;
         Ui.Clear(_selFacts);
         Ui.Clear(_selActions);
-        if (OwnSelectedFleet() is { } f) FleetCard(f);
-        else SystemCard(_view.Selected);
+        SystemCard(_view.Selected);
     }
 
     void Fact(string caption, string value, Color? color = null, string tip = null)
@@ -123,22 +123,5 @@ public partial class GameScreen
             CardButton("Fleets", () => OpenFromTile(name, "fleets"), "Open the windows of your fleets here");
         _selActions.AddChild(Ui.Grow());
         CardButton("Details →", () => { _sysTab = SysTab.Overview; ShowTab(DrawerTab.Selected); }, "Everything about this system, in the window");
-    }
-
-    void FleetCard(Fleet f)
-    {
-        _selName.Text = f.Name;
-        Tag("YOUR FLEET", Ui.You);
-        if (f.At != null) Fact("AT", f.At);
-        if (f.Transit is { } t && f.At == null) { Fact("TO", t.Path[^1]); Fact("ARRIVES", $"day {GameSession.ArrivalDay(t)}"); }
-        else if (S.PlannedMoveOf(f.Id) is { } pm) { Fact("TO", pm.To, Ui.Warn); Fact("ARRIVES", $"day {pm.ArrivalDay}", Ui.Warn); }
-        // the strength number is not shown bare (Paul 2026-11-22, F7 answer B); it stays in the hover
-        Fact("SHIPS", f.Ships.Count.ToString(), tip: $"Strength {Fm.StrengthOf(f):0}: how hard the fleet hits, its damage rate against three Mandates with its damage counted (three Decrees score about 65).");
-        if (f.At != null)
-            CardButton(_moveFleet == f.Id ? "Cancel move" : "Move...", () => { if (_moveFleet == f.Id) CancelMove(); else StartMove(f); },
-                "Pick a destination on the map: the route and the arrival day show before you confirm", "Primary");
-        int fid = f.Id;
-        // one place for everything else: the fleet's window (2026-11-22; the side panel's fleet page is only a summary now)
-        CardButton("Fleet window", () => OpenMgmt(MgKind.Fleet, fleet: fid), "Its orders (attack, merge, split, scrap), its ships, loading fighters and troops, its leaders. F opens it too.");
     }
 }

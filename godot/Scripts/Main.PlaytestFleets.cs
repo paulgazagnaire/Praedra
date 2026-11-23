@@ -228,11 +228,23 @@ public partial class Main
             Expect(lines.Count == ids.Count && pair.All(f => lines.Any(l => l.StartsWith(f.Name + " ", StringComparison.Ordinal) && (l.EndsWith("Defensive") || l.EndsWith("Elusive")))),
                 "a click on it lists them, each with its ships and behaviour: " + string.Join(" / ", lines));
             var last = pair[^1];
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+            if (gs.WindowOpen) gs.Click("Close window");
             Expect(gs.PlayPickFromFleetGroup(last.Name) && gs.SelectedFleetId == last.Id, $"picking {last.Name} in the list selects it");
+            // Paul 2026-11-23: "the fleet window opens", not the window on the right
+            Expect(gs.MgmtKeys.Contains($"Fleet {last.Id}") && !gs.WindowOpen,
+                $"and opens its Fleet window, not the window on the right ({string.Join(", ", gs.MgmtKeys)}; right window {gs.WindowOpen})");
+            Expect(!gs.SelectionCardOpen, "a fleet selected has no card at the bottom (Paul 2026-11-23)");
             if (gs.G.TryFindSystem(at, out int atIdx)) gs.View.FocusOn(atIdx, 2.4f);   // the words show only on screen
             gs.PlayRefresh();
             Expect(gs.MapWords.Any(w => w.StartsWith(last.Name, StringComparison.Ordinal) && w.EndsWith($" +{ids.Count - 1}", StringComparison.Ordinal)),
                 $"the group's words name the selected fleet and count the others ({last.Name} ... +{ids.Count - 1}): " + string.Join(" | ", gs.MapWords));
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+            gs.PressKey(Key.Tab);
+            Expect(gs.SelectedFleetId == ids[0] && !gs.WindowOpen && !gs.SelectionCardOpen,
+                $"Tab steps to the next fleet there ({ids[0]}, got {gs.SelectedFleetId}) like a click: no window on the right, no card (review 13)");
+            gs.PressKey(Key.Tab, shift: true);
+            Expect(gs.SelectedFleetId == last.Id && !gs.WindowOpen, "Shift+Tab steps back");
             gs.PlayShiftClickGroup(ids[0]);
             Expect(ids.All(gs.View.PickedFleets.Contains), "Shift+click on the marker picks them all");
             gs.PlayShiftClickGroup(ids[0]);
@@ -240,5 +252,29 @@ public partial class Main
         }
         else GD.Print("  (no system with two fleets of yours: the shared marker is not checked on this side)");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // ---- a lone fleet on the map (Paul 2026-11-23): a click selects it with no card at the bottom; a double-click opens its Fleet window
+        var lone = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && gs.PlayFleetGroup(f.Id).Count == 1)
+            .OrderBy(f => f.Id).FirstOrDefault();
+        if (lone != null && gs.G.TryFindSystem(lone.At, out int loneIdx))
+        {
+            if (gs.WindowOpen) gs.Click("Close window");
+            gs.View.Select(-1); gs.View.SelectedFleet = -1;
+            gs.View.FocusOn(loneIdx, 2.4f);
+            gs.PlayRefresh();
+            if (gs.FleetMarker(lone.Id) is { } lp)
+            {
+                gs.PlayMapClick(lp);
+                gs.PlayRefresh();
+                Expect(gs.SelectedFleetId == lone.Id && !gs.SelectionCardOpen && !gs.WindowOpen && gs.MgmtCount == 0,
+                    $"a click on {lone.Name} selects it, with no card at the bottom and no window ({gs.SelectionCardText})");
+                gs.PlayMapClick(lp, doubleClick: true);
+                gs.PlayRefresh();
+                Expect(gs.MgmtKeys.Contains($"Fleet {lone.Id}") && !gs.WindowOpen, $"a double-click on {lone.Name} opens its Fleet window ({string.Join(", ", gs.MgmtKeys)})");
+            }
+            else Expect(false, $"{lone.Name} has a marker on the map");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+        else GD.Print("  (no fleet of yours alone at a system: the double-click is not checked on this side)");
     }
 }

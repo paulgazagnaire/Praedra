@@ -263,7 +263,7 @@ public partial class GameScreen
         using (Card())
         {
             Line("Click a system to see it, and to build there if it is yours.", Ui.Text2, Ui.Small);
-            Line("Click one of your fleets (blue arrows) to give it orders. A number on an arrow means several fleets are there: click it for the list, or Tab steps through them.", Ui.Text2, Ui.Small);
+            Line("Click one of your fleets (blue arrows), then right-click a system to send it there; double-click it (or F) for its window. Several fleets at a system share one arrow: click it for their list, or Tab steps through them.", Ui.Text2, Ui.Small);
             Line("Needs you (Q) lists what wants a decision, worst first. Press Play (Space) and the game stops by itself when it matters.", Ui.Text2, Ui.Small);
         }
         Heading("Keys");
@@ -422,6 +422,9 @@ public partial class GameScreen
         var here = S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == f.At).OrderBy(x => x.Id).ToList();
         if (here.Count < 2) return;
         int i = here.FindIndex(x => x.Id == f.Id);
-        SelectFleet(here[((i + dir) % here.Count + here.Count) % here.Count].Id, false);
+        // like a click on the map (review 13, Paul 2026-11-23): it selects and never opens the window on the right; an open one follows
+        _view.SelectedFleet = here[((i + dir) % here.Count + here.Count) % here.Count].Id;
+        OnViewChanged();
+        _panelDirty = true; _panelTimer = 0;
     }
 }
