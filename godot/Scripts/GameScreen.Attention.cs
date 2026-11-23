@@ -128,7 +128,7 @@ public partial class GameScreen
             if (S.OwnerOf(at) == Me || S.IsDestroyed(at)) continue;
             var fl = f;
             if (S.Host.Troops.RegimentsAboard(f).Count > 0 && S.VisibleEnemyFleetsAt(at).Count == 0 && !S.PendingOf(f.Id).Any())
-                list.Add(new Item($"invade-{f.Id}-{at}", Level.Info, $"{f.Name} is at {at} with troops", "No enemy fleet there. Invade now, or bombard first (the fleet's Orders).", at,
+                list.Add(new Item($"invade-{f.Id}-{at}", Level.Info, $"{S.NameOf(f)} is at {at} with troops", "No enemy fleet there. Invade now, or bombard first (the fleet's Orders).", at,
                     new() { ("Invade now", () => Invade(fl), "Primary"), ("Orders...", () => OpenMgmt(MgKind.Fleet, fleet: fl.Id, tab: "Command"), null) }));
             if (S.HoldsHarvester(f) && !S.PendingOf(f.Id).Any())
                 list.Add(new Item($"harvest-{f.Id}-{at}", Level.Info, $"Your harvester is at {at}", "It can destroy the system (asks first).", at,

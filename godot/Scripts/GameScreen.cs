@@ -89,6 +89,7 @@ public partial class GameScreen : Control
         _view.LabelObstacles = MapLabelObstacles;
         _fleets.Boxes = MapBoxes;
         _fleets.Planned = () => S.PlannedMoves;
+        _fleets.NameOf = S.NameOf;   // a fleet renamed today shows its new name at once
         _fleets.Elusive = id => S.Game.State.Fleets.TryGetValue(id, out var ef) && ef.Side == Me && IsElusive(ef);
         _fleets.EnemyFleets = () => S.Fog.VisibleFleets(S.Player);
         _fleets.CharacterRoutes = CharacterRoutes;
@@ -251,6 +252,7 @@ public partial class GameScreen : Control
     {
         if (e is InputEventKey { Keycode: Key.Alt } k && _view != null) _view.ShowAllNames = k.Pressed;
         TrackTip(e);
+        RenameClickElsewhere(e);   // a fleet's name being typed is kept by a click outside its box
     }
 
     public override void _Notification(int what)

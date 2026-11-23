@@ -124,7 +124,7 @@ public partial class GameScreen
         _waypoints.Clear(); _view.Waypoints = null;
         _view.PickMode = true;
         _mgLayer.Visible = false;   // the windows step aside while a destination is picked: four fleet windows side by side cover the map
-        _moveBanner = $"Move {f.Name}: click a destination system (Esc cancels)";
+        _moveBanner = $"Move {S.NameOf(f)}: click a destination system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
@@ -149,7 +149,7 @@ public partial class GameScreen
         .Where(x => x.Item2.Ok && x.Item2.Red).ToList();
 
     /// <summary>"Fleet 1", or "Fleet 1 and 2 other fleets" when several move together.</summary>
-    string MovingWho(Fleet f) => _moveAlso.Count == 0 ? f.Name : $"{f.Name} and {Ui.Count(_moveAlso.Count, "other fleet", "other fleets")}";
+    string MovingWho(Fleet f) => _moveAlso.Count == 0 ? S.NameOf(f) : $"{S.NameOf(f)} and {Ui.Count(_moveAlso.Count, "other fleet", "other fleets")}";
 
     void CancelMove()
     {
@@ -187,7 +187,7 @@ public partial class GameScreen
             {
                 _view.PathPreview = plan.Ok ? plan.Path.Select(n => G.TryFindSystem(n, out int i) ? i : -1).ToList() : null;
                 _view.PathRouteHop = plan.Ok ? plan.RouteHop : null;
-                string trip = plan.Ok ? $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}" : $"{f.Name} has no route there and stays";
+                string trip = plan.Ok ? $"{plan.HopTicks.Sum()} days, arrives day {plan.ArrivalDay}{LegWords(plan.RouteHop)}" : $"{S.NameOf(f)} has no route there and stays";
                 string through = via.Count == 0 ? "" : " via " + string.Join(", ", via);
                 if (leadRed || redOthers.Count > 0)
                 {
@@ -333,7 +333,7 @@ public partial class GameScreen
         bool Stays(Fleet x, List<string> v)
         {
             var p = S.Host.PlanMove(Me, x.Id, to, v);
-            if (also.Count > 0 && !p.Ok) { Toast($"{x.Name} has no route to {to}: it stays.", MsgKind.Warn); return true; }
+            if (also.Count > 0 && !p.Ok) { Toast($"{S.NameOf(x)} has no route to {to}: it stays.", MsgKind.Warn); return true; }
             return safeOnly && p is { Ok: true, Red: true };
         }
         if (!Stays(f, via)) SendFleetMove(f, to, via);
@@ -351,13 +351,13 @@ public partial class GameScreen
         // the last move given wins: the core would keep the first and refuse the second (QA-99). rule: m1-clock-and-orders §Orders in (withdraw)
         ReplaceFleetMove(f.Id);
         long seq = Fm.SubmitMove(Me, f.Id, to, via);
-        S.TrackFleet(f.Id, seq, $"Move {f.Name} to {to}");
+        S.TrackFleet(f.Id, seq, $"Move {S.NameOf(f)} to {to}");
         if (plan.Ok) S.PlanMove(f.Id, new GameSession.PlannedMove(to, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay, seq));
         string viaWords = via.Count == 0 ? "" : " via " + string.Join(", ", via);
         string trapWords = plan.Red ? $" (warned: interdictor seen at {string.Join(", ", plan.Traps.Select(t => t.System))})" : "";
-        S.Say($"Order sent: move {f.Name} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);
+        S.Say($"Order sent: move {S.NameOf(f)} to {to}{viaWords}{trapWords}.", plan.Red ? MsgKind.Warn : MsgKind.Info, to);
         AddLogItem(S.Messages[^1], false);
-        Toast(plan.Ok ? $"{f.Name} to {to}: arrives day {plan.ArrivalDay}." : $"Order sent: move {f.Name} to {to}.", plan.Red ? MsgKind.Warn : MsgKind.Info);
+        Toast(plan.Ok ? $"{S.NameOf(f)} to {to}: arrives day {plan.ArrivalDay}." : $"Order sent: move {S.NameOf(f)} to {to}.", plan.Red ? MsgKind.Warn : MsgKind.Info);
     }
 
     // ================================================================== the Hearth's move (Collective)

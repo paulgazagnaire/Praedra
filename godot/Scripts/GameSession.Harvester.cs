@@ -54,7 +54,7 @@ public sealed partial class GameSession
 
     /// <summary>Queue Destroy System for the fleet. The core judges it when the clock moves; a refusal comes back in the messages.</summary>
     public long SubmitDestroySystem(Fleet f) =>
-        TrackFleet(f.Id, Host.Harvester.SubmitDestroySystem(Player, f.Id), $"Destroy System {f.At} with {f.Name}");
+        TrackFleet(f.Id, Host.Harvester.SubmitDestroySystem(Player, f.Id), $"Destroy System {f.At} with {NameOf(f)}");
 
     /// <summary>For the sabotage planner: where the enemy harvester was last reported (null when never, or since destroyed).</summary>
     public string EnemyHarvesterNote =>

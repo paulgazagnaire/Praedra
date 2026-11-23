@@ -154,10 +154,10 @@ public partial class GameScreen
         }
         foreach (var f in S.Game.State.Fleets.Values.Where(f => f.Side == Me))
         {
-            int r = Rank(f.Name, q);
+            int r = Rank(S.NameOf(f), q);
             if (r == 9) continue;
             int id = f.Id;
-            hits.Add((r, 1, f.Name, $"fleet, {StatusOf(f)}", () => { CloseSearch(); SelectFleet(id, true); }));
+            hits.Add((r, 1, S.NameOf(f), $"fleet, {StatusOf(f)}", () => { CloseSearch(); SelectFleet(id, true); }));
         }
         foreach (var c in S.MyCharacters.Where(c => c.Status != CharacterStatus.Dead))
         {

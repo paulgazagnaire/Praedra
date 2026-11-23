@@ -249,7 +249,7 @@ public partial class GameScreen
     string ThingName(Drag d) => d.Kind switch
     {
         'L' => S.CharName(d.Id),
-        'M' => S.Game.State.Fleets.TryGetValue(d.Id, out var f) ? f.Name : "fleet",
+        'M' => S.Game.State.Fleets.TryGetValue(d.Id, out var f) ? S.NameOf(f) : "fleet",
         'F' => S.SpecialForceName(d.Id),
         _ => S.Host.Economy.Find(d.Id)?.Class ?? "unit",
     };

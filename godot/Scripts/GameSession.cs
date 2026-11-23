@@ -140,7 +140,8 @@ public sealed partial class GameSession
     public string NameOf(Side s) => s == Side.Hand ? "Hand" : "Collective";
     public string You(Side s) => s == Player ? $"{NameOf(s)} (you)" : NameOf(s);
 
-    public int QueuedOrders => Game.Queue.Count(o => o.Side == Player);
+    // a rename is not counted: it shows done at once, has no Cancel, and a second one the same day replaces it (UI review 16)
+    public int QueuedOrders => Game.Queue.Count(o => o.Side == Player && o is not RenameFleetOrder);
 
     // ------------------------------------------------------------------ fog of war: what the player's side knows (rule: m5-fog-and-hq §N8)
 
@@ -370,6 +371,31 @@ public sealed partial class GameSession
     }
 
     string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"Fleet {id}");
+
+    /// <summary>
+    /// A fleet's name as the screens show it: the name of your RenameFleet order waiting for the day (the core applies it first thing next
+    /// day), else its own. Read from the order queue, so it also holds after a save and load the same day (UI review 16).
+    /// </summary>
+    public string NameOf(Fleet f) => RenamesOf(f).LastOrDefault()?.Name ?? f.Name;
+
+    /// <summary>Your RenameFleet orders waiting for the day for this fleet, oldest first (at most one: a new one replaces it).</summary>
+    IEnumerable<RenameFleetOrder> RenamesOf(Fleet f) =>
+        Game.Queue.OfType<RenameFleetOrder>().Where(o => o.Side == Player && o.Fleet == f.Id).OrderBy(o => o.Sequence);
+
+    /// <summary>
+    /// Sends a RenameFleet order for a fleet of yours and shows the new name at once (Paul 2026-11-23: double-click the name to rename).
+    /// The typed name is cleaned as the core cleans it (trimmed, accents folded); nothing happens when that leaves it empty or unchanged,
+    /// so an empty name keeps the old one. The last name typed today wins (as the HQ move, QA-99): a rename already waiting is taken back,
+    /// and a name back to the fleet's own leaves nothing to send. Returns the name shown now, or null. rule: m3-fleets §Orders (RenameFleet).
+    /// </summary>
+    public string RenameFleet(Fleet f, string typed)
+    {
+        string name = FleetModule.CleanFleetName(typed);
+        if (name.Length == 0 || name == NameOf(f)) return null;
+        foreach (long seq in RenamesOf(f).Select(o => o.Sequence).ToList()) Withdraw(seq);
+        if (name != f.Name) Track(Host.Fleets.SubmitRenameFleet(Player, f.Id, name), $"Rename {f.Name} to {name}");
+        return name;
+    }
     Side? FleetSide(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Side : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Side : null);
     string ClassName(int id) => _classOf.TryGetValue(id, out var c) ? c : $"unit {id}";
 
@@ -419,6 +445,8 @@ public sealed partial class GameSession
         RejectReason.UnknownRegiment => "unknown regiment",
         RejectReason.AlreadyAboard => "already aboard",
         RejectReason.BadValue => "bad value",
+        RejectReason.EmptyName => "the name is empty (the fleet keeps its old name)",
+        RejectReason.NameTooLong => $"the name is longer than {FleetModule.MaxFleetNameLength} letters",
         BattleReject.AiSide => "the computer side cannot set that",
         BombardReject.NotAtSystem => "the fleet is not at that system",
         BombardReject.OwnSystem => "you cannot attack your own system",
@@ -536,8 +564,8 @@ public sealed partial class GameSession
         if (MissionOf(c.Id) is { } mg) return MissionWhere(mg);
         if (c.AttachedFleet != 0 && Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f))
         {
-            if (f.Transit is { } ft && f.At == null) return $"aboard fleet {f.Name}, travelling to {ft.Path[^1]}, arrives day {ArrivalDay(ft)}";
-            return $"aboard fleet {f.Name} at {f.At}";
+            if (f.Transit is { } ft && f.At == null) return $"aboard fleet {NameOf(f)}, travelling to {ft.Path[^1]}, arrives day {ArrivalDay(ft)}";
+            return $"aboard fleet {NameOf(f)} at {f.At}";
         }
         if (c.Transit is { } t && c.System == null) return $"travelling alone to {t.Path[^1]}, arrives day {ArrivalDay(t)}";
         if (PlannedCharacterMoveOf(c.Id) is { } pm) return $"at {c.System}; leaving for {pm.To}, arrives day {pm.ArrivalDay}";
