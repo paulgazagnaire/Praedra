@@ -169,7 +169,7 @@ public partial class GameScreen
         // the tab counts, as the design: ships, and fighters and troops out of their room ("8/16"). The ship count takes the colour of its
         // most damaged ship (amber under half its hull, red under a quarter), as the ship rows do, so damage shows on any tab (UI review 6)
         float worst = WorstHull(f);
-        Color? shipsInk = worst < 0.25f ? Ui.Danger : worst < 0.5f ? Ui.Warn : null;
+        Color? shipsInk = HullInk(worst);
         FleetStrip(w,
             ("Command", null, null, () => CommandTab(f, riders)),
             ("Ships", f.Ships.Count.ToString(), shipsInk, () => ShipsTab(f, still, picked)),
@@ -179,6 +179,9 @@ public partial class GameScreen
         if (shipsInk != null && w.Pages.TryGetValue("Ships", out var shipsTab))
             shipsTab.Tab.TooltipText = Ui.Wrap(HullWords(HullState(f)).Trim() + " Amber: a ship under half its hull. Red: under a quarter.");
     }
+
+    /// <summary>A hull's colour from what is left of it: red under a quarter, amber under half, else none (the caller's own ink).</summary>
+    internal static Color? HullInk(float share) => share < 0.25f ? Ui.Danger : share < 0.5f ? Ui.Warn : null;
 
     /// <summary>"8/16" (what it carries out of its room); just the number with no room; nothing with neither.</summary>
     static string RoomCount(int have, int room) => room <= 0 ? (have == 0 ? null : have.ToString()) : $"{have}/{room}";
@@ -342,7 +345,7 @@ public partial class GameScreen
                 // the bar is the most damaged ship's hull: the one the days count for, coloured as the Ships tab and the side panel (UI review 6)
                 words.Add(Countdown(r.Days));
                 share = r.Worst;
-                ink = r.Worst < 0.25f ? Ui.Danger : r.Worst < 0.5f ? Ui.Warn : Ui.You;
+                ink = HullInk(r.Worst) ?? Ui.You;
                 tip += (tip == "" ? "" : " ") + $"{where}: its hull is whole on day {S.Game.Day + r.Days}. The bar is its most damaged ship's hull." + (r.Fast ? " Leaving stops the repairs." : "")
                     + (r.Broken > 0 ? $" {Ui.Count(r.Broken, "broken part", "broken parts")}: each repair may fix one, by chance." : "") + craft;
             }
@@ -794,7 +797,7 @@ public partial class GameScreen
     /// A card from the design (a ship, a post, a passenger, a squadron, a regiment): its picture centred on the darker surface, 96 x 48,
     /// then its name, centred, two lines at most; a short dim line under that when it has something to say.
     /// </summary>
-    PanelContainer FleetCard(Control pic, string name, string sub = null, bool ghost = false)
+    PanelContainer FleetCard(Control pic, string name, string sub = null, bool ghost = false, int nameLines = 2, params Control[] more)
     {
         var p = new PanelContainer { MouseFilter = MouseFilterEnum.Pass, CustomMinimumSize = new Vector2(CardW, 0) };
         p.SetMeta("card", "card");
@@ -807,8 +810,9 @@ public partial class GameScreen
         center.AddChild(pic);
         tile.AddChild(center);
         v.AddChild(tile);
-        v.AddChild(CardLine(KeepNumeral(name), Look.Text, 2));
+        v.AddChild(CardLine(KeepNumeral(name), Look.Text, nameLines));
         if (sub != null) v.AddChild(CardLine(sub, ghost ? Pending : Look.Dim, 1));
+        foreach (var m in more) v.AddChild(m);
         if (ghost) p.Modulate = new Color(1, 1, 1, 0.62f);
         return p;
     }
@@ -974,8 +978,6 @@ public partial class GameScreen
     PanelContainer ShipCard(EconObject o)
     {
         var sc = Fm.ClassOf(o);
-        var card = FleetCard(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You), o.Class);
-        var v = card.GetChild<VBoxContainer>(0);
         var cap = Boxed(new HBoxContainer(), 4);
         cap.Alignment = BoxContainer.AlignmentMode.Center;
         cap.CustomMinimumSize = new Vector2(CardW, 16);
@@ -995,11 +997,10 @@ public partial class GameScreen
             Cargo("regiment", Fm.UnitsAboard(o.Id, ObjectCategory.Regiment).Count(), sc.TroopCapacity);
         }
         if (cap.GetChildCount() == 0) cap.AddChild(Look.Words("no cargo", 12, Look.Dim));   // every card the same height, so the rows line up
-        v.AddChild(cap);
         int max = sc?.Hull ?? o.Hull;
-        float r = max <= 0 ? 1 : o.Hull / (float)max;
-        v.AddChild(CardLine($"{o.Hull}/{max}", r < 0.25f ? Ui.Danger : r < 0.5f ? Ui.Warn : Look.Dim, 1));
-        return card;
+        var hull = CardLine($"{o.Hull}/{max}", HullInk(max <= 0 ? 1 : o.Hull / (float)max) ?? Look.Dim, 1);
+        // the class on one line (cut with "…"), so every ship card has the same height and the rows line up
+        return FleetCard(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You), o.Class, nameLines: 1, more: new Control[] { cap, hull });
     }
 
     /// <summary>A ship's hover: its class and number, its damage in words, whether it is being repaired, and what its class is for.

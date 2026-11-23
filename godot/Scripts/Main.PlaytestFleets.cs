@@ -86,8 +86,9 @@ public partial class Main
         // Paul's frames (2026-11-23): every ship a 96 px card, three a row, the buttons under them
         var shipShape = gs.MgPageShape(key, "Ships");
         int zoneAt = shipShape.Parts.FindIndex(p => p.Contains($"Zone {key} Ships")), splitAt = shipShape.Parts.FindIndex(p => p.Contains("Fleet Split"));
-        Expect(shipShape.CardWidths.Count >= a.Ships.Count && shipShape.CardWidths.All(x => x == 96) && 3 * 96 + 2 * 9 <= 306,
-            $"each ship is a 96 px card, three to a row ({string.Join(" ", shipShape.CardWidths)})");
+        Expect(shipShape.CardWidths.Count >= a.Ships.Count && shipShape.CardWidths.All(x => x == 96)
+            && shipShape.CardGap >= 0 && 3 * 96 + 2 * shipShape.CardGap <= shipShape.PageWidth && 4 * 96 + 3 * shipShape.CardGap > shipShape.PageWidth,
+            $"each ship is a 96 px card, exactly three to a row ({string.Join(" ", shipShape.CardWidths)}; {shipShape.CardGap} px apart on a {shipShape.PageWidth} px page)");
         Expect(zoneAt >= 0 && splitAt > zoneAt, $"Split and Scrap sit under the ship cards: {string.Join(" / ", shipShape.Parts)}");
         foreach (var tab in new[] { "Fighters", "Troops" })
         {
