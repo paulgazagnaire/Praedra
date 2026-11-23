@@ -890,4 +890,80 @@ public class FleetOrderTests
         Assert.IsType<MoveSquadronsOrder>(loaded.Queue[1]);
         Assert.Equal(new[] { 0, 1, 2, 3, 4, 5 }, ((DebugSetDamageOrder)loaded.Queue[2]).Hits);
     }
+
+    // ---------------------------------------------------------------- renaming a fleet (F23 to F28; Paul 2026-11-23)
+
+    // m3-fleets F23
+    [Fact]
+    public void F23_RenameGivesTheFleetItsNewNameEvenWhileMoving()
+    {
+        var w = F();
+        Assert.Null(Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "  Home Guard  ")));
+        Assert.Equal("Home Guard", w.State.Fleets[200].Name);
+        Assert.Null(Step(w, w.Fleets.SubmitMove(Emp, 200, LongJump)));
+        Assert.Null(w.State.Fleets[200].At); // in transit
+        Assert.Null(Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "Far Watch")));
+        Assert.Equal("Far Watch", w.State.Fleets[200].Name);
+    }
+
+    // m3-fleets F24
+    [Fact]
+    public void F24_RenameOfAnUnknownOrEnemyFleetIsRefused()
+    {
+        var w = F();
+        var before = Snap(w);
+        Assert.Equal(RejectReason.UnknownFleet, Step(w, w.Fleets.SubmitRenameFleet(Emp, 999, "Ghost")));
+        Assert.Equal(RejectReason.NotYours, Step(w, w.Fleets.SubmitRenameFleet(Reb, 200, "Taken")));
+        Assert.Equal(before, Snap(w));
+    }
+
+    // m3-fleets F25
+    [Fact]
+    public void F25_AnEmptyOrBlankNameIsRefused()
+    {
+        var w = F();
+        var before = Snap(w);
+        Assert.Equal(RejectReason.EmptyName, Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "")));
+        Assert.Equal(RejectReason.EmptyName, Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "   ")));
+        Assert.Equal(before, Snap(w));
+    }
+
+    // m3-fleets F26
+    [Fact]
+    public void F26_TwentyFourLettersFitTwentyFiveAreRefused()
+    {
+        var w = F();
+        Assert.Equal(24, FleetModule.MaxFleetNameLength);
+        Assert.Equal(RejectReason.NameTooLong, Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, new string('a', 25))));
+        Assert.Equal("Spare", w.State.Fleets[200].Name);
+        Assert.Null(Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, new string('a', 24))));
+        Assert.Equal(new string('a', 24), w.State.Fleets[200].Name);
+    }
+
+    // m3-fleets F27
+    [Fact]
+    public void F27_AccentsAreTakenOffAndLettersTheFontLacksAreRefused()
+    {
+        var w = F();
+        Assert.Equal("Etoile du Nord", FleetModule.CleanFleetName(" \u00C9toile du Nord "));
+        Assert.Equal("Etoile", FleetModule.CleanFleetName("E\u0301toile")); // the accent typed as a separate mark
+        Assert.Equal("AEgis Strasse Lodz", FleetModule.CleanFleetName("\u00C6gis Stra\u00DFe \u0141\u00F3d\u017A"));
+        Assert.Null(Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "\u00C9toile du Nord")));
+        Assert.Equal("Etoile du Nord", w.State.Fleets[200].Name);
+        var before = Snap(w);
+        Assert.Equal(RejectReason.BadValue, Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "Star \u2605")));
+        Assert.Equal(RejectReason.BadValue, Step(w, w.Fleets.SubmitRenameFleet(Emp, 200, "Tab\there")));
+        Assert.Equal(before, Snap(w));
+    }
+
+    // m3-fleets F28
+    [Fact]
+    public void F28_AQueuedRenameSurvivesTheSaveFormat()
+    {
+        var w = F();
+        w.Fleets.SubmitRenameFleet(Emp, 200, "Home Guard");
+        var loaded = GameSave.Load(GameSave.Save(w.Game));
+        var o = Assert.IsType<RenameFleetOrder>(Assert.Single(loaded.Queue));
+        Assert.Equal((200, "Home Guard"), (o.Fleet, o.Name));
+    }
 }
