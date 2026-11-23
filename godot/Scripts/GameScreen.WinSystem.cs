@@ -222,7 +222,7 @@ public partial class GameScreen
     /// </summary>
     Control FleetRow(Fleet f, bool selected, Action pick)
     {
-        var z = DropZone($"Fleet {f.Id} Row", $"send to {f.Name}", d => d.Kind switch
+        var z = DropZone($"Fleet {f.Id} Row", $"send to {S.NameOf(f)}", d => d.Kind switch
         {
             'S' or 'M' => RefuseShipsInto(d, f),
             'R' or 'Q' => RefuseOnto(d, f, d.Kind),
@@ -250,7 +250,7 @@ public partial class GameScreen
         var v = Ui.VBox(0);
         v.MouseFilter = MouseFilterEnum.Ignore;
         v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var nm = Ui.Label(f.Name, null, Ui.Text, Ui.Small, wrap: false);
+        var nm = Ui.Label(S.NameOf(f), null, Ui.Text, Ui.Small, wrap: false);
         nm.AddThemeFontOverride("font", Ui.SemiBold);
         nm.ClipText = true;
         v.AddChild(nm);
@@ -263,15 +263,15 @@ public partial class GameScreen
         int fid = f.Id;
         if (pick == null)
         {
-            var open = Ui.Button("Open", () => OpenMgmt(MgKind.Fleet, fleet: fid), $"Open {f.Name}'s window", "Chip");
-            open.SetMeta(UiTest.FullName, $"Open {f.Name}");
+            var open = Ui.Button("Open", () => OpenMgmt(MgKind.Fleet, fleet: fid), $"Open {S.NameOf(f)}'s window", "Chip");
+            open.SetMeta(UiTest.FullName, $"Open {S.NameOf(f)}");
             open.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             h.AddChild(open);
         }
         z.Flow.AddChild(h);
         z.Box.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         z.Box.MouseDefaultCursorShape = CursorShape.PointingHand;
-        z.Box.TooltipText = Ui.Wrap($"{f.Name}. Strength {Fm.StrengthOf(f):0}: how hard it hits (three Decrees score about 65). Drop ships, troops, fighters or leaders here to send them to it."
+        z.Box.TooltipText = Ui.Wrap($"{S.NameOf(f)}. Strength {Fm.StrengthOf(f):0}: how hard it hits (three Decrees score about 65). Drop ships, troops, fighters or leaders here to send them to it."
             + (pick != null && !selected ? " Click to show it." : ""));
         z.Box.GuiInput += e =>
         {

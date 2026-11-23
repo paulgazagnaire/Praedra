@@ -385,7 +385,7 @@ public partial class GameScreen
         // a window whose hover card is being read waits (Paul 2026-11-19); the others are rebuilt now, it catches up when the card goes
         if (!dragging && !Input.IsMouseButtonPressed(MouseButton.Left))
             foreach (var w in _mgWins.ToList())
-                if (w.Stale && _mgWins.Contains(w) && !ReadingTip(w.Panel)) RebuildMg(w);
+                if (w.Stale && _mgWins.Contains(w) && !ReadingTip(w.Panel) && !RenameBoxIn(w)) RebuildMg(w);   // nor while its name is typed
     }
 
     // ================================================================== content

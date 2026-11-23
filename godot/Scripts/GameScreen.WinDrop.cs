@@ -76,7 +76,7 @@ public partial class GameScreen
         var c = Cm.Get(d.Id);
         if (c == null) return "";
         if (c.AttachedFleet == f.Id && c.Post == post) return "";
-        if (!Still(f)) return $"{f.Name} is travelling: send leaders when it stands still.";
+        if (!Still(f)) return $"{S.NameOf(f)} is travelling: send leaders when it stands still.";
         if (post != CharacterPost.None && !Cm.ClassOf(c).Can(post)) return $"{S.CharName(c.Id)} can't be {GameSession.PostWords(post)}.";
         var (at, _) = WhereNow(d);
         if (at != f.At) return CanTravel(c, f.At);   // another system: they set off and take the post on arrival
@@ -103,7 +103,7 @@ public partial class GameScreen
         LeaveCurrentPost(c);
         int cid = c.Id, fid = f?.Id ?? 0, days = TravelDays(c, to);
         string name = S.CharName(cid);
-        string role = f == null ? $"to {to}" : post == CharacterPost.None ? $"to ride {f.Name}" : $"to be {GameSession.PostWords(post)} of {f.Name}";
+        string role = f == null ? $"to {to}" : post == CharacterPost.None ? $"to ride {S.NameOf(f)}" : $"to be {GameSession.PostWords(post)} of {S.NameOf(f)}";
         long seq = S.TrackCharacter(cid, -1, S.Game.Submit(q => new MoveCharacterOrder(q, Me, cid, to, fid, post)), $"Send {name} {role}");
         if (Cm.LocationOf(c) is string from && Fm.FindPath(from, to, Cm.Params.CharacterSpeed) is { Ok: true } pr)
             S.PlanCharacterMove(cid, new GameSession.PlannedMove(to, pr.Systems.Select(i => G.Systems[i].Name).ToList(), pr.TotalTicks, S.Game.Day + pr.TotalTicks, seq));
@@ -123,7 +123,7 @@ public partial class GameScreen
             _moved[new Drag('L', holder.Id).Key] = ($"lands at {f.At}", $"Ground {f.At} Leaders");
         }
         Attach(c, f, post);
-        _moved[d.Key] = (post == CharacterPost.None ? $"{f.Name}, passenger" : $"{GameSession.PostWords(post)} of {f.Name}", zone);
+        _moved[d.Key] = (post == CharacterPost.None ? $"{S.NameOf(f)}, passenger" : $"{GameSession.PostWords(post)} of {S.NameOf(f)}", zone);
     }
 
     /// <summary>A leader leaves the fleet post or the system General's post they hold, so a new post can be given in the same day.</summary>
@@ -256,14 +256,14 @@ public partial class GameScreen
         if (d.Kind != kind) return "";
         var (at, fleet) = WhereNow(d);
         if (fleet == f.Id) return "";
-        if (!Still(f)) return $"{f.Name} is travelling.";
+        if (!Still(f)) return $"{S.NameOf(f)} is travelling.";
         if (at != f.At) return $"{ThingName(d)} is not at {f.At}.";
         // from another fleet the drop unloads first, then loads (rule: m3-fleets §Orders, m3-troops-and-special-forces §Orders)
         string why = fleet != 0 ? CheckUnloadOne(kind, fleet, d.Id) : CheckLoadOne(kind, f.Id, d.Id);
         if (why == RejectReason.NotYourSystem) return "Move it through the planet: only on a planet you hold.";
         if (why != null && why != RejectReason.NoCapacity) return Words(why);
         int room = (kind == 'R' ? Fm.FreeTroopSlots(f) : Fm.FreeBerths(f)) - Promised(f.Id);
-        if (room <= 0) return kind == 'R' ? $"{f.Name} has no troop room left." : $"{f.Name} has no hangar room left.";
+        if (room <= 0) return kind == 'R' ? $"{S.NameOf(f)} has no troop room left." : $"{S.NameOf(f)} has no hangar room left.";
         return null;
     }
 
@@ -276,7 +276,7 @@ public partial class GameScreen
         }
         if (d.Kind == 'R') LoadTroops(f, new List<int> { d.Id }); else LoadFighters(f, new List<int> { d.Id });
         _pendingIn[f.Id] = Promised(f.Id) + 1;
-        _moved[d.Key] = ($"boards {f.Name}", d.Kind == 'R' ? $"Fleet {f.Id} Troops" : $"Fleet {f.Id} Fighters");
+        _moved[d.Key] = ($"boards {S.NameOf(f)}", d.Kind == 'R' ? $"Fleet {f.Id} Troops" : $"Fleet {f.Id} Fighters");
         if (d.Kind == 'R' && fleet == 0) WarnGarrison(f.At);
     }
 
@@ -302,21 +302,21 @@ public partial class GameScreen
         if (d.Kind is not ('S' or 'M')) return "";
         var (at, fleet) = WhereNow(d);
         if (fleet == f.Id) return "";
-        if (!Still(f)) return $"{f.Name} is travelling.";
-        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{f.Name} itself {itself.Words}.";
+        if (!Still(f)) return $"{S.NameOf(f)} is travelling.";
+        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{S.NameOf(f)} itself {itself.Words}.";
         if (!S.Game.State.Fleets.TryGetValue(fleet, out var from) || !Still(from)) return $"{ThingName(d)}'s fleet is travelling.";
         if (at != f.At)
         {
             if (d.Kind == 'S')
             {
                 // a capital ship splits off, flies there and joins on arrival. rule: m3-fleets §Orders (SplitFleet: sending ships)
-                if (_moved.TryGetValue(new Drag('M', from.Id).Key, out var src)) return $"{from.Name} itself {src.Words}.";
-                if (from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: to send the whole fleet, use Merge in the other fleet's window.";
+                if (_moved.TryGetValue(new Drag('M', from.Id).Key, out var src)) return $"{S.NameOf(from)} itself {src.Words}.";
+                if (from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {S.NameOf(from)}'s last ship: to send the whole fleet, use Merge in the other fleet's window.";
                 return Words(Fm.CheckSplitFleet(new SplitFleetOrder(0, Me, from.Id, One(d.Id), f.At, f.Id)));
             }
-            return Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)).Ok ? null : $"{from.Name} can't reach {f.At}.";   // it flies there and merges on arrival
+            return Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)).Ok ? null : $"{S.NameOf(from)} can't reach {f.At}.";   // it flies there and merges on arrival
         }
-        if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {from.Name}'s last ship: to join the fleets, use Merge in the other fleet's window.";
+        if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {S.NameOf(from)}'s last ship: to join the fleets, use Merge in the other fleet's window.";
         // rule: m3-fleets §Orders (TransferShips, MergeFleets)
         return Words(d.Kind == 'S' ? Fm.CheckTransferShips(new TransferShipsOrder(0, Me, One(d.Id), f.Id)) : Fm.CheckMergeFleets(new MergeFleetsOrder(0, Me, from.Id, f.Id)));
     }
@@ -333,10 +333,10 @@ public partial class GameScreen
             int days = Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)) is { Ok: true } p ? p.TotalTicks : 0;
             ReplaceFleetMove(from.Id); // the last move given wins (QA-100)
             var plan = S.Host.PlanMove(Me, from.Id, f.At, null);
-            long seq = S.TrackFleet(from.Id, Fm.SubmitMove(Me, from.Id, f.At, null, f.Id), $"Fly {from.Name} to {f.At} and merge into {f.Name}");
+            long seq = S.TrackFleet(from.Id, Fm.SubmitMove(Me, from.Id, f.At, null, f.Id), $"Fly {S.NameOf(from)} to {f.At} and merge into {S.NameOf(f)}");
             if (plan.Ok) S.PlanMove(from.Id, new GameSession.PlannedMove(f.At, plan.Path.ToList(), plan.HopTicks.Sum(), plan.ArrivalDay, seq));
-            Sent($"fly {from.Name} to {f.At} to merge into {f.Name}", f.At);
-            _moved[d.Key] = ($"flies to join {f.Name}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
+            Sent($"fly {S.NameOf(from)} to {f.At} to merge into {S.NameOf(f)}", f.At);
+            _moved[d.Key] = ($"flies to join {S.NameOf(f)}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
             return;
         }
         if (d.Kind == 'S' && from.At != f.At)
@@ -346,15 +346,15 @@ public partial class GameScreen
             var order = new SplitFleetOrder(0, Me, from.Id, One(id), f.At, f.Id);
             int days = Fm.SplitSendDays(order);
             WarnTraps(Fm.SplitSendRoute(order), $"The {ThingName(d)}'s way to {f.At}");
-            S.TrackFleet(from.Id, S.Game.Submit(seq => order with { Sequence = seq }), $"Send the {ThingName(d)} from {from.Name} to join {f.Name}");
-            Sent($"send the {ThingName(d)} from {from.Name} to join {f.Name} at {f.At}", f.At);
-            _moved[d.Key] = ($"flies to join {f.Name}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
+            S.TrackFleet(from.Id, S.Game.Submit(seq => order with { Sequence = seq }), $"Send the {ThingName(d)} from {S.NameOf(from)} to join {S.NameOf(f)}");
+            Sent($"send the {ThingName(d)} from {S.NameOf(from)} to join {S.NameOf(f)} at {f.At}", f.At);
+            _moved[d.Key] = ($"flies to join {S.NameOf(f)}, {Ui.Count(days, "day", "days")}", $"Fleet {f.Id} Ships");
             return;
         }
-        if (d.Kind == 'M') { Merge(from, f); _moved[d.Key] = ($"merges into {f.Name}", $"Fleet {f.Id} Ships"); return; }
-        S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, new[] { d.Id }, f.Id), $"Move a ship from {from.Name} into {f.Name}");
-        Sent($"move the {ThingName(d)} from {from.Name} into {f.Name}", f.At);
-        _moved[d.Key] = ($"joins {f.Name}", $"Fleet {f.Id} Ships");
+        if (d.Kind == 'M') { Merge(from, f); _moved[d.Key] = ($"merges into {S.NameOf(f)}", $"Fleet {f.Id} Ships"); return; }
+        S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, new[] { d.Id }, f.Id), $"Move a ship from {S.NameOf(from)} into {S.NameOf(f)}");
+        Sent($"move the {ThingName(d)} from {S.NameOf(from)} into {S.NameOf(f)}", f.At);
+        _moved[d.Key] = ($"joins {S.NameOf(f)}", $"Fleet {f.Id} Ships");
     }
 
     string RefuseSplit(Drag d, Fleet f)
@@ -363,7 +363,7 @@ public partial class GameScreen
         var (_, fleet) = WhereNow(d);
         if (fleet != f.Id) return "Split ships off their own fleet: drop them on its New fleet.";
         // QA-82: a split given after today's merge of this fleet would run after it, on a fleet that is gone by then
-        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{f.Name} itself {itself.Words}.";
+        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{S.NameOf(f)} itself {itself.Words}.";
         if (f.Ships.Count - ShipsLeaving(f) <= 1) return "A fleet keeps at least one ship.";
         // the drop withdraws today's split of this fleet and sends one with every ship so far (DropSplit). rule: m3-fleets §Orders (SplitFleet)
         var ships = _splits.TryGetValue(f.Id, out var prev) ? new List<int>(prev.Ships) { d.Id } : One(d.Id);
@@ -376,8 +376,8 @@ public partial class GameScreen
     {
         var ships = new List<int> { d.Id };
         if (_splits.TryGetValue(f.Id, out var prev) && S.Withdraw(prev.Seq)) ships.InsertRange(0, prev.Ships);   // rule: m1-clock-and-orders §Orders in (withdraw)
-        _splits[f.Id] = (S.TrackFleet(f.Id, Fm.SubmitSplitFleet(Me, f.Id, ships), ships.Count == 1 ? $"Split a ship off {f.Name}" : $"Split {ships.Count} ships off {f.Name}"), ships);
-        Sent($"split the {ThingName(d)} off {f.Name} into a new fleet", f.At);
+        _splits[f.Id] = (S.TrackFleet(f.Id, Fm.SubmitSplitFleet(Me, f.Id, ships), ships.Count == 1 ? $"Split a ship off {S.NameOf(f)}" : $"Split {ships.Count} ships off {S.NameOf(f)}"), ships);
+        Sent($"split the {ThingName(d)} off {S.NameOf(f)} into a new fleet", f.At);
         _moved[d.Key] = ("forms a new fleet", $"Fleet {f.Id} NewFleet");
     }
 

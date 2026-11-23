@@ -24,6 +24,8 @@ public partial class FleetLayer : Control
     public Side? Player { get; set; }
     /// <summary>Move orders given but not started yet (fleet id to plan); drawn as a route so the player sees what is pending.</summary>
     public Func<IEnumerable<KeyValuePair<int, GameSession.PlannedMove>>> Planned { get; set; }
+    /// <summary>A fleet's name as the screens show it (a name typed today shows at once: GameSession.NameOf).</summary>
+    public Func<Fleet, string> NameOf { get; set; }
     /// <summary>Whether one of the player's fleets is Elusive (it pulls back when an enemy fleet arrives): its marker is an arrowhead.</summary>
     public Func<int, bool> Elusive { get; set; }
     /// <summary>The enemy fleets the player's side sees now (system, class counts). Null = no fog (every fleet drawn from the core).</summary>
@@ -415,10 +417,11 @@ public partial class FleetLayer : Control
         if (Planned != null) foreach (var kv in Planned()) planned[kv.Key] = kv.Value.ArrivalDay;
         string FleetWords(Fleet f, bool full)
         {
-            if (!full) return f.Name;
-            if (planned.TryGetValue(f.Id, out int day)) return $"{f.Name} · day {day}";
-            if (f.Transit is { } t && f.At == null) { int a = t.DueDay; for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) a += t.HopTicks[h]; return $"{f.Name} · day {a}"; }
-            return f.Name;
+            string name = NameOf?.Invoke(f) ?? f.Name;
+            if (!full) return name;
+            if (planned.TryGetValue(f.Id, out int day)) return $"{name} · day {day}";
+            if (f.Transit is { } t && f.At == null) { int a = t.DueDay; for (int h = t.HopIndex + 1; h < t.HopTicks.Count; h++) a += t.HopTicks[h]; return $"{name} · day {a}"; }
+            return name;
         }
         Color MoverColour(Mover m) => m.Kind == MoverKind.Hq ? HqGold : ColorOf(Player ?? Side.Hand);
 

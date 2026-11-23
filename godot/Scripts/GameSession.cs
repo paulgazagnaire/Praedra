@@ -293,6 +293,7 @@ public sealed partial class GameSession
         foreach (var x in advised) _pending[x.Sequence] = "Sibyl's order (" + SibylWords(x.Detail).Text + ")";
         if (!OpponentIdle) Opponent.PlanDay();
         Game.Step();
+        _renamed.Clear();   // the day applied them (or refused them, with its reason in the messages)
         var outcome = new StepOutcome();
         foreach (var t in switched)
         {
@@ -370,6 +371,26 @@ public sealed partial class GameSession
     }
 
     string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"Fleet {id}");
+
+    // a fleet renamed today: the core applies the RenameFleet order first thing next day, so until then the screens show the typed name
+    readonly Dictionary<int, string> _renamed = new();   // fleet id -> name typed today; looked up, never iterated
+
+    /// <summary>A fleet's name as the screens show it: the name typed today if there is one, else its own.</summary>
+    public string NameOf(Fleet f) => _renamed.TryGetValue(f.Id, out var n) ? n : f.Name;
+
+    /// <summary>
+    /// Sends a RenameFleet order for a fleet of yours and shows the new name at once (Paul 2026-11-23: double-click the name to rename).
+    /// The typed name is cleaned as the core cleans it (trimmed, accents folded); nothing is sent when that leaves it empty or unchanged,
+    /// so an empty name keeps the old one. Returns the new name, or null. rule: m3-fleets §Orders (RenameFleet).
+    /// </summary>
+    public string RenameFleet(Fleet f, string typed)
+    {
+        string name = FleetModule.CleanFleetName(typed);
+        if (name.Length == 0 || name == NameOf(f)) return null;
+        Track(Host.Fleets.SubmitRenameFleet(Player, f.Id, name), $"Rename {NameOf(f)} to {name}");
+        _renamed[f.Id] = name;
+        return name;
+    }
     Side? FleetSide(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Side : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Side : null);
     string ClassName(int id) => _classOf.TryGetValue(id, out var c) ? c : $"unit {id}";
 
@@ -536,8 +557,8 @@ public sealed partial class GameSession
         if (MissionOf(c.Id) is { } mg) return MissionWhere(mg);
         if (c.AttachedFleet != 0 && Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f))
         {
-            if (f.Transit is { } ft && f.At == null) return $"aboard fleet {f.Name}, travelling to {ft.Path[^1]}, arrives day {ArrivalDay(ft)}";
-            return $"aboard fleet {f.Name} at {f.At}";
+            if (f.Transit is { } ft && f.At == null) return $"aboard fleet {NameOf(f)}, travelling to {ft.Path[^1]}, arrives day {ArrivalDay(ft)}";
+            return $"aboard fleet {NameOf(f)} at {f.At}";
         }
         if (c.Transit is { } t && c.System == null) return $"travelling alone to {t.Path[^1]}, arrives day {ArrivalDay(t)}";
         if (PlannedCharacterMoveOf(c.Id) is { } pm) return $"at {c.System}; leaving for {pm.To}, arrives day {pm.ArrivalDay}";

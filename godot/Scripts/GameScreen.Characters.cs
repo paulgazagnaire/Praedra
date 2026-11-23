@@ -166,7 +166,7 @@ public partial class GameScreen
     void Attach(CharacterRecord c, Fleet f, CharacterPost post)
     {
         string name = S.CharName(c.Id);
-        string what = post == CharacterPost.None ? $"Attach {name} to {f.Name} as a passenger" : $"Attach {name} to {f.Name} as {GameSession.PostWords(post)}";
+        string what = post == CharacterPost.None ? $"Attach {name} to {S.NameOf(f)} as a passenger" : $"Attach {name} to {S.NameOf(f)} as {GameSession.PostWords(post)}";
         int cid = c.Id, fid = f.Id;
         S.TrackCharacter(cid, fid, S.Game.Submit(seq => new AttachCharacterOrder(seq, Me, cid, fid, post)), what);
         Sent(char.ToLowerInvariant(what[0]) + what[1..], f.At);
@@ -176,8 +176,8 @@ public partial class GameScreen
     {
         string name = S.CharName(c.Id);
         int cid = c.Id;
-        S.TrackCharacter(cid, f.Id, S.Game.Submit(seq => new DetachCharacterOrder(seq, Me, cid)), $"Detach {name} from {f.Name}");
-        Sent($"detach {name} from {f.Name}", f.At);
+        S.TrackCharacter(cid, f.Id, S.Game.Submit(seq => new DetachCharacterOrder(seq, Me, cid)), $"Detach {name} from {S.NameOf(f)}");
+        Sent($"detach {name} from {S.NameOf(f)}", f.At);
     }
 
     // ================================================================== a system's General and the characters there

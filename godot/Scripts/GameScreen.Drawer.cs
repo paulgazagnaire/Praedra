@@ -315,7 +315,7 @@ public partial class GameScreen
         var hull = HullState(f);
         int regs = S.Host.Troops.RegimentsAboard(f).Count, room = Fm.FreeTroopSlots(f) + regs;
         bool elusive = IsElusive(f);
-        string tip = $"{f.Name}: {StatusOf(f)}. Strength {Fm.StrengthOf(f):0}."
+        string tip = $"{S.NameOf(f)}: {StatusOf(f)}. Strength {Fm.StrengthOf(f):0}."
             + HullWords(hull)
             + (room > 0 ? $" Troops {regs} of {room}." : "")
             + (elusive ? " Elusive: it pulls back when an enemy fleet arrives." : "") + " Click to select it.";
@@ -323,7 +323,7 @@ public partial class GameScreen
         // troops. The left words end in "..." before they reach the right ones (a long trip at +140% text ran under them, 2026-11-22).
         var b = Ui.Button("", () => SelectFleet(fl.Id, true), tip, "Row");
         b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        b.SetMeta(UiTest.FullName, $"{f.Name}\n{RowStatus(f)}");   // its words for the playtest: the name, then the trip
+        b.SetMeta(UiTest.FullName, $"{S.NameOf(f)}\n{RowStatus(f)}");   // its words for the playtest: the name, then the trip
         var lines = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         lines.AddThemeConstantOverride("separation", 0);
         lines.AnchorRight = lines.AnchorBottom = 1;
@@ -366,7 +366,7 @@ public partial class GameScreen
         }
         void Part(HBoxContainer h, string words, Color ink) => h.AddChild(Ui.Label(words, null, ink, Ui.Small, wrap: false));
         // line 1: ships (those under half their hull in amber, red when one is under a quarter: the Ships tab's marks), then strength
-        var top = Line(f.Name);
+        var top = Line(S.NameOf(f));
         Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Ui.Text3);
         if (hull.Low > 0) Part(top, $", {hull.Low} damaged", hull.Critical > 0 ? Ui.Danger : Ui.Warn);
         // no bare strength number: it had no scale (Paul 2026-11-22, F7 answer B); it stays in the row's hover
@@ -396,7 +396,7 @@ public partial class GameScreen
         RowTrip(f) is { } tr ? $"to {tr.To}, day {tr.Day}" : S.PendingOf(f.Id).Any() ? $"at {f.At}; order given" : $"at {f.At}";
 
     internal IEnumerable<string> FleetListTexts() =>
-        S.Game.State.Fleets.Values.Where(f => f.Side == Me).Select(f => $"{f.Name}\n{RowStatus(f)}");
+        S.Game.State.Fleets.Values.Where(f => f.Side == Me).Select(f => $"{S.NameOf(f)}\n{RowStatus(f)}");
 
     public void SelectFleet(int id, bool centre)
     {

@@ -165,7 +165,7 @@ public partial class GameScreen
         links.AddChild(OutlinedButton(PixelIconData.Tile["fleets"], "Fleet", $"Fleet at {n}",
             () => { if (fleets.Count == 1) OpenMgmt(MgKind.Fleet, fleet: fleets[0].Id); else OpenMgmt(MgKind.Ground, n, tab: "Fleets"); },
             fleets.Count == 0 ? $"No fleet of yours is in orbit at {n}." : fleets.Count == 1 ? $"Opens {fleets[0].Name}'s window."
-                : $"{fleets.Count} fleets of yours are in orbit ({string.Join(", ", fleets.Select(f => f.Name))}): opens the list of them.",
+                : $"{fleets.Count} fleets of yours are in orbit ({string.Join(", ", fleets.Select(f => S.NameOf(f)))}): opens the list of them.",
             fleets.Count == 0));
         row.AddChild(links);
         return row;

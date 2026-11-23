@@ -96,7 +96,7 @@ public partial class GameScreen
     void ShowFleetGroup(IReadOnlyList<int> ids, Vector2 at)
     {
         var items = ids.Select(id => S.Game.State.Fleets.TryGetValue(id, out var f) && f.Side == Me ? f : null).Where(f => f != null)
-            .Select(f => ($"{f.Name}   {Ui.Count(f.Ships.Count, "ship", "ships")} · {(IsElusive(f) ? "Elusive" : "Defensive")}", (Action)(() => OpenFleetFromMap(f.Id))))
+            .Select(f => ($"{S.NameOf(f)}   {Ui.Count(f.Ships.Count, "ship", "ships")} · {(IsElusive(f) ? "Elusive" : "Defensive")}", (Action)(() => OpenFleetFromMap(f.Id))))
             .ToArray();
         if (items.Length == 0) return;
         _groupMenu = items;
@@ -209,16 +209,23 @@ public partial class GameScreen
         grip.AddThemeColorOverride("font_color", Look.Text);   // the design's grey (its dots stay the mono ⋮⋮: Space Grotesk has no such glyph)
 
         var row = Boxed(new HBoxContainer(), NameGap);
-        string upper = f.Name.ToUpperInvariant();
+        string upper = S.NameOf(f).ToUpperInvariant();
         float room = WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad - NameGap - 3 * WinButton - 2 * 4;
         int size = Ui.NameSize(upper, room);
-        var name = Look.Words(upper, size, Look.Text);
-        name.AddThemeFontOverride("font", Ui.NameFont(size, upper));
-        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        name.ClipText = true;
-        name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        row.AddChild(name);
+        if (Renaming(w)) row.AddChild(RenameBox(f, size));   // its name is being typed (GameScreen.FleetRename)
+        else
+        {
+            var font = Ui.NameFont(size, upper);
+            var name = Look.Words(upper, size, Look.Text);
+            name.AddThemeFontOverride("font", font);
+            name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            name.ClipText = true;
+            name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            name.SetMeta(UiTest.FullName, $"Fleet name {f.Id}");
+            RenameOnDoubleClick(name, w, f, font.GetStringSize(upper, HorizontalAlignment.Left, -1, size).X);
+            row.AddChild(name);
+        }
         row.AddChild(WinButtons(w, grip, grey: true));
         parts.AddChild(row);
         if (!w.Min) parts.AddChild(FleetStatus(f, still, WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad));
@@ -310,31 +317,31 @@ public partial class GameScreen
             // rule: m4-retreat-damage-repair §5: no repair while moving
             string hurtWords = hurt > 0 ? $" Its {Ui.Count(hurt, "damaged ship", "damaged ships")} repair only once it stops." : "";
             return new(new List<string> { go, left <= 1 ? "ETA: tomorrow" : $"ETA: {left} days" }, 1f - left / (float)total, Ui.You, false,
-                $"{f.Name} is flying to {to}: it arrives on day {GameSession.ArrivalDay(t)}. The bar shows how far along it is." + hurtWords + more);
+                $"{S.NameOf(f)} is flying to {to}: it arrives on day {GameSession.ArrivalDay(t)}. The bar shows how far along it is." + hurtWords + more);
         }
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto))
-            return new(new List<string> { char.ToUpperInvariant(mto.Words[0]) + mto.Words[1..] }, null, Ui.You, false, $"{f.Name} {mto.Words} when the clock moves." + more);
+            return new(new List<string> { char.ToUpperInvariant(mto.Words[0]) + mto.Words[1..] }, null, Ui.You, false, $"{S.NameOf(f)} {mto.Words} when the clock moves." + more);
         if (S.PlannedMoveOf(f.Id) is { } pm)
         {
             int days = Math.Max(1, pm.ArrivalDay - S.Game.Day);
             string stops = rep is { } r0 && Math.Max(r0.Days, r0.FighterDays) > 0 ? $" Leaving stops its repairs ({Ui.Count(Math.Max(r0.Days, r0.FighterDays), "day", "days")} from whole here)." : "";
             return new(new List<string> { $"Leaves for {pm.To}", $"ETA: {Ui.Count(days, "day", "days")}" }, null, Ui.You, false,
-                $"{f.Name} leaves for {pm.To} when the clock moves and arrives on day {pm.ArrivalDay}." + stops + more);
+                $"{S.NameOf(f)} leaves for {pm.To} when the clock moves and arrives on day {pm.ArrivalDay}." + stops + more);
         }
 
         // at a system: the first words, then the countdown (the repair, else the harvest wait)
         string first, tip;
         bool note = false;
         if (TodayNote(f) is { } tn) { first = tn.Words; tip = tn.Tip; note = true; }
-        else if (Blockading(f)) { first = $"Blockading {f.At}"; tip = $"{f.Name} blockades {f.At}: the enemy's mines, refineries and yards there are stopped while it stays."; }
+        else if (Blockading(f)) { first = $"Blockading {f.At}"; tip = $"{S.NameOf(f)} blockades {f.At}: the enemy's mines, refineries and yards there are stopped while it stays."; }
         else if (rep != null) { first = $"Repairing at {f.At}"; tip = ""; }
-        else { first = $"In orbit at {f.At}"; tip = $"{f.Name} is in orbit at {f.At}."; }
+        else { first = $"In orbit at {f.At}"; tip = $"{S.NameOf(f)} is in orbit at {f.At}."; }
         var words = new List<string> { first };
         float? share = null;
         var ink = Ui.You;
         if (rep is { } r)
         {
-            string where = r.Fast ? $"{f.Name} is repaired at your shipyard at {f.At}, every {Ui.Count(r.Period, "day", "days")}"
+            string where = r.Fast ? $"{S.NameOf(f)} is repaired at your shipyard at {f.At}, every {Ui.Count(r.Period, "day", "days")}"
                 : $"No working shipyard of yours at {f.At}, so a repair comes only every {r.Period} days";
             string Countdown(int d) => first.StartsWith("Repairing", StringComparison.Ordinal) ? $"{Ui.Count(d, "day", "days")} left" : $"Repair: {Ui.Count(d, "day", "days")}";
             string craft = r.FighterDays > 0 ? $" Its fighters get one craft back per repair: {Ui.Count(r.CraftLost, "craft", "craft")} short, all back on day {S.Game.Day + r.FighterDays}." : "";
@@ -433,14 +440,14 @@ public partial class GameScreen
             switch (events[k])
             {
                 case FleetRetreated r when r.Fleet == f.Id:
-                    Take(0, $"Retreated to {r.To}", $"{f.Name} left the battle at {r.From} today and jumped to {r.To}. Its order is cancelled."); break;
+                    Take(0, $"Retreated to {r.To}", $"{S.NameOf(f)} left the battle at {r.From} today and jumped to {r.To}. Its order is cancelled."); break;
                 case FleetCreated c when c.Fleet == f.Id && c.Cause == FleetCreateCause.HoldBeamHeld:
-                    Take(1, $"Held at {c.System}", $"Enemy Hold beams kept these ships in the battle at {c.System} when the rest of their fleet jumped away. They are now {f.Name}."); break;
+                    Take(1, $"Held at {c.System}", $"Enemy Hold beams kept these ships in the battle at {c.System} when the rest of their fleet jumped away. They are now {S.NameOf(f)}."); break;
                 case ForcedStop x when x.Fleet == f.Id:
-                    Take(2, $"Stopped at {x.System}", $"An enemy fleet stopped {f.Name} at {x.System} today. Its trip is cancelled: give it a new order."); break;
+                    Take(2, $"Stopped at {x.System}", $"An enemy fleet stopped {S.NameOf(f)} at {x.System} today. Its trip is cancelled: give it a new order."); break;
                 case FleetJoinFailed j when j.Fleet == f.Id:
                     string into = S.Game.State.Fleets.TryGetValue(j.Into, out var jf) ? jf.Name : "its fleet";
-                    Take(3, $"Could not join {into}", $"{f.Name} reached {j.System}, but {into} was not there, so they did not merge."); break;
+                    Take(3, $"Could not join {into}", $"{S.NameOf(f)} reached {j.System}, but {into} was not there, so they did not merge."); break;
             }
         return best is { } b ? (b.Words, b.Tip) : null;
     }
@@ -587,7 +594,7 @@ public partial class GameScreen
         var fs = S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.JoinFleet == f.Id && x.Transit != null).OrderBy(x => x.Id).ToList();
         if (ls.Count + fs.Count > 0)
         {
-            var way = FleetSection("On the way", 16, (ls.Count + fs.Count).ToString(), $"Sent to join {f.Name} from other systems. They take their place when they arrive.");
+            var way = FleetSection("On the way", 16, (ls.Count + fs.Count).ToString(), $"Sent to join {S.NameOf(f)} from other systems. They take their place when they arrive.");
             var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
             bool hand = Me == Side.Hand;
             foreach (var c in ls)
@@ -595,7 +602,7 @@ public partial class GameScreen
                 string name = S.CharName(c.Id);
                 flow.AddChild(FleetCard(LeaderPic(c.Id, Ui.You), GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), ghost: true));
             }
-            foreach (var x in fs) flow.AddChild(FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), ghost: true));
+            foreach (var x in fs) flow.AddChild(FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), S.NameOf(x), Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), ghost: true));
             way.AddChild(flow);
         }
         // where the leaders to drag stand, and where they land (UI review 4), as the design's Ground button of the other tabs
@@ -637,7 +644,7 @@ public partial class GameScreen
         go.AddChild(MenuAction("Merge", "Fleet Merge", merge.Select(l => (l.Text, (Action)(() => { l.Do(); MgRefreshSoon(); }))).ToArray(),
             !still ? travelling
             : merge.Count == 0 ? "No other fleet of yours can join this one now: none can reach it, or each already has an order today."
-            : $"Another fleet joins {f.Name}: a fleet here joins at once, one elsewhere flies here and joins when it arrives."));
+            : $"Another fleet joins {S.NameOf(f)}: a fleet here joins at once, one elsewhere flies here and joins when it arrives."));
 
         // the harvester's strike
         if (still && S.HoldsHarvester(f))
@@ -697,9 +704,9 @@ public partial class GameScreen
         var lines = new List<(string, Action)>();
         // each line says who moves and when (UI review 1, 2026-11-22): the other fleet comes to this one, this one stays
         if (here.Count > 1) lines.Add(($"All {here.Count} fleets here join now", () => MergeInto(f, here)));
-        foreach (var x in here) lines.Add(($"{x.Name} joins now (here)", () => MergeInto(f, new List<Fleet> { x })));
+        foreach (var x in here) lines.Add(($"{S.NameOf(x)} joins now (here)", () => MergeInto(f, new List<Fleet> { x })));
         foreach (var (x, plan) in far)
-            lines.Add(($"{x.Name} flies from {x.At}, joins in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? " (known trap on the way)" : ""), () => MergeInto(f, new List<Fleet> { x })));
+            lines.Add(($"{S.NameOf(x)} flies from {x.At}, joins in {Ui.Count(plan.HopTicks.Sum(), "day", "days")}" + (plan.Red ? " (known trap on the way)" : ""), () => MergeInto(f, new List<Fleet> { x })));
         return lines;
     }
 
@@ -713,10 +720,10 @@ public partial class GameScreen
         foreach (var from in others)
         {
             var d = new Drag('M', from.Id);
-            if (_moved.TryGetValue(d.Key, out var already)) { Toast($"{from.Name} already {already.Words}.", MsgKind.Warn); continue; }
+            if (_moved.TryGetValue(d.Key, out var already)) { Toast($"{S.NameOf(from)} already {already.Words}.", MsgKind.Warn); continue; }
             string why = RefuseShipsInto(d, into);
             if (why == "") continue;
-            if (why != null) { Toast($"{from.Name}: {why}", MsgKind.Warn); continue; }
+            if (why != null) { Toast($"{S.NameOf(from)}: {why}", MsgKind.Warn); continue; }
             DropShipsInto(d, into);
             sent++;
         }
@@ -1047,8 +1054,8 @@ public partial class GameScreen
             bar.AddChild(FleetAction("Split off", "Fleet Split", () => { },
                 !still ? travelling : f.Ships.Count < 2 ? "A fleet of one ship can't be split." : "Click a ship to pick it (Shift+click for more), then split them off into a new fleet here.", true));
             var all = f.Ships.Select(S.Host.Economy.Find).Where(o => o != null && Scrappable(o) && !_scrapped.Contains(o.Id)).ToList();
-            bar.AddChild(FleetAction("Scrap fleet...", "Fleet Scrap fleet", () => AskScrap(all, $"all {Ui.Count(all.Count, "ship", "ships")} of {f.Name}", f.At),
-                !still ? travelling : $"Scraps every ship of {f.Name}. Asks first. Half the refined cost comes back and their upkeep is freed.", !still || all.Count == 0, hoverInk: Ui.Danger));
+            bar.AddChild(FleetAction("Scrap fleet...", "Fleet Scrap fleet", () => AskScrap(all, $"all {Ui.Count(all.Count, "ship", "ships")} of {S.NameOf(f)}", f.At),
+                !still ? travelling : $"Scraps every ship of {S.NameOf(f)}. Asks first. Half the refined cost comes back and their upkeep is freed.", !still || all.Count == 0, hoverInk: Ui.Danger));
         }
         else
         {
@@ -1174,7 +1181,7 @@ public partial class GameScreen
             var t = Tile(null, false, 0, GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: LeaderSprite(c.Id));
             flow.AddChild(t);
         }
-        foreach (var x in fs) flow.AddChild(Tile(UnitIcon.Kind.Ship, Me == Side.Hand, 2, x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), 1, Ui.You, ghost: true));
+        foreach (var x in fs) flow.AddChild(Tile(UnitIcon.Kind.Ship, Me == Side.Hand, 2, S.NameOf(x), Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), 1, Ui.You, ghost: true));
         Add(flow);
     }
 

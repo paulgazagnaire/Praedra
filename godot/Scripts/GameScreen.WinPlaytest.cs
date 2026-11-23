@@ -309,4 +309,30 @@ public partial class GameScreen
 
     /// <summary>Close the window on top as its X button does (for the playtest).</summary>
     internal void PlayCloseTop() => CloseTopMgmt();   // a screenshot holds a drag without a mouse
+
+    // ---------------------------------------------------------------- renaming a fleet (Paul 2026-11-23), for the playtest
+
+    /// <summary>A double-click on the name in a fleet's window, on its words or (<paramref name="pastWords"/>) to the right of them,
+    /// then the rebuild the next frame makes. True when the box shows.</summary>
+    internal bool PlayRenameOpen(int fleet, bool pastWords = false)
+    {
+        if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Fleet && x.Fleet == fleet) is not { } w) return false;
+        if (w.Stale) RebuildMg(w);   // the box just closed: its name is back the next frame
+        if (MenuCard($"Fleet name {fleet}") is not Label name) return false;
+        name.EmitSignal(Control.SignalName.GuiInput, new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, DoubleClick = true,
+            Position = new Vector2(pastWords ? 2000 : 4, 4) });   // past the words: further right than any name reaches
+        if (w.Stale) RebuildMg(w);   // as the next frame would
+        return _renameEdit != null && _renameEdit.IsInsideTree() && _renaming == fleet;
+    }
+
+    internal string RenameBoxText => _renameEdit != null && IsInstanceValid(_renameEdit) ? _renameEdit.Text : null;
+    internal bool RenameOpen => _renaming >= 0;
+
+    /// <summary>Typing into the box: the whole text as it would stand after the keys, then the box's own check of it.</summary>
+    internal void PlayRenameType(string text) { _renameEdit.Text = text; _renameEdit.EmitSignal(LineEdit.SignalName.TextChanged, text); }
+    internal void PlayRenameEnter() => _renameEdit.EmitSignal(LineEdit.SignalName.TextSubmitted, _renameEdit.Text);
+    internal void PlayRenameEsc() => _renameEdit.EmitSignal(Control.SignalName.GuiInput, new InputEventKey { Keycode = Key.Escape, Pressed = true });
+
+    /// <summary>A press somewhere outside the box (where the headless mouse rests, which no window covers).</summary>
+    internal void PlayRenameClickElsewhere() => RenameClickElsewhere(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true });
 }

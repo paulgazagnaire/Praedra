@@ -196,6 +196,50 @@ public partial class Main
         }
         else GD.Print("  (no fleet of three ships: the two-ship split is not checked on this side)");
 
+        // ---------------------------------------------------------------- rename a fleet by double-clicking its name (Paul 2026-11-23)
+        // Enter or a click elsewhere keeps the name, Esc and an empty box keep the old one; the new name shows at once, the day applies it
+        // rule: m3-fleets §Orders (RenameFleet)
+        var named = s.Game.State.Fleets.Values.Where(f => f.Side == me).OrderBy(f => f.Id).FirstOrDefault();
+        if (named != null)
+        {
+            string was = named.Name, key = $"Fleet {named.Id}";
+            gs.ShotWindow("fleet", named.Id.ToString()); gs.PlayRefresh();
+            Expect(!gs.PlayRenameOpen(named.Id, pastWords: true) && !gs.RenameOpen, "a double-click past the fleet's name leaves it as it is (the head still folds the window there)");
+            Expect(gs.PlayRenameOpen(named.Id) && gs.RenameBoxText == was, $"a double-click on the name turns it into a box holding \"{was}\"");
+            gs.PlayRenameType("\u00C9b\u00E8ne Fist");
+            Expect(gs.RenameBoxText == "Ebene Fist", $"accented letters become plain ones as they are typed (got \"{gs.RenameBoxText}\")");
+            gs.PlayRenameType("Fist \u2713 \u4E00");
+            Expect(gs.RenameBoxText == "Fist  ", $"letters the font has not got are left out (got \"{gs.RenameBoxText}\")");
+            gs.PlayRenameType(new string('x', 30));
+            Expect(gs.RenameBoxText?.Length == Praedra.Core.Fleets.FleetModule.MaxFleetNameLength, "a name stops at 24 letters");
+            int q0 = s.QueuedOrders;
+            gs.PlayRenameEsc();
+            Expect(!gs.RenameOpen && s.QueuedOrders == q0 && s.NameOf(named) == was, "Esc keeps the old name and sends nothing");
+            Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
+            gs.PlayRenameType("   ");
+            gs.PlayRenameClickElsewhere();
+            Expect(!gs.RenameOpen && s.QueuedOrders == q0 && s.NameOf(named) == was, "an empty name keeps the old one and sends nothing");
+            Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
+            gs.PlayRenameEnter();
+            Expect(!gs.RenameOpen && s.QueuedOrders == q0, "Enter on the unchanged name sends nothing");
+            Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
+            gs.PlayRenameType("  Iron Fist ");
+            gs.PlayRenameEnter();
+            Expect(!gs.RenameOpen && s.QueuedOrders == q0 + 1 && s.NameOf(named) == "Iron Fist" && named.Name == was,
+                "Enter sends one RenameFleet order; the new name (trimmed) shows at once, the fleet keeps its own until the day");
+            Expect(gs.MgText(key).Contains("IRON FIST") && gs.FleetListTexts().Any(t => t.StartsWith("Iron Fist\n", StringComparison.Ordinal)),
+                "the window's head and the fleet list show the new name before the day runs");
+            gs.PlayDay(); gs.PlayRefresh();
+            Expect(named.Name == "Iron Fist" && s.NameOf(named) == "Iron Fist", $"next day the fleet is called Iron Fist (it is {named.Name})");
+            Expect(gs.PlayRenameOpen(named.Id) && gs.RenameBoxText == "Iron Fist", "the box holds the name as it is spelled, not in capitals");
+            gs.PlayRenameType(was);
+            gs.PlayRenameClickElsewhere();
+            Expect(!gs.RenameOpen && s.Game.Queue.Count(o => o is Praedra.Core.Clock.RenameFleetOrder r && r.Fleet == named.Id) == 1 && s.NameOf(named) == was,
+                "a click elsewhere keeps the typed name: one order, shown at once");
+            gs.PlayDay(); gs.PlayRefresh();
+            Expect(named.Name == was, $"next day it is {was} again");
+        }
+
         // ---------------------------------------------------------------- a regiment goes alone to another system you hold, never to one you don't (Paul 2026-11-02)
         var cons = s.Host.Construction;
         var lone = s.Game.State.Economy.Objects.Values.Where(o => o.Side == me && o.Category == ObjectCategory.Regiment && o.Completed && o.System != null && o.AboardShip == 0)

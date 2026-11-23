@@ -46,7 +46,7 @@ public partial class GameScreen
         else if (S.PlannedMoveOf(f.Id) != null) tags.Add(("LEAVING", Ui.Warn));
         if (S.HoldsHarvester(f)) tags.Add(("HARVESTER", Ui.Enemy));
         var here = atSystem ? S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == at).OrderBy(x => x.Id).ToList() : new List<Fleet> { f };
-        Title(f.Name, WhereIs(f), tags.ToArray());
+        Title(S.NameOf(f), WhereIs(f), tags.ToArray());
         if (here.Count > 1)
         {
             int i = here.FindIndex(x => x.Id == f.Id);
@@ -103,7 +103,7 @@ public partial class GameScreen
         if (!S.Game.State.Fleets.TryGetValue(fleetId, out var f) || f.At == null) return;
         string at = f.At;
         S.SubmitDestroySystem(f);
-        Sent($"{f.Name} destroys {at}", at); // the core judges it when the clock moves; a refusal comes back in the messages with its reason
+        Sent($"{S.NameOf(f)} destroys {at}", at); // the core judges it when the clock moves; a refusal comes back in the messages with its reason
     }
 
     // ================================================================== orders
@@ -121,39 +121,39 @@ public partial class GameScreen
     void LoadTroops(Fleet f, List<int> ids)
     {
         if (ids.Count == 0) return;
-        S.TrackFleet(f.Id, S.Host.Troops.SubmitLoad(Me, f.Id, ids), $"Load troops onto {f.Name}");
-        Sent($"load {ids.Count} regiment(s) onto {f.Name}", f.At);
+        S.TrackFleet(f.Id, S.Host.Troops.SubmitLoad(Me, f.Id, ids), $"Load troops onto {S.NameOf(f)}");
+        Sent($"load {ids.Count} regiment(s) onto {S.NameOf(f)}", f.At);
     }
 
     void UnloadTroops(Fleet f, List<int> ids)
     {
-        S.TrackFleet(f.Id, S.Host.Troops.SubmitUnload(Me, f.Id, ids), $"Unload troops from {f.Name}");
-        Sent($"unload {ids.Count} regiment(s) from {f.Name}", f.At);
+        S.TrackFleet(f.Id, S.Host.Troops.SubmitUnload(Me, f.Id, ids), $"Unload troops from {S.NameOf(f)}");
+        Sent($"unload {ids.Count} regiment(s) from {S.NameOf(f)}", f.At);
     }
 
     void LoadFighters(Fleet f, List<int> ids)
     {
         if (ids.Count == 0) return;
-        S.TrackFleet(f.Id, Fm.SubmitLoadSquadrons(Me, f.Id, ids), $"Load fighters onto {f.Name}");
-        Sent($"load {ids.Count} fighter squadron(s) onto {f.Name}", f.At);
+        S.TrackFleet(f.Id, Fm.SubmitLoadSquadrons(Me, f.Id, ids), $"Load fighters onto {S.NameOf(f)}");
+        Sent($"load {ids.Count} fighter squadron(s) onto {S.NameOf(f)}", f.At);
     }
 
     void UnloadFighters(Fleet f, List<int> ids)
     {
-        S.TrackFleet(f.Id, Fm.SubmitUnloadSquadrons(Me, f.Id, ids), $"Unload fighters from {f.Name}");
-        Sent($"unload {ids.Count} fighter squadron(s) from {f.Name}", f.At);
+        S.TrackFleet(f.Id, Fm.SubmitUnloadSquadrons(Me, f.Id, ids), $"Unload fighters from {S.NameOf(f)}");
+        Sent($"unload {ids.Count} fighter squadron(s) from {S.NameOf(f)}", f.At);
     }
 
     void Bombard(Fleet f, BombardCategory cat)
     {
-        S.TrackFleet(f.Id, S.Host.Bombardment.SubmitBombard(Me, f.Id, f.At!, cat), $"Bombard {f.At} with {f.Name}");
-        Sent($"{f.Name} bombards {f.At} ({cat.ToString().ToLowerInvariant()})", f.At);
+        S.TrackFleet(f.Id, S.Host.Bombardment.SubmitBombard(Me, f.Id, f.At!, cat), $"Bombard {f.At} with {S.NameOf(f)}");
+        Sent($"{S.NameOf(f)} bombards {f.At} ({cat.ToString().ToLowerInvariant()})", f.At);
     }
 
     void Invade(Fleet f)
     {
-        S.TrackFleet(f.Id, S.Host.Assault.SubmitAssault(Me, f.Id, f.At!), $"Invade {f.At} with {f.Name}");
-        Sent($"{f.Name} invades {f.At}", f.At);
+        S.TrackFleet(f.Id, S.Host.Assault.SubmitAssault(Me, f.Id, f.At!), $"Invade {f.At} with {S.NameOf(f)}");
+        Sent($"{S.NameOf(f)} invades {f.At}", f.At);
     }
 
     /// <summary>How a fleet's ships stand by the Ships tab's hull marks (amber under half its hull, red under a quarter): how many are
@@ -185,8 +185,8 @@ public partial class GameScreen
     {
         _retreatPending[f.Id] = on;
         _fleets.QueueRedraw();   // its marker turns into an arrowhead (or back) at once
-        S.Track(S.Host.Battles.SubmitSetFleetOnContact(Me, f.Id, on ? OnContactMode.Retreat : OnContactMode.Fight), $"Change the battle behaviour of {f.Name}");
-        S.Say(on ? $"Order sent: {f.Name} will pull back when an enemy arrives." : $"Order sent: {f.Name} will stay and fight when an enemy arrives.");
+        S.Track(S.Host.Battles.SubmitSetFleetOnContact(Me, f.Id, on ? OnContactMode.Retreat : OnContactMode.Fight), $"Change the battle behaviour of {S.NameOf(f)}");
+        S.Say(on ? $"Order sent: {S.NameOf(f)} will pull back when an enemy arrives." : $"Order sent: {S.NameOf(f)} will stay and fight when an enemy arrives.");
         AddLogItem(S.Messages[^1], false);
         RefreshTop();
         // the setting shows in the Fleet window's Orders tab; the panel redraws too, so nothing shows the old setting
@@ -196,7 +196,7 @@ public partial class GameScreen
 
     void Merge(Fleet f, Fleet into)
     {
-        S.TrackFleet(f.Id, Fm.SubmitMergeFleets(Me, f.Id, into.Id), $"Merge {f.Name} into {into.Name}");
-        Sent($"merge {f.Name} into {into.Name}", f.At);
+        S.TrackFleet(f.Id, Fm.SubmitMergeFleets(Me, f.Id, into.Id), $"Merge {S.NameOf(f)} into {S.NameOf(into)}");
+        Sent($"merge {S.NameOf(f)} into {S.NameOf(into)}", f.At);
     }
 }
