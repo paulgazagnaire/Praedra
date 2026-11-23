@@ -239,6 +239,12 @@ public partial class Main
             gs.PlayRefresh();
             Expect(gs.MapWords.Any(w => w.StartsWith(last.Name, StringComparison.Ordinal) && w.EndsWith($" +{ids.Count - 1}", StringComparison.Ordinal)),
                 $"the group's words name the selected fleet and count the others ({last.Name} ... +{ids.Count - 1}): " + string.Join(" | ", gs.MapWords));
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+            gs.PressKey(Key.Tab);
+            Expect(gs.SelectedFleetId == ids[0] && !gs.WindowOpen && !gs.SelectionCardOpen,
+                $"Tab steps to the next fleet there ({ids[0]}, got {gs.SelectedFleetId}) like a click: no window on the right, no card (review 13)");
+            gs.PressKey(Key.Tab, shift: true);
+            Expect(gs.SelectedFleetId == last.Id && !gs.WindowOpen, "Shift+Tab steps back");
             gs.PlayShiftClickGroup(ids[0]);
             Expect(ids.All(gs.View.PickedFleets.Contains), "Shift+click on the marker picks them all");
             gs.PlayShiftClickGroup(ids[0]);

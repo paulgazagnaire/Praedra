@@ -422,6 +422,9 @@ public partial class GameScreen
         var here = S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.At == f.At).OrderBy(x => x.Id).ToList();
         if (here.Count < 2) return;
         int i = here.FindIndex(x => x.Id == f.Id);
-        SelectFleet(here[((i + dir) % here.Count + here.Count) % here.Count].Id, false);
+        // like a click on the map (review 13, Paul 2026-11-23): it selects and never opens the window on the right; an open one follows
+        _view.SelectedFleet = here[((i + dir) % here.Count + here.Count) % here.Count].Id;
+        OnViewChanged();
+        _panelDirty = true; _panelTimer = 0;
     }
 }
