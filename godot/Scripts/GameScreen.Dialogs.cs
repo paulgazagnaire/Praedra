@@ -340,7 +340,7 @@ public partial class GameScreen
         }),
         ("Doing things", new[]
         {
-            "Move: click your fleet, Move..., then a system.",
+            "Move: click your fleet, then right-click a system. Double-click a fleet for its window.",
             "Build: click your planet, then Infra.",
             "Invade: Load troops, move, beat any fleet there, then Invade.",
             "Missions: Leaders (C), then pick a team, a kind and a target.",

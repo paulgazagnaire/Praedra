@@ -263,7 +263,7 @@ public partial class GameScreen
         using (Card())
         {
             Line("Click a system to see it, and to build there if it is yours.", Ui.Text2, Ui.Small);
-            Line("Click one of your fleets (blue arrows) to give it orders. A number on an arrow means several fleets are there: click it for the list, or Tab steps through them.", Ui.Text2, Ui.Small);
+            Line("Click one of your fleets (blue arrows), then right-click a system to send it there; double-click it (or F) for its window. Several fleets at a system share one arrow: click it for their list, or Tab steps through them.", Ui.Text2, Ui.Small);
             Line("Needs you (Q) lists what wants a decision, worst first. Press Play (Space) and the game stops by itself when it matters.", Ui.Text2, Ui.Small);
         }
         Heading("Keys");

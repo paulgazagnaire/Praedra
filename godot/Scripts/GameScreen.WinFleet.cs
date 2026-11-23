@@ -86,12 +86,13 @@ public partial class GameScreen
 
     /// <summary>
     /// A click on a marker several fleets of yours share (Paul's pick 2026-11-22, "Open a list of the fleets"): a short list of them by the
-    /// click, each with its ships and its behaviour; picking one selects it, as a click on its own marker did.
+    /// click, each with its ships and its behaviour; picking one selects it and opens its Fleet window (Paul 2026-11-23: "the fleet window
+    /// opens", not the window on the right).
     /// </summary>
     void ShowFleetGroup(IReadOnlyList<int> ids, Vector2 at)
     {
         var items = ids.Select(id => S.Game.State.Fleets.TryGetValue(id, out var f) && f.Side == Me ? f : null).Where(f => f != null)
-            .Select(f => ($"{f.Name}   {Ui.Count(f.Ships.Count, "ship", "ships")} · {(IsElusive(f) ? "Elusive" : "Defensive")}", (Action)(() => SelectFleet(f.Id, false))))
+            .Select(f => ($"{f.Name}   {Ui.Count(f.Ships.Count, "ship", "ships")} · {(IsElusive(f) ? "Elusive" : "Defensive")}", (Action)(() => OpenFleetFromMap(f.Id))))
             .ToArray();
         if (items.Length == 0) return;
         _groupMenu = items;
@@ -102,6 +103,16 @@ public partial class GameScreen
         AddChild(pm);
         _groupPopup = pm;
         pm.Popup(new Rect2I((Vector2I)(_view.GetGlobalTransform() * at + new Vector2(10, 6)), Vector2I.Zero));
+    }
+
+    /// <summary>A fleet of yours opened from the map (a row of a group's list, or a double-click on its marker, Paul 2026-11-23): it is
+    /// selected on the map and its Fleet window opens; the window on the right stays as it was.</summary>
+    void OpenFleetFromMap(int id)
+    {
+        if (!S.Game.State.Fleets.TryGetValue(id, out var f) || f.Side != Me) return;
+        _view.SelectedFleet = id;
+        OnViewChanged();
+        OpenMgmt(MgKind.Fleet, fleet: id);
     }
 
     /// <summary>Let the fleets picked on the map go. True if there were any.</summary>

@@ -81,6 +81,7 @@ public partial class GameScreen : Control
         _view.FleetGroup = _fleets.GroupOf;            // several fleets in orbit share one marker (Paul 2026-11-22)
         _view.FleetGroupClicked += ShowFleetGroup;
         _view.FleetGroupShiftClicked += ShiftPickGroup;
+        _view.FleetDoubleClicked += OpenFleetFromMap;   // Paul 2026-11-23: a double-click on a lone fleet opens its window
         _view.RightClicked += OnMapRightClick;
         _view.EnemyMarkerPicker = _fleets.PickEnemySystem;
         _fleets.Player = S.Player;

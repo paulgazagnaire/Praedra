@@ -43,6 +43,8 @@ public partial class GalaxyView : Control
     public event Action<IReadOnlyList<int>, Vector2> FleetGroupClicked;
     /// <summary>A Shift+click on a marker several fleets share: they are all picked, or all let go.</summary>
     public event Action<IReadOnlyList<int>> FleetGroupShiftClicked;
+    /// <summary>A double-click on the marker of a fleet alone at its place (Paul 2026-11-23: it opens the fleet's window directly).</summary>
+    public event Action<int> FleetDoubleClicked;
 
     public event Action StateChanged;
 
@@ -286,7 +288,14 @@ public partial class GalaxyView : Control
             }
             else if (mb.ButtonIndex == MouseButton.Left || mb.ButtonIndex == MouseButton.Middle)
             {
-                if (mb.Pressed) { _dragging = true; _dragMoved = false; _pressAt = mb.Position; }
+                // a double-click on a lone fleet's marker opens its window; the press that ends it is not a click any more
+                if (mb.Pressed && mb.DoubleClick && mb.ButtonIndex == MouseButton.Left && !mb.ShiftPressed && !PickMode && FleetDoubleClicked != null
+                    && (FleetPicker?.Invoke(mb.Position) ?? -1) is int df and >= 0 && (FleetGroup?.Invoke(df)?.Count ?? 1) == 1)
+                {
+                    _dragging = false;
+                    FleetDoubleClicked(df);
+                }
+                else if (mb.Pressed) { _dragging = true; _dragMoved = false; _pressAt = mb.Position; }
                 else
                 {
                     if (_dragging && !_dragMoved && mb.ButtonIndex == MouseButton.Left && PickMode)

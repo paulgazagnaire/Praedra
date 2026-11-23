@@ -88,6 +88,14 @@ public partial class GameScreen
         return _groupMenu?.Select(x => x.Text).ToList() ?? new List<string>();
     }
 
+    /// <summary>A left click on the map at a point (press and release through the map's own handler); with doubleClick, the second press
+    /// of a double-click and its release.</summary>
+    internal void PlayMapClick(Vector2 at, bool doubleClick = false)
+    {
+        _view._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, DoubleClick = doubleClick, Position = at });
+        _view._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = at });
+    }
+
     /// <summary>Picks the line of the open fleet list that starts with a fleet's name, as a click would; false if none.</summary>
     internal bool PlayPickFromFleetGroup(string name)
     {
