@@ -440,6 +440,8 @@ public sealed partial class GameSession
         RejectReason.UnknownRegiment => "unknown regiment",
         RejectReason.AlreadyAboard => "already aboard",
         RejectReason.BadValue => "bad value",
+        RejectReason.EmptyName => "the name is empty (the fleet keeps its old name)",
+        RejectReason.NameTooLong => $"the name is longer than {FleetModule.MaxFleetNameLength} letters",
         BattleReject.AiSide => "the computer side cannot set that",
         BombardReject.NotAtSystem => "the fleet is not at that system",
         BombardReject.OwnSystem => "you cannot attack your own system",
