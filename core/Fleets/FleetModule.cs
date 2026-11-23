@@ -69,6 +69,7 @@ public sealed partial class FleetModule
         game.RegisterOrderHandler<SplitFleetOrder>(m.HandleSplitFleet);
         game.RegisterOrderHandler<TransferShipsOrder>(m.HandleTransferShips);
         game.RegisterOrderHandler<MergeFleetsOrder>(m.HandleMergeFleets);
+        game.RegisterOrderHandler<RenameFleetOrder>(m.HandleRenameFleet);
         game.RegisterOrderHandler<MoveSquadronsOrder>(m.HandleMoveSquadrons);
         game.RegisterOrderHandler<LoadSquadronsOrder>(m.HandleLoadSquadrons);
         game.RegisterOrderHandler<UnloadSquadronsOrder>(m.HandleUnloadSquadrons);
@@ -171,6 +172,66 @@ public sealed partial class FleetModule
     public long SubmitSplitFleet(Side side, int fleet, IEnumerable<int> ships) => _game.Submit(seq => new SplitFleetOrder(seq, side, fleet, ships.ToList()));
     public long SubmitTransferShips(Side side, IEnumerable<int> ships, int toFleet) => _game.Submit(seq => new TransferShipsOrder(seq, side, ships.ToList(), toFleet));
     public long SubmitMergeFleets(Side side, int from, int into) => _game.Submit(seq => new MergeFleetsOrder(seq, side, from, into));
+
+    /// <summary>
+    /// Queue a RenameFleet order. The typed name is cleaned first (<see cref="CleanFleetName"/>: trimmed, accents taken off), so the order
+    /// carries the name the fleet will get. rule: m3-fleets §Orders (RenameFleet).
+    /// </summary>
+    public long SubmitRenameFleet(Side side, int fleetId, string name) => _game.Submit(seq => new RenameFleetOrder(seq, side, fleetId, CleanFleetName(name)));
+
+    /// <summary>Longest fleet name in letters. rule: m3-fleets §Orders (RenameFleet; DEFAULT 24, UI designer 2026-11-23).</summary>
+    public const int MaxFleetNameLength = 24;
+
+    /// <summary>
+    /// The name a typed fleet name becomes: trimmed, and accented Latin letters turned into their plain letters (e with an accent becomes e,
+    /// a joined ae becomes ae) because the game font has no accents. Loose accent marks are dropped. Any other letter stays as it is and the
+    /// order is refused with BadValue. A fixed table, so every machine cleans a name the same way. Runs when the order is submitted, never
+    /// inside a Step. rule: m3-fleets §Orders (RenameFleet; names font-safe, Paul 2026-11-15).
+    /// </summary>
+    public static string CleanFleetName(string? name)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (char c in (name ?? "").Trim())
+        {
+            if (c >= '\u0300' && c <= '\u036F') continue; // a loose accent mark typed after its letter
+            if (AccentFold.TryGetValue(c, out var plain)) sb.Append(plain); else sb.Append(c);
+        }
+        return sb.ToString().Trim();
+    }
+
+    // Latin-1 and Latin Extended-A letters with their plain spelling. Lookup only (never iterated).
+    private static readonly Dictionary<char, string> AccentFold = BuildAccentFold(
+        ("\u00C0\u00C1\u00C2\u00C3\u00C4\u00C5\u0100\u0102\u0104", "A"), ("\u00E0\u00E1\u00E2\u00E3\u00E4\u00E5\u0101\u0103\u0105", "a"),
+        ("\u00C6", "AE"), ("\u00E6", "ae"),
+        ("\u00C7\u0106\u0108\u010A\u010C", "C"), ("\u00E7\u0107\u0109\u010B\u010D", "c"),
+        ("\u00D0\u010E\u0110", "D"), ("\u00F0\u010F\u0111", "d"),
+        ("\u00C8\u00C9\u00CA\u00CB\u0112\u0114\u0116\u0118\u011A", "E"), ("\u00E8\u00E9\u00EA\u00EB\u0113\u0115\u0117\u0119\u011B", "e"),
+        ("\u011C\u011E\u0120\u0122", "G"), ("\u011D\u011F\u0121\u0123", "g"),
+        ("\u0124\u0126", "H"), ("\u0125\u0127", "h"),
+        ("\u00CC\u00CD\u00CE\u00CF\u0128\u012A\u012C\u012E\u0130", "I"), ("\u00EC\u00ED\u00EE\u00EF\u0129\u012B\u012D\u012F\u0131", "i"),
+        ("\u0132", "IJ"), ("\u0133", "ij"), ("\u0134", "J"), ("\u0135", "j"),
+        ("\u0136", "K"), ("\u0137\u0138", "k"),
+        ("\u0139\u013B\u013D\u013F\u0141", "L"), ("\u013A\u013C\u013E\u0140\u0142", "l"),
+        ("\u00D1\u0143\u0145\u0147\u014A", "N"), ("\u00F1\u0144\u0146\u0148\u0149\u014B", "n"),
+        ("\u00D2\u00D3\u00D4\u00D5\u00D6\u00D8\u014C\u014E\u0150", "O"), ("\u00F2\u00F3\u00F4\u00F5\u00F6\u00F8\u014D\u014F\u0151", "o"),
+        ("\u0152", "OE"), ("\u0153", "oe"),
+        ("\u0154\u0156\u0158", "R"), ("\u0155\u0157\u0159", "r"),
+        ("\u015A\u015C\u015E\u0160", "S"), ("\u015B\u015D\u015F\u0161\u017F", "s"), ("\u00DF", "ss"),
+        ("\u0162\u0164\u0166", "T"), ("\u0163\u0165\u0167", "t"), ("\u00DE", "Th"), ("\u00FE", "th"),
+        ("\u00D9\u00DA\u00DB\u00DC\u0168\u016A\u016C\u016E\u0170\u0172", "U"), ("\u00F9\u00FA\u00FB\u00FC\u0169\u016B\u016D\u016F\u0171\u0173", "u"),
+        ("\u0174", "W"), ("\u0175", "w"),
+        ("\u00DD\u0176\u0178", "Y"), ("\u00FD\u00FF\u0177", "y"),
+        ("\u0179\u017B\u017D", "Z"), ("\u017A\u017C\u017E", "z"));
+
+    private static Dictionary<char, string> BuildAccentFold(params (string From, string To)[] rows)
+    {
+        var d = new Dictionary<char, string>();
+        foreach (var (from, to) in rows) foreach (char c in from) d.Add(c, to);
+        return d;
+    }
+
+    /// <summary>A letter the game font can draw in a name: printable ASCII, space included. rule: m3-fleets §Orders (RenameFleet).</summary>
+    public static bool IsFontSafe(char c) => c >= ' ' && c <= '~';
     public long SubmitMoveSquadrons(Side side, IEnumerable<int> squadrons, string destination) =>
         _game.Submit(seq => new MoveSquadronsOrder(seq, side, squadrons.ToList(), destination));
     public long SubmitLoadSquadrons(Side side, int fleet, IEnumerable<int> squadrons) =>

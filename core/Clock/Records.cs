@@ -23,6 +23,7 @@ public enum Side { Hand = 0, Collective = 1 }
 [JsonDerivedType(typeof(SplitFleetOrder), "SplitFleet")]
 [JsonDerivedType(typeof(TransferShipsOrder), "TransferShips")]
 [JsonDerivedType(typeof(MergeFleetsOrder), "MergeFleets")]
+[JsonDerivedType(typeof(RenameFleetOrder), "RenameFleet")]
 [JsonDerivedType(typeof(MoveSquadronsOrder), "MoveSquadrons")]
 [JsonDerivedType(typeof(LoadSquadronsOrder), "LoadSquadrons")]
 [JsonDerivedType(typeof(UnloadSquadronsOrder), "UnloadSquadrons")]
@@ -121,6 +122,9 @@ public sealed record TransferShipsOrder(long Sequence, Side Side, List<int> Ship
 /// <summary>Transfer every ship of one fleet into another; the first fleet is removed. rule: m3-fleets §Orders (MergeFleets).</summary>
 public sealed record MergeFleetsOrder(long Sequence, Side Side, int From, int Into) : Order(Sequence, Side);
 
+/// <summary>Give a fleet a new name (display only; the fleet may be anywhere, moving too). rule: m3-fleets §Orders (RenameFleet, Paul 2026-11-23).</summary>
+public sealed record RenameFleetOrder(long Sequence, Side Side, int Fleet, string Name) : Order(Sequence, Side);
+
 /// <summary>Fly based squadrons (hyperdrive above 0) as a squadron-only fleet. rule: m3-fleets §Unescorted squadrons (DEFAULT).</summary>
 public sealed record MoveSquadronsOrder(long Sequence, Side Side, List<int> Squadrons, string Destination) : Order(Sequence, Side);
 
@@ -212,6 +216,9 @@ public static class RejectReason
     public const string NotAboard = "NotAboard";
     public const string NotYourSystem = "NotYourSystem";
     public const string BadValue = "BadValue";
+    // rule: m3-fleets §Orders (RenameFleet: EmptyName, NameTooLong; a letter the game font cannot draw is BadValue)
+    public const string EmptyName = "EmptyName";
+    public const string NameTooLong = "NameTooLong";
     // rule: m3-troops-and-special-forces §Orders. DuplicateRegiment, UnknownRegiment, AlreadyAboard are the sheet's names; EmptySelection is shared.
     public const string UnknownRegiment = "UnknownRegiment";
     public const string DuplicateRegiment = "DuplicateRegiment";

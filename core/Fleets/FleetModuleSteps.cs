@@ -201,6 +201,20 @@ public sealed partial class FleetModule
         return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
     }
 
+    // rule: m3-fleets §Orders (RenameFleet {fleet, name}: UnknownFleet, NotYours, EmptyName, NameTooLong, BadValue). Display only: the fleet may be
+    // anywhere, moving too (no InTransit), and two fleets may share a name. The name is trimmed again here for orders that skip SubmitRenameFleet.
+    private OrderResult HandleRenameFleet(StepContext ctx, RenameFleetOrder o)
+    {
+        if (!State.Fleets.TryGetValue(o.Fleet, out var f)) return OrderResult.Reject(RejectReason.UnknownFleet);
+        if (f.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
+        var name = (o.Name ?? "").Trim();
+        if (name.Length == 0) return OrderResult.Reject(RejectReason.EmptyName);
+        if (name.Length > MaxFleetNameLength) return OrderResult.Reject(RejectReason.NameTooLong);
+        if (!name.All(IsFontSafe)) return OrderResult.Reject(RejectReason.BadValue);
+        f.Name = name;
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
     // rule: m3-fleets §Orders (MoveSquadrons), §Unescorted squadrons: UnknownSquadron, NotYours, SquadronAboard, NotCompleted, NotSameSystem,
     // then the MoveFleet reasons (Immobile when any rating is 0). Nothing is created unless the order is accepted (F14).
     private OrderResult HandleMoveSquadrons(StepContext ctx, MoveSquadronsOrder o)
