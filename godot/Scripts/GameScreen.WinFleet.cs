@@ -593,7 +593,7 @@ public partial class GameScreen
             foreach (var c in ls)
             {
                 string name = S.CharName(c.Id);
-                flow.AddChild(FleetCard(Avatar(name, Ui.You), GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), ghost: true));
+                flow.AddChild(FleetCard(LeaderPic(c.Id, Ui.You), GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), ghost: true));
             }
             foreach (var x in fs) flow.AddChild(FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), ghost: true));
             way.AddChild(flow);
@@ -849,20 +849,15 @@ public partial class GameScreen
         return flow;
     }
 
-    /// <summary>A leader's picture until leaders have portraits: their initials in a ring, 40 px as the design's picture.</summary>
-    static Control Avatar(string name, Color ink)
-    {
-        var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(40, 40) };
-        ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 20, ink, 1, 0, 0));
-        var l = Look.Words(Initials(name), 14, ink, true);
-        l.HorizontalAlignment = HorizontalAlignment.Center; l.VerticalAlignment = VerticalAlignment.Center;
-        ring.AddChild(l);
-        return ring;
-    }
+    /// <summary>A leader's picture: their role's sprite at 2 px a pixel, on nothing (Paul 2026-11-23: a hero has a character picture,
+    /// transparent background). It replaced the initials in a ring.</summary>
+    Control LeaderPic(int id, Color ink) =>
+        LeaderSprite(id) is { } grid ? IconPic.Of(grid, 2, ink) : new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(32, 32) };
 
-    /// <summary>A unit's pixel icon at 2 px a pixel (icons are code only, Paul 2026-11-18).</summary>
-    static Control UnitPic(UnitIcon.Kind kind, bool hand, int size4, Color ink) =>
-        PixelIcons.Unit(kind, hand, size4) is { } grid ? IconPic.Of(grid, 2, ink) : new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(32, 32) };
+    /// <summary>A unit's pixel icon at 2 px a pixel (icons are code only, Paul 2026-11-18): its class's own sprite when one is drawn
+    /// (Paul 2026-11-23, one picture per class), else its kind's.</summary>
+    static Control UnitPic(UnitIcon.Kind kind, bool hand, int size4, Color ink, string cls = null) =>
+        PixelIcons.Unit(kind, hand, size4, cls) is { } grid ? IconPic.Of(grid, 2, ink) : new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(32, 32) };
 
     /// <summary>A leader as a card: their picture and name. Drags unless an order already moves them today, or they cannot act; their
     /// skills and the posts they can hold are in the hover.</summary>
@@ -873,7 +868,7 @@ public partial class GameScreen
         if (_moved.ContainsKey(d.Key)) return new Control { Visible = false };   // it already stands where it was dropped
         bool can = c.Status == CharacterStatus.Free && c.Transit == null && !Cm.IsOnMission(c.Id);
         string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : null;
-        var card = FleetCard(Avatar(name, can ? Ui.You : Look.Soft), GameSession.CardName(name), sub);
+        var card = FleetCard(LeaderPic(c.Id, can ? Ui.You : Look.Soft), GameSession.CardName(name), sub);
         bool mission = CanJoin(c);
         card.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}." + (can ? "\nDrag onto a post or a fleet." : "")
             + (mission ? " Right-click to send them on a mission." : ""));
@@ -909,7 +904,7 @@ public partial class GameScreen
     /// <summary>A squadron or regiment as a card (the Fighters and Troops tabs): its icon, its class, and a short line (a damaged hull,
     /// "flies along").</summary>
     PanelContainer UnitCard(EconObject o, string sub, bool can) =>
-        FleetCard(UnitPic(KindOf(o.Category, o.Class), Me == Side.Hand, SizeOfClass(o.Class), can ? Ui.You : Look.Soft), o.Class, sub);
+        FleetCard(UnitPic(KindOf(o.Category, o.Class), Me == Side.Hand, SizeOfClass(o.Class), can ? Ui.You : Look.Soft, o.Class), o.Class, sub);
 
     /// <summary>What a drop into one of this window's places shows until the clock moves: the card or row it will be, faded.</summary>
     Control FleetGhost(Drag d, string sub)
@@ -917,12 +912,12 @@ public partial class GameScreen
         bool hand = Me == Side.Hand;
         switch (d.Kind)
         {
-            case 'L': string name = S.CharName(d.Id); return FleetCard(Avatar(name, Ui.You), GameSession.CardName(name), sub, ghost: true);
+            case 'L': string name = S.CharName(d.Id); return FleetCard(LeaderPic(d.Id, Ui.You), GameSession.CardName(name), sub, ghost: true);
             case 'M': return FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), ThingName(d), sub, ghost: true);
             case 'S' when S.Host.Economy.Find(d.Id) is { } ship: { var r = ShipCard(ship); r.Modulate = new Color(1, 1, 1, 0.62f); return r; }
             default:
                 var o = S.Host.Economy.Find(d.Id);
-                return FleetCard(UnitPic(o == null ? UnitIcon.Kind.Regiment : KindOf(o.Category, o.Class), hand, SizeOfClass(o?.Class), Ui.You), o?.Class ?? "unit", sub, ghost: true);
+                return FleetCard(UnitPic(o == null ? UnitIcon.Kind.Regiment : KindOf(o.Category, o.Class), hand, SizeOfClass(o?.Class), Ui.You, o?.Class), o?.Class ?? "unit", sub, ghost: true);
         }
     }
 
@@ -999,7 +994,7 @@ public partial class GameScreen
         int max = sc?.Hull ?? o.Hull;
         var hull = CardLine($"{o.Hull}/{max}", HullInk(max <= 0 ? 1 : o.Hull / (float)max) ?? ink, 1);
         // the class on one line (cut with "…"), so every ship card has the same height and the rows line up
-        return FleetCard(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You), o.Class, nameLines: 1, more: new Control[] { cap, hull });
+        return FleetCard(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You, o.Class), o.Class, nameLines: 1, more: new Control[] { cap, hull });
     }
 
     /// <summary>A ship's hover: its class and number, its damage in words, whether it is being repaired, and what its class is for.
@@ -1176,7 +1171,7 @@ public partial class GameScreen
         foreach (var c in ls)
         {
             string name = S.CharName(c.Id);
-            var t = Tile(null, false, 0, GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: Initials(name));
+            var t = Tile(null, false, 0, GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: LeaderSprite(c.Id));
             flow.AddChild(t);
         }
         foreach (var x in fs) flow.AddChild(Tile(UnitIcon.Kind.Ship, Me == Side.Hand, 2, x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), 1, Ui.You, ghost: true));

@@ -95,10 +95,10 @@ public partial class GameScreen
     int SizeOfClass(string cls) => cls != null && Fm.Strength.Data.Classes.TryGetValue(cls, out var cc) ? Math.Clamp((int)cc.Size - 1, 0, 3) : 1;
 
     /// <summary>
-    /// A unit as a tile: its picture (or a leader's initials in a ring), its name and a short line under it. One tile is one unit (Paul
+    /// A unit as a tile: its picture (a leader's is their role's sprite), its name and a short line under it. One tile is one unit (Paul
     /// 2026-11-14); "×N" shows only on a drag preview that carries N units (Shift-drag). Dim when it can't move; faded when it is a drop shown before the day applies it.
     /// </summary>
-    PanelContainer Tile(UnitIcon.Kind? kind, bool hand, int size4, string name, string sub, int count, Color accent, bool ghost = false, string avatar = null)
+    PanelContainer Tile(UnitIcon.Kind? kind, bool hand, int size4, string name, string sub, int count, Color accent, bool ghost = false, string[] avatar = null, string cls = null)
     {
         bool art = kind != null && avatar == null && UnitArt.Has(name); // a painted picture of the class (art/units/units.json)
         var p = art ? new ArtTile { Cls = name, TooltipText = name } : new PanelContainer();
@@ -112,16 +112,10 @@ public partial class GameScreen
         var holder = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(TileW - 8, 40) };
         if (avatar != null)
         {
-            var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(36, 36) };
-            // a plain round line in the tile's colour, no fill (Paul 2026-11-14: no fills; portraits stay round)
-            ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 18, accent, 1, 0, 0));
-            var bl = Ui.Label(avatar, null, accent, 12, wrap: false);
-            bl.AddThemeFontOverride("font", Ui.SemiBold);
-            bl.HorizontalAlignment = HorizontalAlignment.Center; bl.VerticalAlignment = VerticalAlignment.Center;
-            ring.AddChild(bl);
+            // the leader's sprite straight on the tile, no ring round it (Paul 2026-11-23: sprites on a transparent background)
             var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
             center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            center.AddChild(ring);
+            center.AddChild(IconPic.Of(avatar, 2, accent));
             holder.AddChild(center);
         }
         else if (art && accent == Ui.You)
@@ -135,7 +129,7 @@ public partial class GameScreen
         // still shows the painting
         else if (kind is UnitIcon.Kind k)
         {
-            var icon = UnitIcon.For(k, hand, accent, size4, Vector2.Zero);
+            var icon = UnitIcon.For(k, hand, accent, size4, Vector2.Zero, cls: cls ?? name);   // a special force's name is "Strikers #12": its class comes apart
             icon.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             icon.OffsetLeft = 6; icon.OffsetRight = -6; icon.OffsetTop = 2; icon.OffsetBottom = -2;
             holder.AddChild(icon);
@@ -182,11 +176,11 @@ public partial class GameScreen
         {
             case 'L':
                 string name = S.CharName(d.Id);
-                return Tile(null, hand, 0, GameSession.CardName(name), sub, count, Ui.You, ghost, Initials(name));
+                return Tile(null, hand, 0, GameSession.CardName(name), sub, count, Ui.You, ghost, LeaderSprite(d.Id));
             case 'M':
                 return Tile(UnitIcon.Kind.Ship, hand, 2, ThingName(d), sub ?? "whole fleet", 1, Ui.You, ghost);
             case 'F':
-                return Tile(UnitIcon.Kind.Agent, hand, 1, S.SpecialForceName(d.Id), sub, count, Ui.You, ghost);
+                return Tile(UnitIcon.Kind.Agent, hand, 1, S.SpecialForceName(d.Id), sub, count, Ui.You, ghost, cls: S.Host.Economy.Find(d.Id)?.Class);
             default:
                 var o = S.Host.Economy.Find(d.Id);
                 return Tile(o == null ? UnitIcon.Kind.Regiment : KindOf(o.Category, o.Class), hand, SizeOfClass(o?.Class), o?.Class ?? "unit", sub, count, Ui.You, ghost);

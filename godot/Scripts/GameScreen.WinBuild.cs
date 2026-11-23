@@ -607,7 +607,7 @@ public partial class GameScreen
             (b.Why != null ? $"\n{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : "") + (ClassTip(r.Name) is string ct ? "\n" + ct : "") + (b.Usable ? $"\nClick to order {qty}." : "");
         // the hover card: what it is, its role, its stats and its picture (Paul 2026-11-19); the plain tip stays as the fallback text
         var kind = KindOf(r.Category, r.Name);
-        var grid = PixelIcons.Unit(kind, hand, SizeOfClass(r.Name)) ?? PixelIcons.Building(kind) ?? PixelIcons.Building(UnitIcon.Kind.Building);
+        var grid = PixelIcons.Unit(kind, hand, SizeOfClass(r.Name), r.Name) ?? PixelIcons.Building(kind) ?? PixelIcons.Building(UnitIcon.Kind.Building);
         var stats = ClassStats(r, b.Days, out string extra);
         string hoverFoot = string.Join("\n", new[] { extra, b.Why != null ? $"{char.ToUpperInvariant(b.Why[0])}{b.Why[1..]}." : null, b.Usable ? (founds ? "Builds itself here, no construction yard needed. Click to order 1." : $"Click to order {qty}.") : null }.Where(x => x != null));
         var btn = new InfoButton { Make = () => UnitInfo.Card(r.Name, KeepNumeral(r.Name), grid, b.Usable ? Ui.You : Look.Text, stats, hoverFoot) };
