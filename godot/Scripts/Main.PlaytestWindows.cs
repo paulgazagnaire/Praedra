@@ -310,7 +310,7 @@ public partial class Main
                 Praedra.Core.Economy.ObjectCategory.CapitalShip => PixelIconData.Ships, Praedra.Core.Economy.ObjectCategory.Fighter => PixelIconData.Craft,
                 Praedra.Core.Economy.ObjectCategory.Regiment => PixelIconData.Troops, _ => PixelIconData.Agents,
             };
-            var noSprite = s.Host.Economy.Costs.Rows.Where(r => r.Category != Praedra.Core.Economy.ObjectCategory.Facility && r.Cost > 0)
+            var noSprite = s.Host.Economy.Costs.Rows.Where(r => r.Category != Praedra.Core.Economy.ObjectCategory.Facility)
                 .Where(r => !SetOf(r.Category).ContainsKey(PixelIcons.Slug(r.Name))).Select(r => r.Name).ToList();
             Expect(noSprite.Count == 0, "every ship, fighter, regiment and special force class has its own pixel picture: missing " + string.Join(", ", noSprite));
             var noFace = s.Host.Characters.Data.All.Where(k => PixelIcons.Leader(k.Side == Praedra.Core.Clock.Side.Hand, PixelIcons.RoleOf(k.Rank, k.CanAdmiral, k.CanGeneral)) == null)
