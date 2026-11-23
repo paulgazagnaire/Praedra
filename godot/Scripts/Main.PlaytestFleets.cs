@@ -80,9 +80,22 @@ public partial class Main
         gs.PressKey(Key.Escape);
         Expect(!gs.InMoveMode && gs.MgShown && gs.MgmtKeys.Contains(key), "Esc cancels the move and the windows come back, none closed");
 
-        // ---- ships: one row each, with its cargo and hull; its damage in its hover; a click picks it
+        // ---- ships: one card each, three a row, with its cargo and hull; its damage in its hover; a click picks it
         Expect(gs.Click($"Tab {key} Ships") && gs.MgTab(key) == "Ships", "a click on the Ships tab shows it");
-        Expect(gs.Has("Fleet Split") && !gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap fleet"), "over the rows: Split off (greyed until a ship is picked) and Scrap fleet...");
+        Expect(gs.Has("Fleet Split") && !gs.Enabled("Fleet Split") && gs.Enabled("Fleet Scrap fleet"), "under the cards: Split off (greyed until a ship is picked) and Scrap fleet...");
+        // Paul's frames (2026-11-23): every ship a 96 px card, three a row, the buttons under them
+        var shipShape = gs.MgPageShape(key, "Ships");
+        int zoneAt = shipShape.Parts.FindIndex(p => p.Contains($"Zone {key} Ships")), splitAt = shipShape.Parts.FindIndex(p => p.Contains("Fleet Split"));
+        Expect(shipShape.CardWidths.Count >= a.Ships.Count && shipShape.CardWidths.All(x => x == 96) && 3 * 96 + 2 * 9 <= 306,
+            $"each ship is a 96 px card, three to a row ({string.Join(" ", shipShape.CardWidths)})");
+        Expect(zoneAt >= 0 && splitAt > zoneAt, $"Split and Scrap sit under the ship cards: {string.Join(" / ", shipShape.Parts)}");
+        foreach (var tab in new[] { "Fighters", "Troops" })
+        {
+            var sh = gs.MgPageShape(key, tab);
+            int z = sh.Parts.FindIndex(p => p.Contains($"Zone {key} {tab}")), g = sh.Parts.FindIndex(p => p.Contains($"Ground at {a.At}"));
+            Expect(z >= 0 && g > z && sh.GroundIcon && sh.CardWidths.All(x => x == 96),
+                $"{tab}: 96 px cards, then the buttons under them with Ground at {a.At} and its turret: {string.Join(" / ", sh.Parts)} (icon {sh.GroundIcon})");
+        }
         var carrier = a.Ships.Select(eco.Find).FirstOrDefault(o => o != null && fm.ClassOf(o) is { } c && c.FighterCapacity + c.TroopCapacity > 0);
         if (carrier != null)
         {
