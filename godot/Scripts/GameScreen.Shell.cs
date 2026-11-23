@@ -490,7 +490,8 @@ public partial class GameScreen
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
         Item(Map("fleet-defensive", Ui.You), "Your fleet, Defensive (it fights)");
         Item(Map("fleet-elusive", Ui.You), "Your fleet, Elusive (it slips away)");
-        Item(Map("fleet-group-3", Ui.You), "Several of your fleets here: their number");
+        Item(Map("fleet-pair-defensive", Ui.You), "Two of your fleets here: two marks");
+        Item(Map("fleet-group-3", Ui.You), "More of your fleets here: their number");
         Item(Map("fleet-unknown", Ui.Enemy), "Enemy fleet you see now");
         Item(Map("mover-leader", Ui.You), "Your leader travelling alone");
         Item(Map("mover-team", Ui.You), "Your mission team travelling");

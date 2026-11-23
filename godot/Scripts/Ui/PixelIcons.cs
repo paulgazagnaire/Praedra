@@ -97,8 +97,8 @@ public static class PixelIcons
 
     /// <summary>
     /// A leader's role for the picture: their rank says it first (character-ranks.csv: Admiral, Captain, Commodore and Commander command
-    /// fleets; General commands troops; the others are officials), else what they can command; a leader who can command both, or neither,
-    /// is shown as an official. Screens only.
+    /// fleets; General commands troops; the others are officials), else what they can command: fleets, or fleets and troops both, is the
+    /// fleet officer; troops only is the general; neither is the official, who commands nothing (UI review 15). Screens only.
     /// </summary>
     public static LeaderRole RoleOf(string rank, bool canAdmiral, bool canGeneral)
     {
@@ -109,7 +109,7 @@ public static class PixelIcons
             case "": break;
             default: return LeaderRole.Civil;
         }
-        return canAdmiral && !canGeneral ? LeaderRole.Admiral : canGeneral && !canAdmiral ? LeaderRole.General : LeaderRole.Civil;
+        return canAdmiral ? LeaderRole.Admiral : canGeneral ? LeaderRole.General : LeaderRole.Civil;
     }
 
     /// <summary>The unit icon for a picture kind and side (ships by size class 0 small to 3 huge), or null.</summary>
