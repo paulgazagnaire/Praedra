@@ -7,7 +7,8 @@ using Praedra.Core.Fleets;
 namespace PraedraViewer;
 
 /// <summary>
-/// Renaming a fleet (Paul 2026-11-23: a double-click on a fleet's name renames it; Enter or a click elsewhere confirms). A double-click on the name in the fleet's window turns it into a box holding the name, all of it picked,
+/// Renaming a fleet (Paul 2026-11-23: a double-click on a fleet's name renames it; Enter or a click elsewhere confirms). A double-click
+/// on the name in the fleet's window turns it into a box holding the name, all of it picked,
 /// so typing replaces it. Enter, or a click anywhere outside the box, keeps what is typed; Esc keeps the old name, and so does an empty box.
 /// At most 24 letters the game font can draw: an accented letter becomes its plain letter as it is typed, and any other letter it has not
 /// got is left out. The core renames the fleet first thing next day; the new name shows everywhere at once (GameSession.NameOf).
@@ -26,12 +27,13 @@ public partial class GameScreen
     /// <summary>Whether this window shows the box now: it then waits to be rebuilt until the typing ends, so nothing typed is lost.</summary>
     bool RenameBoxIn(MgWin w) => Renaming(w) && _renameEdit != null && IsInstanceValid(_renameEdit) && _renameEdit.IsInsideTree() && w.Panel.IsAncestorOf(_renameEdit);
 
-    /// <summary>The name in the head opens the box on a double-click on its words (the rest of the head still folds the window).</summary>
-    void RenameOnDoubleClick(Label name, MgWin w, Fleet f, float wordsW)
+    /// <summary>The name in the head opens the box on a double-click on its words (the rest of the head still folds the window). A name
+    /// the head cuts short is whole in its hover (UI review 16).</summary>
+    void RenameOnDoubleClick(Label name, MgWin w, Fleet f, float wordsW, bool cut)
     {
         name.MouseFilter = MouseFilterEnum.Pass;   // a press still reaches the head under it, which moves the window
         name.MouseDefaultCursorShape = CursorShape.Move;
-        name.TooltipText = Ui.Wrap("Double-click the name to rename the fleet.");
+        name.TooltipText = Ui.Wrap((cut ? S.NameOf(f) + ". " : "") + "Double-click the name to rename the fleet.");
         int id = f.Id;
         name.GuiInput += e =>
         {
@@ -131,7 +133,7 @@ public partial class GameScreen
             string old = S.NameOf(f);
             if (S.RenameFleet(f, typed) is { } name)
             {
-                S.Say($"Order sent: {old} is renamed {name}.");
+                S.Say($"{old} is now called {name}.");   // no "Order sent": a rename shows done at once and has no Cancel (UI review 16)
                 AddLogItem(S.Messages[^1], false);
                 _panelDirty = true; _panelTimer = 0;
                 _fleets.QueueRedraw();   // its words on the map

@@ -140,7 +140,8 @@ public sealed partial class GameSession
     public string NameOf(Side s) => s == Side.Hand ? "Hand" : "Collective";
     public string You(Side s) => s == Player ? $"{NameOf(s)} (you)" : NameOf(s);
 
-    public int QueuedOrders => Game.Queue.Count(o => o.Side == Player);
+    // a rename is not counted: it shows done at once, has no Cancel, and a second one the same day replaces it (UI review 16)
+    public int QueuedOrders => Game.Queue.Count(o => o.Side == Player && o is not RenameFleetOrder);
 
     // ------------------------------------------------------------------ fog of war: what the player's side knows (rule: m5-fog-and-hq §N8)
 
@@ -293,7 +294,6 @@ public sealed partial class GameSession
         foreach (var x in advised) _pending[x.Sequence] = "Sibyl's order (" + SibylWords(x.Detail).Text + ")";
         if (!OpponentIdle) Opponent.PlanDay();
         Game.Step();
-        _renamed.Clear();   // the day applied them (or refused them, with its reason in the messages)
         var outcome = new StepOutcome();
         foreach (var t in switched)
         {
@@ -372,23 +372,28 @@ public sealed partial class GameSession
 
     string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"Fleet {id}");
 
-    // a fleet renamed today: the core applies the RenameFleet order first thing next day, so until then the screens show the typed name
-    readonly Dictionary<int, string> _renamed = new();   // fleet id -> name typed today; looked up, never iterated
+    /// <summary>
+    /// A fleet's name as the screens show it: the name of your RenameFleet order waiting for the day (the core applies it first thing next
+    /// day), else its own. Read from the order queue, so it also holds after a save and load the same day (UI review 16).
+    /// </summary>
+    public string NameOf(Fleet f) => RenamesOf(f).LastOrDefault()?.Name ?? f.Name;
 
-    /// <summary>A fleet's name as the screens show it: the name typed today if there is one, else its own.</summary>
-    public string NameOf(Fleet f) => _renamed.TryGetValue(f.Id, out var n) ? n : f.Name;
+    /// <summary>Your RenameFleet orders waiting for the day for this fleet, oldest first (at most one: a new one replaces it).</summary>
+    IEnumerable<RenameFleetOrder> RenamesOf(Fleet f) =>
+        Game.Queue.OfType<RenameFleetOrder>().Where(o => o.Side == Player && o.Fleet == f.Id).OrderBy(o => o.Sequence);
 
     /// <summary>
     /// Sends a RenameFleet order for a fleet of yours and shows the new name at once (Paul 2026-11-23: double-click the name to rename).
-    /// The typed name is cleaned as the core cleans it (trimmed, accents folded); nothing is sent when that leaves it empty or unchanged,
-    /// so an empty name keeps the old one. Returns the new name, or null. rule: m3-fleets §Orders (RenameFleet).
+    /// The typed name is cleaned as the core cleans it (trimmed, accents folded); nothing happens when that leaves it empty or unchanged,
+    /// so an empty name keeps the old one. The last name typed today wins (as the HQ move, QA-99): a rename already waiting is taken back,
+    /// and a name back to the fleet's own leaves nothing to send. Returns the name shown now, or null. rule: m3-fleets §Orders (RenameFleet).
     /// </summary>
     public string RenameFleet(Fleet f, string typed)
     {
         string name = FleetModule.CleanFleetName(typed);
         if (name.Length == 0 || name == NameOf(f)) return null;
-        Track(Host.Fleets.SubmitRenameFleet(Player, f.Id, name), $"Rename {NameOf(f)} to {name}");
-        _renamed[f.Id] = name;
+        foreach (long seq in RenamesOf(f).Select(o => o.Sequence).ToList()) Withdraw(seq);
+        if (name != f.Name) Track(Host.Fleets.SubmitRenameFleet(Player, f.Id, name), $"Rename {f.Name} to {name}");
         return name;
     }
     Side? FleetSide(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Side : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Side : null);

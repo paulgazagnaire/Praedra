@@ -213,29 +213,41 @@ public partial class Main
             gs.PlayRenameType(new string('x', 30));
             Expect(gs.RenameBoxText?.Length == Praedra.Core.Fleets.FleetModule.MaxFleetNameLength, "a name stops at 24 letters");
             int q0 = s.QueuedOrders;
+            int Renames() => s.Game.Queue.Count(o => o is Praedra.Core.Clock.RenameFleetOrder r && r.Fleet == named.Id);
             gs.PlayRenameEsc();
-            Expect(!gs.RenameOpen && s.QueuedOrders == q0 && s.NameOf(named) == was, "Esc keeps the old name and sends nothing");
+            Expect(!gs.RenameOpen && Renames() == 0 && s.NameOf(named) == was, "Esc keeps the old name and sends nothing");
             Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
             gs.PlayRenameType("   ");
             gs.PlayRenameClickElsewhere();
-            Expect(!gs.RenameOpen && s.QueuedOrders == q0 && s.NameOf(named) == was, "an empty name keeps the old one and sends nothing");
+            Expect(!gs.RenameOpen && Renames() == 0 && s.NameOf(named) == was, "an empty name keeps the old one and sends nothing");
             Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
             gs.PlayRenameEnter();
-            Expect(!gs.RenameOpen && s.QueuedOrders == q0, "Enter on the unchanged name sends nothing");
+            Expect(!gs.RenameOpen && Renames() == 0, "Enter on the unchanged name sends nothing");
             Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
             gs.PlayRenameType("  Iron Fist ");
             gs.PlayRenameEnter();
-            Expect(!gs.RenameOpen && s.QueuedOrders == q0 + 1 && s.NameOf(named) == "Iron Fist" && named.Name == was,
+            Expect(!gs.RenameOpen && Renames() == 1 && s.NameOf(named) == "Iron Fist" && named.Name == was,
                 "Enter sends one RenameFleet order; the new name (trimmed) shows at once, the fleet keeps its own until the day");
+            Expect(s.QueuedOrders == q0, "the top bar's orders given leaves a rename out: it has no Cancel and shows done at once (UI review 16)");
             Expect(gs.MgText(key).Contains("IRON FIST") && gs.FleetListTexts().Any(t => t.StartsWith("Iron Fist\n", StringComparison.Ordinal)),
                 "the window's head and the fleet list show the new name before the day runs");
-            gs.PlayDay(); gs.PlayRefresh();
-            Expect(named.Name == "Iron Fist" && s.NameOf(named) == "Iron Fist", $"next day the fleet is called Iron Fist (it is {named.Name})");
             Expect(gs.PlayRenameOpen(named.Id) && gs.RenameBoxText == "Iron Fist", "the box holds the name as it is spelled, not in capitals");
+            gs.PlayRenameType("Lantern");
+            gs.PlayRenameClickElsewhere();
+            Expect(!gs.RenameOpen && Renames() == 1 && s.NameOf(named) == "Lantern", "a click elsewhere keeps the name; a second rename the same day replaces the first (the last wins)");
+            Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
+            gs.PlayRenameType(was);
+            gs.PlayRenameEnter();
+            Expect(Renames() == 0 && s.NameOf(named) == was, "renamed back to its own name the same day: the rename is taken back, nothing waits");
+            Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
+            gs.PlayRenameType("Iron Fist");
+            gs.PlayRenameEnter();
+            gs.PlayDay(); gs.PlayRefresh();
+            Expect(named.Name == "Iron Fist" && s.NameOf(named) == "Iron Fist" && Renames() == 0, $"next day the fleet is called Iron Fist (it is {named.Name})");
+            Expect(gs.PlayRenameOpen(named.Id), "the box opens again");
             gs.PlayRenameType(was);
             gs.PlayRenameClickElsewhere();
-            Expect(!gs.RenameOpen && s.Game.Queue.Count(o => o is Praedra.Core.Clock.RenameFleetOrder r && r.Fleet == named.Id) == 1 && s.NameOf(named) == was,
-                "a click elsewhere keeps the typed name: one order, shown at once");
+            Expect(Renames() == 1 && s.NameOf(named) == was, "renamed back after the day: one order, shown at once");
             gs.PlayDay(); gs.PlayRefresh();
             Expect(named.Name == was, $"next day it is {was} again");
         }

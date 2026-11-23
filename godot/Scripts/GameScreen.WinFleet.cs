@@ -223,7 +223,8 @@ public partial class GameScreen
             name.ClipText = true;
             name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             name.SetMeta(UiTest.FullName, $"Fleet name {f.Id}");
-            RenameOnDoubleClick(name, w, f, font.GetStringSize(upper, HorizontalAlignment.Left, -1, size).X);
+            float wordsW = font.GetStringSize(upper, HorizontalAlignment.Left, -1, size).X;
+            RenameOnDoubleClick(name, w, f, wordsW, cut: wordsW > room);
             row.AddChild(name);
         }
         row.AddChild(WinButtons(w, grip, grey: true));
