@@ -149,6 +149,41 @@ public partial class GameScreen
         return (Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
     }
 
+    /// <summary>
+    /// The shape of a fleet window's tab (Paul's frames of 2026-11-23): the widths of its cards, and its parts top to bottom, each named by
+    /// what it holds (the zone's key, or the buttons in it), so a check can say the buttons sit under the cards.
+    /// </summary>
+    internal (List<float> CardWidths, List<string> Parts, bool GroundIcon, float PageWidth, int CardGap) MgPageShape(string key, string page)
+    {
+        var widths = new List<float>();
+        var parts = new List<string>();
+        if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return (widths, parts, false, 0, 0);
+        RebuildMg(w);
+        if (!w.Pages.TryGetValue(page, out var pg)) return (widths, parts, false, 0, 0);
+        bool icon = false;
+        int gap = -1;
+        void Walk(Node n, List<string> names)
+        {
+            if (n is Control c && c.HasMeta("card"))
+            {
+                widths.Add(c.GetCombinedMinimumSize().X);
+                if (gap < 0 && c.GetParent() is HFlowContainer fl) gap = fl.GetThemeConstant("h_separation");
+            }
+            if (n is Control k && k.HasMeta(UiTest.FullName)) names.Add(k.GetMeta(UiTest.FullName).AsString());
+            if (n is Button b && b.HasMeta(UiTest.FullName) && b.GetMeta(UiTest.FullName).AsString().StartsWith("Ground at", StringComparison.Ordinal))
+                icon |= Descendants(b).Any(x => x is IconPic);
+            foreach (var ch in n.GetChildren()) Walk(ch, names);
+        }
+        static IEnumerable<Node> Descendants(Node n) { foreach (var ch in n.GetChildren()) { yield return ch; foreach (var d in Descendants(ch)) yield return d; } }
+        foreach (var part in pg.Page.GetChildren())
+        {
+            var names = new List<string>();
+            Walk(part, names);
+            parts.Add(string.Join(", ", names));
+        }
+        return (widths, parts, icon, w.Body.CustomMinimumSize.X, gap);
+    }
+
     /// <summary>The windows are shown (they step aside while a fleet's destination is picked).</summary>
     internal bool MgShown => _mgLayer.Visible;
 
@@ -242,7 +277,7 @@ public partial class GameScreen
     {
         var st = StatusOf(f, Still(f));
         float worst = WorstHull(f);
-        return (string.Join(" / ", st.Words), st.Share != null, worst < 0.25f ? Ui.Danger : worst < 0.5f ? Ui.Warn : null);
+        return (string.Join(" / ", st.Words), st.Share != null, HullInk(worst));
     }
     internal IReadOnlyList<string> MgTabs(string key) => _mgWins.FirstOrDefault(w => w.Key == key)?.Pages.Keys.ToList() ?? new List<string>();
 

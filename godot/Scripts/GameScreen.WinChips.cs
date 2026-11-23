@@ -187,9 +187,9 @@ public partial class GameScreen
         if (Pickable(self))
         {
             // a click picks it, Shift+click adds it to the pick or takes it out (Paul 2026-11-19); a drag is not a click
-            // picked: a fleet window's card or ship row keeps its frame, its line turns blue; other tiles take the picked look
+            // picked: a fleet window's card gets a blue line just outside it (it has no frame at rest); other tiles take the picked look
             if (IsPicked(self) && c is PanelContainer pc)
-                pc.AddThemeStyleboxOverride("panel", !c.HasMeta("card") ? PickedLook() : c.GetMeta("card").AsString() == "row" ? RowBox(Ui.You) : CardBox(Ui.You));
+                pc.AddThemeStyleboxOverride("panel", !c.HasMeta("card") ? PickedLook() : CardBox(Ui.You));
             Vector2? down = null;
             c.GuiInput += e =>
             {

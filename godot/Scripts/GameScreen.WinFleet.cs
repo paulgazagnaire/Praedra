@@ -23,11 +23,13 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// A fleet's window, Paul's Paper design (fleet-new-frame-1 and -2, 2026-11-21), in the Infrastructure window's look. One column, so four
-/// fleets stand side by side. The head: the name, the window buttons, the status with a 2 px bar (where it is, or how far along its trip).
-/// A strip of tabs: Command (its orders, its behaviour, its three posts, its passengers), Ships (one row per ship: hull and cargo),
-/// Fighters and Troops (what it carries out of its room, with Load and Unload). What the design left out is a plain button (2026-11-22):
-/// Merge with the actions, Split and Scrap over the ship rows; right-clicks on the head and on a ship are shortcuts to the same.
+/// A fleet's window, Paul's Paper design (fleet-new-frame-1 to -4, 2026-11-23; export praedra/specs/ui/paper/fleet-new-2026-11-23/), in
+/// the Infrastructure window's look. One column, so four fleets stand side by side. The head: the name, the window buttons, the status with
+/// a 2 px bar (where it is, or how far along its trip). A strip of tabs: Command (its orders, its behaviour, its three posts, its
+/// passengers), Ships, Fighters and Troops. Everything it holds is a card, three a row: a picture on the darker surface, the name under it
+/// (a ship adds its cargo and hull). The buttons of a tab sit under its cards (Unload, Load, Ground at the planet). What the design left out
+/// is a plain button (2026-11-22): Merge under the actions, Split and Scrap under the ship cards; right-clicks on the head and on a ship are
+/// shortcuts to the same.
 /// Several fleets are picked on the map with Shift+click, and a right-click on a system sends them there (Paul's pick: move only). Every
 /// order is one the core already has, judged when the clock moves. Screens only.
 /// </summary>
@@ -35,10 +37,12 @@ public partial class GameScreen
 {
     const int FleetListW = 150;   // the Ground window's fleet rows, two to a row
     const int FleetBodyW = MgWidth - 34 - 4;   // the window's page (BodyWidth of a one-column window)
-    const int CardSpace = 16;   // between cards, as in the design
-    const int CardW = (FleetBodyW - 2 * CardSpace) / 3;   // a leader, squadron or regiment card: three a row
-    const int CardH = 120;
-    const int ShipPicW = 80;   // the ship row's picture cell
+    // a card, as Paul's frames of 2026-11-23: its picture tile 96 x 48 on the darker surface, 4 px, its name; three a row, 16 px between rows.
+    // Across, the design's page is 312 px (12 px between cards); here the scroll grabber keeps 4 px of it, so 9 px between cards
+    const int CardW = 96, CardPicH = 48;
+    const int CardGapX = (FleetBodyW - 3 * CardW) / 2, CardGapY = 16;
+    const int LeaderCardH = CardPicH + 4 + 32;   // a leader's card: two lines of name (first name over last name), the empty post's size
+    const int WideEmptyH = 80;   // the design's full-width "Drop regiments here to load them"
 
     static readonly string[] HitNames = { "shield generator", "weapons", "hold beam", "sub-light engines", "hyperdrive", "damage control" };
 
@@ -165,7 +169,7 @@ public partial class GameScreen
         // the tab counts, as the design: ships, and fighters and troops out of their room ("8/16"). The ship count takes the colour of its
         // most damaged ship (amber under half its hull, red under a quarter), as the ship rows do, so damage shows on any tab (UI review 6)
         float worst = WorstHull(f);
-        Color? shipsInk = worst < 0.25f ? Ui.Danger : worst < 0.5f ? Ui.Warn : null;
+        Color? shipsInk = HullInk(worst);
         FleetStrip(w,
             ("Command", null, null, () => CommandTab(f, riders)),
             ("Ships", f.Ships.Count.ToString(), shipsInk, () => ShipsTab(f, still, picked)),
@@ -175,6 +179,9 @@ public partial class GameScreen
         if (shipsInk != null && w.Pages.TryGetValue("Ships", out var shipsTab))
             shipsTab.Tab.TooltipText = Ui.Wrap(HullWords(HullState(f)).Trim() + " Amber: a ship under half its hull. Red: under a quarter.");
     }
+
+    /// <summary>A hull's colour from what is left of it: red under a quarter, amber under half, else none (the caller's own ink).</summary>
+    internal static Color? HullInk(float share) => share < 0.25f ? Ui.Danger : share < 0.5f ? Ui.Warn : null;
 
     /// <summary>"8/16" (what it carries out of its room); just the number with no room; nothing with neither.</summary>
     static string RoomCount(int have, int room) => room <= 0 ? (have == 0 ? null : have.ToString()) : $"{have}/{room}";
@@ -338,7 +345,7 @@ public partial class GameScreen
                 // the bar is the most damaged ship's hull: the one the days count for, coloured as the Ships tab and the side panel (UI review 6)
                 words.Add(Countdown(r.Days));
                 share = r.Worst;
-                ink = r.Worst < 0.25f ? Ui.Danger : r.Worst < 0.5f ? Ui.Warn : Ui.You;
+                ink = HullInk(r.Worst) ?? Ui.You;
                 tip += (tip == "" ? "" : " ") + $"{where}: its hull is whole on day {S.Game.Day + r.Days}. The bar is its most damaged ship's hull." + (r.Fast ? " Leaving stops the repairs." : "")
                     + (r.Broken > 0 ? $" {Ui.Count(r.Broken, "broken part", "broken parts")}: each repair may fix one, by chance." : "") + craft;
             }
@@ -543,7 +550,7 @@ public partial class GameScreen
             .AddChild(BehaviorRow(f));
 
         var cmd = FleetSection("Fleet command", 16);
-        var posts = Boxed(new HBoxContainer(), CardSpace);
+        var posts = Boxed(new HBoxContainer(), CardGapX);
         foreach (var post in new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander })
         {
             var p = post;
@@ -591,7 +598,8 @@ public partial class GameScreen
             foreach (var x in fs) flow.AddChild(FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), x.Name, Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), ghost: true));
             way.AddChild(flow);
         }
-        GroundLink(f, "Leaders");   // where the leaders to drag stand, and where they land (UI review 4)
+        // where the leaders to drag stand, and where they land (UI review 4), as the design's Ground button of the other tabs
+        if (GroundButton(f, "Leaders") is { } ground) Add(ground);
     }
 
     /// <summary>
@@ -719,7 +727,7 @@ public partial class GameScreen
 
     /// <summary>The design's button: a 1 px #36363C outline, 8 px inside, 12 px words. Brighter outline under the mouse, the words greyed
     /// with the reason in the hover when it can't act; <paramref name="ink"/> for a meaning colour (the harvester's red).</summary>
-    static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false, Color? hoverInk = null)
+    static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false, Color? hoverInk = null, string[] icon = null)
     {
         var b = new Button { FocusMode = FocusModeEnum.None, Disabled = disabled, TooltipText = Ui.Wrap(tip),
             MouseDefaultCursorShape = disabled ? CursorShape.Arrow : CursorShape.PointingHand };
@@ -728,6 +736,13 @@ public partial class GameScreen
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         var c = disabled ? Look.Dim : ink ?? Look.Text;
         var h = Boxed(new HBoxContainer(), 8);
+        if (icon != null)
+        {
+            // the design's 16 px glyph before the words, flat in the words' grey (the Ground button's turret)
+            var pic = IconPic.Of(icon, 1, c, flat: true);
+            pic.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            h.AddChild(pic);
+        }
         var text = Look.Words(words, 12, c);
         h.AddChild(text);
         if (menu) { var arrow = Look.Words("▾", 12, c, true); arrow.SizeFlagsVertical = SizeFlags.ShrinkCenter; h.AddChild(arrow); }
@@ -768,59 +783,56 @@ public partial class GameScreen
         pm.Popup(new Rect2I((Vector2I)(r.Position + new Vector2(0, r.Size.Y + 2)), Vector2I.Zero));
     }
 
-    /// <summary>A card's frame: a 1 px line, 4 px inside it. Picked: the line in your blue.</summary>
+    /// <summary>A card's frame: none at rest, as the design (a card is its picture tile and its words); picked, a 1 px line in your blue
+    /// drawn 3 px outside it, so the card never moves and the line clears the picture.</summary>
     static StyleBoxFlat CardBox(Color line)
     {
         var b = Look.Box(new Color(0, 0, 0, 0), line, 1, 1, 1, 1);
-        b.ContentMarginLeft = b.ContentMarginRight = b.ContentMarginTop = b.ContentMarginBottom = 5;
+        b.ContentMarginLeft = b.ContentMarginRight = b.ContentMarginTop = b.ContentMarginBottom = 0;
+        b.SetExpandMarginAll(3);
         return b;
     }
 
-    /// <summary>A ship row's frame: a 1 px line, nothing inside it (the picture cell runs to the line). Picked: the line in your blue.</summary>
-    static StyleBoxFlat RowBox(Color line)
+    /// <summary>
+    /// A card from the design (a ship, a post, a passenger, a squadron, a regiment): its picture centred on the darker surface, 96 x 48,
+    /// then its name, centred, two lines at most; a short dim line under that when it has something to say.
+    /// </summary>
+    PanelContainer FleetCard(Control pic, string name, string sub = null, bool ghost = false, int nameLines = 2, params Control[] more)
     {
-        var b = Look.Box(new Color(0, 0, 0, 0), line, 1, 1, 1, 1);
-        b.ContentMarginLeft = b.ContentMarginRight = b.ContentMarginTop = b.ContentMarginBottom = 1;
-        return b;
-    }
-
-    /// <summary>A card from the design (a post, a passenger, a squadron, a regiment): its picture on the darker surface, 76 px high, and its
-    /// name under it, centred, two lines at most; a short dim line under that when it has something to say.</summary>
-    PanelContainer FleetCard(Control pic, string name, string sub = null, bool ghost = false)
-    {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Pass, CustomMinimumSize = new Vector2(CardW, CardH) };
+        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Pass, CustomMinimumSize = new Vector2(CardW, 0) };
         p.SetMeta("card", "card");
-        p.AddThemeStyleboxOverride("panel", CardBox(Look.Outline));
+        p.AddThemeStyleboxOverride("panel", CardBox(new Color(0, 0, 0, 0)));
         var v = Boxed(new VBoxContainer(), 4);
         p.AddChild(v);
-        var holder = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(0, 76) };
-        holder.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(CardW, CardPicH) };
+        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
         var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         center.AddChild(pic);
-        holder.AddChild(center);
-        v.AddChild(holder);
-        var t = Look.Words(KeepNumeral(name), 12, Look.Text);
-        t.HorizontalAlignment = HorizontalAlignment.Center;
-        t.AutowrapMode = TextServer.AutowrapMode.Word;
-        t.MaxLinesVisible = 2;
-        t.CustomMinimumSize = new Vector2(CardW - 10, 0);
-        t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        v.AddChild(t);
-        if (sub != null)
-        {
-            var s = Look.Words(sub, 12, ghost ? Pending : Look.Dim);
-            s.HorizontalAlignment = HorizontalAlignment.Center;
-            s.ClipText = true; s.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            s.CustomMinimumSize = new Vector2(CardW - 10, 0);
-            v.AddChild(s);
-        }
+        tile.AddChild(center);
+        v.AddChild(tile);
+        v.AddChild(CardLine(KeepNumeral(name), Look.Text, nameLines));
+        if (sub != null) v.AddChild(CardLine(sub, ghost ? Pending : Look.Dim, 1));
+        foreach (var m in more) v.AddChild(m);
         if (ghost) p.Modulate = new Color(1, 1, 1, 0.62f);
         return p;
     }
 
-    /// <summary>An empty place on a card's footprint: dashed #36363C, its words centred (the design's "Drop a leader here"). A label, so a
-    /// drop shown before the day applies it takes its place.</summary>
-    static Label EmptyCard(string words, float width = CardW, float height = CardH)
+    /// <summary>A line of a card: 12 px, centred on the card's width, cut with "…" past <paramref name="lines"/> lines.</summary>
+    static Label CardLine(string words, Color ink, int lines)
+    {
+        var t = Look.Words(words, 12, ink);
+        t.HorizontalAlignment = HorizontalAlignment.Center;
+        t.CustomMinimumSize = new Vector2(CardW, 0);
+        if (lines > 1) { t.AutowrapMode = TextServer.AutowrapMode.Word; t.MaxLinesVisible = lines; }
+        else t.ClipText = true;
+        t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        return t;
+    }
+
+    /// <summary>An empty place: dashed #36363C, its words centred. A card's size by default (the design's "Drop a leader here", 96 x 84);
+    /// the Fighters and Troops tabs pass the page's width (the design's "Drop regiments here to load them", 80 px high). A label, so a drop
+    /// shown before the day applies it takes its place.</summary>
+    static Label EmptyCard(string words, float width = CardW, float height = LeaderCardH)
     {
         var box = new DashedBox { Ink = Look.Outline };
         box.ContentMarginLeft = box.ContentMarginRight = 12; box.ContentMarginTop = box.ContentMarginBottom = 8;
@@ -832,18 +844,18 @@ public partial class GameScreen
         return l;
     }
 
-    /// <summary>Cards in a flow, 16 px apart both ways (three a row).</summary>
+    /// <summary>Cards in a flow, three a row: <see cref="CardGapX"/> across, 16 px between rows.</summary>
     static HFlowContainer CardFlow(HFlowContainer flow)
     {
-        flow.AddThemeConstantOverride("h_separation", CardSpace); flow.AddThemeConstantOverride("v_separation", CardSpace);
+        flow.AddThemeConstantOverride("h_separation", CardGapX); flow.AddThemeConstantOverride("v_separation", CardGapY);
         return flow;
     }
 
-    /// <summary>A leader's picture until leaders have portraits: their initials in a ring (portraits stay round).</summary>
+    /// <summary>A leader's picture until leaders have portraits: their initials in a ring, 40 px as the design's picture.</summary>
     static Control Avatar(string name, Color ink)
     {
-        var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(44, 44) };
-        ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 22, ink, 1, 0, 0));
+        var ring = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(40, 40) };
+        ring.AddThemeStyleboxOverride("panel", Ui.Box(new Color(0, 0, 0, 0), 20, ink, 1, 0, 0));
         var l = Look.Words(Initials(name), 14, ink, true);
         l.HorizontalAlignment = HorizontalAlignment.Center; l.VerticalAlignment = VerticalAlignment.Center;
         ring.AddChild(l);
@@ -909,44 +921,43 @@ public partial class GameScreen
         {
             case 'L': string name = S.CharName(d.Id); return FleetCard(Avatar(name, Ui.You), GameSession.CardName(name), sub, ghost: true);
             case 'M': return FleetCard(UnitPic(UnitIcon.Kind.Ship, hand, 2, Ui.You), ThingName(d), sub, ghost: true);
-            case 'S' when S.Host.Economy.Find(d.Id) is { } ship: { var r = ShipRow(ship); r.Modulate = new Color(1, 1, 1, 0.62f); return r; }
+            case 'S' when S.Host.Economy.Find(d.Id) is { } ship: { var r = ShipCard(ship); r.Modulate = new Color(1, 1, 1, 0.62f); return r; }
             default:
                 var o = S.Host.Economy.Find(d.Id);
                 return FleetCard(UnitPic(o == null ? UnitIcon.Kind.Regiment : KindOf(o.Category, o.Class), hand, SizeOfClass(o?.Class), Ui.You), o?.Class ?? "unit", sub, ghost: true);
         }
     }
 
-    // ================================================================== Ships: one row per ship
+    // ================================================================== Ships: one card per ship
 
     /// <summary>
-    /// One row per ship (Paul's design): its picture, its class, what it carries out of its room, its hull. A click picks it, Shift+click
-    /// picks several: split them off or scrap them together (over the rows), or drag them onto another fleet's window. A right-click splits
-    /// it off or scraps it. Its damage, in words, is in its hover. While one of its ships is dragged, a dashed place under the rows takes it
-    /// as a new fleet.
+    /// One card per ship, three a row (Paul's frame 2, 2026-11-23): its picture, its class, what it carries out of its room, its hull. A
+    /// click picks it, Shift+click picks several: split them off or scrap them together (the buttons under the cards), or drag them onto
+    /// another fleet's window. A right-click splits it off or scraps it. Its damage, in words, is in its hover. While one of its ships is
+    /// dragged, a dashed place under the cards takes it as a new fleet.
     /// </summary>
     void ShipsTab(Fleet f, bool still, List<EconObject> picked)
     {
         var eco = S.Host.Economy;
-        ShipActions(f, picked, still);
         var sz = DropZone($"Fleet {f.Id} Ships", "join", d => RefuseShipsInto(d, f), d => DropShipsInto(d, f));
-        sz.Flow.AddThemeConstantOverride("v_separation", 8);
+        CardFlow(sz.Flow);
         var ships = f.Ships.Select(eco.Find).Where(o => o != null && !_moved.ContainsKey(new Drag('S', o.Id).Key) && !_scrapped.Contains(o.Id)).ToList();
         foreach (var o in ships.GroupBy(o => o.Class).SelectMany(g => g))
         {
             var d = new Drag('S', o.Id);
-            var row = ShipRow(o);
-            row.SetMeta(UiTest.FullName, d.Key);
+            var card = ShipCard(o);
+            card.SetMeta(UiTest.FullName, d.Key);
             // this ship first, then the same class beside it: a plain drag takes this one, Shift takes them all
             var same = ships.Where(x => x.Class == o.Class && x.Id != o.Id).ToList();
             var drags = new List<Drag> { d };
             drags.AddRange(same.Select(x => new Drag('S', x.Id)));
-            MakeDraggable(row, drags, o.Class);
-            row.TooltipText = Ui.Wrap(ShipTip(o) + "\nClick to pick it; Shift+click to pick several. Drag to another fleet's window"
+            MakeDraggable(card, drags, o.Class);
+            card.TooltipText = Ui.Wrap(ShipTip(o) + "\nClick to pick it; Shift+click to pick several. Drag to another fleet's window"
                 + (same.Count > 0 ? $" (hold Shift as you start the drag to move all {same.Count + 1} {o.Class})" : "") + "."
                 + (still ? "\nRight-click: split it off or scrap it." : ""));
             var one = o;
-            if (still) RightClickMenu(row, () => ShipMenu(f, one).ToArray());
-            sz.Flow.AddChild(row);
+            if (still) RightClickMenu(card, () => ShipMenu(f, one).ToArray());
+            sz.Flow.AddChild(card);
         }
         Add(sz.Box);
         // the place to split ships off: shown only while one of its ships is dragged (the design has no slot for it)
@@ -959,65 +970,38 @@ public partial class GameScreen
             nz.Flow.AddChild(EmptyCard("Drop here to split them off into a new fleet", FleetBodyW - 12, 64));
             Add(nz.Box);
         }
+        ShipActions(f, picked, still);
     }
 
-    /// <summary>A ship as the design's row: the picture cell (80 px, the darker surface), then its class, "Capacity" with its fighters and
-    /// regiments out of their room, and "Hull" with its hull out of its class's (amber under half, red under a quarter).</summary>
-    PanelContainer ShipRow(EconObject o)
+    /// <summary>A ship as the design's card: its picture, its class, then what it carries out of its room (a fighter and a regiment, each
+    /// with "6/6") and its hull out of its class's ("2750/2750", amber under half, red under a quarter), all in the dim grey.</summary>
+    PanelContainer ShipCard(EconObject o)
     {
         var sc = Fm.ClassOf(o);
-        // more than half the page, so it takes a line of its own, and stretched across it (the place it stands in may be narrower)
-        var row = new PanelContainer { MouseFilter = MouseFilterEnum.Pass, CustomMinimumSize = new Vector2(FleetBodyW / 2 + 1, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        row.SetMeta("card", "row");
-        row.AddThemeStyleboxOverride("panel", RowBox(Look.Edge));
-        var h = Boxed(new HBoxContainer(), 0);
-        row.AddChild(h);
-        var cell = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(ShipPicW, 0) };
-        cell.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
-        var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
-        center.AddChild(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You));
-        cell.AddChild(center);
-        h.AddChild(cell);
-        var right = Pad(16, 16, 16, 16);
-        right.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        h.AddChild(right);
-        var v = Boxed(new VBoxContainer(), 4);
-        right.AddChild(v);
-        v.AddChild(Look.Words(o.Class, 13, Look.Text, true));
-        var lines = Boxed(new VBoxContainer(), 0);
-        v.AddChild(lines);
-
         var cap = Boxed(new HBoxContainer(), 4);
-        var cl = Look.Words("Capacity", 12, Look.Dim);
-        cl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        cap.AddChild(cl);
+        cap.Alignment = BoxContainer.AlignmentMode.Center;
+        cap.CustomMinimumSize = new Vector2(CardW, 16);
         string side = Me == Side.Hand ? "hand" : "collective";
+        var ink = Look.Muted;   // Paul 2026-11-23 picked the readable grey of the status line over the frame's #454545
         void Cargo(string icon, int have, int room)
         {
             if (room <= 0) return;
-            if (cap.GetChildCount() > 1) cap.AddChild(new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(8, 0) });
-            var i = IconPic.Of(PixelIconData.Units[$"{icon}-{side}"], 1, Look.Dim);
+            if (cap.GetChildCount() > 0) cap.AddChild(new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(6, 0) });
+            var i = IconPic.Of(PixelIconData.Units[$"{icon}-{side}"], 1, ink, flat: true);   // the design's flat silhouettes
             i.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             cap.AddChild(i);
-            cap.AddChild(Look.Words($"{have}/{room}", 12, Look.Dim));
+            cap.AddChild(Look.Words($"{have}/{room}", 12, ink));
         }
         if (sc != null)
         {
             Cargo("fighter", Fm.UnitsAboard(o.Id, ObjectCategory.Fighter).Count(), sc.FighterCapacity);
             Cargo("regiment", Fm.UnitsAboard(o.Id, ObjectCategory.Regiment).Count(), sc.TroopCapacity);
         }
-        if (cap.GetChildCount() == 1) cap.AddChild(Look.Words("none", 12, Look.Dim));
-        lines.AddChild(cap);
-
-        var hull = Boxed(new HBoxContainer(), 4);
-        var hl = Look.Words("Hull", 12, Look.Dim);
-        hl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        hull.AddChild(hl);
+        if (cap.GetChildCount() == 0) cap.AddChild(Look.Words("no cargo", 12, ink));   // every card the same height, so the rows line up
         int max = sc?.Hull ?? o.Hull;
-        float r = max <= 0 ? 1 : o.Hull / (float)max;
-        hull.AddChild(Look.Words($"{o.Hull}/{max}", 12, r < 0.25f ? Ui.Danger : r < 0.5f ? Ui.Warn : Look.Dim));
-        lines.AddChild(hull);
-        return row;
+        var hull = CardLine($"{o.Hull}/{max}", HullInk(max <= 0 ? 1 : o.Hull / (float)max) ?? ink, 1);
+        // the class on one line (cut with "…"), so every ship card has the same height and the rows line up
+        return FleetCard(UnitPic(UnitIcon.Kind.Ship, Me == Side.Hand, SizeOfClass(o.Class), Ui.You), o.Class, nameLines: 1, more: new Control[] { cap, hull });
     }
 
     /// <summary>A ship's hover: its class and number, its damage in words, whether it is being repaired, and what its class is for.
@@ -1056,7 +1040,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// Over the ship rows, always: Split and Scrap, so nobody has to find them in a right-click (2026-11-22). With no ship picked, Split
+    /// Under the ship cards, always (where the design puts a tab's buttons): Split and Scrap, so nobody has to find them in a right-click (2026-11-22). With no ship picked, Split
     /// says how to pick and Scrap takes the whole fleet; with ships picked, both act on those, and their words say how many.
     /// rule: m3-fleets §Orders (SplitFleet), m2-maintenance §Scrapping and refunds.
     /// </summary>
@@ -1096,26 +1080,27 @@ public partial class GameScreen
         CardFlow(qz.Flow);
         UnitTiles(qz.Flow, aboard.Select(o => ((Drag?)new Drag('Q', o.Id), o, HullWords(o)))
             .Concat(f.Squadrons.Select(id => eco.Find(id)).Where(o => o != null).Select(o => ((Drag?)null, o, "flies along"))), f.At, UnitCard);
-        if (aboard.Count + f.Squadrons.Count == 0) qz.Flow.AddChild(EmptyCard(berths > 0 ? "Drop squadrons here to load them" : "No carrier in this fleet"));
-        CargoActions(f, fighters: true, aboard);
+        if (aboard.Count + f.Squadrons.Count == 0)
+            qz.Flow.AddChild(EmptyCard(berths > 0 ? "Drop squadrons here to load them" : "No carrier in this fleet", FleetBodyW, WideEmptyH));
         Add(qz.Box);
-        GroundLink(f, "Fighters");
+        CargoActions(f, fighters: true, aboard);
     }
 
-    /// <summary>The planet's window, where the fleet takes its leaders, fighters and troops from, opened on the matching tab (the tab exists
-    /// only at a planet you hold).</summary>
-    void GroundLink(Fleet f, string tab)
+    /// <summary>The design's "Ground at Charter" (its turret before the words): the planet's window, where the fleet takes its leaders,
+    /// fighters and troops from, opened on the matching tab (the tab exists only at a planet you hold). Null while the fleet travels.</summary>
+    Button GroundButton(Fleet f, string tab)
     {
-        if (!Still(f)) return;
+        if (!Still(f)) return null;
         // leaders land and board on any planet; troops and fighters only on one you hold (its window has those tabs only then)
         bool held = tab == "Leaders" ? LeadersHere(f) != null : !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me;
         string what = tab == "Leaders" ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
         var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: held ? tab : null),
             held ? $"Opens {tab} in Ground at {f.At}: drag its {what} onto this fleet, and this fleet's back onto the planet."
                  : S.IsDestroyed(f.At) ? $"Nothing is left of {f.At}: nothing lands or boards here."
-                 : $"The Ground window of {f.At}. You don't hold this planet: your {what} don't land on it or board from it (your leaders do, in its Leaders tab).");
+                 : $"The Ground window of {f.At}. You don't hold this planet: your {what} don't land on it or board from it (your leaders do, in its Leaders tab).",
+            icon: PixelIconData.Tile["troops"]);
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        Add(b);
+        return b;
     }
 
     void TroopsAboardTab(Fleet f, List<EconObject> aboard)
@@ -1124,15 +1109,14 @@ public partial class GameScreen
         var tz = DropZone($"Fleet {f.Id} Troops", "load", d => RefuseOnto(d, f, 'R'), d => DropOnto(d, f));
         CardFlow(tz.Flow);
         UnitTiles(tz.Flow, aboard.Select(o => ((Drag?)new Drag('R', o.Id), o, (string)null)), f.At, UnitCard);
-        if (aboard.Count == 0) tz.Flow.AddChild(EmptyCard(room > 0 ? "Drop regiments here to load them" : "No transport in this fleet"));
-        CargoActions(f, fighters: false, aboard);
+        if (aboard.Count == 0) tz.Flow.AddChild(EmptyCard(room > 0 ? "Drop regiments here to load them" : "No transport in this fleet", FleetBodyW, WideEmptyH));
         Add(tz.Box);
-        GroundLink(f, "Troops");
+        CargoActions(f, fighters: false, aboard);
     }
 
     /// <summary>
-    /// Over the cards of the Fighters and Troops tabs: one click loads what stands at the planet, or lands what is aboard (these were in
-    /// the side panel's fleet page, 2026-11-22). Troops load leaving the garrison the planet needs; "Load all" takes the rest too and says
+    /// Under the cards of the Fighters and Troops tabs, as the design: one click loads what stands at the planet, or lands what is aboard
+    /// (these were in the side panel's fleet page, 2026-11-22), then Ground at the planet. Troops load leaving the garrison the planet needs; "Load all" takes the rest too and says
     /// the planet may revolt. rule: m2-support (garrison), m3-fleets §Orders (load and unload).
     /// </summary>
     void CargoActions(Fleet f, bool fighters, List<EconObject> aboard)
@@ -1178,6 +1162,7 @@ public partial class GameScreen
                     : S.IsDestroyed(at) ? $"Nowhere to land them: {at} is destroyed."
                     : $"Regiments land only on a planet you hold. To take {at}, use Invasion in Command.", !mine));
         }
+        if (GroundButton(f, fighters ? "Fighters" : "Troops") is { } ground) bar.AddChild(ground);
         if (bar.GetChildCount() > 0) Add(bar);
     }
 
