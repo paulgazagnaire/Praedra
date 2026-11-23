@@ -434,7 +434,7 @@ public partial class FleetLayer : Control
             if (count <= 1) return FleetWords(f, full);
             if (!full) return $"{count} fleets";
             if (map.SelectedFleet == f.Id) return $"{FleetWords(f, true)} +{count - 1}";   // the selected fleet is the one drawn
-            var names = Sharing(f).Select(id => _game.State.Fleets[id].Name).ToList();
+            var names = Sharing(f).Select(id => _game.State.Fleets[id]).Select(x => NameOf?.Invoke(x) ?? x.Name).ToList();
             return string.Join(", ", names.Take(3)) + (names.Count > 3 ? $" +{names.Count - 3}" : "");
         }
         // an enemy group: how many, and the ships and squadrons seen in all of them together

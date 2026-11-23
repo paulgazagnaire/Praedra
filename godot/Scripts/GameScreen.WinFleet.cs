@@ -313,7 +313,7 @@ public partial class GameScreen
         {
             string to = t.Path[^1];
             int total = Math.Max(1, t.HopTicks.Sum()), left = DaysLeft(t);
-            string go = f.JoinFleet is int j && j > 0 && S.Game.State.Fleets.TryGetValue(j, out var jf) && jf.Side == Me ? $"Moving to join {jf.Name}" : $"Moving to {to}";
+            string go = f.JoinFleet is int j && j > 0 && S.Game.State.Fleets.TryGetValue(j, out var jf) && jf.Side == Me ? $"Moving to join {S.NameOf(jf)}" : $"Moving to {to}";
             // rule: m4-retreat-damage-repair §5: no repair while moving
             string hurtWords = hurt > 0 ? $" Its {Ui.Count(hurt, "damaged ship", "damaged ships")} repair only once it stops." : "";
             return new(new List<string> { go, left <= 1 ? "ETA: tomorrow" : $"ETA: {left} days" }, 1f - left / (float)total, Ui.You, false,
@@ -446,7 +446,7 @@ public partial class GameScreen
                 case ForcedStop x when x.Fleet == f.Id:
                     Take(2, $"Stopped at {x.System}", $"An enemy fleet stopped {S.NameOf(f)} at {x.System} today. Its trip is cancelled: give it a new order."); break;
                 case FleetJoinFailed j when j.Fleet == f.Id:
-                    string into = S.Game.State.Fleets.TryGetValue(j.Into, out var jf) ? jf.Name : "its fleet";
+                    string into = S.Game.State.Fleets.TryGetValue(j.Into, out var jf) ? S.NameOf(jf) : "its fleet";
                     Take(3, $"Could not join {into}", $"{S.NameOf(f)} reached {j.System}, but {into} was not there, so they did not merge."); break;
             }
         return best is { } b ? (b.Words, b.Tip) : null;
