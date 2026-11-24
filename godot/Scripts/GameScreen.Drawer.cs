@@ -128,9 +128,15 @@ public partial class GameScreen
         static string OnOff(bool on) => on ? "on" : "off";
         bool g = S.SibylOn(Praedra.Core.AI.SibylJob.ManageGarrisons), p = S.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction);
         _sibylStatus.Text = g || p ? $"Garrisons {OnOff(g)} · Production {OnOff(p)}" : "Advising only";
-        _sibylStatusRow.TooltipText = Ui.Wrap("Sibyl can also act for you: train the garrisons your worlds need, and build mines and refineries at "
-            + "idle construction yards. Switch each on or off in Menu > Settings." + (g || p ? "" : " Both are off: she only advises here."));
+        // what each switch does, as the advisor plans it (rule: m6-advisor-sibyl §Manage Garrisons, §Manage Production; Ponytail on #372)
+        _sibylStatusRow.TooltipText = Ui.Wrap("Sibyl can also act for you, at construction yards you left idle. Garrisons: she trains the regiments "
+            + "your worlds are short of, uprisings first, and builds training facilities when none is free. Production: she builds mines and "
+            + $"refineries and more construction yards, and founds one if you have none left. She always keeps {SibylRoom} upkeep free. "
+            + "Switch each on or off in Menu > Settings." + (g || p ? "" : " Both are off: she only advises here."));
     }
+
+    /// <summary>The upkeep room Sibyl always leaves free, from the advisor's own parameters (rule: m6-advisor-sibyl §Manage Garrisons 6).</summary>
+    static readonly int SibylRoom = new Praedra.Core.AI.SimpleAiParams().AdvisorUpkeepMargin;
 
     readonly Dictionary<DrawerTab, Label> _tabCounts = new();
 
@@ -162,7 +168,7 @@ public partial class GameScreen
             var b = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = tab == _tab, FocusMode = FocusModeEnum.None,
                 MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(tip) };
             b.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg));
-            b.AddThemeStyleboxOverride("hover", Look.Box(new Color("17171a")));
+            b.AddThemeStyleboxOverride("hover", Look.Box(Look.CellHover));
             b.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
             b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
             b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
@@ -323,12 +329,15 @@ public partial class GameScreen
 
     /// <summary>A section head: a clear gap above it (a new group starts), then the name in small capitals. In the window on the right,
     /// the Fleet window's part title (Paul 2026-11-24): 16 px words, a count in the dim grey beside them ("At your systems 3"), 24 px above.</summary>
+    /// <summary>"At your systems (3)": a section name and its count, split for the Fleet window's title.</summary>
+    static readonly System.Text.RegularExpressions.Regex CountedHead = new(@"^(.*) \((\d+)\)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     void Heading(string text, string tip = null)
     {
         if (InDrawer)
         {
             if ((_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(WinGap - Ui.Block * 2));
-            var m = System.Text.RegularExpressions.Regex.Match(text, @"^(.*) \((\d+)\)$");
+            var m = CountedHead.Match(text);
             var hd = Add(Heading2(m.Success ? m.Groups[1].Value : text, m.Success ? m.Groups[2].Value : null));
             if (tip != null) { hd.TooltipText = Ui.Wrap(tip); hd.MouseFilter = MouseFilterEnum.Stop; hd.MouseDefaultCursorShape = CursorShape.Help; }
             return;
@@ -511,13 +520,13 @@ public partial class GameScreen
         b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         b.SetMeta(UiTest.FullName, $"{S.NameOf(f)}\n{RowStatus(f)}");   // its words for the playtest: the name, then the trip
         // its map mark on the dark tile at the left, as every picture on the redesigned windows (Paul 2026-11-24): the square for
-        // Defensive, the chevron for Elusive, in your blue
+        // Defensive, the chevron for Elusive, in your blue, pointing up-right as a parked fleet's does
         var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
         tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
         tile.AnchorBottom = 1;
         tile.OffsetLeft = 1; tile.OffsetTop = 1; tile.OffsetRight = 1 + RowTile; tile.OffsetBottom = -1;
         var mark = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
-        mark.AddChild(IconPic.Of(PixelIconData.Map[elusive ? "fleet-elusive" : "fleet-defensive"], 2, Ui.You));
+        mark.AddChild(IconPic.Of(FleetLayer.Parked(elusive ? "fleet-elusive" : "fleet-defensive"), 2, Ui.You));   // as parked on the map
         tile.AddChild(mark);
         b.AddChild(tile);
         var lines = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };

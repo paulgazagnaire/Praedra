@@ -480,7 +480,7 @@ public partial class GameScreen
             v.AddChild(h);
         }
         // the map's own pixel icons, as the map draws them (Paul 2026-11-23: no placeholder pictures anywhere; the map icons are #359-#361)
-        Control Map(string key, Color ink) => IconPic.Of(PixelIconData.Map[key], 1, ink);
+        Control Map(string key, Color ink) => IconPic.Of(FleetLayer.Parked(key), 1, ink);   // a fleet's mark pointing up-right, as parked (review 20)
         Item(new Glyph(Glyph.Kind.Dot, Ui.You, 11), "Your system");
         Item(new Glyph(Glyph.Kind.Dot, Ui.Enemy, 11), "Enemy system (as last seen)");
         Item(new Glyph(Glyph.Kind.Dot, Ui.Neutral, 8), "Nobody's system");
