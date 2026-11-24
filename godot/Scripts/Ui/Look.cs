@@ -25,6 +25,9 @@ public static class Look
     public static readonly Color Divider = new(0x61 / 255f, 0x61 / 255f, 0x61 / 255f, 0.4f); // between the two gauges; a bar's track
     public static readonly Color Outline = new("36363c");   // a button's and a card's outline (Paul's fleet window design, 2026-11-21)
     public static readonly Color Muted = new("7d8699");     // what a fleet is doing, in its status line (the same design)
+    // the dark tile behind a picture on a window that is itself Bg (the Ground window): one step darker, as Bg is under Band in the Fleet
+    // window (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now")
+    public static readonly Color PicTile = new("0e0e10");
 
     /// <summary>A label in the design's face: Space Grotesk, Medium for names and headings, Regular for numbers and states.</summary>
     public static Label Words(string text, int size, Color color, bool medium = false)

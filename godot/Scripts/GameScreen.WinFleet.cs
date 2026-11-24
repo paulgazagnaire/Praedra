@@ -37,7 +37,7 @@ public partial class GameScreen
 {
     const int FleetListW = 150;   // the Ground window's fleet rows, two to a row
     const int FleetBodyW = MgWidth - 34 - 4;   // the window's page (BodyWidth of a one-column window)
-    // a card, as Paul's frames of 2026-11-23: its picture in a 96 x 48 place (no tile behind it, Paul 2026-11-23), 4 px, its name; three a row, 16 px between rows.
+    // a card, as Paul's frames of 2026-11-23: its picture tile 96 x 48 on the darker surface, 4 px, its name; three a row, 16 px between rows.
     // Across, the design's page is 312 px (12 px between cards); here the scroll grabber keeps 4 px of it, so 9 px between cards
     const int CardW = 96, CardPicH = 48;
     const int CardGapX = (FleetBodyW - 3 * CardW) / 2, CardGapY = 16;
@@ -791,7 +791,7 @@ public partial class GameScreen
         pm.Popup(new Rect2I((Vector2I)(r.Position + new Vector2(0, r.Size.Y + 2)), Vector2I.Zero));
     }
 
-    /// <summary>A card's frame: none at rest, as the design (a card is its picture and its words); picked, a 1 px line in your blue
+    /// <summary>A card's frame: none at rest, as the design (a card is its picture tile and its words); picked, a 1 px line in your blue
     /// drawn 3 px outside it, so the card never moves and the line clears the picture.</summary>
     static StyleBoxFlat CardBox(Color line)
     {
@@ -802,7 +802,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A card from the design (a ship, a post, a passenger, a squadron, a regiment): its picture centred in a 96 x 48 place, straight on the card,
+    /// A card from the design (a ship, a post, a passenger, a squadron, a regiment): its picture centred on the darker surface, 96 x 48,
     /// then its name, centred, two lines at most; a short dim line under that when it has something to say.
     /// </summary>
     PanelContainer FleetCard(Control pic, string name, string sub = null, bool ghost = false, int nameLines = 2, params Control[] more)
@@ -812,9 +812,13 @@ public partial class GameScreen
         p.AddThemeStyleboxOverride("panel", CardBox(new Color(0, 0, 0, 0)));
         var v = Boxed(new VBoxContainer(), 4);
         p.AddChild(v);
-        // the picture sits straight on the card: no tile behind it (Paul 2026-11-23, "I want it gone too"), only its 96 x 48 place
-        var tile = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(CardW, CardPicH) };
-        tile.AddChild(pic);
+        // the dark tile behind the picture (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now"); the sprite itself
+        // stays transparent
+        var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(CardW, CardPicH) };
+        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        center.AddChild(pic);
+        tile.AddChild(center);
         v.AddChild(tile);
         v.AddChild(CardLine(KeepNumeral(name), Look.Text, nameLines));
         if (sub != null) v.AddChild(CardLine(sub, ghost ? Pending : Look.Dim, 1));
