@@ -12,8 +12,7 @@ namespace PraedraViewer;
 /// <summary>
 /// "Needs you" (user stories D1-D4, K2): every problem and chance that wants a decision, worst first, each with the button that deals with
 /// it. Never make the player hunt for problems (the UI principles, 06-revamped-ui.md). Built only from what the player's side may know: its
-/// own state, its picture, its sensor log and the events told to it. "Run until something needs me" plays until a new red or yellow item
-/// appears.
+/// own state, its picture, its sensor log and the events told to it.
 /// </summary>
 public partial class GameScreen
 {
@@ -26,8 +25,6 @@ public partial class GameScreen
     }
 
     List<Item> _attention = new();
-    bool _runUntilNeeded;
-    HashSet<string> _runBaseline = new();
     const int MaxRows = 3; // a chance lists a few examples; the map layer shows the rest
 
     void RefreshAttention()
@@ -35,28 +32,6 @@ public partial class GameScreen
         _attention = Attention();
         RefreshTabTitles();
         if (_tab == DrawerTab.Needs) _panelDirty = true;
-    }
-
-    /// <summary>The first red or yellow item that was not there when "Run until something needs me" started, or null.</summary>
-    string NewAttention()
-    {
-        _attention = Attention();
-        RefreshTabTitles();
-        var fresh = _attention.FirstOrDefault(a => a.Level != Level.Info && !_runBaseline.Contains(a.Key));
-        if (fresh != null) { ShowTab(DrawerTab.Needs); return fresh.Title; }
-        return null;
-    }
-
-    void RunUntilNeeded()
-    {
-        if (S.Winner != null || OverlayOpen) return;
-        _attention = Attention();
-        _runBaseline = _attention.Where(a => a.Level != Level.Info).Select(a => a.Key).ToHashSet();
-        _pauseNote = null;
-        _playing = true;
-        _runUntilNeeded = true;
-        HideModal(_reportPanel);
-        RefreshTop();
     }
 
     List<Item> Attention()
@@ -177,9 +152,6 @@ public partial class GameScreen
         int urgent = items.Count(i => i.Level == Level.Danger), watch = items.Count(i => i.Level == Level.Warn);
         Lead(items.Count == 0 ? "Nothing needs a decision right now."
             : urgent + watch == 0 ? "Nothing urgent." : string.Join(", ", new[] { urgent > 0 ? $"{urgent} urgent" : null, watch > 0 ? $"{watch} to watch" : null }.Where(x => x != null)) + ".");
-        var run = Act(_runUntilNeeded ? "Running until something needs you... (Space stops)" : "Run until something needs me", () => { if (_runUntilNeeded) Pause(); else RunUntilNeeded(); },
-            $"Plays {RunUntilDaysPerSecond:0} days a second, whatever the speed, and stops as soon as a new red or yellow item appears here (and on battles, captures and invasions, as always).", S.Winner != null, "Primary");
-        run.Alignment = HorizontalAlignment.Center;
         if (items.Count == 0)
         {
             Note("All quiet: your systems have their troops, no enemy fleet is at them, and your yards are busy.");
