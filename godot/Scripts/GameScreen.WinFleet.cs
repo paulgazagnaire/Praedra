@@ -283,7 +283,7 @@ public partial class GameScreen
         bar.SetMeta(UiTest.FullName, $"Fleet status bar {f.Id}");
         bar.SetMeta("shown", st.Share != null);
         v.AddChild(bar);
-        var orders = S.PendingOrdersOf(f.Id).ToList();
+        var orders = S.PendingOrdersOf(f.Id, incoming: true).ToList();
         if (orders.Count > 0)
         {
             var ov = Boxed(new VBoxContainer(), 4);
@@ -322,6 +322,10 @@ public partial class GameScreen
         }
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto))
             return new(new List<string> { char.ToUpperInvariant(mto.Words[0]) + mto.Words[1..] }, null, Ui.You, false, $"{S.NameOf(f)} {mto.Words} when the clock moves." + more);
+        // every ship moved into other fleets here: it acts as a merge (Paul 2026-11-24). rule: m3-fleets §Fleet invariant 1
+        if (AllShipsLeave(f))
+            return new(new List<string> { $"Merges into {LeavesInto(f)}" }, null, Ui.You, false,
+                $"All of {S.NameOf(f)}'s ships join {LeavesInto(f)} when the clock moves, so {S.NameOf(f)} is then gone, as after a merge; its leaders join the fleet its last ship joins. Cancel a move to keep it." + more);
         if (S.PlannedMoveOf(f.Id) is { } pm)
         {
             int days = Math.Max(1, pm.ArrivalDay - S.Game.Day);

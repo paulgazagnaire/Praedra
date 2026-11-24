@@ -192,7 +192,25 @@ public partial class Main
             gs.PlayDay();
             var two = s.Game.State.Fleets.Values.Where(f => !before2.Contains(f.Id)).ToList();
             Expect(two.Count == 1 && two[0].Ships.Contains(a1) && two[0].Ships.Contains(a2), $"next day they make one new fleet ({two.Count} made)");
-            if (two.Count == 1) { gs.ShotWindow("fleet", two[0].Id.ToString()); gs.PlayRefresh(); gs.MgDrop($"M:{two[0].Id}", $"Fleet {big.Id} Ships"); gs.PlayDay(); }
+            if (two.Count == 1)
+            {
+                // ------------------------------------------------------------ every ship moved into another fleet here: it acts as a merge (Paul 2026-11-24)
+                var src = two[0];
+                gs.ShotWindow("fleet", src.Id.ToString()); gs.ShotWindow("fleet", big.Id.ToString()); gs.PlayRefresh();
+                int qt = s.QueuedOrders;
+                Expect(gs.MgDrop($"S:{a1}", $"Fleet {big.Id} Ships") == null && s.QueuedOrders == qt + 1, $"move a ship of {src.Name} into {big.Name}: one transfer order");
+                string moveWords = $"Move a ship from {s.NameOf(src)} into {s.NameOf(big)}";
+                Expect(gs.MgText($"Fleet {big.Id}").Contains("Ordered: " + moveWords), $"the fleet it goes into shows the order too: {gs.MgText($"Fleet {big.Id}").Replace("\n", " / ")}");
+                Expect(gs.Click("Cancel: " + moveWords) && s.QueuedOrders == qt, "its Cancel takes the move back");
+                Expect(gs.MgDrop($"S:{a1}", $"Fleet {big.Id} Ships") == null, "move it again (the card is back)");
+                string last = gs.MgDrop($"S:{a2}", $"Fleet {big.Id} Ships");
+                Expect(last == null, $"the last ship may go too: {last ?? "moved"}");
+                Expect(gs.MgText($"Fleet {src.Id}").Contains($"Merges into {s.NameOf(big)}"), $"the emptied fleet says it merges: {gs.MgText($"Fleet {src.Id}").Replace("\n", " / ")}");
+                Expect(gs.MgDrop($"M:{src.Id}", $"Fleet {big.Id} Ships") != null, "a fleet whose ships all leave can't be merged as well");
+                gs.PlayDay(); gs.PlayRefresh();
+                Expect(!s.Game.State.Fleets.ContainsKey(src.Id) && big.Ships.Contains(a1) && big.Ships.Contains(a2), "next day the emptied fleet is gone and its ships are in the other");
+                Expect(!gs.MgmtKeys.Contains($"Fleet {src.Id}"), "the emptied fleet's window closes by itself");
+            }
         }
         else GD.Print("  (no fleet of three ships: the two-ship split is not checked on this side)");
 

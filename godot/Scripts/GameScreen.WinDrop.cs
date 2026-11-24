@@ -305,6 +305,9 @@ public partial class GameScreen
         if (!Still(f)) return $"{S.NameOf(f)} is travelling.";
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{S.NameOf(f)} itself {itself.Words}.";
         if (!S.Game.State.Fleets.TryGetValue(fleet, out var from) || !Still(from)) return $"{ThingName(d)}'s fleet is travelling.";
+        // a fleet whose every ship leaves today is gone tomorrow, as after a merge (m3-fleets §Fleet invariant 1): nothing more joins it or leaves it whole
+        if (AllShipsLeave(f)) return $"{S.NameOf(f)} merges away today: all its ships join {LeavesInto(f)}.";
+        if (d.Kind == 'M' && AllShipsLeave(from)) return $"All of {S.NameOf(from)}'s ships already join {LeavesInto(from)}.";
         if (at != f.At)
         {
             if (d.Kind == 'S')
@@ -316,12 +319,26 @@ public partial class GameScreen
             }
             return Fm.FindPath(from.At, f.At, Fm.SpeedOf(from)).Ok ? null : $"{S.NameOf(from)} can't reach {f.At}.";   // it flies there and merges on arrival
         }
-        if (d.Kind == 'S' && from.Ships.Count - ShipsLeaving(from) <= 1) return $"It is {S.NameOf(from)}'s last ship: to join the fleets, use Merge in the other fleet's window.";
-        // rule: m3-fleets §Orders (TransferShips, MergeFleets)
+        // the last ship may go too: its fleet is then gone, as after a merge, and its leaders join the fleet it joins (Paul 2026-11-24).
+        // rule: m3-fleets §Fleet invariant 1 (a fleet that loses its last member is removed); m3-fleets §Orders (TransferShips, MergeFleets)
         return Words(d.Kind == 'S' ? Fm.CheckTransferShips(new TransferShipsOrder(0, Me, One(d.Id), f.Id)) : Fm.CheckMergeFleets(new MergeFleetsOrder(0, Me, from.Id, f.Id)));
     }
 
     int ShipsLeaving(Fleet f) => f.Ships.Count(id => _moved.ContainsKey(new Drag('S', id).Key));
+
+    /// <summary>Every ship of the fleet leaves it today (moved into other fleets here): the fleet is gone when the clock moves.</summary>
+    bool AllShipsLeave(Fleet f) => f.Ships.Count > 0 && ShipsLeaving(f) == f.Ships.Count;
+
+    /// <summary>The names of the fleets the leaving ships of <paramref name="f"/> join, in ship order ("TESTFLEET", "A and B").</summary>
+    string LeavesInto(Fleet f)
+    {
+        var names = new List<string>();
+        foreach (var id in f.Ships)
+            if (_moved.TryGetValue(new Drag('S', id).Key, out var m) && m.Zone.StartsWith("Fleet ", StringComparison.Ordinal)
+                && int.TryParse(m.Zone.Split(' ')[1], out int to) && S.Game.State.Fleets.TryGetValue(to, out var tf) && !names.Contains(S.NameOf(tf)))
+                names.Add(S.NameOf(tf));
+        return names.Count == 0 ? "other fleets" : names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1];
+    }
 
     void DropShipsInto(Drag d, Fleet f)
     {
@@ -352,9 +369,10 @@ public partial class GameScreen
             return;
         }
         if (d.Kind == 'M') { Merge(from, f); _moved[d.Key] = ($"merges into {S.NameOf(f)}", $"Fleet {f.Id} Ships"); return; }
-        S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, new[] { d.Id }, f.Id), $"Move a ship from {S.NameOf(from)} into {S.NameOf(f)}");
-        Sent($"move the {ThingName(d)} from {S.NameOf(from)} into {S.NameOf(f)}", f.At);
+        bool last = from.Ships.Count - ShipsLeaving(from) == 1;
+        S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, new[] { d.Id }, f.Id), $"Move a ship from {S.NameOf(from)} into {S.NameOf(f)}", into: f.Id);
         _moved[d.Key] = ($"joins {S.NameOf(f)}", $"Fleet {f.Id} Ships");
+        Sent($"move the {ThingName(d)} from {S.NameOf(from)} into {S.NameOf(f)}" + (last ? $". It was {S.NameOf(from)}'s last ship: {S.NameOf(from)} is gone when the clock moves, as after a merge" : ""), f.At);
     }
 
     string RefuseSplit(Drag d, Fleet f)
