@@ -152,4 +152,12 @@ public class DominanceVictoryTests
         Assert.Equal(h.StateHash(), l.StateHash());
         Assert.Equal(h.Victory.DominanceDueDay, l.Victory.DominanceDueDay);
     }
+
+    [Fact] // m5-setup-and-victory V28
+    public void DefaultRunLasts240DaysAt70Percent()
+    {
+        var r = new VictoryRules();
+        Assert.Equal(240, r.DominanceDays); // Paul 2026-11-24, was 180
+        Assert.Equal(70, r.DominanceSharePercent);
+    }
 }

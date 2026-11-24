@@ -8,7 +8,7 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// Playtest of the screen itself (the layout of 2026-10-28): the drawer tabs, Needs you and "Run until something needs me", search, the map
+/// Playtest of the screen itself (the layout of 2026-10-28): the drawer tabs, Needs you, search, the map
 /// layers, the sector window, the goal, the settings, quick save, Esc, and the colours (blue is you, orange the enemy). A fresh Hand game, as
 /// Paul plays it. Every action is a click on the real button or a key press; the core is only read to check the result.
 /// </summary>
@@ -89,13 +89,19 @@ public partial class Main
         var titles = gs.AttentionTitles;
         GD.Print("  needs you: " + string.Join(" | ", titles));
         Expect(gs.TabName == "Needs" && (gs.PanelText().Contains("urgent") || gs.PanelText().Contains("to watch") || gs.PanelText().Contains("Nothing")), "the Needs you tab opens on its count line: " + gs.PanelText()[..Math.Min(80, gs.PanelText().Length)]);
-        Expect(gs.Has("Run until something needs me"), "it offers Run until something needs me");
-        int day0 = s.Game.Day;
-        Expect(gs.Click("Run until something needs me") && gs.Playing, "Run until something needs me starts the clock");
-        for (int i = 0; i < 400 && gs.Playing && s.Winner == null; i++) gs.Frame(0.25); // 10 days a second, whatever the speed chip
-        Expect(!gs.Playing && s.Game.Day > day0, $"it stopped by itself on day {s.Game.Day}: {gs.Banner}");
-        if (gs.ReportVisible) gs.Click("Close");
-        gs.PlayRefresh();
+        Expect(!gs.Has("Run until something needs me"), "Run until something needs me is gone (Paul 2026-11-24)");
+        // a badly damaged fleet (at most half its hull left) is a Needs you item (Paul 2026-11-24); its hulls are put back after
+        var hurt = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.Ships.Count > 0).OrderBy(f => f.Id).FirstOrDefault();
+        if (hurt != null)
+        {
+            var hulls = hurt.Ships.Select(s.Host.Economy.Find).Where(o => o != null && s.Host.Fleets.ClassOf(o) is { Hull: > 0 }).Select(o => (o, o.Hull)).ToList();
+            foreach (var (o, _) in hulls) o.Hull = Math.Max(1, s.Host.Fleets.ClassOf(o)!.Hull * 30 / 100);
+            gs.PlayRefresh();
+            Expect(gs.AttentionTitles.Contains($"{s.NameOf(hurt)} is badly damaged"), $"a fleet at 30% hull is in Needs you: " + string.Join(" | ", gs.AttentionTitles));
+            foreach (var (o, h) in hulls) o.Hull = h;
+            gs.PlayRefresh();
+            Expect(!gs.AttentionTitles.Contains($"{s.NameOf(hurt)} is badly damaged"), "and leaves it once whole again");
+        }
 
         // ---------------------------------------------------------------- search
         gs.SetSearch("chart");

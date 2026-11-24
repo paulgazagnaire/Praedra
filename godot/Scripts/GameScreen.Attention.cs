@@ -12,8 +12,7 @@ namespace PraedraViewer;
 /// <summary>
 /// "Needs you" (user stories D1-D4, K2): every problem and chance that wants a decision, worst first, each with the button that deals with
 /// it. Never make the player hunt for problems (the UI principles, 06-revamped-ui.md). Built only from what the player's side may know: its
-/// own state, its picture, its sensor log and the events told to it. "Run until something needs me" plays until a new red or yellow item
-/// appears.
+/// own state, its picture, its sensor log and the events told to it.
 /// </summary>
 public partial class GameScreen
 {
@@ -26,8 +25,6 @@ public partial class GameScreen
     }
 
     List<Item> _attention = new();
-    bool _runUntilNeeded;
-    HashSet<string> _runBaseline = new();
     const int MaxRows = 3; // a chance lists a few examples; the map layer shows the rest
 
     void RefreshAttention()
@@ -35,28 +32,6 @@ public partial class GameScreen
         _attention = Attention();
         RefreshTabTitles();
         if (_tab == DrawerTab.Needs) _panelDirty = true;
-    }
-
-    /// <summary>The first red or yellow item that was not there when "Run until something needs me" started, or null.</summary>
-    string NewAttention()
-    {
-        _attention = Attention();
-        RefreshTabTitles();
-        var fresh = _attention.FirstOrDefault(a => a.Level != Level.Info && !_runBaseline.Contains(a.Key));
-        if (fresh != null) { ShowTab(DrawerTab.Needs); return fresh.Title; }
-        return null;
-    }
-
-    void RunUntilNeeded()
-    {
-        if (S.Winner != null || OverlayOpen) return;
-        _attention = Attention();
-        _runBaseline = _attention.Where(a => a.Level != Level.Info).Select(a => a.Key).ToHashSet();
-        _pauseNote = null;
-        _playing = true;
-        _runUntilNeeded = true;
-        HideModal(_reportPanel);
-        RefreshTop();
     }
 
     List<Item> Attention()
@@ -73,10 +48,20 @@ public partial class GameScreen
             if (lead == Me) list.Add(new Item("dominance-me", Level.Info, $"You win on day {due} ({Ui.InDays(left)})", $"Keep at least {S.Host.Victory.Rules.DominanceSharePercent}% of the claimed worlds until then.", null, new() { ("Goal", ShowGoal, null) }));
             else list.Add(new Item("dominance-enemy", Level.Danger, $"The {S.NameOf(lead)} wins on day {due} ({Ui.InDays(left)})", $"It holds {S.Host.Victory.Rules.DominanceSharePercent}% of the claimed worlds after your capital fell. Take systems back to break its hold.", null, new() { ("Goal", ShowGoal, null) }));
         }
-        foreach (var k in S.Host.Victory.Keys.Where(k => k.Standard && k.Side == S.Enemy).OrderBy(k => k.Character))
-            if (Cm.Get(k.Character) is { Status: CharacterStatus.Captured } c)
+        var enemyWinKeys = S.Host.Victory.Keys.Where(k => k.Standard && k.Side == S.Enemy).Select(k => k.Character).OrderBy(id => id).ToList();
+        foreach (int id in enemyWinKeys)
+            if (Cm.Get(id) is { Status: CharacterStatus.Captured } c)
                 list.Add(new Item($"key-{c.Id}", Level.Danger, $"{S.CharName(c.Id)} is a prisoner{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}",
                     $"The {S.NameOf(S.Enemy)} needs this leader captive to win. Send a team on a Rescue mission.", c.HeldAt, new() { ("Leaders", () => ShowTab(DrawerTab.Leaders), null) }));
+
+        // ---- your own leaders in prison who are not a win target: amber (Paul 2026-11-24)
+        foreach (var c in S.MyCharacters.Where(c => c.Status == CharacterStatus.Captured && !enemyWinKeys.Contains(c.Id)))
+            list.Add(new Item($"prisoner-{c.Id}", Level.Warn, $"{S.CharName(c.Id)} is a prisoner{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}",
+                "Send a team on a Rescue mission to get this leader back.", c.HeldAt, new() { ("Leaders", () => ShowTab(DrawerTab.Leaders), null) }));
+
+        LostSystems(list);
+        CapitalThreat(list);
+        DamagedFleets(list);
 
         // ---- your systems
         foreach (var n in mine)
@@ -96,7 +81,7 @@ public partial class GameScreen
 
         // ---- sensor warnings still ahead (rule: m5-fog-and-hq §N4)
         foreach (var r in S.Fog.Sightings(Me, Math.Max(0, S.Game.Day - 30))
-                     .Where(x => x.Kind == Praedra.Core.Fog.SightingKind.SensorArrival && x.ReachDay is int rd && rd >= S.Game.Day)
+                     .Where(x => x.Kind == Praedra.Core.Fog.SightingKind.SensorArrival && x.ReachDay is int rd && rd >= S.Game.Day && !CapitalHeld(x.System))
                      .GroupBy(x => x.System).Select(g => g.OrderByDescending(x => x.Day).First()).OrderBy(x => x.ReachDay))
             list.Add(new Item($"sensor-{r.System}-{r.ReachDay}", Level.Warn, $"Enemy fleet heading for {r.System}, expected day {r.ReachDay}",
                 $"Your Sensor Station saw a {(r.Size?.ToString() ?? "").ToLowerInvariant()} {S.NameOf(r.Side)} fleet coming.", r.System, GoThere(r.System)));
@@ -161,6 +146,101 @@ public partial class GameScreen
         return list.OrderBy(i => i.Level).ToList(); // stable: the order above within a level
     }
 
+    // ================================================================== the four alerts Paul asked for (2026-11-24)
+
+    /// <summary>How long a lost system stays on the list (unless you take it back). UI choice, stated in PR "Needs you: four new alerts".</summary>
+    const int LostSystemDays = 30;
+    /// <summary>A fleet is badly damaged when its ships have at most this share of their full hull, all ships added up.</summary>
+    const int BadlyDamagedHullPercent = 50;
+    /// <summary>An enemy fleet the player sees that could reach the capital within this many days (its class speed, no navigator) is a threat.</summary>
+    const int CapitalThreatDays = 10;
+
+    bool CapitalHeld(string sys) => sys == S.MyHqSystem && S.OwnerOf(sys) == Me && !S.IsDestroyed(sys);
+
+    /// <summary>Systems you held that changed hands or were destroyed in the last <see cref="LostSystemDays"/> days and are not yours again: one red item.
+    /// Read from the side's event feed, which is not saved: after a Load only losses since the load show (Ponytail on #375; accepted for now).</summary>
+    void LostSystems(List<Item> list)
+    {
+        int from = S.Game.Day - LostSystemDays;
+        var lost = new SortedDictionary<string, (int Day, string How)>(StringComparer.Ordinal);
+        var ev = S.Fog.EventsFor(Me);
+        for (int i = ev.Count - 1; i >= 0 && ev[i].Day >= from; i--)
+        {
+            (string sys, string how) = ev[i] switch
+            {
+                Praedra.Core.Control.SystemCaptured c when c.From == Me && c.To != Me => (c.System, c.To is Side to ? $"taken by the {S.NameOf(to)}" : "went neutral"),
+                Praedra.Core.Harvester.SystemDestroyed d when d.PriorHolder == Me => (d.System, "destroyed by a harvester"),
+                _ => (null, null),
+            };
+            if (sys == null || lost.ContainsKey(sys) || S.OwnerOf(sys) == Me) continue;
+            lost[sys] = (ev[i].Day, how);
+        }
+        if (lost.Count == 0) return;
+        var rows = lost.OrderByDescending(kv => kv.Value.Day).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => { string sys = kv.Key; return ($"{sys}: {kv.Value.How}, day {kv.Value.Day}", (Action)(() => GoTo(sys, true))); }).ToList();
+        string first = lost.OrderByDescending(kv => kv.Value.Day).First().Key;
+        list.Add(new Item("lost-systems", Level.Danger, lost.Count == 1 ? $"You lost {first}" : $"You lost {lost.Count} systems",
+            $"In the last {LostSystemDays} days. Take them back with a fleet and troops.", lost.Count == 1 ? first : null,
+            lost.Count == 1 ? new() { ("Go there", () => GoTo(first, true), null) } : new()) { Rows = lost.Count == 1 ? null : rows });
+    }
+
+    /// <summary>
+    /// Your capital, while you still hold it, with a visible enemy fleet that could get there within <see cref="CapitalThreatDays"/> days, or a
+    /// Sensor Station warning of a fleet heading for it: red. A fleet already there is "Enemy fleet at ..." below.
+    /// </summary>
+    void CapitalThreat(List<Item> list)
+    {
+        string cap = S.MyHqSystem;
+        if (cap == null || !CapitalHeld(cap)) return;
+        var near = new List<(string Sys, int Days, Praedra.Core.Fog.FleetPicture Fleet)>();
+        foreach (var (sys, pic) in S.Fog.VisibleFleets(Me).Where(v => v.Fleet.Side != Me && v.System != cap))
+        {
+            int speed = Praedra.Core.Travel.TravelFormula.FleetSpeed(
+                pic.Ships.SelectMany(kv => Enumerable.Repeat(Fm.ShipClasses.TryGetValue(kv.Key, out var c) ? c.Speed(false) : 100, kv.Value)),
+                pic.Squadrons.SelectMany(kv => Enumerable.Repeat(Fm.ShipClasses.TryGetValue(kv.Key, out var c) ? c.Speed(false) : 100, kv.Value)));
+            if (speed <= 0) continue;
+            var path = Fm.FindPath(sys, cap, speed);
+            if (path.Ok && path.TotalTicks <= CapitalThreatDays) near.Add((sys, path.TotalTicks, pic));
+        }
+        var warned = S.Fog.Sightings(Me, Math.Max(0, S.Game.Day - 30))
+            .Where(x => x.Kind == Praedra.Core.Fog.SightingKind.SensorArrival && x.System == cap && x.ReachDay is int rd && rd >= S.Game.Day)
+            .OrderByDescending(x => x.Day).FirstOrDefault();
+        if (near.Count == 0 && warned == null) return;
+        var lines = new List<string>();
+        if (warned != null) lines.Add($"Your Sensor Station saw a {(warned.Size?.ToString() ?? "").ToLowerInvariant()} {S.NameOf(warned.Side)} fleet coming, expected day {warned.ReachDay}.");
+        foreach (var n in near.OrderBy(n => n.Days).ThenBy(n => n.Sys, StringComparer.Ordinal).Take(MaxRows))
+            lines.Add($"At {n.Sys}, about {Ui.InDays(n.Days)} away: {n.Fleet}.");
+        if (near.Count > MaxRows) lines.Add($"And {near.Count - MaxRows} more enemy fleets close by.");
+        lines.Add("Bring fleets and troops home before it falls.");
+        list.Add(new Item("capital-threat", Level.Danger, $"Your capital {cap} is threatened", string.Join(" ", lines), cap,
+            new() { ("Go there", () => GoTo(cap, true), null) }));
+    }
+
+    /// <summary>
+    /// Your fleets whose ships have at most <see cref="BadlyDamagedHullPercent"/>% of their full hull left: red, or amber while they mend at a
+    /// working shipyard of yours (fast repair).
+    /// </summary>
+    void DamagedFleets(List<Item> list)
+    {
+        var eco = S.Host.Economy;
+        foreach (var f in S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.Ships.Count > 0).OrderBy(f => f.Id))
+        {
+            long have = 0, full = 0;
+            foreach (var o in f.Ships.Select(eco.Find))
+                if (o != null && Fm.ClassOf(o) is { Hull: > 0 } c) { have += Math.Max(0, o.Hull); full += c.Hull; }
+            if (full == 0 || have * 100 > full * BadlyDamagedHullPercent) continue;
+            int pct = (int)(have * 100 / full);
+            var fl = f;
+            bool mending = f.At != null && S.Host.Repair.FastRepair(f.At, Me);
+            string why = mending
+                ? $"Its ships have {pct}% of their hull left. It is mending at your shipyard at {f.At}" + (RepairOf(f) is { Days: > 0 } r ? $", whole in {Ui.InDays(r.Days)}." : ".")
+                : $"Its ships have {pct}% of their hull left. Another battle may lose it: send it to one of your shipyards to mend.";
+            var acts = new List<(string, Action, string)> { ("Fleet", () => OpenMgmt(MgKind.Fleet, fleet: fl.Id), null) };
+            if (f.At != null) { string at = f.At; acts.Add(("Go there", () => GoTo(at, true), null)); }
+            list.Add(new Item($"damaged-{f.Id}", mending ? Level.Warn : Level.Danger, $"{S.NameOf(f)} is badly damaged", why, f.At, acts));
+        }
+    }
+
     List<(string, Action, string)> FixTroops(string system, int missing)
     {
         var acts = new List<(string, Action, string)>();
@@ -179,9 +259,6 @@ public partial class GameScreen
         int urgent = items.Count(i => i.Level == Level.Danger), watch = items.Count(i => i.Level == Level.Warn);
         Lead(items.Count == 0 ? "Nothing needs a decision right now."
             : urgent + watch == 0 ? "Nothing urgent." : string.Join(", ", new[] { urgent > 0 ? $"{urgent} urgent" : null, watch > 0 ? $"{watch} to watch" : null }.Where(x => x != null)) + ".");
-        var run = Act(_runUntilNeeded ? "Running until something needs you... (Space stops)" : "Run until something needs me", () => { if (_runUntilNeeded) Pause(); else RunUntilNeeded(); },
-            $"Plays {RunUntilDaysPerSecond:0} days a second, whatever the speed, and stops as soon as a new red or yellow item appears here (and on battles, captures and invasions, as always).", S.Winner != null, "Primary");
-        run.Alignment = HorizontalAlignment.Center;
         if (items.Count == 0)
         {
             Note("All quiet: your systems have their troops, no enemy fleet is at them, and your yards are busy.");

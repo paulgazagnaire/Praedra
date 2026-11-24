@@ -243,7 +243,7 @@ public partial class GameScreen
         _modalCenter.MoveChild(p, _modalCenter.GetChildCount() - 1);
         _modalLayer.Visible = true;
         _menuPopup.Visible = false; _menuCatcher.Visible = false;
-        if (_playing) { _playing = false; _runUntilNeeded = false; }
+        if (_playing) _playing = false;
         RefreshTop();
     }
 

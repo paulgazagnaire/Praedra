@@ -223,7 +223,6 @@ public partial class GameScreen
         if (_pill == null) return;
         string text = null; Color dot = Ui.Warn;
         if (InMoveMode) text = null;
-        else if (_playing && _runUntilNeeded) { text = "Running until something needs you"; dot = Ui.Good; }
         else if (!_playing && _pauseNote != null) text = _pauseNote == StartNote ? StartNoteText() : _pauseNote;
         else
         {
