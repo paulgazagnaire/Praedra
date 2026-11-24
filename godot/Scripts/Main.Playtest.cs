@@ -348,6 +348,11 @@ public partial class Main
             var cards = gs.InfraState(yardSys)?.Cards ?? new();
             if (me == Side.Hand) Expect(cards.Any(r => r.Name == "harvester"), "the harvester is among the Hand's shipyard cards");
             else Expect(cards.Count > 0 && !cards.Any(r => r.Name == "harvester"), "the Collective's shipyard cards have no harvester");
+            // the checks the old Build tab had, now on the Infrastructure window's cards (QA round 221: they left with #376)
+            Expect(gs.MgText($"Infra {yardSys}").Contains("Research (ship design): level"), "the shipyard cell says where ship research stands and what comes next");
+            var greyed = cards.Where(r => !r.Usable).Select(r => r.Name).ToList();
+            var silent = greyed.Where(n => gs.InfraWhy(yardSys, n) is not { } why || gs.Enabled($"Build {n}") || !gs.TipOf($"Build {n}").Contains(why, StringComparison.OrdinalIgnoreCase)).ToList();
+            Expect(silent.Count == 0, $"every shipyard card that cannot be ordered is greyed out and its hover says why ({greyed.Count} greyed){(silent.Count > 0 ? ": not " + string.Join(", ", silent) : "")}");
             var ship = cards.FirstOrDefault(r => r.Usable && r.Name != "harvester");
             Expect(ship.Name != null, "a basic ship can be chosen at the shipyard");
             if (ship.Name != null)

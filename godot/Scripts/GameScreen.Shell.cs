@@ -487,7 +487,7 @@ public partial class GameScreen
         Item(Sphere(Ui.Neutral, 9), "Nobody's system");
         Item(Sphere(GalaxyView.UnknownColor, 7), "Never explored");
         Item(new Glyph(Glyph.Kind.Cross, Ui.Danger, 11), "Destroyed by a harvester");
-        Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the dot");   // as the map draws it
+        Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the sphere");   // as the map draws it
         Item(new Glyph(Glyph.Kind.Ring, Ui.Danger, 14), "Uprising: yards and mines stop");
         Item(new Glyph(Glyph.Kind.DashedRing, Ui.Warn, 14), "Blockade: yards and mines stop");
         Item(Map("fleet-defensive", Ui.You), "Your fleet, Defensive (it fights)");
