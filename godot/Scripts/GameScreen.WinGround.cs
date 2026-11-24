@@ -122,7 +122,8 @@ public partial class GameScreen
         int? loyal = mine ? S.Host.Economy.SupportOf(n, Me)
             : pic?.Owner is { } po ? (Me == Side.Collective ? po.Value.CollectiveSupport : 100 - po.Value.CollectiveSupport) : null;
         var line = Boxed(new HBoxContainer(), StatusGap);
-        line.AddChild(Look.Words("Loyalty", 12, Look.Text, true));
+        // on a planet you don't hold the share is yours, not its holder's: "Loyalty 0%" under "Held by the Collective" read as a revolt (review 23)
+        line.AddChild(Look.Words(mine ? "Loyalty" : "Loyalty to you", 12, Look.Text, true));
         var right = Look.Words(loyal is int l ? $"{l}%" : "unknown", 12, Look.Quiet);
         right.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         right.HorizontalAlignment = HorizontalAlignment.Right;
@@ -200,7 +201,9 @@ public partial class GameScreen
         var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
         CardFlow(lz.Flow);
         foreach (var c in here) lz.Flow.AddChild(LeaderCard(c));
-        if (here.Count == 0) lz.Flow.AddChild(EmptyCard(DropLeader));
+        // on a planet you don't hold, leaders land only off a fleet of yours in orbit: with none, say so rather than invite a refused drop
+        bool landable = mine || S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n);
+        if (here.Count == 0) lz.Flow.AddChild(EmptyCard(landable ? DropLeader : "Bring a fleet here to land leaders"));
         lz.Box.TooltipText = Ui.Wrap(mine ? "Drag a leader here to land them on the planet." : "Drag a leader off a fleet of yours here to land them.");
         chars.AddChild(lz.Box);
 

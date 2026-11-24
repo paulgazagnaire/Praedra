@@ -481,13 +481,18 @@ public partial class GameScreen
     // ================================================================== the strip of tabs
 
     /// <summary>
-    /// A strip cell's name: light on every cell, as the new colors frames draw them (2026-11-24; this settles the open question of review 21,
-    /// T5): the open cell shows by its lighter surface (#131313 on #0B0B0D), which joins the page under it. Its count keeps its own colour.
-    /// Returns the repaint, for a cell pressed with no signal.
+    /// A strip cell's name: light on the open cell and under the mouse, the muted grey on the others (R16, Paul 18:57: "the open tab is
+    /// barely lighter than the rest"). The new colors frames draw every name light, but their cells differ by 1.06:1 (#131313 on #0B0B0D),
+    /// so the name is what tells the open tab (review 23; Paul's A/B pending). Its count keeps its own colour. Returns the repaint, for a
+    /// cell pressed with no signal.
     /// </summary>
     static Action CellWords(Button cell, Label words)
     {
-        void Paint() => words.AddThemeColorOverride("font_color", Look.Text);
+        bool over = false;
+        void Paint() => words.AddThemeColorOverride("font_color", cell.ButtonPressed || over ? Look.Text : Look.Muted);
+        cell.Toggled += _ => Paint();
+        cell.MouseEntered += () => { over = true; Paint(); };
+        cell.MouseExited += () => { over = false; Paint(); };
         Paint();
         return Paint;   // for a cell pressed without its signal
     }
@@ -1037,7 +1042,7 @@ public partial class GameScreen
         cap.Alignment = BoxContainer.AlignmentMode.Center;
         cap.CustomMinimumSize = new Vector2(CardW, 16);
         string side = Me == Side.Hand ? "hand" : "collective";
-        var ink = Look.Quiet;   // Paul 2026-11-23 picked the status line's grey for these (now #525252; the new frame has #454545)
+        var ink = Look.Muted;   // Paul 2026-11-23 picked the readable grey #7D8699 for these (backlog R9), over the frame's #454545
         void Cargo(string icon, int have, int room)
         {
             if (room <= 0) return;

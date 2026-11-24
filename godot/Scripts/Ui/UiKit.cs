@@ -475,15 +475,16 @@ public static class Ui
             t.SetColor("font_color", type, color);
         }
 
-        // buttons: a thin square outline, no fill; a brighter edge under the mouse (the text keeps its grey: four greys only); greyed out
-        // when they can't be used
-        void Outlined(string type, Color edge, Color ink, int size, int padX = 8, int padY = 3)
+        // buttons: a thin outline with 4 px corners (W2, the new colors frames 2026-11-24; rows stay square), no fill; a brighter edge under
+        // the mouse (the text keeps its grey: four greys only); greyed out when they can't be used
+        void Outlined(string type, Color edge, Color ink, int size, int padX = 8, int padY = 3, int radius = 4)
         {
-            t.SetStylebox("normal", type, Box(clear, 0, edge, 1, padX, padY));
-            t.SetStylebox("hover", type, Box(clear, 0, WinHover, 1, padX, padY));
-            t.SetStylebox("pressed", type, Box(clear, 0, WinActive, 1, padX, padY));
-            t.SetStylebox("hover_pressed", type, Box(clear, 0, WinActive, 1, padX, padY));
-            t.SetStylebox("disabled", type, Box(clear, 0, WinLine, 1, padX, padY));
+            StyleBoxFlat Round(StyleBoxFlat b) { b.SetCornerRadiusAll(radius); b.AntiAliasing = radius > 0; return b; }
+            t.SetStylebox("normal", type, Round(Box(clear, 0, edge, 1, padX, padY)));
+            t.SetStylebox("hover", type, Round(Box(clear, 0, WinHover, 1, padX, padY)));
+            t.SetStylebox("pressed", type, Round(Box(clear, 0, WinActive, 1, padX, padY)));
+            t.SetStylebox("hover_pressed", type, Round(Box(clear, 0, WinActive, 1, padX, padY)));
+            t.SetStylebox("disabled", type, Round(Box(clear, 0, WinLine, 1, padX, padY)));
             t.SetStylebox("focus", type, new StyleBoxEmpty());
             Inks(type, ink, size, Grotesk);
         }
@@ -509,12 +510,12 @@ public static class Ui
         t.SetConstant("h_separation", "Button", 6);
         // the build stepper's − and +: one 24 x 24 square each, the glyph centred
         t.SetTypeVariation("Step", "Button"); Outlined("Step", WinLine, WinActive, 13, 0, 0);
-        foreach (var v in new[] { "Chip", "Row", "Primary" }) { t.SetTypeVariation(v, "Button"); Outlined(v, v == "Primary" ? WinText : WinLine, WinActive, v == "Row" ? Body : v == "Chip" ? 13 : 14); }
+        foreach (var v in new[] { "Chip", "Row", "Primary" }) { t.SetTypeVariation(v, "Button"); Outlined(v, v == "Primary" ? WinText : WinLine, WinActive, v == "Row" ? Body : v == "Chip" ? 13 : 14, radius: v == "Row" ? 0 : 4); }
         t.SetTypeVariation("DangerButton", "Button"); Outlined("DangerButton", new Color(Danger, 0.8f), Danger, 14);
         t.SetTypeVariation("WarnButton", "Button"); Outlined("WarnButton", new Color(Warn, 0.7f), Warn, 14);
         // a row in a list: no line until the mouse is on it
         t.SetTypeVariation("Flat", "Button");
-        Outlined("Flat", clear, WinActive, 13);
+        Outlined("Flat", clear, WinActive, 13, radius: 0);
         // a link: just the words (the windows' own links are LinkButtons, underlined)
         t.SetTypeVariation("Link", "Button");
         Plain("Link", WinActive, Small, Grotesk, 2, 1);

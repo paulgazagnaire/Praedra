@@ -40,7 +40,8 @@ public partial class GameScreen
         var mineNeeded = EnemyTerms.ToList();
         if (mineNeeded.Count > 0)
         {
-            Heading("Keep them free: the enemy needs them to win");
+            Heading("Key leaders");   // a title is a few words, the reason a note (review 23: a sentence in pixel capitals is slow to read)
+            Note("The enemy needs them to win: keep them free.");
             using (Card(Ui.Panel, Ui.Line))
                 foreach (int id in mineNeeded)
                 {

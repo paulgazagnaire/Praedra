@@ -502,8 +502,8 @@ public partial class GameScreen
             .ThenBy(kv => kv.Key, StringComparer.Ordinal).SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value)).ToList() ?? new List<string>();
         var sec = Boxed(new VBoxContainer(), 16);
         sec.AddChild(Heading2("Buildings", seen.Count.ToString()));
-        if (fac == null) sec.AddChild(Look.Words($"Nobody has looked at the buildings of {n} yet: send a fleet or a spy.", 12, Look.Dim));
-        else if (seen.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} seen here (day {fac.Stamp}).", 12, Look.Dim));
+        if (fac == null) sec.AddChild(Look.Words($"Nobody has looked at the buildings of {n} yet: send a fleet or a spy.", 12, Look.Soft));
+        else if (seen.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} seen here (day {fac.Stamp}).", 12, Look.Soft));
         else
         {
             var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
