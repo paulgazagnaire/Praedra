@@ -153,8 +153,8 @@ public partial class GameScreen
     {
         int Layer(Node n) { while (n != null && n.GetParent() != this) n = n.GetParent(); return n?.GetIndex() ?? -1; }
         bool InBar(Control c) => c != null && c.FindParent("TopBar") == _barLayer;
-        if (!InBar(_rawLabel) || !InBar(_refinedLabel) || !InBar(_upkeepLabel) || !InBar(_dayLabel) || !InBar(_playButton) || !InBar(_goalButton) || !InBar(_search))
-            return "the stocks, day, clock, goal and search are not all in the top bar";
+        if (!InBar(_rawLabel) || !InBar(_refinedLabel) || !InBar(_upkeepLabel) || !InBar(_dayLabel) || !InBar(_playButton) || !InBar(_goalButton) || !InBar(_search) || !InBar(_advisorButton))
+            return "the stocks, day, clock, goal, search and advisor are not all in the top bar";
         if (_speedChips.Count != 3) return $"{_speedChips.Count} speed buttons, not 1x 2x 5x";
         if (!(Layer(_mgLayer) < Layer(_barLayer) && Layer(_barLayer) < Layer(_noteLayer) && Layer(_noteLayer) < Layer(_modalLayer)))
             return "the top bar is not between the windows and the notes";
@@ -379,6 +379,9 @@ public partial class GameScreen
     public void ShotCloseWindow() => CloseDrawer();
     public void ShotOpenMenu() => Callable.From(() => { if (!_menuPopup.Visible) ToggleMenu(); }).CallDeferred();
     internal bool WindowOpen => _drawer.Visible;
+    /// <summary>The advisor button right of the clock (Paul 2026-11-24) is lit while the window on the right is open.</summary>
+    internal bool AdvisorLit => _advisorButton.ButtonPressed;
+    internal string AdvisorTip => _advisorButton.TooltipText;
     internal bool SelectionCardOpen => _selCard.Visible;
     internal string SelectionCardText => _selCard.Visible ? LabelsIn(_selCard) : "";
     internal string PillText => _pill.Visible ? _banner.Text : "";

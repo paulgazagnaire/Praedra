@@ -44,6 +44,13 @@ public partial class Main
         Expect(gs.TopText.StartsWith("Day 0"), "the clock shows the day: " + gs.TopText);
         string barWhy = gs.TopBarProblem();
         Expect(barWhy == null, "the top bar as Paul drew it (ui-update-nov-15): stocks, day and clock in it, over the windows, and it fits at every interface size" + (barWhy != null ? ": " + barWhy : ""));
+        // rule: none (screen only). Paul 2026-11-24: the window on the right becomes the advisor's (Sibyl for the Hand), opened from a button right of the clock
+        Expect(!gs.WindowOpen && !gs.AdvisorLit, "the game opens with the advisor's window shut and its button unlit");
+        Expect(gs.Click("Advisor") && gs.WindowOpen && gs.AdvisorLit, "the advisor button right of the clock opens the window on the right and stays lit");
+        Expect(gs.AdvisorTip.Contains(me == Side.Hand ? "Sibyl" : "Your advisor") && gs.AdvisorTip.Contains("close"), "its hover names the advisor and says a click closes it: " + gs.AdvisorTip);
+        Expect(gs.Click("Advisor") && !gs.WindowOpen && !gs.AdvisorLit, "a second click on the advisor closes the window and unlights the button");
+        gs.Click("Advisor"); gs.PressKey(Key.Escape);
+        Expect(!gs.WindowOpen && !gs.AdvisorLit, "Esc closes the advisor's window and the button goes dark with it");
         string dialogWhy = gs.DialogFitProblem();
         Expect(dialogWhy == null, "every dialog fits the 1029 x 579 screen of 140% text, its body scrolling under the head (QA-105)" + (dialogWhy != null ? ": " + dialogWhy : ""));
 
