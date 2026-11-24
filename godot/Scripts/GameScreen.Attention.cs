@@ -155,20 +155,26 @@ public partial class GameScreen
     /// <summary>An enemy fleet the player sees that could reach the capital within this many days (its class speed, no navigator) is a threat.</summary>
     const int CapitalThreatDays = 10;
 
-    bool _capitalThreatWas;
+    /// <summary>The last day a capital threat was there (null = never since this screen opened).</summary>
+    int? _capitalThreatSeen;
+    /// <summary>A threat stops the clock again only after it has been gone this many days, so a fleet that drops out of view for a day or two
+    /// does not stop it each time (QA-122: 31 to 96 stops in 1500 days without it, a third to a half of them the same threat blinking).</summary>
+    const int CapitalThreatRearmDays = 10;
 
     /// <summary>
-    /// The day a capital threat first shows (it was not there the day before), the clock stops, if Settings say so (DEFAULT on, Paul
-    /// 2026-11-24 "Pause, on"). A threat that stays does not stop it again until it has gone and come back. Called every day, even when
-    /// another stop fired, so a threat seen on a day that already paused does not stop the clock again the next day (Ponytail on #378).
+    /// The day a capital threat shows after at least <see cref="CapitalThreatRearmDays"/> days without one, the clock stops, if Settings say so
+    /// (DEFAULT on, Paul 2026-11-24 "Pause, on"). Called every day, even when another stop fired, so a threat seen on a day that already
+    /// paused does not stop the clock again the next day (Ponytail on #378).
     /// </summary>
     string CapitalThreatPause()
     {
         var probe = new List<Item>();
         CapitalThreat(probe);
-        bool now = probe.Count > 0, was = _capitalThreatWas;
-        _capitalThreatWas = now;
-        if (!now || was || !UiSettings.PauseCapitalThreat) return null;
+        if (probe.Count == 0) return null;
+        int day = S.Game.Day;
+        bool fresh = _capitalThreatSeen is not int last || day - last > CapitalThreatRearmDays;
+        _capitalThreatSeen = day;
+        if (!fresh || !UiSettings.PauseCapitalThreat) return null;
         return $"Paused: your capital {S.MyHqSystem} is threatened";
     }
 
