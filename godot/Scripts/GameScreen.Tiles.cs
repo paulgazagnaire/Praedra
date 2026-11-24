@@ -109,10 +109,12 @@ public partial class GameScreen
         var v = Ui.VBox(2);
         v.MouseFilter = MouseFilterEnum.Ignore;
         p.AddChild(v);
-        var holder = new Control { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(TileW - 8, 40) };
+        // the picture on a dark tile, as on the Fleet window's cards (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now")
+        var holder = new Panel { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(TileW - 8, 40) };
+        holder.AddThemeStyleboxOverride("panel", Look.Box(Look.PicTile));
         if (avatar != null)
         {
-            // the leader's sprite straight on the tile, no ring round it (Paul 2026-11-23: sprites on a transparent background)
+            // the leader's sprite on the dark tile, no ring round it (the sprite's own background stays transparent, Paul 2026-11-23)
             var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
             center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             center.AddChild(IconPic.Of(avatar, 2, accent));

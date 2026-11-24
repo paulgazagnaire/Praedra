@@ -431,11 +431,12 @@ public partial class GameScreen
     {
         bool ghost = !o.Completed;
         var b = new Button { FocusMode = FocusModeEnum.None, CustomMinimumSize = BuildingTileSize };
-        var clear = new Color(0, 0, 0, 0);
-        b.AddThemeStyleboxOverride("normal", Look.Box(clear, Look.Edge, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("hover", Look.Box(clear, Look.Dim, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("pressed", Look.Box(clear, Look.Dim, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("hover_pressed", Look.Box(clear, Look.Dim, 1, 1, 1, 1));
+        // the tile is the dark tile behind its picture, as the build cards and the Fleet window's cards (Paul 2026-11-24, "I need the dark
+        // tile behind pictures everywhere for now"), with its outline
+        b.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg, Look.Edge, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("hover", Look.Box(Look.Bg, Look.Dim, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("pressed", Look.Box(Look.Bg, Look.Dim, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Bg, Look.Dim, 1, 1, 1, 1));
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         b.SetMeta(UiTest.FullName, $"Building {o.Class} {o.Id}");
         var grid = PixelIcons.Building(UnitIcon.ForFacility(o.Class)) ?? PixelIcons.Building(UnitIcon.Kind.Building);
