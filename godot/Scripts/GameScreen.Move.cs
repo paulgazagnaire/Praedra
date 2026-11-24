@@ -347,6 +347,7 @@ public partial class GameScreen
 
     void SendFleetMove(Fleet f, string to, List<string> via)
     {
+        if (MergesAwayWhy(f) is string gone) { Toast(gone, MsgKind.Warn); return; }   // the core would refuse it: the fleet is gone by then
         var plan = S.Host.PlanMove(Me, f.Id, to, via);
         // the last move given wins: the core would keep the first and refuse the second (QA-99). rule: m1-clock-and-orders §Orders in (withdraw)
         ReplaceFleetMove(f.Id);

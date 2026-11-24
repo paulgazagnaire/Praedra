@@ -77,6 +77,7 @@ public partial class GameScreen
         if (c == null) return "";
         if (c.AttachedFleet == f.Id && c.Post == post) return "";
         if (!Still(f)) return $"{S.NameOf(f)} is travelling: send leaders when it stands still.";
+        if (MergesAwayWhy(f) is string gone) return gone;
         if (post != CharacterPost.None && !Cm.ClassOf(c).Can(post)) return $"{S.CharName(c.Id)} can't be {GameSession.PostWords(post)}.";
         var (at, _) = WhereNow(d);
         if (at != f.At) return CanTravel(c, f.At);   // another system: they set off and take the post on arrival
@@ -257,6 +258,7 @@ public partial class GameScreen
         var (at, fleet) = WhereNow(d);
         if (fleet == f.Id) return "";
         if (!Still(f)) return $"{S.NameOf(f)} is travelling.";
+        if (MergesAwayWhy(f) is string gone) return gone;
         if (at != f.At) return $"{ThingName(d)} is not at {f.At}.";
         // from another fleet the drop unloads first, then loads (rule: m3-fleets §Orders, m3-troops-and-special-forces §Orders)
         string why = fleet != 0 ? CheckUnloadOne(kind, fleet, d.Id) : CheckLoadOne(kind, f.Id, d.Id);
@@ -306,8 +308,12 @@ public partial class GameScreen
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var itself)) return $"{S.NameOf(f)} itself {itself.Words}.";
         if (!S.Game.State.Fleets.TryGetValue(fleet, out var from) || !Still(from)) return $"{ThingName(d)}'s fleet is travelling.";
         // a fleet whose every ship leaves today is gone tomorrow, as after a merge (m3-fleets §Fleet invariant 1): nothing more joins it or leaves it whole
-        if (AllShipsLeave(f)) return $"{S.NameOf(f)} merges away today: all its ships join {LeavesInto(f)}.";
+        if (MergesAwayWhy(f) is string gone) return gone;
         if (d.Kind == 'M' && AllShipsLeave(from)) return $"All of {S.NameOf(from)}'s ships already join {LeavesInto(from)}.";
+        // a fleet with a move given today is in transit once the day's moves start, before ships change fleets (step 1, in order given):
+        // the core would refuse the transfer, merge or split (InTransit), or the join would miss it. rule: m3-fleets §Orders (TransferShips, MergeFleets)
+        if (S.PlannedMoveOf(f.Id) is { } tm) return $"{S.NameOf(f)} leaves for {tm.To} today: cancel its move first.";
+        if ((d.Kind == 'S' || at == f.At) && S.PlannedMoveOf(from.Id) is { } fm) return $"{S.NameOf(from)} leaves for {fm.To} today: cancel its move first.";
         if (at != f.At)
         {
             if (d.Kind == 'S')
@@ -326,8 +332,20 @@ public partial class GameScreen
 
     int ShipsLeaving(Fleet f) => f.Ships.Count(id => _moved.ContainsKey(new Drag('S', id).Key));
 
-    /// <summary>Every ship of the fleet leaves it today (moved into other fleets here): the fleet is gone when the clock moves.</summary>
-    bool AllShipsLeave(Fleet f) => f.Ships.Count > 0 && ShipsLeaving(f) == f.Ships.Count;
+    /// <summary>Every ship of the fleet leaves it today (moved into other fleets here) and none comes in today (a ship or a fleet here
+    /// moved into it, given earlier, keeps it alive; one given later is refused): the fleet is gone when the clock moves.</summary>
+    bool AllShipsLeave(Fleet f) => f.Ships.Count > 0 && ShipsLeaving(f) == f.Ships.Count
+        && !_moved.Values.Any(m => m.Zone == $"Fleet {f.Id} Ships" && (m.Words.StartsWith("joins ", StringComparison.Ordinal) || m.Words.StartsWith("merges into ", StringComparison.Ordinal)));
+
+    /// <summary>Why the fleet takes no new order today: it merges into another fleet here when the clock moves (a merge given, or every
+    /// ship moved out), so the core would refuse the order. Null when it stays. rule: m3-fleets §Fleet invariant 1, §Orders (MergeFleets)</summary>
+    string MergesAwayWhy(Fleet f)
+    {
+        if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var m) && m.Words.StartsWith("merges into", StringComparison.Ordinal))
+            return $"{S.NameOf(f)} {m.Words} today. Cancel the merge to keep it.";
+        if (AllShipsLeave(f)) return $"{S.NameOf(f)} merges into {LeavesInto(f)} today. Cancel a ship's move to keep it.";
+        return null;
+    }
 
     /// <summary>The names of the fleets the leaving ships of <paramref name="f"/> join, in ship order ("TESTFLEET", "A and B").</summary>
     string LeavesInto(Fleet f)
@@ -370,7 +388,13 @@ public partial class GameScreen
         }
         if (d.Kind == 'M') { Merge(from, f); _moved[d.Key] = ($"merges into {S.NameOf(f)}", $"Fleet {f.Id} Ships"); return; }
         bool last = from.Ships.Count - ShipsLeaving(from) == 1;
-        S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, new[] { d.Id }, f.Id), $"Move a ship from {S.NameOf(from)} into {S.NameOf(f)}", into: f.Id);
+        // one order per pair of fleets, so one line and one Cancel: today's transfer from this fleet into that one is taken back and given
+        // again with this ship too, as DropSplit does. rule: m1-clock-and-orders §Orders in (withdraw); m3-fleets §Orders (TransferShips)
+        var pair = (from.Id, f.Id);
+        var ships = new List<int> { d.Id };
+        if (_transfers.TryGetValue(pair, out var prev) && S.Withdraw(prev.Seq)) ships.InsertRange(0, prev.Ships);
+        string words = ships.Count == 1 ? $"The {ThingName(d)} from {S.NameOf(from)} joins {S.NameOf(f)}" : $"{ships.Count} ships from {S.NameOf(from)} join {S.NameOf(f)}";
+        _transfers[pair] = (S.TrackFleet(from.Id, Fm.SubmitTransferShips(Me, ships, f.Id), words, into: f.Id), ships);
         _moved[d.Key] = ($"joins {S.NameOf(f)}", $"Fleet {f.Id} Ships");
         Sent($"move the {ThingName(d)} from {S.NameOf(from)} into {S.NameOf(f)}" + (last ? $". It was {S.NameOf(from)}'s last ship: {S.NameOf(from)} is gone when the clock moves, as after a merge" : ""), f.At);
     }
@@ -389,6 +413,7 @@ public partial class GameScreen
     }
 
     readonly Dictionary<int, (long Seq, List<int> Ships)> _splits = new(); // today's split order per fleet (lookup only)
+    readonly Dictionary<(int From, int Into), (long Seq, List<int> Ships)> _transfers = new(); // today's ship transfer per pair of fleets here
 
     void DropSplit(Drag d, Fleet f)
     {

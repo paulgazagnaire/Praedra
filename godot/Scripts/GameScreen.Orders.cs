@@ -20,6 +20,7 @@ public partial class GameScreen
         public readonly Dictionary<int, int> PendingIn = new();
         public readonly Dictionary<string, int> Leaving = new(System.StringComparer.Ordinal);
         public readonly HashSet<int> Splits = new();
+        public readonly HashSet<(int, int)> Transfers = new();
     }
 
     readonly Dictionary<long, DropUndo> _dropUndo = new(); // an order made by a drop -> that drop's undo (until the clock moves)
@@ -75,6 +76,7 @@ public partial class GameScreen
             foreach (var (f, n) in u.PendingIn) { int left = (_pendingIn.TryGetValue(f, out int had) ? had : 0) - n; if (left > 0) _pendingIn[f] = left; else _pendingIn.Remove(f); }
             foreach (var (sys, n) in u.Leaving) { int left = (_leaving.TryGetValue(sys, out int had) ? had : 0) - n; if (left > 0) _leaving[sys] = left; else _leaving.Remove(sys); }
             foreach (var f in u.Splits) _splits.Remove(f);
+            foreach (var p in u.Transfers) _transfers.Remove(p);
             foreach (var q in u.Seqs) _dropUndo.Remove(q);
         }
         return true;
@@ -89,6 +91,7 @@ public partial class GameScreen
         var pin = new Dictionary<int, int>(_pendingIn);
         var leaving = new Dictionary<string, int>(_leaving, System.StringComparer.Ordinal);
         var splits = _splits.ToDictionary(kv => kv.Key, kv => kv.Value.Seq);
+        var transfers = _transfers.ToDictionary(kv => kv.Key, kv => kv.Value.Seq);
         drop();
         var u = new DropUndo();
         u.Seqs.AddRange(S.TrackedAfter(before));
@@ -96,6 +99,7 @@ public partial class GameScreen
         foreach (var (f, n) in _pendingIn) { int d = n - (pin.TryGetValue(f, out int was) ? was : 0); if (d > 0) u.PendingIn[f] = d; }
         foreach (var (sys, n) in _leaving) { int d = n - (leaving.TryGetValue(sys, out int was) ? was : 0); if (d > 0) u.Leaving[sys] = d; }
         foreach (var (f, s) in _splits) if (!splits.TryGetValue(f, out long was) || was != s.Seq) u.Splits.Add(f);
+        foreach (var (p, t) in _transfers) if (!transfers.TryGetValue(p, out long was) || was != t.Seq) u.Transfers.Add(p);
         // an earlier drop whose order this one took back: its changes become this drop's (they stand or fall together now)
         foreach (var old in _dropUndo.Where(kv => S.WhatOf(kv.Key) == null).Select(kv => kv.Value).Distinct().ToList())
         {
@@ -103,6 +107,7 @@ public partial class GameScreen
             foreach (var (f, n) in old.PendingIn) u.PendingIn[f] = (u.PendingIn.TryGetValue(f, out int x) ? x : 0) + n;
             foreach (var (sys, n) in old.Leaving) u.Leaving[sys] = (u.Leaving.TryGetValue(sys, out int x) ? x : 0) + n;
             u.Splits.UnionWith(old.Splits);
+            u.Transfers.UnionWith(old.Transfers);
             foreach (var q in old.Seqs) { _dropUndo.Remove(q); if (S.WhatOf(q) != null) u.Seqs.Add(q); }
         }
         foreach (var q in u.Seqs) _dropUndo[q] = u;
