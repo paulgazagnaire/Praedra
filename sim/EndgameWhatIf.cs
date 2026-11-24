@@ -24,7 +24,7 @@ internal sealed class EndgameWhatIf
     {
         new("Hearth destroyed = Hand wins", "hearth", 0, s => s.HearthGone ? Side.Hand : null),
         new("Hearth gone + Collective <= 25 systems", "remnant25", 0, s => s.HearthGone && s.Collective <= 25 ? Side.Hand : null),
-        new("capital gone + 70% of held, 180 days", "cap70", 180, s => Share(s, 70, true)),
+        new("capital gone + 70% of held, 240 days (the live rule)", "cap70", 240, s => Share(s, 70, true)),
         new("capital gone + 80% of held, 180 days", "cap80", 180, s => Share(s, 80, true)),
         new("capital gone + 90% of held, 90 days", "cap90", 90, s => Share(s, 90, true)),
         new("90% of held systems, 365 days", "dom90", 365, s => Share(s, 90, false)),
