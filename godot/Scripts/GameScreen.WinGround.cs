@@ -195,7 +195,7 @@ public partial class GameScreen
             cmd.AddChild(col);
         }
 
-        var chars = FleetSection("Characters", 16, null, mine ? "Your leaders standing on the planet, not on a fleet. Drag one onto a fleet in orbit, a post, or another system."
+        var chars = FleetSection("Leaders", 16, null, mine ? "Your leaders standing on the planet, not on a fleet. Drag one onto a fleet in orbit, a post, or another system."
             : $"You don't hold {n}, but your leaders can stand on it: drag a leader off a fleet of yours here to land them, or one standing here onto a fleet of yours in orbit.");
         var lz = DropZone($"Ground {n} Leaders", "land", d => RefuseToGround(d, n, 'L'), d => DropToGround(d, n));
         CardFlow(lz.Flow);

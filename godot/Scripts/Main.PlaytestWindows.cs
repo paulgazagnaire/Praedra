@@ -40,7 +40,7 @@ public partial class Main
         gs.ShotWindow("ground", sys); gs.PlayRefresh();
         string ground = gs.MgText($"Ground {sys}");
         // Paul's new colors frames (2026-11-24): Command (the General, the characters here), Troops, Fighters, Fleets; the Lore tab is gone
-        Expect(gs.MgmtKeys.Contains($"Ground {sys}") && gs.MgTab($"Ground {sys}") == "Command" && ground.Contains("CHARACTERS") && ground.Contains("YOUR FLEETS"),
+        Expect(gs.MgmtKeys.Contains($"Ground {sys}") && gs.MgTab($"Ground {sys}") == "Command" && ground.Contains("LEADERS") && ground.Contains("YOUR FLEETS"),
             "the system window opens on its Command tab, and its Fleets tab lists the fleets in orbit");
         Expect(string.Join(",", gs.MgTabs($"Ground {sys}")) == "Command,Troops,Fighters,Fleets", $"its tabs, no Lore: {string.Join(", ", gs.MgTabs($"Ground {sys}"))}");
         if (s.OwnerOf(sys) == me)

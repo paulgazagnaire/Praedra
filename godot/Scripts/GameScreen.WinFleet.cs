@@ -950,10 +950,10 @@ public partial class GameScreen
         return card;
     }
 
-    /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Characters in Ground at Charter"): the Command tab
+    /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Leaders in Ground at Charter"): the Command tab
     /// of the Ground window of the planet where the fleet stands, yours or not (the core lets a passenger off anywhere a fleet stands still,
     /// rule: m5-characters §Posts, DetachCharacter; QA on #357). Null in flight or at a harvested world: no leader lands there.</summary>
-    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) ? $"Characters in Ground at {f.At}" : null;
+    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) ? $"Leaders in Ground at {f.At}" : null;
 
     /// <summary>
     /// A post or Passengers takes a leader only by a drag, never by a click or a menu (Paul 2026-11-22: moving a leader is too important to
