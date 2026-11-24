@@ -161,21 +161,32 @@ public partial class GameScreen
     /// does not stop it each time (QA-122: 31 to 96 stops in 1500 days without it, a third to a half of them the same threat blinking).</summary>
     const int CapitalThreatRearmDays = 10;
 
+    /// <summary>The most enemy ships and squadrons seen near the capital at once during the current threat, and the day of the newest Sensor
+    /// Station warning about it already stopped for.</summary>
+    int _capitalThreatPeak, _capitalThreatWarnDay = -1;
+
     /// <summary>
-    /// The day a capital threat shows after at least <see cref="CapitalThreatRearmDays"/> days without one, the clock stops, if Settings say so
-    /// (DEFAULT on, Paul 2026-11-24 "Pause, on"). Called every day, even when another stop fired, so a threat seen on a day that already
-    /// paused does not stop the clock again the next day (Ponytail on #378).
+    /// The clock stops, if Settings say so (DEFAULT on, Paul 2026-11-24 "Pause, on"), when a capital threat shows after at least
+    /// <see cref="CapitalThreatRearmDays"/> days without one, and again during the same threat when it gets worse: the enemy ships and
+    /// squadrons near the capital reach twice the most seen so far, or a Sensor Station sends a new warning (one per enemy trip). So a scout
+    /// that lingers near the capital does not hide the big fleet that joins it (Ponytail on #380), while the same fleet blinking in and out
+    /// of view never stops it twice. Called every day, even when another stop fired, so a threat seen on a day that already paused does not
+    /// stop the clock again the next day (Ponytail on #378).
     /// </summary>
     string CapitalThreatPause()
     {
-        var probe = new List<Item>();
-        CapitalThreat(probe);
-        if (probe.Count == 0) return null;
+        if (CapitalThreatScan() is not { } scan || (scan.Near.Count == 0 && scan.Warned == null)) return null;
+        var (near, warned) = scan;
         int day = S.Game.Day;
+        int size = near.Sum(n => n.Fleet.ShipCount + n.Fleet.SquadronCount);
+        int warnDay = warned?.Day ?? -1;
         bool fresh = _capitalThreatSeen is not int last || day - last > CapitalThreatRearmDays;
+        bool worse = !fresh && (size >= 2 * Math.Max(1, _capitalThreatPeak) || warnDay > _capitalThreatWarnDay);
+        _capitalThreatPeak = fresh ? size : Math.Max(_capitalThreatPeak, size);
+        _capitalThreatWarnDay = fresh ? warnDay : Math.Max(_capitalThreatWarnDay, warnDay);
         _capitalThreatSeen = day;
-        if (!fresh || !UiSettings.PauseCapitalThreat) return null;
-        return $"Paused: your capital {S.MyHqSystem} is threatened";
+        if (!(fresh || worse) || !UiSettings.PauseCapitalThreat) return null;
+        return fresh ? $"Paused: your capital {S.MyHqSystem} is threatened" : $"Paused: the threat to your capital {S.MyHqSystem} has grown";
     }
 
     bool CapitalHeld(string sys) => sys == S.MyHqSystem && S.OwnerOf(sys) == Me && !S.IsDestroyed(sys);
@@ -207,14 +218,12 @@ public partial class GameScreen
             lost.Count == 1 ? new() { ("Go there", () => GoTo(first, true), null) } : new()) { Rows = lost.Count == 1 ? null : rows });
     }
 
-    /// <summary>
-    /// Your capital, while you still hold it, with a visible enemy fleet that could get there within <see cref="CapitalThreatDays"/> days, or a
-    /// Sensor Station warning of a fleet heading for it: red. A fleet already there is "Enemy fleet at ..." below.
-    /// </summary>
-    void CapitalThreat(List<Item> list)
+    /// <summary>The enemy fleets the player sees within <see cref="CapitalThreatDays"/> days of the capital and the newest Sensor Station warning
+    /// of a fleet still on its way there; null when you do not hold your capital.</summary>
+    (List<(string Sys, int Days, Praedra.Core.Fog.FleetPicture Fleet)> Near, Praedra.Core.Fog.Sighting Warned)? CapitalThreatScan()
     {
         string cap = S.MyHqSystem;
-        if (cap == null || !CapitalHeld(cap)) return;
+        if (cap == null || !CapitalHeld(cap)) return null;
         var near = new List<(string Sys, int Days, Praedra.Core.Fog.FleetPicture Fleet)>();
         foreach (var (sys, pic) in S.Fog.VisibleFleets(Me).Where(v => v.Fleet.Side != Me && v.System != cap))
         {
@@ -228,7 +237,18 @@ public partial class GameScreen
         var warned = S.Fog.Sightings(Me, Math.Max(0, S.Game.Day - 30))
             .Where(x => x.Kind == Praedra.Core.Fog.SightingKind.SensorArrival && x.System == cap && x.ReachDay is int rd && rd >= S.Game.Day)
             .OrderByDescending(x => x.Day).FirstOrDefault();
-        if (near.Count == 0 && warned == null) return;
+        return (near, warned);
+    }
+
+    /// <summary>
+    /// Your capital, while you still hold it, with a visible enemy fleet that could get there within <see cref="CapitalThreatDays"/> days, or a
+    /// Sensor Station warning of a fleet heading for it: red. A fleet already there is "Enemy fleet at ..." below.
+    /// </summary>
+    void CapitalThreat(List<Item> list)
+    {
+        if (CapitalThreatScan() is not { } scan || (scan.Near.Count == 0 && scan.Warned == null)) return;
+        var (near, warned) = scan;
+        string cap = S.MyHqSystem;
         var lines = new List<string>();
         if (warned != null) lines.Add($"Your Sensor Station saw a {(warned.Size?.ToString() ?? "").ToLowerInvariant()} {S.NameOf(warned.Side)} fleet coming, expected day {warned.ReachDay}.");
         foreach (var n in near.OrderBy(n => n.Days).ThenBy(n => n.Sys, StringComparer.Ordinal).Take(MaxRows))
