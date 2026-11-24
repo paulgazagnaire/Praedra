@@ -44,8 +44,8 @@ public sealed record VictoryRules
     /// sides hold, for <see cref="DominanceDays"/> days running. 0 = off (Classic has no such ending, B4 §15). rule: m5-setup-and-victory §Capital and control.
     /// </summary>
     public int DominanceSharePercent { get; init; } = 70;
-    /// <summary>Days the capital-and-control run must last. Decided Paul 2026-10-26. rule: m5-setup-and-victory §Victory.</summary>
-    public int DominanceDays { get; init; } = 180;
+    /// <summary>Days the capital-and-control run must last. Decided Paul 2026-10-26 (180), raised to 240 by Paul 2026-11-24. rule: m5-setup-and-victory §Capital and control.</summary>
+    public int DominanceDays { get; init; } = 240;
     /// <summary>
     /// A run survives this many days below the bar before it breaks (no notice while it lapses; it cannot win while below; on recovery its start and due day move on by the days below, with a new DominanceChanged). DEFAULT 10, a Dev
     /// lead Proposal after QA round 83 (one game started and broke a run 9 times in a year); 0 = break at once. rule: m5-setup-and-victory §Capital and control.
