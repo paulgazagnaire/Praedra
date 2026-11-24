@@ -63,12 +63,22 @@ public partial class GameScreen
         };
     }
 
+    /// <summary>A planet's Infrastructure window. One you don't hold gets the same window (Paul 2026-11-24): what your side last saw built
+    /// there, with the day, read only, and no Build part.</summary>
     void InfraOwnWin(MgWin w)
     {
         string n = w.System;
+        bool mine = S.OwnerOf(n) == Me;
+        var pic = mine ? null : S.Picture(n);
         var tab = w.Shows ??= TabOfSection(_buildSection);
-        InfraHead(w, n);
+        InfraHead(w, n, pic);
         if (w.Min) return;
+        if (!mine)
+        {
+            InfraBuildingsSeen(n, tab, pic);
+            FleetSection("Build", 8).AddChild(Para("You can build only on planets you hold. To take this one, invade it from a fleet in orbit with regiments aboard, or win its people over with Diplomacy.", Look.Soft));
+            return;
+        }
         InfraBuildings(n, tab);
         InfraBuild(w, n, tab);
         if (Me == Side.Collective && n == S.MyHqSystem) HqSection(n);
@@ -76,8 +86,9 @@ public partial class GameScreen
 
     // ================================================================== the head: name, gauges, links, the strip
 
-    void InfraHead(MgWin w, string n)
+    void InfraHead(MgWin w, string n, Praedra.Core.Fog.SystemPicture pic)
     {
+        bool mine = S.OwnerOf(n) == Me;
         var eco = S.Host.Economy;
         var head = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
@@ -98,19 +109,34 @@ public partial class GameScreen
         name.ClipText = true;
         name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         row.AddChild(name);
-        row.AddChild(WinButtons(w));
+        var grip = MoveGrip();
+        grip.AddThemeColorOverride("font_color", Look.Text);
+        row.AddChild(WinButtons(w, grip, grey: true));
         parts.AddChild(row);
         if (!w.Min)
         {
             var mid = Boxed(new VBoxContainer(), 12);
-            mid.AddChild(InfraGauges(n));
+            mid.AddChild(InfraGauges(n, pic));
             // what stops the planet (Paul 2026-11-19: kept, small): one line each, only when it applies
-            int mines = eco.OfKindAt(n, FacilityKind.Mine), refs = eco.OfKindAt(n, FacilityKind.Refinery);
-            int smug = mines + refs > 0 ? eco.DiversionPercent(n, Me) : 0;
             var warns = new List<(string, Color)>();
-            if (S.Game.State.Blockades.ContainsKey(n)) warns.Add(("Blockaded: the mines and yards here stop until the enemy fleet is driven off.", Ui.Danger));
-            if (S.Host.Support.IsUprising(n)) warns.Add(("Uprising: the mines and yards here stop until it ends.", Ui.Danger));
-            if (smug > 0) warns.Add(($"Smugglers may take a cycle's output {smug}% of the time. More support, or forces here, scare them off.", Ui.Warn));
+            if (mine)
+            {
+                int mines = eco.OfKindAt(n, FacilityKind.Mine), refs = eco.OfKindAt(n, FacilityKind.Refinery);
+                int smug = mines + refs > 0 ? eco.DiversionPercent(n, Me) : 0;
+                if (S.Game.State.Blockades.ContainsKey(n)) warns.Add(("Blockaded: the mines and yards here stop until the enemy fleet is driven off.", Ui.Danger));
+                if (S.Host.Support.IsUprising(n)) warns.Add(("Uprising: the mines and yards here stop until it ends.", Ui.Danger));
+                if (smug > 0) warns.Add(($"Smugglers may take a cycle's output {smug}% of the time. More support, or forces here, scare them off.", Ui.Warn));
+            }
+            else
+            {
+                // whose it is and how old your picture is, as the Ground window's head says it
+                var (known, owner) = S.KnownOwnerOf(n);
+                int? last = pic?.Facilities?.Stamp ?? S.LastSeenDay(n);
+                string who = !known ? "Unexplored: you don't know what is built here." : owner == null ? "Nobody holds it." : $"Held by the {S.NameOf(owner.Value)}.";
+                string when = pic?.Facilities == null ? (known ? " Nobody has looked at its ground yet: send a fleet or a spy." : "")
+                    : last is int d ? (d >= S.Game.Day ? $" Buildings seen today (day {d})." : $" Buildings seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): they may have changed.") : "";
+                warns.Add((who + when, known && owner != null ? Ui.Enemy : Look.Soft));
+            }
             foreach (var (words, ink) in warns)
             {
                 var l = Look.Words(words, 12, ink);
@@ -120,7 +146,7 @@ public partial class GameScreen
             parts.AddChild(mid);
         }
         w.Head.AddChild(head);
-        if (!w.Min) w.Head.AddChild(YardStrip(w, n));
+        if (!w.Min) w.Head.AddChild(YardStrip(w, n, pic));
     }
 
     static T Boxed<T>(T box, int gap) where T : BoxContainer
@@ -131,7 +157,37 @@ public partial class GameScreen
     }
 
     /// <summary>The two slot gauges, a line between them, and on the right the way to the planet's Ground window and its fleet.</summary>
-    Control InfraGauges(string n)
+    Control InfraGauges(string n, Praedra.Core.Fog.SystemPicture pic = null)
+    {
+        var row = Boxed(new HBoxContainer(), 24);
+        var gauges = Boxed(new HBoxContainer(), 24);
+        gauges.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        if (S.OwnerOf(n) != Me) SeenGauges(gauges, pic);
+        else LiveGauges(n, gauges);
+        row.AddChild(gauges);
+        row.AddChild(Ui.Grow());
+        row.AddChild(InfraLinks(n));
+        return row;
+    }
+
+    /// <summary>A planet you don't hold: its slots and the buildings your side last saw (rule: m5-fog-and-hq §F1 groups A and C), as the same two
+    /// gauges, with the day in their hover.</summary>
+    static void SeenGauges(HBoxContainer gauges, Praedra.Core.Fog.SystemPicture pic)
+    {
+        var fac = pic?.Facilities;
+        int built = fac?.Value.Values.Sum() ?? 0;
+        int mines = fac?.Value.Where(kv => FacilityKinds.TryParse(kv.Key, out var k) && k == FacilityKind.Mine).Sum(kv => kv.Value) ?? 0;
+        int energy = pic?.Status?.Value.Energy ?? 0, raw = Math.Min(pic?.Status?.Value.Raw ?? 0, energy);
+        string seen = fac is { } f ? $"Seen day {f.Stamp}." : "Nobody has looked at its buildings yet.";
+        string slots = pic?.Status is { } st ? $"Its slots were seen on day {st.Stamp}." : "Its slots are unknown.";
+        gauges.AddChild(Gauge("System energy", built, built, energy, Look.Accent, Look.AccentDeep,
+            $"System energy: {built} of {energy} slots taken by the buildings your side saw. {seen} {slots}"));
+        gauges.AddChild(new ColorRect { Color = Look.Divider, CustomMinimumSize = new Vector2(1, 36), MouseFilter = MouseFilterEnum.Ignore });
+        gauges.AddChild(Gauge("Raw material", mines, mines, raw, Look.Raw, Look.RawDeep,
+            $"Raw material: {mines} of {raw} raw slots taken by the mines your side saw. {seen} {slots}"));
+    }
+
+    void LiveGauges(string n, HBoxContainer gauges)
     {
         var eco = S.Host.Economy;
         var slots = eco.SlotsOf(n);
@@ -140,10 +196,6 @@ public partial class GameScreen
         int rBuilt = built.Count(o => FacilityKinds.TryParse(o.Class, out var k) && k == FacilityKind.Mine), rUsed = eco.RawUsed(n), rTotal = eco.EffectiveRaw(n);
         int mines = eco.OfKindAt(n, FacilityKind.Mine), refs = eco.OfKindAt(n, FacilityKind.Refinery);
         string Ordered(int used, int b) => used > b ? $", {used - b} ordered or being built" : "";
-
-        var row = Boxed(new HBoxContainer(), 24);
-        var gauges = Boxed(new HBoxContainer(), 24);
-        gauges.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         gauges.AddChild(Gauge("System energy", eBuilt, eUsed, slots.Energy, Look.Accent, Look.AccentDeep,
             $"System energy: {eUsed} of {slots.Energy} slots taken ({eBuilt} built{Ordered(eUsed, eBuilt)}), {Math.Max(0, slots.Energy - eUsed)} free. "
             + "Every building takes one energy slot.\nBright: built. Mid: ordered or being built. Dark: free."));
@@ -154,21 +206,22 @@ public partial class GameScreen
             + $"\nMines: {(mines == 0 ? "none" : $"{mines}, about +{RawPerMonth(n)} raw every 30 days")}. Refineries: {(refs == 0 ? "none" : $"{refs}, about +{RefinedPerMonth(n)} refined every 30 days")}. "
             + "Each mine digs one raw material every cycle; each refinery turns one raw into one refined. The cycle is longer when support is low. "
             + $"Every mine and refinery also adds {eco.Params.CapacityPerFacility} to your upkeep room (with as many of the other kind)."));
-        row.AddChild(gauges);
-        row.AddChild(Ui.Grow());
+    }
 
+    /// <summary>The way to the planet's Ground window and to your fleets in orbit (the frame's "Ground and military" and "Fleets").</summary>
+    Control InfraLinks(string n)
+    {
         var links = Boxed(new HBoxContainer(), 16);
         links.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         links.AddChild(OutlinedButton(PixelIconData.Tile["troops"], "Ground and military", $"Ground and military at {n}", () => OpenMgmt(MgKind.Ground, n),
             $"The Ground window of {n}: leaders, troops and fighters on the planet, and the fleets in orbit."));
         var fleets = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n && f.Transit == null).OrderBy(f => f.Id).ToList();
-        links.AddChild(OutlinedButton(PixelIconData.Tile["fleets"], "Fleet", $"Fleet at {n}",
+        links.AddChild(OutlinedButton(PixelIconData.Tile["fleets"], "Fleets", $"Fleet at {n}",
             () => { if (fleets.Count == 1) OpenMgmt(MgKind.Fleet, fleet: fleets[0].Id); else OpenMgmt(MgKind.Ground, n, tab: "Fleets"); },
             fleets.Count == 0 ? $"No fleet of yours is in orbit at {n}." : fleets.Count == 1 ? $"Opens {fleets[0].Name}'s window."
                 : $"{fleets.Count} fleets of yours are in orbit ({string.Join(", ", fleets.Select(f => S.NameOf(f)))}): opens the list of them.",
             fleets.Count == 0));
-        row.AddChild(links);
-        return row;
+        return links;
     }
 
     static Control Gauge(string label, int built, int used, int total, Color bright, Color mid, string tip)
@@ -179,7 +232,7 @@ public partial class GameScreen
         var h = Boxed(new HBoxContainer(), 16);
         h.AddChild(Look.Words(label, 12, Look.Text, true));
         h.AddChild(Ui.Grow());
-        var num = Look.Words($"{used}/{total}", 10, Look.Dim);
+        var num = Look.Words($"{used}/{total}", 10, Look.Quiet);   // the frame's #525252
         num.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(num);
         v.AddChild(h);
@@ -192,17 +245,19 @@ public partial class GameScreen
     {
         var b = new Button { FocusMode = FocusModeEnum.None, Disabled = disabled, TooltipText = Ui.Wrap(tip),
             MouseDefaultCursorShape = disabled ? CursorShape.Arrow : CursorShape.PointingHand };
-        var clear = new Color(0, 0, 0, 0);
-        foreach (var (state, line) in new[] { ("normal", Look.Line), ("hover", Look.Dim), ("pressed", Look.Accent), ("hover_pressed", Look.Accent), ("disabled", Look.Line) })
-            b.AddThemeStyleboxOverride(state, Look.Box(clear, line, 1, 1, 1, 1));
+        // the new colors frames (2026-11-24): the buttons' outline, 4 px corners, 40 px high (Paul: "follow the frames")
+        foreach (var (state, line) in new[] { ("normal", Look.Outline), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text), ("disabled", Look.Line) })
+            b.AddThemeStyleboxOverride(state, ButtonBox(line));
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         var ink = disabled ? Look.Dim : Look.Text;
         var h = Boxed(new HBoxContainer(), 8);
         var i = IconPic.Of(icon, 1, ink, disabled);
         i.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(i);
-        h.AddChild(Look.Words(words, 12, ink, true));
-        Fill(b, h, 8, 8);
+        var l = Look.Words(words, 12, ink, true);
+        l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        h.AddChild(l);
+        Fill(b, h, 8, 8, new Vector2(0, ButtonH));
         b.Pressed += act;
         b.SetMeta(UiTest.FullName, key);
         return b;
@@ -224,15 +279,16 @@ public partial class GameScreen
 
     /// <summary>Three cells a page and the arrows: › shows the mines, refineries and defences, ‹ the yards again (Paul 2026-11-19, 4B). The
     /// open cell is the lighter one, joined to the part under it.</summary>
-    Control YardStrip(MgWin w, string n)
+    Control YardStrip(MgWin w, string n, Praedra.Core.Fog.SystemPicture pic)
     {
+        bool mine = S.OwnerOf(n) == Me;
         var strip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
         var lines = Look.Box(Look.Line);
         lines.ContentMarginTop = 1;   // the line above the cells
         strip.AddThemeStyleboxOverride("panel", lines);
         var h = Boxed(new HBoxContainer(), 1);   // the line between cells
         strip.AddChild(h);
-        foreach (var t in Enum.GetValues<InfraTab>().Skip(w.Page * CellsPerPage).Take(CellsPerPage)) h.AddChild(YardCell(w, n, t));
+        foreach (var t in Enum.GetValues<InfraTab>().Skip(w.Page * CellsPerPage).Take(CellsPerPage)) h.AddChild(mine ? YardCell(w, n, t) : SeenCell(w, n, t, pic));
         var arrows = Boxed(new VBoxContainer(), 1);
         arrows.CustomMinimumSize = new Vector2(ArrowColumn, 0);
         arrows.AddChild(ArrowButton(true, w.Page == 0, () => TurnStrip(w, 1), "Mines, refineries and defences", $"Strip next {n}"));
@@ -277,29 +333,8 @@ public partial class GameScreen
     Control YardCell(MgWin w, string n, InfraTab t)
     {
         var eco = S.Host.Economy;
-        bool open = w.Shows == t;
-        var cell = new HoverWordsButton { FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseDefaultCursorShape = CursorShape.PointingHand };
-        cell.SetMeta(UiTest.FullName, $"Yard {n} {t}");
-        var bg = open ? Look.Band : Look.Bg;
-        cell.AddThemeStyleboxOverride("normal", Look.Box(bg));
-        cell.AddThemeStyleboxOverride("hover", Look.Box(open ? Look.Band : Look.CellHover));
-        cell.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
-        cell.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
-        cell.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-
-        var v = Boxed(new VBoxContainer(), 16);
-        var top = Boxed(new HBoxContainer(), 8);
-        var icon = IconPic.Of(PixelIcons.Building(IconOfTab(t)) ?? PixelIcons.Building(UnitIcon.Kind.Building), 1, Look.Text);
-        icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        top.AddChild(icon);
-        // the name is never cut ("Construction yards" is the longest): its cell takes the room it needs, the cells share the rest
-        var name = Look.Words(CellName(t), 16, Look.Text, true);
-        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        top.AddChild(name);
         var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == n && InTab(o.Class, t)).ToList();
         int count = here.Count(o => o.Completed);
-        top.AddChild(Look.Words(count.ToString(), 16, count == 0 ? Look.Soft : Look.Dim));
-        v.AddChild(top);
 
         // what they are doing
         string left = "No infrastructure", right = "-", hover = null, tip;
@@ -370,9 +405,40 @@ public partial class GameScreen
                 _ => "Shields and batteries fight for the planet when it is attacked; a Sensor Station watches the routes around it.",
             } + $"\nClick: the {kinds} here (right-click one to scrap it), and what the construction yards can build of them.";
         }
-        cell.TooltipText = Ui.Wrap(tip);
+        var cell = CellFrame(w, n, t, count, left, right, ink, share, track, tip, out var l);
         if (menu.Count > 0) RightClickMenu(cell, menu.ToArray());
+        if (hover != null) { cell.Target = l; cell.Normal = left; cell.Hover = hover; }
+        return cell;
+    }
 
+    /// <summary>
+    /// A cell of the strip, as the frame draws it: the kind's 16 px icon, its name and how many stand here (#454545, #676767 when none);
+    /// under it the left and right words and a 2 px bar. The open cell is the page's surface, joined to it. A click opens it.
+    /// </summary>
+    HoverWordsButton CellFrame(MgWin w, string n, InfraTab t, int count, string left, string right, Color ink, float share, bool track, string tip, out Label leftWords)
+    {
+        bool open = w.Shows == t;
+        var cell = new HoverWordsButton { FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseDefaultCursorShape = CursorShape.PointingHand };
+        cell.SetMeta(UiTest.FullName, $"Yard {n} {t}");
+        cell.AddThemeStyleboxOverride("normal", Look.Box(open ? Look.Band : Look.Bg));
+        cell.AddThemeStyleboxOverride("hover", Look.Box(open ? Look.Band : Look.CellHover));
+        cell.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
+        cell.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
+        cell.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+
+        var v = Boxed(new VBoxContainer(), 16);
+        var top = Boxed(new HBoxContainer(), 8);
+        var icon = IconPic.Of(PixelIcons.Building(IconOfTab(t)) ?? PixelIcons.Building(UnitIcon.Kind.Building), 1, Look.Text);
+        icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        top.AddChild(icon);
+        // the name is never cut ("Construction yards" is the longest): its cell takes the room it needs, the cells share the rest
+        var name = Look.Words(CellName(t), 16, Look.Text, true);
+        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        top.AddChild(name);
+        top.AddChild(Look.Words(count.ToString(), 16, count == 0 ? Look.Soft : Look.Dim));
+        v.AddChild(top);
+
+        cell.TooltipText = Ui.Wrap(tip);
         var st = Boxed(new VBoxContainer(), 4);
         var line = Boxed(new HBoxContainer(), 8);
         var l = Look.Words(left, 12, ink, true);
@@ -383,7 +449,6 @@ public partial class GameScreen
         st.AddChild(line);
         st.AddChild(new ThinBar { Share = share, Fill = Look.Accent, Track = track ? new Color(Look.AccentDeep, 0.5f) : new Color(Look.Dim, 0.4f), CustomMinimumSize = new Vector2(0, 2) });
         v.AddChild(st);
-        if (hover != null) { cell.Target = l; cell.Normal = left; cell.Hover = hover; }
         Fill(cell, v, 16, 16);
         cell.Pressed += () =>
         {
@@ -391,7 +456,19 @@ public partial class GameScreen
             if (FamilyOfTab(t) is YardFamily f) _buildSection = SectionOfFamily(f);   // the drawer's build table follows the yard last opened
             MgRefreshSoon();
         };
+        leftWords = l;
         return cell;
+    }
+
+    /// <summary>A cell on a planet you don't hold: how many of that kind your side saw there, and when. rule: m5-fog-and-hq §F1 group C.</summary>
+    Control SeenCell(MgWin w, string n, InfraTab t, Praedra.Core.Fog.SystemPicture pic)
+    {
+        var fac = pic?.Facilities;
+        int count = fac?.Value.Where(kv => InTab(kv.Key, t)).Sum(kv => kv.Value) ?? 0;
+        string left = fac == null ? "Unknown" : count == 0 ? "None seen" : $"Seen day {fac.Stamp}";
+        string tip = fac == null ? $"Nobody has looked at the buildings of {n} yet."
+            : $"{CellName(t)}: {count} seen here on day {fac.Stamp}. It may have changed since.\nClick: what was seen.";
+        return CellFrame(w, n, t, count, left, "-", count > 0 ? Look.Text : Look.Dim, 0, false, tip, out _);
     }
 
     // ================================================================== under the strip: the buildings and what to build
@@ -417,12 +494,55 @@ public partial class GameScreen
         Add(sec);
     }
 
-    /// <summary>A heading of the part under the strip: the word, and a count in the dim grey 16 px to its right.</summary>
+    /// <summary>The buildings your side last saw on a planet you don't hold, one tile each, read only (rule: m5-fog-and-hq §F1 group C).</summary>
+    void InfraBuildingsSeen(string n, InfraTab tab, Praedra.Core.Fog.SystemPicture pic)
+    {
+        var fac = pic?.Facilities;
+        var seen = fac?.Value.Where(kv => InTab(kv.Key, tab)).OrderBy(kv => Array.IndexOf(FacilityPriority, kv.Key) is int i && i >= 0 ? i : 50)
+            .ThenBy(kv => kv.Key, StringComparer.Ordinal).SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value)).ToList() ?? new List<string>();
+        var sec = Boxed(new VBoxContainer(), 16);
+        sec.AddChild(Heading2("Buildings", seen.Count.ToString()));
+        if (fac == null) sec.AddChild(Look.Words($"Nobody has looked at the buildings of {n} yet: send a fleet or a spy.", 12, Look.Dim));
+        else if (seen.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} seen here (day {fac.Stamp}).", 12, Look.Dim));
+        else
+        {
+            var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+            flow.AddThemeConstantOverride("h_separation", 8); flow.AddThemeConstantOverride("v_separation", 8);
+            foreach (var cls in seen) flow.AddChild(SeenBuildingTile(cls, fac.Stamp));
+            sec.AddChild(flow);
+        }
+        Add(sec);
+    }
+
+    /// <summary>A building your side saw: its icon in the outlined tile, the name and the day on hover. Read only.</summary>
+    Control SeenBuildingTile(string cls, int day)
+    {
+        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = BuildingTileSize };
+        p.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg, Look.Edge, 1, 1, 1, 1));
+        var grid = PixelIcons.Building(UnitIcon.ForFacility(cls)) ?? PixelIcons.Building(UnitIcon.Kind.Building);
+        var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        center.AddChild(IconPic.Of(grid, 2, Look.Text));
+        p.AddChild(center);
+        p.TooltipText = Ui.Wrap($"{cls}: seen here on day {day}." + (ClassTip(cls) is string ct ? "\n" + ct : ""));
+        p.SetMeta(UiTest.FullName, $"Seen building {cls}");
+        return p;
+    }
+
+    /// <summary>A section's title (the new colors frames, 2026-11-24): the word in BitPotion 24 px capitals, 1 px apart, and a count in the dim
+    /// grey 16 px to its right.</summary>
     static Control Heading2(string word, string count = null)
     {
         var h = Boxed(new HBoxContainer(), 16);
-        h.AddChild(Look.Words(word, 16, Look.Text, true));
-        if (count != null) h.AddChild(Look.Words(count, 16, count == "0" ? Look.Soft : Look.Dim));
+        var t = Look.Words(word.ToUpperInvariant(), Ui.SectionSize, Look.Text);
+        t.AddThemeFontOverride("font", Ui.SectionFont);
+        t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        h.AddChild(t);
+        if (count != null)
+        {
+            var c = Look.Words(count, 16, count == "0" ? Look.Soft : Look.Dim);
+            c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            h.AddChild(c);
+        }
         return h;
     }
 
@@ -580,11 +700,9 @@ public partial class GameScreen
     {
         var b = new Button { Text = glyph, FocusMode = FocusModeEnum.None, TooltipText = tip, CustomMinimumSize = new Vector2(24, 24),
             MouseDefaultCursorShape = CursorShape.PointingHand };
-        var clear = new Color(0, 0, 0, 0);
-        b.AddThemeStyleboxOverride("normal", Look.Box(clear, Look.Line, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("hover", Look.Box(clear, Look.Dim, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("pressed", Look.Box(clear, Look.Accent, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("hover_pressed", Look.Box(clear, Look.Accent, 1, 1, 1, 1));
+        // the frames' buttons: the outline, 4 px corners (Paul 2026-11-24)
+        foreach (var (state, line) in new[] { ("normal", Look.Outline), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text) })
+            b.AddThemeStyleboxOverride(state, ButtonBox(line));
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         b.AddThemeFontOverride("font", Ui.Grotesk);
         b.AddThemeFontSizeOverride("font_size", 14);

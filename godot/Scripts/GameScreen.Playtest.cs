@@ -510,7 +510,7 @@ public partial class GameScreen
             }
             return;
         }
-        string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", "lore" => "Lore", _ => "Leaders" };
+        string tab = kind.ToLowerInvariant() switch { "troops" => "Troops", "fighters" => "Fighters", "fleets" => "Fleets", _ => "Command" };
         OpenMgmt(MgKind.Ground, what.Replace('_', ' '), tab: tab);
     }
     public void ShotGoal() => ShowGoal();

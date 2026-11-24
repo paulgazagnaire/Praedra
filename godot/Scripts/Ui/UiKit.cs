@@ -66,10 +66,10 @@ public static class Ui
     // rounded corners, no divider lines. The greys are those of his Infrastructure design (Paper, 2026-11-18; see Look), which Paul gave
     // to every window (2026-11-19, answer 10): one grey for the words you read, as the design has, and the bluish #909EBD only for the
     // window buttons.
-    public static readonly Color WinActive = Look.Text;     // #BABABA names, values, the chosen tab, links, the window's name
-    public static readonly Color WinText = Look.Text;       // #BABABA every other line you read, small labels, the other tabs
+    public static readonly Color WinActive = Look.Text;     // #DFDFDF names, values, the chosen tab, links, the window's name
+    public static readonly Color WinText = Look.Text;       // #DFDFDF every other line you read, small labels, the other tabs
     public static readonly Color WinHover = Look.Soft;      // #676767 the outline under the mouse (a button: #2D2E32, hover, then #BABABA pressed)
-    public static readonly Color WinButtonInk = Look.Accent; // #909EBD the window buttons ⋮⋮ – × ‹ ›
+    public static readonly Color WinButtonInk = Look.Text;   // #DFDFDF the window buttons ⋮⋮ – × ‹ › (new colors frames, 2026-11-24)
     public static readonly Color WinDim = Look.Dim;         // #454545 greyed out: unexplored, not researched, placeholders like "Empty"
     public static readonly Color WinLine = Look.Edge;       // #2D2E32 the outline of tiles, bar tracks, empty slots
     /// <summary>The edge of a window and of the pieces on the map: lighter than the lines inside, so a window stands off the map
@@ -125,6 +125,21 @@ public static class Ui
     /// <summary>The name that fits: <paramref name="room"/> px wide at 48 px, else 32 px.</summary>
     public static int NameSize(string upper, float room) =>
         NameFont(NameBig, upper).GetStringSize(upper, HorizontalAlignment.Left, -1, NameBig).X <= room ? NameBig : NameSmall;
+
+    static Font _section;
+    /// <summary>A section's title in a window (the new colors frames, 2026-11-24): BitPotion 24 px in capitals, 0.05 em apart (1 px).</summary>
+    public static Font SectionFont
+    {
+        get
+        {
+            if (_section != null) return _section;
+            if (PixelFace == null) return ThemeDB.FallbackFont;
+            var v = new FontVariation { BaseFont = PixelFace, SpacingGlyph = 1 };
+            if (GroteskMedium != null) v.Fallbacks = new Godot.Collections.Array<Font> { GroteskMedium };   // a letter BitPotion lacks
+            return _section = v;
+        }
+    }
+    public const int SectionSize = 24;
 
     static Font _glyphs;
     /// <summary>The window buttons' face (⋮⋮ – × ‹ ›): JetBrains Mono 24 px, its line trimmed to the frame's 24 px box.</summary>

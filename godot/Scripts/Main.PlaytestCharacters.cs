@@ -26,7 +26,7 @@ public partial class Main
         gs.PlayRefresh();
         string panel = gs.PanelText();
         string all = panel + "\n" + string.Join("\n", gs.ButtonTexts());
-        Expect(panel.Contains("Your leaders"), "the Leaders tab opens");
+        Expect(panel.Contains("Your leaders", StringComparison.OrdinalIgnoreCase), "the Leaders tab opens");   // section titles show in capitals (new colors, 2026-11-24)
         var mine = me == Side.Collective ? new[] { "Nobody", "Ledger" } : new[] { "Cassia Ravilla" };
         foreach (var n in mine) Expect(all.Contains(n), $"the Leaders tab shows {n}");
         // enemy leaders: only the ones you must capture (named by the win rules) and the ones your side has seen, placed where they were seen
@@ -94,7 +94,8 @@ public partial class Main
         gs.MgCloseAll();
 
         // a passenger lands at a planet you don't hold too (QA on #357: the core lets them off anywhere the fleet stands still, rule:
-        // m5-characters §Posts, DetachCharacter): that planet's Ground window has a Leaders tab, with no General post. Test only: the system
+        // m5-characters §Posts, DetachCharacter): that planet's Ground window is the same as on your own (Paul 2026-11-24), its Command tab
+        // with the characters standing there and no General post. Test only: the system
         // is made nobody's for the drop, then given back before the day runs.
         OpenFleetTab(gs, fleet, "Command");
         Expect(gs.MgDrop($"L:{mover.Id}", $"Fleet {fleet.Id} Passengers") == null, $"{mname} boards {fleet.Name} as a passenger");
@@ -105,8 +106,8 @@ public partial class Main
             fm.SetOwner(here, null);
             gs.MgCloseAll(); OpenFleetTab(gs, fleet, "Command"); gs.ShotWindow("ground", here); gs.PlayRefresh();
             var tabs = gs.MgTabs($"Ground {here}");
-            Expect(tabs.Contains("Leaders") && !tabs.Contains("Troops"), $"a planet you don't hold: its Ground window has Leaders (and no Troops): {string.Join(", ", tabs)}");
-            Expect(!gs.MgPageText($"Ground {here}", "Leaders").Contains("General"), "no General post on a planet you don't hold");
+            Expect(string.Join(",", tabs) == "Command,Troops,Fighters,Fleets", $"a planet you don't hold: the same Ground window as your own: {string.Join(", ", tabs)}");
+            Expect(!gs.MgHasZone($"Ground {here} General") && !gs.MgPageText($"Ground {here}", "Command").Contains("GROUND COMMAND"), "no General post on a planet you don't hold");
             why = gs.MgDrop($"L:{mover.Id}", $"Ground {here} Leaders");
             Expect(why == null, $"drag {mname} off the fleet onto the Leaders of a planet you don't hold: {why ?? "sent"}");
             fm.SetOwner(here, me);

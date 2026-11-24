@@ -69,7 +69,7 @@ public partial class Main
             $"standing still and whole, it has no bar ({stNow.Words}, bar {stNow.Bar})");
         Expect(gs.CardTip($"Fleet status {a.Id}").Contains("Strength") && gs.CardTip($"Fleet status {a.Id}").Contains("Slowest ship"), "the status's hover gives its strength and its slowest ship");
         Expect(string.Join(",", gs.MgTabs(key)) == "Command,Ships,Fighters,Troops" && gs.MgTab(key) == "Command", $"the tabs are Command, Ships, Fighters and Troops, Command in front: {string.Join(", ", gs.MgTabs(key))}");
-        Expect(text.Contains("Fleet actions") && text.Contains("Fleet behavior") && text.Contains("Fleet command") && text.Contains("Passengers"), "Command: actions, behaviour, the three posts and the passengers");
+        Expect(new[] { "Fleet actions", "Fleet behavior", "Fleet command", "Passengers" }.All(x => text.Contains(x, StringComparison.OrdinalIgnoreCase)), "Command: actions, behaviour, the three posts and the passengers");
         Expect(gs.Has("Fleet Bombard") && gs.Has("Fleet Invade") && gs.Has("Fleet Move") && gs.Has("Behavior Defensive") && gs.Has("Behavior Elusive"), "the actions Bombardment, Invasion and Move, and the behaviour Defensive or Elusive");
         // merge, split and scrap are buttons, not only right-clicks (2026-11-22, follow-up 1): Merge with the actions, Split and Scrap on Ships
         Expect(gs.Enabled("Fleet Merge") && gs.MenuOf("Fleet Merge").Any(l => l.StartsWith($"{b.Name} joins now (here)", StringComparison.Ordinal)),

@@ -41,7 +41,7 @@ public partial class GameScreen
         drawer.Theme = SibylTheme;
         // Paul 2026-11-24 ("update the style according to the recent tabs that we redesigned, especially the fleet and ground tabs"): the
         // Fleet window's look. The window on the lighter surface with its 1 px edge, the head on the darker one, the strip of tabs, the page.
-        var frame = Look.Box(Look.Band, Ui.WinEdge, 1, 1, 1, 1);
+        var frame = Look.Box(Look.Band, Look.Frame, 1, 1, 1, 1);
         frame.ContentMarginLeft = frame.ContentMarginRight = frame.ContentMarginTop = frame.ContentMarginBottom = 1;
         drawer.AddThemeStyleboxOverride("panel", frame);
         drawer.Visible = false;

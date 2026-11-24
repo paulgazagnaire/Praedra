@@ -259,7 +259,7 @@ public partial class GameScreen
         bool split = st.Words.Count > 1 && need > lineW;
         Label Part(int i)
         {
-            var l = Look.Words(st.Words[i], 12, i == 0 && st.Note ? Ui.Warn : Look.Muted);
+            var l = Look.Words(st.Words[i], 12, i == 0 && st.Note ? Ui.Warn : Look.Quiet);
             l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             l.HorizontalAlignment = HorizontalAlignment.Right;
             if (i == 0)
@@ -274,7 +274,7 @@ public partial class GameScreen
         line.AddChild(Part(0));
         for (int i = 1; i < st.Words.Count && !split; i++)
         {
-            line.AddChild(Look.Words("/", 12, Look.Muted));
+            line.AddChild(Look.Words("/", 12, Look.Quiet));
             line.AddChild(Part(i));
         }
         v.AddChild(line);
@@ -481,17 +481,13 @@ public partial class GameScreen
     // ================================================================== the strip of tabs
 
     /// <summary>
-    /// A strip cell's name: light on the open cell, the muted grey on the others (#7D8699, 4.8:1 on the strip: T5 keeps #676767 for notes,
-    /// zero counts and greyed-out things, review 21), light again under the mouse (Paul 2026-11-24: "the open tab is barely lighter than the
-    /// rest"; the lighter surface alone measured 1.07:1). Its count keeps its own colour. Returns the repaint, for a cell pressed with no signal.
+    /// A strip cell's name: light on every cell, as the new colors frames draw them (2026-11-24; this settles the open question of review 21,
+    /// T5): the open cell shows by its lighter surface (#131313 on #0B0B0D), which joins the page under it. Its count keeps its own colour.
+    /// Returns the repaint, for a cell pressed with no signal.
     /// </summary>
     static Action CellWords(Button cell, Label words)
     {
-        bool over = false;
-        void Paint() => words.AddThemeColorOverride("font_color", cell.ButtonPressed || over ? Look.Text : Look.Muted);
-        cell.Toggled += _ => Paint();
-        cell.MouseEntered += () => { over = true; Paint(); };
-        cell.MouseExited += () => { over = false; Paint(); };
+        void Paint() => words.AddThemeColorOverride("font_color", Look.Text);
         Paint();
         return Paint;   // for a cell pressed without its signal
     }
@@ -530,13 +526,13 @@ public partial class GameScreen
             CellWords(b, l);
             if (count != null)
             {
-                var c = Look.Words(count, 12, ink ?? Look.Dim);
+                var c = Look.Words(count, 12, ink ?? Look.Quiet);   // the frames' #525252
                 c.SetMeta(UiTest.FullName, $"Tab {w.Key} {name} count");
                 row.AddChild(c);
             }
-            // as the design: Command and Ships fit their words (Ships at least 72 px), Fighters and Troops share the rest
+            // as the design: Command and Ships fit their words (Ships at least 72 px), the others share the rest (Fighters, Troops, Fleets)
             Fill(b, row, 8, 8, name == "Ships" ? new Vector2(72, 0) : null);
-            b.SizeFlagsHorizontal = name is "Fighters" or "Troops" ? SizeFlags.ExpandFill : SizeFlags.Fill;
+            b.SizeFlagsHorizontal = name is "Fighters" or "Troops" or "Fleets" ? SizeFlags.ExpandFill : SizeFlags.Fill;
             b.Pressed += () => { w.Tab = tabName; Fit(w); };
             // spring-loaded: hovering a dragged unit over a cell opens it
             b.SetDragForwarding(new Callable(),
@@ -628,7 +624,7 @@ public partial class GameScreen
             way.AddChild(flow);
         }
         // where the leaders to drag stand, and where they land (UI review 4), as the design's Ground button of the other tabs
-        if (GroundButton(f, "Leaders") is { } ground) Add(ground);
+        if (GroundButton(f, "Command") is { } ground) Add(ground);
     }
 
     /// <summary>
@@ -683,26 +679,45 @@ public partial class GameScreen
         return bar;
     }
 
-    /// <summary>This fleet's choice when an enemy fleet arrives, Defensive (fight) or Elusive (pull back); the chosen one has the light outline.
-    /// rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive fleets leave in their first step and the rest fight).</summary>
+    /// <summary>This fleet's choice when an enemy fleet arrives, Defensive (fight) or Elusive (pull back), as the frames' switch (2026-11-24):
+    /// one outline, 4 px corners, the chosen half filled #36363C. rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive
+    /// fleets leave in their first step and the rest fight).</summary>
     Control BehaviorRow(Fleet f)
     {
-        var row = Boxed(new HBoxContainer(), 8);
         bool Elusive() => IsElusive(f);
         bool retreat = Elusive();
+        var sw = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, CustomMinimumSize = new Vector2(0, ButtonH) };
+        var frame = ButtonBox(Look.Outline);
+        frame.ContentMarginLeft = frame.ContentMarginRight = frame.ContentMarginTop = frame.ContentMarginBottom = 2;
+        sw.AddThemeStyleboxOverride("panel", frame);
+        var row = Boxed(new HBoxContainer(), 2);
+        sw.AddChild(row);
         foreach (var (word, on, tip) in new[]
         {
             ("Defensive", false, "This fleet stays and fights an enemy fleet that arrives."),
             ("Elusive", true, "This fleet pulls back when an enemy fleet arrives, instead of fighting. Your Defensive fleets there stay and fight without it. An enemy ship that blocks retreat can keep it in the fight."),
         })
         {
-            bool r = on;
-            var b = FleetAction(word, $"Behavior {word}", () => { if (r != Elusive()) { SetRetreat(f, r); MgRefreshSoon(); } },
-                tip + (retreat == on ? " Chosen." : ""));
-            if (retreat == on) b.AddThemeStyleboxOverride("normal", ButtonBox(Look.Text));
+            bool r = on, chosen = retreat == on;
+            var b = new Button { FocusMode = FocusModeEnum.None, TooltipText = Ui.Wrap(tip + (chosen ? " Chosen." : "")),
+                MouseDefaultCursorShape = chosen ? CursorShape.Arrow : CursorShape.PointingHand, SizeFlagsVertical = SizeFlags.ExpandFill };
+            var clear = new Color(0, 0, 0, 0);
+            StyleBoxFlat Seg(Color fill) { var x = Look.Box(fill); x.SetCornerRadiusAll(SegmentRadius); x.AntiAliasing = true; return x; }
+            var rest = chosen ? Look.Outline : clear;
+            b.AddThemeStyleboxOverride("normal", Seg(rest));
+            b.AddThemeStyleboxOverride("hover", Seg(chosen ? Look.Outline : Look.Line));
+            b.AddThemeStyleboxOverride("pressed", Seg(Look.Outline));
+            b.AddThemeStyleboxOverride("hover_pressed", Seg(Look.Outline));
+            b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+            var l = Look.Words(word, 12, Look.Text, true);
+            l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            Fill(b, l, 8, 7);
+            b.Pressed += () => { if (r != Elusive()) { SetRetreat(f, r); MgRefreshSoon(); } };
+            b.SetMeta(UiTest.FullName, $"Behavior {word}");
+            b.SetMeta("chosen", chosen);
             row.AddChild(b);
         }
-        return row;
+        return sw;
     }
 
     bool CanAttackHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) && S.OwnerOf(f.At) != Me
@@ -775,7 +790,8 @@ public partial class GameScreen
             pic.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             h.AddChild(pic);
         }
-        var text = Look.Words(words, 12, c);
+        var text = Look.Words(words, 12, c, true);   // the frames' buttons say it in Medium
+        text.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(text);
         if (menu) { var arrow = Look.Words("▾", 12, c, true); arrow.SizeFlagsVertical = SizeFlags.ShrinkCenter; h.AddChild(arrow); }
         if (hoverInk is Color hi && !disabled)
@@ -784,13 +800,23 @@ public partial class GameScreen
             b.MouseEntered += () => text.AddThemeColorOverride("font_color", hi);
             b.MouseExited += () => text.AddThemeColorOverride("font_color", c);
         }
-        Fill(b, h, 8, 8);
+        Fill(b, h, 8, 8, new Vector2(0, ButtonH));
         b.Pressed += act;
         b.SetMeta(UiTest.FullName, key);
         return b;
     }
 
-    static StyleBoxFlat ButtonBox(Color line) => Look.Box(new Color(0, 0, 0, 0), line, 1, 1, 1, 1);
+    /// <summary>A button's outline: 1 px, 4 px corners (the new colors frames; Paul 2026-11-24, "follow the frames").</summary>
+    static StyleBoxFlat ButtonBox(Color line, Color? fill = null, int radius = ButtonRadius)
+    {
+        var b = Look.Box(fill ?? new Color(0, 0, 0, 0), line, 1, 1, 1, 1);
+        b.SetCornerRadiusAll(radius);
+        b.AntiAliasing = true;   // a rounded corner needs it; the straight edges stay on whole pixels
+        return b;
+    }
+
+    /// <summary>The frames' button: 40 px high, 4 px corners; inside a switch, 2 px corners.</summary>
+    const int ButtonH = 40, ButtonRadius = 4, SegmentRadius = 2;
 
     /// <summary>An order button that opens a short list of choices under it (the bombard targets).</summary>
     Button MenuAction(string words, string key, (string Text, Action Do)[] lines, string tip)
@@ -924,10 +950,10 @@ public partial class GameScreen
         return card;
     }
 
-    /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Leaders in Ground at Charter"): the Leaders tab of
-    /// the Ground window of the planet where the fleet stands, yours or not (the core lets a passenger off anywhere a fleet stands still,
+    /// <summary>Where this fleet's leaders come from and land, in the words on screen ("Characters in Ground at Charter"): the Command tab
+    /// of the Ground window of the planet where the fleet stands, yours or not (the core lets a passenger off anywhere a fleet stands still,
     /// rule: m5-characters §Posts, DetachCharacter; QA on #357). Null in flight or at a harvested world: no leader lands there.</summary>
-    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) ? $"Leaders in Ground at {f.At}" : null;
+    string LeadersHere(Fleet f) => Still(f) && !S.IsDestroyed(f.At) ? $"Characters in Ground at {f.At}" : null;
 
     /// <summary>
     /// A post or Passengers takes a leader only by a drag, never by a click or a menu (Paul 2026-11-22: moving a leader is too important to
@@ -1011,7 +1037,7 @@ public partial class GameScreen
         cap.Alignment = BoxContainer.AlignmentMode.Center;
         cap.CustomMinimumSize = new Vector2(CardW, 16);
         string side = Me == Side.Hand ? "hand" : "collective";
-        var ink = Look.Muted;   // Paul 2026-11-23 picked the readable grey of the status line over the frame's #454545
+        var ink = Look.Quiet;   // Paul 2026-11-23 picked the status line's grey for these (now #525252; the new frame has #454545)
         void Cargo(string icon, int have, int room)
         {
             if (room <= 0) return;
@@ -1116,17 +1142,19 @@ public partial class GameScreen
     }
 
     /// <summary>The design's "Ground at Charter" (its turret before the words): the planet's window, where the fleet takes its leaders,
-    /// fighters and troops from, opened on the matching tab (the tab exists only at a planet you hold). Null while the fleet travels.</summary>
+    /// fighters and troops from, opened on the matching tab (every planet's window has the same tabs, 2026-11-24). Null while the fleet
+    /// travels.</summary>
     Button GroundButton(Fleet f, string tab)
     {
         if (!Still(f)) return null;
-        // leaders land and board on any planet; troops and fighters only on one you hold (its window has those tabs only then)
-        bool held = tab == "Leaders" ? LeadersHere(f) != null : !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me;
-        string what = tab == "Leaders" ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
-        var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: held ? tab : null),
+        // leaders land and board on any planet (its Command tab); troops and fighters only on one you hold
+        bool leaders = tab == "Command";
+        bool held = leaders ? LeadersHere(f) != null : !S.IsDestroyed(f.At) && S.OwnerOf(f.At) == Me;
+        string what = leaders ? "leaders" : tab == "Fighters" ? "fighters" : "troops";
+        var b = FleetAction($"Ground at {f.At}", $"Ground at {f.At}", () => OpenMgmt(MgKind.Ground, f.At, tab: S.IsDestroyed(f.At) ? null : tab),
             held ? $"Opens {tab} in Ground at {f.At}: drag its {what} onto this fleet, and this fleet's back onto the planet."
                  : S.IsDestroyed(f.At) ? $"Nothing is left of {f.At}: nothing lands or boards here."
-                 : $"The Ground window of {f.At}. You don't hold this planet: your {what} don't land on it or board from it (your leaders do, in its Leaders tab).",
+                 : $"The Ground window of {f.At}, with what your side last saw there. You don't hold this planet: your {what} don't land on it or board from it (your leaders do, in its Command tab).",
             icon: PixelIconData.Tile["troops"]);
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         return b;
@@ -1193,25 +1221,6 @@ public partial class GameScreen
         }
         if (GroundButton(f, fighters ? "Fighters" : "Troops") is { } ground) bar.AddChild(ground);
         if (bar.GetChildCount() > 0) Add(bar);
-    }
-
-    /// <summary>Who is travelling here (leaders, and fleets sent to join): name and arrival day. Not draggable while they travel.</summary>
-    void OnTheWay(IEnumerable<CharacterRecord> leaders, string to, IEnumerable<Fleet> fleets = null)
-    {
-        var ls = leaders.OrderBy(c => c.Id).ToList();
-        var fs = (fleets ?? Enumerable.Empty<Fleet>()).ToList();
-        if (ls.Count + fs.Count == 0) return;
-        Section("On the way", (ls.Count + fs.Count).ToString(), $"Sent here from other systems. They take their place when they reach {to}.");
-        var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
-        flow.AddThemeConstantOverride("h_separation", 6); flow.AddThemeConstantOverride("v_separation", 6);
-        foreach (var c in ls)
-        {
-            string name = S.CharName(c.Id);
-            var t = Tile(null, false, 0, GameSession.CardName(name), Arrives(c.Transit, c.JoinPost != CharacterPost.None ? $"to be {GameSession.PostWords(c.JoinPost)}" : null), 1, Ui.You, ghost: true, avatar: LeaderSprite(c.Id));
-            flow.AddChild(t);
-        }
-        foreach (var x in fs) flow.AddChild(Tile(UnitIcon.Kind.Ship, Me == Side.Hand, 2, S.NameOf(x), Arrives(x.Transit, $"{Ui.Count(x.Ships.Count, "ship", "ships")}, to merge"), 1, Ui.You, ghost: true));
-        Add(flow);
     }
 
     string Arrives(FleetTransit t, string what)

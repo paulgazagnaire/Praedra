@@ -52,7 +52,7 @@ public partial class Main
         Expect(st0 is { Width: 698 } && st0.Value.Want <= st0.Value.Width + 0.5f,
             $"your planet's Infrastructure window ({sys}) is two columns wide (698) and nothing in it asks for more ({st0?.Want:0} wanted)");
         string text = gs.MgText(key);
-        Expect(text.Contains($"{sys.ToUpperInvariant()}: INFRASTRUCTURE") && new[] { "System energy", "Raw material", "Construction yards", "Orbital shipyards", "Training facilities", "Buildings", "Build", "How many" }.All(text.Contains),
+        Expect(text.Contains($"{sys.ToUpperInvariant()}: INFRASTRUCTURE") && new[] { "System energy", "Raw material", "Construction yards", "Orbital shipyards", "Training facilities", "Buildings", "Build", "How many" }.All(x => text.Contains(x, StringComparison.OrdinalIgnoreCase)),
             "it has the design's parts: " + text.Replace("\n", " / "));
 
         // the yard cells are the Build tabs

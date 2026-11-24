@@ -140,7 +140,7 @@ public partial class Main
         var unit = eco.Objects.First(o => o.Category == Praedra.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
         string uname = s.SpecialForceName(unit.Id);
         gs.SelectSystem(yard); gs.PlayRefresh();
-        Expect(gs.PanelText().Contains("Special forces") && gs.PanelText().Contains($"{uname} - ready"), $"the system panel lists {uname} under Special forces");
+        Expect(gs.PanelText().Contains("Special forces", StringComparison.OrdinalIgnoreCase) && gs.PanelText().Contains($"{uname} - ready"), $"the system panel lists {uname} under Special forces");
         Expect(gs.Click($"Send a mission from {yard}..."), "open the planner from the system panel");
         gs.PlayRefresh();
         Expect(gs.SetTeam(uname, true), $"tick {uname} in the team");
