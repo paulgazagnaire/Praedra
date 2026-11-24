@@ -159,7 +159,8 @@ public partial class GameScreen
 
     /// <summary>
     /// The day a capital threat first shows (it was not there the day before), the clock stops, if Settings say so (DEFAULT on, Paul
-    /// 2026-11-24 "Pause, on"). A threat that stays does not stop it again until it has gone and come back.
+    /// 2026-11-24 "Pause, on"). A threat that stays does not stop it again until it has gone and come back. Called every day, even when
+    /// another stop fired, so a threat seen on a day that already paused does not stop the clock again the next day (Ponytail on #378).
     /// </summary>
     string CapitalThreatPause()
     {
@@ -168,7 +169,6 @@ public partial class GameScreen
         bool now = probe.Count > 0, was = _capitalThreatWas;
         _capitalThreatWas = now;
         if (!now || was || !UiSettings.PauseCapitalThreat) return null;
-        ShowTab(DrawerTab.Needs);
         return $"Paused: your capital {S.MyHqSystem} is threatened";
     }
 

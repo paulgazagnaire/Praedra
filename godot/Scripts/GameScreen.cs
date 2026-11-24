@@ -163,6 +163,7 @@ public partial class GameScreen : Control
 
         // The core's own pauses (a battle, a capture, an invasion, a harvest), each of which the Settings can switch off; then the events the
         // player chose to stop on.
+        string capital = CapitalThreatPause();   // every day, so it remembers what it saw even when another stop fires
         string why = oc.PauseReason != null && UiSettings.PausesOn(oc.PauseReason) ? oc.PauseReason : null;
         string note = why switch
         {
@@ -175,7 +176,7 @@ public partial class GameScreen : Control
         };
         if (why != null && oc.Popup != null) ShowReport(oc.Popup);
         note ??= ChosenPause(oc.New);
-        note ??= CapitalThreatPause();
+        if (note == null && capital != null) { note = capital; ShowTab(DrawerTab.Needs); }
         if (note != null) { Pause(note); return false; }
         RefreshTop();
         return true;
