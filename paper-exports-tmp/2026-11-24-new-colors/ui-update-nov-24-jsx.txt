@@ -1,0 +1,313 @@
+(
+    <div id="SIG-0" style={{ boxSizing: 'border-box', fontSynthesis: 'none', MozOsxFontSmoothing: 'grayscale', overflowWrap: 'anywhere', position: 'relative', WebkitFontSmoothing: 'antialiased' }}>
+      <div id="14FG-1" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/01M86Y990V2NXQRE5SEQH9ZAK2.png)', backgroundPosition: '50%', backgroundSize: 'cover', boxSizing: 'border-box', height: '738px', left: 0, position: 'absolute', top: 40, width: '1441px' }} />
+      <div id="14F2-2" style={{ backgroundColor: '#000000', borderBottomColor: '#181B21', borderBottomStyle: 'solid', borderBottomWidth: '1px', boxSizing: 'border-box', height: '40px', left: 0, position: 'absolute', top: 0, width: '1440px' }} />
+      <div id="143H-2" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', gap: 2, left: 1214, position: 'absolute', top: 4, width: 'max-content' }}>
+        <div id="143I-2" style={{ alignItems: 'center', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '32px', justifyContent: 'center', width: '32px' }}>
+          <div id="143J-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="143M-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="143N-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="143O-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="143T-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="143W-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="143Y-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="143Z-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="1440-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="1443-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="1453-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="1454-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="1455-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="1456-2" style={{ backgroundColor: '#BEBEBE', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="1444-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="144V-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="144W-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="144X-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="144Y-2" style={{ backgroundColor: '#BEBEBE', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="1445-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="1457-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="1458-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="1459-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="145A-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="1446-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="144Z-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="1450-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="1451-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="1452-2" style={{ backgroundColor: '#B7B7B7', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="144A-2" style={{ backgroundColor: '#BEBEBE', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="144B-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="144C-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="144D-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="144E-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="144F-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="144G-2" style={{ backgroundColor: '#6F6F6F', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="144H-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="144I-2" style={{ backgroundColor: '#6F6F6F', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="144J-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="144K-2" style={{ backgroundColor: '#6F6F6F', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="144N-2" style={{ backgroundColor: '#AAADB5', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 12, width: '1px' }} />
+          </div>
+        </div>
+        <div id="1489-2" style={{ alignItems: 'start', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '32px', justifyContent: 'center', paddingBlock: '7px', width: '32px' }}>
+          <div id="148A-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            1x
+          </div>
+        </div>
+        <div id="144R-2" style={{ alignItems: 'start', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '32px', justifyContent: 'center', paddingBlock: '7px', width: '32px' }}>
+          <div id="144S-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            2x
+          </div>
+        </div>
+        <div id="144T-2" style={{ alignItems: 'start', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', flexShrink: 0, height: '32px', justifyContent: 'center', paddingBlock: '7px', width: '32px' }}>
+          <div id="144U-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            5x
+          </div>
+        </div>
+      </div>
+      <div id="1477-2" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', gap: 16, left: 756, position: 'absolute', top: 4, width: 'max-content' }}>
+        <div id="140E-2" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'center' }}>
+          <div id="146D-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="146E-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="146F-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="146G-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="146H-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="146I-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="146J-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="146K-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="146L-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="146M-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="146N-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="146O-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="146P-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="146Q-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="146R-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="146S-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="146T-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="146U-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="146V-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="146W-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="146X-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="146Y-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="146Z-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="1470-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="1471-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="1472-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="1473-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="1474-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="1475-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="1476-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 8, width: '1px' }} />
+          </div>
+          <div id="141B-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Raw
+          </div>
+          <div id="141C-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999
+          </div>
+        </div>
+        <div id="145B-2" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'center' }}>
+          <div id="145C-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="145D-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="145E-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="145F-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="145G-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="145H-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="145I-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="145J-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="145K-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="145L-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="145M-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="145N-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="145O-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="145P-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="145Q-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="145R-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="145S-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="145T-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="145U-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="145V-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="145W-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="145X-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="145Y-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 14, width: '1px' }} />
+            <div id="145Z-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 14, width: '1px' }} />
+            <div id="1460-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="1461-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="1462-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="1463-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="1464-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="1465-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="1466-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="1467-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="1468-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="1469-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="146A-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 4, width: '1px' }} />
+          </div>
+          <div id="146B-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Refined
+          </div>
+          <div id="146C-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999
+          </div>
+        </div>
+        <div id="1478-2" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'center' }}>
+          <div id="1479-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+            <div id="147A-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 3, width: '1px' }} />
+            <div id="147B-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="147C-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="147D-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="147E-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="147F-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="147G-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="147H-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="147I-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="147J-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="147K-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="147L-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="147M-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="147N-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 9, width: '1px' }} />
+            <div id="147O-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 8, width: '1px' }} />
+            <div id="147P-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="147Q-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="147R-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 10, width: '1px' }} />
+            <div id="147S-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 11, width: '1px' }} />
+            <div id="147T-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="147U-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 13, width: '1px' }} />
+            <div id="147V-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 12, width: '1px' }} />
+            <div id="147W-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="147X-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="147Y-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 4, width: '1px' }} />
+            <div id="147Z-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="1480-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 5, width: '1px' }} />
+            <div id="1481-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 7, width: '1px' }} />
+            <div id="1482-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 2, width: '1px' }} />
+            <div id="1483-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 6, width: '1px' }} />
+            <div id="1484-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 2, width: '1px' }} />
+          </div>
+          <div id="1485-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            Upkeep
+          </div>
+          <div id="1486-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+            9999/9999
+          </div>
+        </div>
+      </div>
+      <div id="14FH-1" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 1209, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="1487-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 1352, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="1488-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 1121, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="14AS-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 739, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="14AT-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 510, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="143C-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 213, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="14F0-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 40, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="14F1-2" style={{ backgroundColor: '#181B21', boxSizing: 'border-box', height: '39px', left: 130, position: 'absolute', top: 0, width: '1px' }} />
+      <div id="141E-2" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'center', left: 1138, position: 'absolute', top: 4, width: 'max-content' }}>
+        <div id="142B-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+          DAY
+        </div>
+        <div id="142C-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+          9999
+        </div>
+      </div>
+      <div id="14AU-2" style={{ alignItems: 'start', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'center', left: 45, paddingBlock: '7px', paddingInline: '8px', position: 'absolute', top: 4, width: 'max-content' }}>
+        <div id="14AV-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+          <div id="14AW-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 2, width: '1px' }} />
+          <div id="14AX-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 2, width: '1px' }} />
+          <div id="14AY-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 3, width: '1px' }} />
+          <div id="14AZ-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14B0-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 5, width: '1px' }} />
+          <div id="14B1-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 6, width: '1px' }} />
+          <div id="14B2-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14B3-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 8, width: '1px' }} />
+          <div id="14B4-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14B5-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 9, width: '1px' }} />
+          <div id="14B6-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 8, width: '1px' }} />
+          <div id="14B7-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14B8-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14B9-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14BA-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 9, width: '1px' }} />
+          <div id="14BB-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 8, width: '1px' }} />
+          <div id="14BC-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14BD-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 6, width: '1px' }} />
+          <div id="14BE-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14BF-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 12, width: '1px' }} />
+          <div id="14BG-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 13, width: '1px' }} />
+          <div id="14BH-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 14, width: '1px' }} />
+          <div id="14BI-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 7, position: 'absolute', top: 14, width: '1px' }} />
+          <div id="14BJ-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 13, width: '1px' }} />
+          <div id="14BK-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 12, width: '1px' }} />
+          <div id="14BL-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14BM-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 9, width: '1px' }} />
+          <div id="14BN-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 8, width: '1px' }} />
+          <div id="14BO-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14BP-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14BQ-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 5, width: '1px' }} />
+          <div id="14BR-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 3, width: '1px' }} />
+          <div id="14BS-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 6, width: '1px' }} />
+          <div id="14BT-2" style={{ backgroundColor: '#DDDDDD', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 4, width: '1px' }} />
+        </div>
+        <div id="14BU-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+          Layers
+        </div>
+      </div>
+      <div id="149A-2" style={{ alignItems: 'start', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'center', left: 135, paddingBlock: '7px', paddingInline: '8px', position: 'absolute', top: 4, width: 'max-content' }}>
+        <div id="14AA-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+          GOAL
+        </div>
+        <div id="14BV-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+          0/3
+        </div>
+      </div>
+      <div id="144P-2" style={{ alignItems: 'start', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', gap: 4, height: '32px', justifyContent: 'space-between', left: 218, paddingBlock: '7px', paddingInline: '8px', position: 'absolute', top: 4, width: '288px' }}>
+        <div id="144Q-2" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#84878E', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '16px', lineHeight: '30px', textAlign: 'center', whiteSpace: 'pre', width: 'max-content' }}>
+          Search
+        </div>
+        <div id="14AB-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+          <div id="14AC-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 3, width: '3px' }} />
+          <div id="14AD-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 11, width: '3px' }} />
+          <div id="14AE-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14AF-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14AG-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14AH-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14AI-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '3px', left: 2, position: 'absolute', top: 6, width: '1px' }} />
+          <div id="14AJ-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '3px', left: 10, position: 'absolute', top: 6, width: '1px' }} />
+          <div id="14AK-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 5, width: '1px' }} />
+          <div id="14AL-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 5, width: '1px' }} />
+          <div id="14AM-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 9, width: '1px' }} />
+          <div id="14AN-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9, position: 'absolute', top: 9, width: '1px' }} />
+          <div id="14AO-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14AP-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 11, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14AQ-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 12, position: 'absolute', top: 12, width: '1px' }} />
+          <div id="14AR-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 13, position: 'absolute', top: 13, width: '1px' }} />
+        </div>
+      </div>
+      <div id="14BW-2" style={{ alignItems: 'center', backgroundColor: '#000000', borderRadius: '4px', boxSizing: 'border-box', display: 'flex', height: '32px', justifyContent: 'center', left: 4, position: 'absolute', top: 4, width: '32px' }}>
+        <div id="14BX-2" style={{ boxSizing: 'border-box', flexShrink: 0, height: '16px', position: 'relative', width: '16px' }}>
+          <div id="14C4-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 6.5, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14C5-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 7.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14C6-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 6.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14C7-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14CD-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14CE-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14D4-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 6.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14D5-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 7.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14D6-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14D7-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14D8-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14CG-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 7.5, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14CH-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14CI-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14CJ-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14CT-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 7, width: '1px' }} />
+          <div id="14DH-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14EU-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 5.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14EV-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 6.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14EW-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 7.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14EX-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14EY-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14EZ-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 4, width: '1px' }} />
+          <div id="14CW-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 10, width: '1px' }} />
+          <div id="14CX-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 4.5, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14CZ-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 9.5, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14D3-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 10.5, position: 'absolute', top: 11, width: '1px' }} />
+          <div id="14D1-2" style={{ backgroundColor: '#84878E', boxSizing: 'border-box', height: '1px', left: 8.5, position: 'absolute', top: 11, width: '1px' }} />
+        </div>
+      </div>
+    </div>
+  )

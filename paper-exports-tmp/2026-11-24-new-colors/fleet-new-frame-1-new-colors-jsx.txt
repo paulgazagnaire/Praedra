@@ -1,0 +1,251 @@
+(
+    <div id="12JJ-0" style={{ alignItems: 'start', borderColor: '#181B21', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', fontSynthesis: 'none', MozOsxFontSmoothing: 'grayscale', overflowWrap: 'anywhere', WebkitFontSmoothing: 'antialiased' }}>
+      <div id="12JK-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 24, padding: '24px', width: '344px' }}>
+        <div id="12JL-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', justifyContent: 'space-between' }}>
+          <div id="12JM-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '48px', fontWeight: 500, height: '27px', lineHeight: '27px', whiteSpace: 'pre', width: 'max-content' }}>
+            FLEET 1
+          </div>
+          <div id="12JN-0" style={{ boxSizing: 'border-box', flexShrink: 0, height: '25px', position: 'relative', width: '80px' }}>
+            <div id="12JO-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '24px', height: '28px', left: '-1px', letterSpacing: '-5px', lineHeight: '28px', position: 'absolute', textAlign: 'center', top: '-1.5px', whiteSpace: 'pre', width: '26px' }}>
+              ⋮⋮
+            </div>
+            <div id="12JP-0" style={{ boxSizing: 'border-box', height: '25px', left: '28px', position: 'absolute', top: '0px', width: '24px' }}>
+              <div id="12JQ-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                –
+              </div>
+            </div>
+            <div id="12JR-0" style={{ boxSizing: 'border-box', height: '25px', left: '56px', position: 'absolute', top: '0px', width: '24px' }}>
+              <div id="12JS-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '24px', height: '25px', left: '4px', lineHeight: '25px', position: 'absolute', textAlign: 'center', top: '0px', whiteSpace: 'pre', width: '16px' }}>
+                ×
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="12JT-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div id="12JU-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            <div id="12JV-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+              Status:
+            </div>
+            <div id="12JW-0" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+              <div id="12JX-0" style={{ boxSizing: 'border-box', color: '#525252', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Moving
+              </div>
+              <div id="12JY-0" style={{ boxSizing: 'border-box', color: '#525252', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                /
+              </div>
+              <div id="12JZ-0" style={{ boxSizing: 'border-box', color: '#525252', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                ETA: 29 days
+              </div>
+            </div>
+          </div>
+          <div id="12K0-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex' }}>
+            <div id="12K1-0" style={{ backgroundColor: '#5AA9F0', boxSizing: 'border-box', height: '2px', width: 'round(70%, 1px)' }} />
+            <div id="12K2-0" style={{ backgroundColor: '#616161', boxSizing: 'border-box', flexBasis: '0%', flexGrow: '1', height: '2px', opacity: 0.4 }} />
+          </div>
+        </div>
+      </div>
+      <div id="12K3-0" style={{ alignItems: 'start', alignSelf: 'stretch', backgroundColor: '#1E1E21', boxSizing: 'border-box', display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+        <div id="12K4-0" style={{ alignItems: 'start', backgroundColor: '#131313', borderTopColor: '#1E1E21', borderTopStyle: 'solid', borderTopWidth: '1px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flexShrink: 0, gap: 16, justifyContent: 'center', padding: '8px', width: '72px' }}>
+          <div id="12K5-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            <div id="12K6-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+              <div id="12K7-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Command
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="12K8-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderTopColor: '#1E1E21', borderTopStyle: 'solid', borderTopWidth: '1px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flexShrink: 0, gap: 16, justifyContent: 'center', padding: '8px', width: '72px' }}>
+          <div id="12K9-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            <div id="12KA-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+              <div id="12KB-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Ships
+              </div>
+            </div>
+            <div id="12KC-0" style={{ boxSizing: 'border-box', color: '#525252', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+              3
+            </div>
+          </div>
+        </div>
+        <div id="12KD-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderTopColor: '#1E1E21', borderTopStyle: 'solid', borderTopWidth: '1px', boxSizing: 'border-box', display: 'flex', flex: 1, flexDirection: 'column', gap: 16, justifyContent: 'center', padding: '8px' }}>
+          <div id="12KE-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            <div id="12KF-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+              <div id="12KG-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Fighters
+              </div>
+            </div>
+            <div id="12KH-0" style={{ boxSizing: 'border-box', color: '#525252', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+              8/16
+            </div>
+          </div>
+        </div>
+        <div id="12KI-0" style={{ alignItems: 'start', backgroundColor: '#0B0B0D', borderTopColor: '#1E1E21', borderTopStyle: 'solid', borderTopWidth: '1px', boxSizing: 'border-box', display: 'flex', flex: 1, flexDirection: 'column', gap: 16, justifyContent: 'center', padding: '8px' }}>
+          <div id="12KJ-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            <div id="12KK-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+              <div id="12KL-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Troops
+              </div>
+            </div>
+            <div id="12KM-0" style={{ boxSizing: 'border-box', color: '#525252', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+              4/24
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="12KN-0" style={{ alignItems: 'start', backgroundColor: '#131313', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 24, padding: '16px', width: '344px' }}>
+        <div id="12KO-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div id="12KP-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '20px', letterSpacing: '0.05em', lineHeight: '30px', textAlign: 'center', textTransform: 'uppercase', whiteSpace: 'pre', width: 'max-content' }}>
+            Fleet actions
+          </div>
+          <div id="12KQ-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+            <div id="12KR-0" style={{ alignItems: 'center', borderColor: '#36363C', borderRadius: '4px', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', display: 'flex', gap: 8, height: '40px', paddingBlock: '10px', paddingInline: '8px' }}>
+              <div id="12KS-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, height: '19px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Bombardment
+              </div>
+              <div id="12KT-0" style={{ boxSizing: 'border-box', flexShrink: 0, height: '8px', position: 'relative', width: '8px' }}>
+                <div id="12KU-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 3, width: '1px' }} />
+                <div id="12KV-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 1, position: 'absolute', top: 2, width: '1px' }} />
+                <div id="12KW-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 4, width: '1px' }} />
+                <div id="12KX-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 3, position: 'absolute', top: 5, width: '1px' }} />
+                <div id="12KY-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 2, position: 'absolute', top: 4, width: '1px' }} />
+                <div id="12KZ-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 1, position: 'absolute', top: 3, width: '1px' }} />
+                <div id="12L0-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 4, width: '1px' }} />
+                <div id="12L1-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 4, position: 'absolute', top: 5, width: '1px' }} />
+                <div id="12L2-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 4, width: '1px' }} />
+                <div id="12L3-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 3, width: '1px' }} />
+                <div id="12L4-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 5, position: 'absolute', top: 3, width: '1px' }} />
+                <div id="12L5-0" style={{ backgroundColor: '#DFDFDF', boxSizing: 'border-box', height: '1px', left: 6, position: 'absolute', top: 2, width: '1px' }} />
+              </div>
+            </div>
+            <div id="12L6-0" style={{ alignItems: 'center', borderColor: '#36363C', borderRadius: '4px', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', display: 'flex', gap: 8, height: '40px', paddingBlock: '10px', paddingInline: '8px' }}>
+              <div id="12L7-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, height: '19px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Invasion
+              </div>
+            </div>
+            <div id="12L8-0" style={{ alignItems: 'center', borderColor: '#36363C', borderRadius: '4px', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', display: 'flex', gap: 8, height: '40px', paddingBlock: '10px', paddingInline: '8px' }}>
+              <div id="12L9-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, height: '19px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Move
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="12LA-0" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 8, width: '296px' }}>
+          <div id="12LB-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '20px', letterSpacing: '0.05em', lineHeight: '30px', textAlign: 'center', textTransform: 'uppercase', whiteSpace: 'pre', width: 'max-content' }}>
+            Fleet behavior
+          </div>
+          <div id="12LC-0" style={{ alignItems: 'center', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8 }}>
+            <div id="12LD-0" style={{ alignItems: 'center', borderColor: '#36363C', borderRadius: '4px', borderStyle: 'solid', borderWidth: '1px', boxSizing: 'border-box', display: 'flex', gap: 2, height: '40px', justifyContent: 'space-between', padding: '2px' }}>
+              <div id="12LE-0" style={{ alignItems: 'start', backgroundColor: '#36363C', borderRadius: '2px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', paddingBlock: '7px', paddingInline: '8px' }}>
+                <div id="12LF-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, height: '19px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                  Defensive
+                </div>
+              </div>
+              <div id="12LG-0" style={{ alignItems: 'start', borderRadius: '2px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', paddingBlock: '7px', paddingInline: '8px' }}>
+                <div id="12LH-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, height: '19px', lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                  Elusive
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="12LI-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div id="12LJ-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '20px', letterSpacing: '0.05em', lineHeight: '30px', textAlign: 'center', textTransform: 'uppercase', whiteSpace: 'pre', width: 'max-content' }}>
+            Fleet command
+          </div>
+          <div id="12LK-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            <div id="12LL-0" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flexShrink: 0, gap: 8, width: '96px' }}>
+              <div id="12LM-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Admiral
+              </div>
+              <div id="12LN-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12LO-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12LP-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12LQ-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Hostilia<br />Saxa
+                </div>
+              </div>
+            </div>
+            <div id="12LR-0" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flexShrink: 0, gap: 8, width: '96px' }}>
+              <div id="12LS-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                General
+              </div>
+              <div id="12LT-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexShrink: 0, gap: 8, height: '84px', justifyContent: 'space-between', outline: '1px dashed #36363C', outlineOffset: '-1px', paddingBlock: '8px', paddingInline: '12px', width: '96px' }}>
+                <div id="12LU-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flex: 1, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center' }}>
+                  Drop a leader here
+                </div>
+              </div>
+            </div>
+            <div id="12LV-0" style={{ alignItems: 'start', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', flexShrink: 0, gap: 8, width: '96px' }}>
+              <div id="12LW-0" style={{ boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', fontWeight: 500, lineHeight: '16px', whiteSpace: 'pre', width: 'max-content' }}>
+                Commander
+              </div>
+              <div id="12LX-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexShrink: 0, gap: 8, height: '84px', justifyContent: 'space-between', outline: '1px dashed #36363C', outlineOffset: '-1px', paddingBlock: '8px', paddingInline: '12px', width: '96px' }}>
+                <div id="12LY-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flex: 1, fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center' }}>
+                  Drop a leader here
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="12LZ-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div id="12M0-0" style={{ alignContent: 'unsafe center', boxSizing: 'border-box', color: '#DFDFDF', flexShrink: 0, fontFamily: '"BitPotion", system-ui, sans-serif', fontSize: '24px', fontWeight: 500, height: '20px', letterSpacing: '0.05em', lineHeight: '30px', textAlign: 'center', textTransform: 'uppercase', whiteSpace: 'pre', width: 'max-content' }}>
+            Passengers
+          </div>
+          <div id="12M1-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div id="12M2-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+              <div id="12M3-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12M4-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12M5-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12M6-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Cyprian<br />Galena
+                </div>
+              </div>
+              <div id="12M7-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12M8-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12M9-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12MA-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Quintus<br />Ferro
+                </div>
+              </div>
+              <div id="12MB-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12MC-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12MD-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12ME-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Fidelis<br />Censor
+                </div>
+              </div>
+            </div>
+            <div id="12MF-0" style={{ alignItems: 'start', alignSelf: 'stretch', boxSizing: 'border-box', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+              <div id="12MG-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12MH-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12MI-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12MJ-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Aurelia<br />Quell
+                </div>
+              </div>
+              <div id="12MK-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12ML-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12MM-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12MN-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Mantis<br />Doran
+                </div>
+              </div>
+              <div id="12MO-0" style={{ alignItems: 'center', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div id="12MP-0" style={{ alignContent: 'center', backgroundColor: '#0B0B0D', boxSizing: 'border-box', flexShrink: 0, height: '48px', justifyItems: 'center', width: '96px' }}>
+                  <div id="12MQ-0" style={{ backgroundImage: 'url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)', backgroundPosition: '50%', backgroundRepeat: 'no-repeat', backgroundSize: '100% 100%', boxSizing: 'border-box', height: '40px', width: '40px' }} />
+                </div>
+                <div id="12MR-0" style={{ alignSelf: 'stretch', boxSizing: 'border-box', color: '#DFDFDF', fontFamily: '"Space Grotesk", system-ui, sans-serif', fontSize: '12px', lineHeight: '16px', textAlign: 'center', whiteSpace: 'pre' }}>
+                  Spurius<br />Cato
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )

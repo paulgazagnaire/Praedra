@@ -1,0 +1,1376 @@
+{
+ "id": "12C5-0",
+ "name": "fleet-new-frame-4-new-colors",
+ "type": "Frame",
+ "x": 2665,
+ "y": 2669,
+ "worldX": 2665,
+ "worldY": 2669,
+ "width": 344,
+ "height": 754,
+ "visible": true,
+ "text": null,
+ "imageFill": null,
+ "styles": {
+  "display": "flex",
+  "flexDirection": "column",
+  "alignItems": "start",
+  "top": 2669,
+  "left": 2665,
+  "position": "absolute"
+ },
+ "children": [
+  {
+   "id": "12C6-0",
+   "name": "fleet",
+   "type": "Frame",
+   "x": 0,
+   "y": 0,
+   "worldX": 2665,
+   "worldY": 2669,
+   "width": 344,
+   "height": 125,
+   "visible": true,
+   "text": null,
+   "imageFill": null,
+   "styles": {
+    "display": "flex",
+    "flexDirection": "column",
+    "alignItems": "start",
+    "gap": 24,
+    "width": "344px",
+    "padding": "24px",
+    "backgroundColor": "#0B0B0D"
+   },
+   "children": [
+    {
+     "id": "12C7-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 24,
+     "y": 24,
+     "worldX": 2689,
+     "worldY": 2693,
+     "width": 296,
+     "height": 27,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "center",
+      "justifyContent": "space-between",
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "12C8-0",
+       "name": "CHARTER",
+       "type": "Text",
+       "x": 0,
+       "y": 0,
+       "worldX": 2689,
+       "worldY": 2693,
+       "width": 99,
+       "height": 27,
+       "visible": true,
+       "text": "FLEET 1",
+       "imageFill": null,
+       "styles": {
+        "width": "max-content",
+        "height": "27px",
+        "fontSize": "48px",
+        "lineHeight": "27px",
+        "textAlign": "left",
+        "whiteSpace": "pre",
+        "flexShrink": 0,
+        "fontFamily": "\"BitPotion\", system-ui, sans-serif",
+        "fontWeight": 500,
+        "color": "#DFDFDF"
+       },
+       "children": []
+      },
+      {
+       "id": "12C9-0",
+       "name": "Group: ⋮⋮",
+       "type": "Frame",
+       "x": 216,
+       "y": 1,
+       "worldX": 2905,
+       "worldY": 2694,
+       "width": 80,
+       "height": 25,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "width": "80px",
+        "height": "25px",
+        "position": "relative",
+        "flexShrink": 0
+       },
+       "children": [
+        {
+         "id": "12CA-0",
+         "name": "⋮⋮",
+         "type": "Text",
+         "x": -1,
+         "y": -1.5,
+         "worldX": 2904,
+         "worldY": 2692.5,
+         "width": 26,
+         "height": 28,
+         "visible": true,
+         "text": "⋮⋮",
+         "imageFill": null,
+         "styles": {
+          "left": "-1px",
+          "top": "-1.5px",
+          "width": "26px",
+          "height": "28px",
+          "fontSize": "24px",
+          "lineHeight": "28px",
+          "textAlign": "center",
+          "letterSpacing": "-5px",
+          "whiteSpace": "pre",
+          "position": "absolute",
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "color": "#DFDFDF"
+         },
+         "children": []
+        },
+        {
+         "id": "12CB-0",
+         "name": "Fold Infra Charter",
+         "type": "Frame",
+         "x": 28,
+         "y": 0,
+         "worldX": 2933,
+         "worldY": 2694,
+         "width": 24,
+         "height": 25,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "left": "28px",
+          "top": "0px",
+          "width": "24px",
+          "height": "25px",
+          "position": "absolute"
+         },
+         "children": [
+          {
+           "id": "12CC-0",
+           "name": "–",
+           "type": "Text",
+           "x": 4,
+           "y": 0,
+           "worldX": 2937,
+           "worldY": 2694,
+           "width": 16,
+           "height": 25,
+           "visible": true,
+           "text": "–",
+           "imageFill": null,
+           "styles": {
+            "left": "4px",
+            "top": "0px",
+            "width": "16px",
+            "height": "25px",
+            "fontSize": "24px",
+            "lineHeight": "25px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "position": "absolute",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "12CD-0",
+         "name": "Close Infra Charter",
+         "type": "Frame",
+         "x": 56,
+         "y": 0,
+         "worldX": 2961,
+         "worldY": 2694,
+         "width": 24,
+         "height": 25,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "left": "56px",
+          "top": "0px",
+          "width": "24px",
+          "height": "25px",
+          "position": "absolute"
+         },
+         "children": [
+          {
+           "id": "12CE-0",
+           "name": "×",
+           "type": "Text",
+           "x": 4,
+           "y": 0,
+           "worldX": 2965,
+           "worldY": 2694,
+           "width": 16,
+           "height": 25,
+           "visible": true,
+           "text": "×",
+           "imageFill": null,
+           "styles": {
+            "left": "4px",
+            "top": "0px",
+            "width": "16px",
+            "height": "25px",
+            "fontSize": "24px",
+            "lineHeight": "25px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "position": "absolute",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "12NI-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 24,
+     "y": 75,
+     "worldX": 2689,
+     "worldY": 2744,
+     "width": 296,
+     "height": 26,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "start",
+      "gap": 8,
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "12NJ-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 0,
+       "worldX": 2689,
+       "worldY": 2744,
+       "width": 296,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "start",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12NK-0",
+         "name": "Energy slots  3 of 15",
+         "type": "Text",
+         "x": 0,
+         "y": 0,
+         "worldX": 2689,
+         "worldY": 2744,
+         "width": 42,
+         "height": 16,
+         "visible": true,
+         "text": "Status:",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 500,
+          "lineHeight": "16px",
+          "color": "#DFDFDF"
+         },
+         "children": []
+        },
+        {
+         "id": "12NL-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 159,
+         "y": 0,
+         "worldX": 2848,
+         "worldY": 2744,
+         "width": 137,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "start",
+          "justifyContent": "start",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "12NM-0",
+           "name": "Energy slots  3 of 15",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2848,
+           "worldY": 2744,
+           "width": 43,
+           "height": 16,
+           "visible": true,
+           "text": "Moving",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#525252"
+           },
+           "children": []
+          },
+          {
+           "id": "12NN-0",
+           "name": "Energy slots  3 of 15",
+           "type": "Text",
+           "x": 51,
+           "y": 0,
+           "worldX": 2899,
+           "worldY": 2744,
+           "width": 5,
+           "height": 16,
+           "visible": true,
+           "text": "/",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#525252"
+           },
+           "children": []
+          },
+          {
+           "id": "12NO-0",
+           "name": "Energy slots  3 of 15",
+           "type": "Text",
+           "x": 64,
+           "y": 0,
+           "worldX": 2912,
+           "worldY": 2744,
+           "width": 73,
+           "height": 16,
+           "visible": true,
+           "text": "ETA: 29 days",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#525252"
+           },
+           "children": []
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "12NP-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 24,
+       "worldX": 2689,
+       "worldY": 2768,
+       "width": 296,
+       "height": 2,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "start",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12NQ-0",
+         "name": "You 70%",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2689,
+         "worldY": 2768,
+         "width": 207,
+         "height": 2,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "width": "round(70%, 1px)",
+          "height": "2px",
+          "backgroundColor": "#5AA9F0"
+         },
+         "children": []
+        },
+        {
+         "id": "12NR-0",
+         "name": "Enemy",
+         "type": "Frame",
+         "x": 207,
+         "y": 0,
+         "worldX": 2896,
+         "worldY": 2768,
+         "width": 89,
+         "height": 2,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "height": "2px",
+          "flexGrow": "1",
+          "flexBasis": "0%",
+          "opacity": 0.4,
+          "backgroundColor": "#616161"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "12CP-0",
+   "name": "Frame",
+   "type": "Frame",
+   "x": 0,
+   "y": 125,
+   "worldX": 2665,
+   "worldY": 2794,
+   "width": 344,
+   "height": 33,
+   "visible": true,
+   "text": null,
+   "imageFill": null,
+   "styles": {
+    "display": "flex",
+    "alignItems": "start",
+    "gap": 1,
+    "justifyContent": "space-between",
+    "alignSelf": "stretch",
+    "backgroundColor": "#1E1E21"
+   },
+   "children": [
+    {
+     "id": "12CQ-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 0,
+     "y": 0,
+     "worldX": 2665,
+     "worldY": 2794,
+     "width": 74,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "padding": "8px",
+      "backgroundColor": "#0B0B0D",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "12CR-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2673,
+       "worldY": 2803,
+       "width": 58,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12CS-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2673,
+         "worldY": 2803,
+         "width": 58,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "12CT-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2673,
+           "worldY": 2803,
+           "width": 58,
+           "height": 16,
+           "visible": true,
+           "text": "Command",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "12CU-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 75,
+     "y": 0,
+     "worldX": 2740,
+     "worldY": 2794,
+     "width": 72,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "padding": "8px",
+      "width": "72px",
+      "flexShrink": 0,
+      "backgroundColor": "#0B0B0D",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "12CV-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2748,
+       "worldY": 2803,
+       "width": 56,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12CW-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2748,
+         "worldY": 2803,
+         "width": 32,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "12CX-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2748,
+           "worldY": 2803,
+           "width": 32,
+           "height": 16,
+           "visible": true,
+           "text": "Ships",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "12CY-0",
+         "name": "Shipyard",
+         "type": "Text",
+         "x": 48,
+         "y": 0,
+         "worldX": 2796,
+         "worldY": 2803,
+         "width": 8,
+         "height": 16,
+         "visible": true,
+         "text": "3",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "color": "#525252"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "12CZ-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 148,
+     "y": 0,
+     "worldX": 2813,
+     "worldY": 2794,
+     "width": 97.5,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "flex": 1,
+      "padding": "8px",
+      "backgroundColor": "#0B0B0D",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "12D0-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2821,
+       "worldY": 2803,
+       "width": 81.5,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12D1-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2821,
+         "worldY": 2803,
+         "width": 48,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "12D2-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2821,
+           "worldY": 2803,
+           "width": 48,
+           "height": 16,
+           "visible": true,
+           "text": "Fighters",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "12D3-0",
+         "name": "Shipyard",
+         "type": "Text",
+         "x": 56.5,
+         "y": 0,
+         "worldX": 2877.5,
+         "worldY": 2803,
+         "width": 25,
+         "height": 16,
+         "visible": true,
+         "text": "8/16",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "color": "#525252"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "12D4-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 246.5,
+     "y": 0,
+     "worldX": 2911.5,
+     "worldY": 2794,
+     "width": 97.5,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "flex": 1,
+      "padding": "8px",
+      "backgroundColor": "#131313",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "12D5-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2919.5,
+       "worldY": 2803,
+       "width": 81.5,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12D6-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2919.5,
+         "worldY": 2803,
+         "width": 40,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "12D7-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2919.5,
+           "worldY": 2803,
+           "width": 40,
+           "height": 16,
+           "visible": true,
+           "text": "Troops",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "12D8-0",
+         "name": "Shipyard",
+         "type": "Text",
+         "x": 54.5,
+         "y": 0,
+         "worldX": 2974,
+         "worldY": 2803,
+         "width": 27,
+         "height": 16,
+         "visible": true,
+         "text": "0/24",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "color": "#525252"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "12D9-0",
+   "name": "Frame",
+   "type": "Frame",
+   "x": 0,
+   "y": 158,
+   "worldX": 2665,
+   "worldY": 2827,
+   "width": 344,
+   "height": 596,
+   "visible": true,
+   "text": null,
+   "imageFill": null,
+   "styles": {
+    "display": "flex",
+    "flexDirection": "column",
+    "alignItems": "start",
+    "width": "344px",
+    "gap": 24,
+    "padding": "16px",
+    "height": "596px",
+    "flexShrink": 0,
+    "backgroundColor": "#131313"
+   },
+   "children": [
+    {
+     "id": "12DA-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 16,
+     "y": 16,
+     "worldX": 2681,
+     "worldY": 2843,
+     "width": 312,
+     "height": 80,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "start",
+      "gap": 16,
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "12DB-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 0,
+       "worldX": 2681,
+       "worldY": 2843,
+       "width": 312,
+       "height": 80,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "height": "80px",
+        "paddingInline": "12px",
+        "paddingBlock": "8px",
+        "alignSelf": "stretch",
+        "flexShrink": 0,
+        "outline": "1px dashed #36363C",
+        "outlineOffset": "-1px"
+       },
+       "children": [
+        {
+         "id": "12DC-0",
+         "name": "Energy slots  3 of 15",
+         "type": "Text",
+         "x": 12,
+         "y": 32,
+         "worldX": 2693,
+         "worldY": 2875,
+         "width": 288,
+         "height": 16,
+         "visible": true,
+         "text": "Drop regiments here to load them",
+         "imageFill": null,
+         "styles": {
+          "fontSize": "12px",
+          "textAlign": "center",
+          "alignContent": "unsafe center",
+          "flex": 1,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "whiteSpace": "pre-wrap",
+          "color": "#DFDFDF"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "12DD-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 16,
+     "y": 120,
+     "worldX": 2681,
+     "worldY": 2947,
+     "width": 312,
+     "height": 40,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "center",
+      "justifyContent": "space-between",
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "12J3-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 0,
+       "worldX": 2681,
+       "worldY": 2947,
+       "width": 146,
+       "height": 40,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "borderRadius": "4px",
+        "paddingBlock": "10px",
+        "paddingInline": "8px",
+        "height": "40px",
+        "borderWidth": "1px",
+        "borderStyle": "solid",
+        "borderColor": "#36363C"
+       },
+       "children": [
+        {
+         "id": "12J4-0",
+         "name": "icon-military-16px",
+         "type": "Frame",
+         "x": 8,
+         "y": 11,
+         "worldX": 2690,
+         "worldY": 2959,
+         "width": 16,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "width": "16px",
+          "height": "16px",
+          "position": "relative",
+          "flexShrink": 0
+         },
+         "children": [
+          {
+           "id": "12J5-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 4,
+           "y": 4,
+           "worldX": 2694,
+           "worldY": 2963,
+           "width": 5,
+           "height": 5,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 4,
+            "top": 4,
+            "width": "5px",
+            "height": "5px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12J6-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 3,
+           "y": 5,
+           "worldX": 2693,
+           "worldY": 2964,
+           "width": 1,
+           "height": 3,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 3,
+            "top": 5,
+            "width": "1px",
+            "height": "3px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12J7-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 13,
+           "y": 4,
+           "worldX": 2703,
+           "worldY": 2963,
+           "width": 1,
+           "height": 3,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 13,
+            "top": 4,
+            "width": "1px",
+            "height": "3px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12J8-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 9,
+           "y": 5,
+           "worldX": 2699,
+           "worldY": 2964,
+           "width": 5,
+           "height": 2,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 9,
+            "top": 5,
+            "width": "5px",
+            "height": "2px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12J9-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 1,
+           "y": 12,
+           "worldX": 2691,
+           "worldY": 2971,
+           "width": 14,
+           "height": 1,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 1,
+            "top": 12,
+            "width": "14px",
+            "height": "1px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12JA-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 5,
+           "y": 9,
+           "worldX": 2695,
+           "worldY": 2968,
+           "width": 3,
+           "height": 2,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 5,
+            "top": 9,
+            "width": "3px",
+            "height": "2px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12JB-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 2,
+           "y": 11,
+           "worldX": 2692,
+           "worldY": 2970,
+           "width": 8,
+           "height": 1,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 2,
+            "top": 11,
+            "width": "8px",
+            "height": "1px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "12JC-0",
+           "name": "Rectangle",
+           "type": "Rectangle",
+           "x": 5,
+           "y": 3,
+           "worldX": 2695,
+           "worldY": 2962,
+           "width": 3,
+           "height": 1,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "left": 5,
+            "top": 3,
+            "width": "3px",
+            "height": "1px",
+            "position": "absolute",
+            "backgroundColor": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "12JD-0",
+         "name": "Energy slots  3 of 15",
+         "type": "Text",
+         "x": 32,
+         "y": 9.5,
+         "worldX": 2714,
+         "worldY": 2957.5,
+         "width": 104,
+         "height": 19,
+         "visible": true,
+         "text": "Ground at Charter",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "height": "19px",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "alignContent": "unsafe center",
+          "lineHeight": "19px",
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "color": "#DFDFDF"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

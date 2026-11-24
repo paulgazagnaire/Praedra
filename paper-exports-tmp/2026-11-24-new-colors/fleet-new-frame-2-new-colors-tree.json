@@ -1,0 +1,2020 @@
+{
+ "id": "1278-0",
+ "name": "fleet-new-frame-2-new-colors",
+ "type": "Frame",
+ "x": 1943,
+ "y": 2669,
+ "worldX": 1943,
+ "worldY": 2669,
+ "width": 344,
+ "height": 755,
+ "visible": true,
+ "text": null,
+ "imageFill": null,
+ "styles": {
+  "display": "flex",
+  "flexDirection": "column",
+  "alignItems": "start",
+  "top": 2669,
+  "left": 1943,
+  "position": "absolute"
+ },
+ "children": [
+  {
+   "id": "1279-0",
+   "name": "fleet",
+   "type": "Frame",
+   "x": 0,
+   "y": 0,
+   "worldX": 1943,
+   "worldY": 2669,
+   "width": 344,
+   "height": 125,
+   "visible": true,
+   "text": null,
+   "imageFill": null,
+   "styles": {
+    "display": "flex",
+    "flexDirection": "column",
+    "alignItems": "start",
+    "gap": 24,
+    "width": "344px",
+    "padding": "24px",
+    "backgroundColor": "#0B0B0D"
+   },
+   "children": [
+    {
+     "id": "127A-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 24,
+     "y": 24,
+     "worldX": 1967,
+     "worldY": 2693,
+     "width": 296,
+     "height": 27,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "center",
+      "justifyContent": "space-between",
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "127B-0",
+       "name": "CHARTER",
+       "type": "Text",
+       "x": 0,
+       "y": 0,
+       "worldX": 1967,
+       "worldY": 2693,
+       "width": 99,
+       "height": 27,
+       "visible": true,
+       "text": "FLEET 1",
+       "imageFill": null,
+       "styles": {
+        "width": "max-content",
+        "height": "27px",
+        "fontSize": "48px",
+        "lineHeight": "27px",
+        "textAlign": "left",
+        "whiteSpace": "pre",
+        "flexShrink": 0,
+        "fontFamily": "\"BitPotion\", system-ui, sans-serif",
+        "fontWeight": 500,
+        "color": "#DFDFDF"
+       },
+       "children": []
+      },
+      {
+       "id": "127C-0",
+       "name": "Group: ⋮⋮",
+       "type": "Frame",
+       "x": 216,
+       "y": 1,
+       "worldX": 2183,
+       "worldY": 2694,
+       "width": 80,
+       "height": 25,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "width": "80px",
+        "height": "25px",
+        "position": "relative",
+        "flexShrink": 0
+       },
+       "children": [
+        {
+         "id": "127D-0",
+         "name": "⋮⋮",
+         "type": "Text",
+         "x": -1,
+         "y": -1.5,
+         "worldX": 2182,
+         "worldY": 2692.5,
+         "width": 26,
+         "height": 28,
+         "visible": true,
+         "text": "⋮⋮",
+         "imageFill": null,
+         "styles": {
+          "left": "-1px",
+          "top": "-1.5px",
+          "width": "26px",
+          "height": "28px",
+          "fontSize": "24px",
+          "lineHeight": "28px",
+          "textAlign": "center",
+          "letterSpacing": "-5px",
+          "whiteSpace": "pre",
+          "position": "absolute",
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "color": "#DFDFDF"
+         },
+         "children": []
+        },
+        {
+         "id": "127E-0",
+         "name": "Fold Infra Charter",
+         "type": "Frame",
+         "x": 28,
+         "y": 0,
+         "worldX": 2211,
+         "worldY": 2694,
+         "width": 24,
+         "height": 25,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "left": "28px",
+          "top": "0px",
+          "width": "24px",
+          "height": "25px",
+          "position": "absolute"
+         },
+         "children": [
+          {
+           "id": "127F-0",
+           "name": "–",
+           "type": "Text",
+           "x": 4,
+           "y": 0,
+           "worldX": 2215,
+           "worldY": 2694,
+           "width": 16,
+           "height": 25,
+           "visible": true,
+           "text": "–",
+           "imageFill": null,
+           "styles": {
+            "left": "4px",
+            "top": "0px",
+            "width": "16px",
+            "height": "25px",
+            "fontSize": "24px",
+            "lineHeight": "25px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "position": "absolute",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "127G-0",
+         "name": "Close Infra Charter",
+         "type": "Frame",
+         "x": 56,
+         "y": 0,
+         "worldX": 2239,
+         "worldY": 2694,
+         "width": 24,
+         "height": 25,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "left": "56px",
+          "top": "0px",
+          "width": "24px",
+          "height": "25px",
+          "position": "absolute"
+         },
+         "children": [
+          {
+           "id": "127H-0",
+           "name": "×",
+           "type": "Text",
+           "x": 4,
+           "y": 0,
+           "worldX": 2243,
+           "worldY": 2694,
+           "width": 16,
+           "height": 25,
+           "visible": true,
+           "text": "×",
+           "imageFill": null,
+           "styles": {
+            "left": "4px",
+            "top": "0px",
+            "width": "16px",
+            "height": "25px",
+            "fontSize": "24px",
+            "lineHeight": "25px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "position": "absolute",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "12MY-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 24,
+     "y": 75,
+     "worldX": 1967,
+     "worldY": 2744,
+     "width": 296,
+     "height": 26,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "start",
+      "gap": 8,
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "12MZ-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 0,
+       "worldX": 1967,
+       "worldY": 2744,
+       "width": 296,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "start",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12N0-0",
+         "name": "Energy slots  3 of 15",
+         "type": "Text",
+         "x": 0,
+         "y": 0,
+         "worldX": 1967,
+         "worldY": 2744,
+         "width": 42,
+         "height": 16,
+         "visible": true,
+         "text": "Status:",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 500,
+          "lineHeight": "16px",
+          "color": "#DFDFDF"
+         },
+         "children": []
+        },
+        {
+         "id": "12N1-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 159,
+         "y": 0,
+         "worldX": 2126,
+         "worldY": 2744,
+         "width": 137,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "start",
+          "justifyContent": "start",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "12N2-0",
+           "name": "Energy slots  3 of 15",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2126,
+           "worldY": 2744,
+           "width": 43,
+           "height": 16,
+           "visible": true,
+           "text": "Moving",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#525252"
+           },
+           "children": []
+          },
+          {
+           "id": "12N3-0",
+           "name": "Energy slots  3 of 15",
+           "type": "Text",
+           "x": 51,
+           "y": 0,
+           "worldX": 2177,
+           "worldY": 2744,
+           "width": 5,
+           "height": 16,
+           "visible": true,
+           "text": "/",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#525252"
+           },
+           "children": []
+          },
+          {
+           "id": "12N4-0",
+           "name": "Energy slots  3 of 15",
+           "type": "Text",
+           "x": 64,
+           "y": 0,
+           "worldX": 2190,
+           "worldY": 2744,
+           "width": 73,
+           "height": 16,
+           "visible": true,
+           "text": "ETA: 29 days",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#525252"
+           },
+           "children": []
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "12N5-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 24,
+       "worldX": 1967,
+       "worldY": 2768,
+       "width": 296,
+       "height": 2,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "start",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "12N6-0",
+         "name": "You 70%",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 1967,
+         "worldY": 2768,
+         "width": 207,
+         "height": 2,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "width": "round(70%, 1px)",
+          "height": "2px",
+          "backgroundColor": "#5AA9F0"
+         },
+         "children": []
+        },
+        {
+         "id": "12N7-0",
+         "name": "Enemy",
+         "type": "Frame",
+         "x": 207,
+         "y": 0,
+         "worldX": 2174,
+         "worldY": 2768,
+         "width": 89,
+         "height": 2,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "height": "2px",
+          "flexGrow": "1",
+          "flexBasis": "0%",
+          "opacity": 0.4,
+          "backgroundColor": "#616161"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "127S-0",
+   "name": "Frame",
+   "type": "Frame",
+   "x": 0,
+   "y": 125,
+   "worldX": 1943,
+   "worldY": 2794,
+   "width": 344,
+   "height": 33,
+   "visible": true,
+   "text": null,
+   "imageFill": null,
+   "styles": {
+    "display": "flex",
+    "alignItems": "start",
+    "gap": 1,
+    "justifyContent": "space-between",
+    "alignSelf": "stretch",
+    "backgroundColor": "#1E1E21"
+   },
+   "children": [
+    {
+     "id": "127T-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 0,
+     "y": 0,
+     "worldX": 1943,
+     "worldY": 2794,
+     "width": 74,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "padding": "8px",
+      "backgroundColor": "#0B0B0D",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "127U-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 1951,
+       "worldY": 2803,
+       "width": 58,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "127V-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 1951,
+         "worldY": 2803,
+         "width": 58,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "127W-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 1951,
+           "worldY": 2803,
+           "width": 58,
+           "height": 16,
+           "visible": true,
+           "text": "Command",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "127X-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 75,
+     "y": 0,
+     "worldX": 2018,
+     "worldY": 2794,
+     "width": 72,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "padding": "8px",
+      "width": "72px",
+      "flexShrink": 0,
+      "backgroundColor": "#131313",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "127Y-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2026,
+       "worldY": 2803,
+       "width": 56,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "127Z-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2026,
+         "worldY": 2803,
+         "width": 32,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "1280-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2026,
+           "worldY": 2803,
+           "width": 32,
+           "height": 16,
+           "visible": true,
+           "text": "Ships",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "1281-0",
+         "name": "Shipyard",
+         "type": "Text",
+         "x": 48,
+         "y": 0,
+         "worldX": 2074,
+         "worldY": 2803,
+         "width": 8,
+         "height": 16,
+         "visible": true,
+         "text": "3",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "color": "#525252"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "1282-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 148,
+     "y": 0,
+     "worldX": 2091,
+     "worldY": 2794,
+     "width": 97.5,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "flex": 1,
+      "padding": "8px",
+      "backgroundColor": "#0B0B0D",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "1283-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2099,
+       "worldY": 2803,
+       "width": 81.5,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "1284-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2099,
+         "worldY": 2803,
+         "width": 48,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "1285-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2099,
+           "worldY": 2803,
+           "width": 48,
+           "height": 16,
+           "visible": true,
+           "text": "Fighters",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "1286-0",
+         "name": "Shipyard",
+         "type": "Text",
+         "x": 56.5,
+         "y": 0,
+         "worldX": 2155.5,
+         "worldY": 2803,
+         "width": 25,
+         "height": 16,
+         "visible": true,
+         "text": "8/16",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "color": "#525252"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "1287-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 246.5,
+     "y": 0,
+     "worldX": 2189.5,
+     "worldY": 2794,
+     "width": 97.5,
+     "height": 33,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "alignItems": "start",
+      "flexDirection": "column",
+      "justifyContent": "center",
+      "gap": 16,
+      "flex": 1,
+      "padding": "8px",
+      "backgroundColor": "#0B0B0D",
+      "borderTopWidth": "1px",
+      "borderTopStyle": "solid",
+      "borderTopColor": "#1E1E21"
+     },
+     "children": [
+      {
+       "id": "1288-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 8,
+       "y": 8,
+       "worldX": 2197.5,
+       "worldY": 2803,
+       "width": 81.5,
+       "height": 16,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "center",
+        "gap": 8,
+        "justifyContent": "space-between",
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "1289-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 2197.5,
+         "worldY": 2803,
+         "width": 40,
+         "height": 16,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": 8
+         },
+         "children": [
+          {
+           "id": "128A-0",
+           "name": "Shipyard",
+           "type": "Text",
+           "x": 0,
+           "y": 0,
+           "worldX": 2197.5,
+           "worldY": 2803,
+           "width": 40,
+           "height": 16,
+           "visible": true,
+           "text": "Troops",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "left",
+            "whiteSpace": "pre",
+            "flexShrink": 0,
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          }
+         ]
+        },
+        {
+         "id": "128B-0",
+         "name": "Shipyard",
+         "type": "Text",
+         "x": 54.5,
+         "y": 0,
+         "worldX": 2252,
+         "worldY": 2803,
+         "width": 27,
+         "height": 16,
+         "visible": true,
+         "text": "4/24",
+         "imageFill": null,
+         "styles": {
+          "width": "max-content",
+          "fontSize": "12px",
+          "textAlign": "left",
+          "whiteSpace": "pre",
+          "flexShrink": 0,
+          "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+          "fontWeight": 400,
+          "lineHeight": "16px",
+          "color": "#525252"
+         },
+         "children": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "128C-0",
+   "name": "Frame",
+   "type": "Frame",
+   "x": 0,
+   "y": 158,
+   "worldX": 1943,
+   "worldY": 2827,
+   "width": 344,
+   "height": 597,
+   "visible": true,
+   "text": null,
+   "imageFill": null,
+   "styles": {
+    "display": "flex",
+    "flexDirection": "column",
+    "alignItems": "start",
+    "width": "344px",
+    "gap": 24,
+    "padding": "16px",
+    "height": "597px",
+    "flexShrink": 0,
+    "backgroundColor": "#131313"
+   },
+   "children": [
+    {
+     "id": "128D-0",
+     "name": "Frame",
+     "type": "Frame",
+     "x": 16,
+     "y": 16,
+     "worldX": 1959,
+     "worldY": 2843,
+     "width": 312,
+     "height": 108,
+     "visible": true,
+     "text": null,
+     "imageFill": null,
+     "styles": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "start",
+      "gap": 16,
+      "alignSelf": "stretch"
+     },
+     "children": [
+      {
+       "id": "128E-0",
+       "name": "Frame",
+       "type": "Frame",
+       "x": 0,
+       "y": 0,
+       "worldX": 1959,
+       "worldY": 2843,
+       "width": 312,
+       "height": 108,
+       "visible": true,
+       "text": null,
+       "imageFill": null,
+       "styles": {
+        "display": "flex",
+        "alignItems": "start",
+        "justifyContent": "space-between",
+        "gap": 8,
+        "alignSelf": "stretch"
+       },
+       "children": [
+        {
+         "id": "128F-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 0,
+         "y": 0,
+         "worldX": 1959,
+         "worldY": 2843,
+         "width": 96,
+         "height": 108,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "flexDirection": "column",
+          "alignItems": "center",
+          "gap": 4
+         },
+         "children": [
+          {
+           "id": "128G-0",
+           "name": "illustration",
+           "type": "Frame",
+           "x": 0,
+           "y": 0,
+           "worldX": 1959,
+           "worldY": 2843,
+           "width": 96,
+           "height": 48,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "width": "96px",
+            "height": "48px",
+            "justifyItems": "center",
+            "alignContent": "center",
+            "flexShrink": 0,
+            "backgroundColor": "#0B0B0D"
+           },
+           "children": [
+            {
+             "id": "128H-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 28,
+             "y": 4,
+             "worldX": 1987,
+             "worldY": 2847,
+             "width": 40,
+             "height": 40,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png",
+             "styles": {
+              "width": "40px",
+              "height": "40px",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": []
+            }
+           ]
+          },
+          {
+           "id": "128I-0",
+           "name": "Gleaner",
+           "type": "Text",
+           "x": 22,
+           "y": 52,
+           "worldX": 1981,
+           "worldY": 2895,
+           "width": 52,
+           "height": 16,
+           "visible": true,
+           "text": "Mandate",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "128J-0",
+           "name": "Group: 6/6",
+           "type": "Frame",
+           "x": 2,
+           "y": 72,
+           "worldX": 1961,
+           "worldY": 2915,
+           "width": 92,
+           "height": 16,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "height": "16px",
+            "width": "92px",
+            "position": "relative",
+            "flexShrink": 0
+           },
+           "children": [
+            {
+             "id": "128K-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 2,
+             "y": 0,
+             "worldX": 1963,
+             "worldY": 2915,
+             "width": 16,
+             "height": 16,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/09X3KSWX84GCD33C3FMTYYRAT2.png",
+             "styles": {
+              "left": "2px",
+              "top": "0px",
+              "width": "16px",
+              "height": "16px",
+              "position": "absolute",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/09X3KSWX84GCD33C3FMTYYRAT2.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": [
+              {
+               "id": "128L-0",
+               "name": "IconPic",
+               "type": "Frame",
+               "x": 0,
+               "y": 0,
+               "worldX": 1963,
+               "worldY": 2915,
+               "width": 16,
+               "height": 16,
+               "visible": true,
+               "text": null,
+               "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1D0V7T1Y82KFPFB3MQH1GGMRVM.png",
+               "styles": {
+                "width": "16px",
+                "height": "16px",
+                "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1D0V7T1Y82KFPFB3MQH1GGMRVM.png)",
+                "backgroundSize": "100% 100%",
+                "backgroundPosition": "50%",
+                "backgroundRepeat": "no-repeat"
+               },
+               "children": []
+              }
+             ]
+            },
+            {
+             "id": "128M-0",
+             "name": "6/6",
+             "type": "Text",
+             "x": 21,
+             "y": -1.5,
+             "worldX": 1982,
+             "worldY": 2913.5,
+             "width": 20,
+             "height": 19,
+             "visible": true,
+             "text": "6/6",
+             "imageFill": null,
+             "styles": {
+              "left": "21px",
+              "top": "-1.5px",
+              "width": "max-content",
+              "fontSize": "12px",
+              "lineHeight": "19px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "position": "absolute",
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "color": "#454545"
+             },
+             "children": []
+            },
+            {
+             "id": "128N-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 51,
+             "y": 0,
+             "worldX": 2012,
+             "worldY": 2915,
+             "width": 16,
+             "height": 16,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/02AZWFA7HK2JGTNFV03N33PQ29.png",
+             "styles": {
+              "left": "51px",
+              "top": "0px",
+              "width": "16px",
+              "height": "16px",
+              "position": "absolute",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/02AZWFA7HK2JGTNFV03N33PQ29.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": []
+            },
+            {
+             "id": "128O-0",
+             "name": "0/3",
+             "type": "Text",
+             "x": 70,
+             "y": -1.5,
+             "worldX": 2031,
+             "worldY": 2913.5,
+             "width": 20,
+             "height": 19,
+             "visible": true,
+             "text": "0/3",
+             "imageFill": null,
+             "styles": {
+              "left": "70px",
+              "top": "-1.5px",
+              "width": "max-content",
+              "fontSize": "12px",
+              "lineHeight": "19px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "position": "absolute",
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "color": "#454545"
+             },
+             "children": []
+            }
+           ]
+          },
+          {
+           "id": "128P-0",
+           "name": "Frame",
+           "type": "Frame",
+           "x": 16.5,
+           "y": 92,
+           "worldX": 1975.5,
+           "worldY": 2935,
+           "width": 63,
+           "height": 16,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "display": "flex",
+            "alignItems": "start"
+           },
+           "children": [
+            {
+             "id": "128Q-0",
+             "name": "2750",
+             "type": "Text",
+             "x": 0,
+             "y": 0,
+             "worldX": 1975.5,
+             "worldY": 2935,
+             "width": 29,
+             "height": 16,
+             "visible": true,
+             "text": "2750",
+             "imageFill": null,
+             "styles": {
+              "width": "max-content",
+              "fontSize": "12px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "flexShrink": 0,
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "lineHeight": "16px",
+              "color": "#454545"
+             },
+             "children": []
+            },
+            {
+             "id": "128R-0",
+             "name": "Shipyard",
+             "type": "Text",
+             "x": 29,
+             "y": 0,
+             "worldX": 2004.5,
+             "worldY": 2935,
+             "width": 34,
+             "height": 16,
+             "visible": true,
+             "text": "/2750",
+             "imageFill": null,
+             "styles": {
+              "width": "max-content",
+              "fontSize": "12px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "flexShrink": 0,
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "lineHeight": "16px",
+              "color": "#454545"
+             },
+             "children": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "id": "128S-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 108,
+         "y": 0,
+         "worldX": 2067,
+         "worldY": 2843,
+         "width": 96,
+         "height": 108,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "flexDirection": "column",
+          "alignItems": "center",
+          "gap": 4
+         },
+         "children": [
+          {
+           "id": "128T-0",
+           "name": "illustration",
+           "type": "Frame",
+           "x": 0,
+           "y": 0,
+           "worldX": 2067,
+           "worldY": 2843,
+           "width": 96,
+           "height": 48,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "width": "96px",
+            "height": "48px",
+            "justifyItems": "center",
+            "alignContent": "center",
+            "flexShrink": 0,
+            "backgroundColor": "#0B0B0D"
+           },
+           "children": [
+            {
+             "id": "128U-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 28,
+             "y": 4,
+             "worldX": 2095,
+             "worldY": 2847,
+             "width": 40,
+             "height": 40,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png",
+             "styles": {
+              "width": "40px",
+              "height": "40px",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": []
+            }
+           ]
+          },
+          {
+           "id": "128V-0",
+           "name": "Gleaner",
+           "type": "Text",
+           "x": 22,
+           "y": 52,
+           "worldX": 2089,
+           "worldY": 2895,
+           "width": 52,
+           "height": 16,
+           "visible": true,
+           "text": "Mandate",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "128W-0",
+           "name": "Group: 6/6",
+           "type": "Frame",
+           "x": 2,
+           "y": 72,
+           "worldX": 2069,
+           "worldY": 2915,
+           "width": 92,
+           "height": 16,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "height": "16px",
+            "width": "92px",
+            "position": "relative",
+            "flexShrink": 0
+           },
+           "children": [
+            {
+             "id": "128X-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 2,
+             "y": 0,
+             "worldX": 2071,
+             "worldY": 2915,
+             "width": 16,
+             "height": 16,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/09X3KSWX84GCD33C3FMTYYRAT2.png",
+             "styles": {
+              "left": "2px",
+              "top": "0px",
+              "width": "16px",
+              "height": "16px",
+              "position": "absolute",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/09X3KSWX84GCD33C3FMTYYRAT2.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": [
+              {
+               "id": "128Y-0",
+               "name": "IconPic",
+               "type": "Frame",
+               "x": 0,
+               "y": 0,
+               "worldX": 2071,
+               "worldY": 2915,
+               "width": 16,
+               "height": 16,
+               "visible": true,
+               "text": null,
+               "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1D0V7T1Y82KFPFB3MQH1GGMRVM.png",
+               "styles": {
+                "width": "16px",
+                "height": "16px",
+                "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1D0V7T1Y82KFPFB3MQH1GGMRVM.png)",
+                "backgroundSize": "100% 100%",
+                "backgroundPosition": "50%",
+                "backgroundRepeat": "no-repeat"
+               },
+               "children": []
+              }
+             ]
+            },
+            {
+             "id": "128Z-0",
+             "name": "6/6",
+             "type": "Text",
+             "x": 21,
+             "y": -1.5,
+             "worldX": 2090,
+             "worldY": 2913.5,
+             "width": 20,
+             "height": 19,
+             "visible": true,
+             "text": "6/6",
+             "imageFill": null,
+             "styles": {
+              "left": "21px",
+              "top": "-1.5px",
+              "width": "max-content",
+              "fontSize": "12px",
+              "lineHeight": "19px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "position": "absolute",
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "color": "#454545"
+             },
+             "children": []
+            },
+            {
+             "id": "1290-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 51,
+             "y": 0,
+             "worldX": 2120,
+             "worldY": 2915,
+             "width": 16,
+             "height": 16,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/02AZWFA7HK2JGTNFV03N33PQ29.png",
+             "styles": {
+              "left": "51px",
+              "top": "0px",
+              "width": "16px",
+              "height": "16px",
+              "position": "absolute",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/02AZWFA7HK2JGTNFV03N33PQ29.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": []
+            },
+            {
+             "id": "1291-0",
+             "name": "0/3",
+             "type": "Text",
+             "x": 70,
+             "y": -1.5,
+             "worldX": 2139,
+             "worldY": 2913.5,
+             "width": 20,
+             "height": 19,
+             "visible": true,
+             "text": "0/3",
+             "imageFill": null,
+             "styles": {
+              "left": "70px",
+              "top": "-1.5px",
+              "width": "max-content",
+              "fontSize": "12px",
+              "lineHeight": "19px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "position": "absolute",
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "color": "#454545"
+             },
+             "children": []
+            }
+           ]
+          },
+          {
+           "id": "1292-0",
+           "name": "Frame",
+           "type": "Frame",
+           "x": 16.5,
+           "y": 92,
+           "worldX": 2083.5,
+           "worldY": 2935,
+           "width": 63,
+           "height": 16,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "display": "flex",
+            "alignItems": "start"
+           },
+           "children": [
+            {
+             "id": "1293-0",
+             "name": "2750",
+             "type": "Text",
+             "x": 0,
+             "y": 0,
+             "worldX": 2083.5,
+             "worldY": 2935,
+             "width": 29,
+             "height": 16,
+             "visible": true,
+             "text": "2750",
+             "imageFill": null,
+             "styles": {
+              "width": "max-content",
+              "fontSize": "12px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "flexShrink": 0,
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "lineHeight": "16px",
+              "color": "#454545"
+             },
+             "children": []
+            },
+            {
+             "id": "1294-0",
+             "name": "Shipyard",
+             "type": "Text",
+             "x": 29,
+             "y": 0,
+             "worldX": 2112.5,
+             "worldY": 2935,
+             "width": 34,
+             "height": 16,
+             "visible": true,
+             "text": "/2750",
+             "imageFill": null,
+             "styles": {
+              "width": "max-content",
+              "fontSize": "12px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "flexShrink": 0,
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "lineHeight": "16px",
+              "color": "#454545"
+             },
+             "children": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "id": "1295-0",
+         "name": "Frame",
+         "type": "Frame",
+         "x": 216,
+         "y": 0,
+         "worldX": 2175,
+         "worldY": 2843,
+         "width": 96,
+         "height": 108,
+         "visible": true,
+         "text": null,
+         "imageFill": null,
+         "styles": {
+          "display": "flex",
+          "flexDirection": "column",
+          "alignItems": "center",
+          "gap": 4
+         },
+         "children": [
+          {
+           "id": "1296-0",
+           "name": "illustration",
+           "type": "Frame",
+           "x": 0,
+           "y": 0,
+           "worldX": 2175,
+           "worldY": 2843,
+           "width": 96,
+           "height": 48,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "width": "96px",
+            "height": "48px",
+            "justifyItems": "center",
+            "alignContent": "center",
+            "flexShrink": 0,
+            "backgroundColor": "#0B0B0D"
+           },
+           "children": [
+            {
+             "id": "1297-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 28,
+             "y": 4,
+             "worldX": 2203,
+             "worldY": 2847,
+             "width": 40,
+             "height": 40,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png",
+             "styles": {
+              "width": "40px",
+              "height": "40px",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/139G4YNQX8TQBFQ13149BJ138E.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": []
+            }
+           ]
+          },
+          {
+           "id": "1298-0",
+           "name": "Gleaner",
+           "type": "Text",
+           "x": 22,
+           "y": 52,
+           "worldX": 2197,
+           "worldY": 2895,
+           "width": 52,
+           "height": 16,
+           "visible": true,
+           "text": "Mandate",
+           "imageFill": null,
+           "styles": {
+            "width": "max-content",
+            "fontSize": "12px",
+            "textAlign": "center",
+            "whiteSpace": "pre",
+            "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+            "fontWeight": 400,
+            "lineHeight": "16px",
+            "color": "#DFDFDF"
+           },
+           "children": []
+          },
+          {
+           "id": "1299-0",
+           "name": "Group: 6/6",
+           "type": "Frame",
+           "x": 2,
+           "y": 72,
+           "worldX": 2177,
+           "worldY": 2915,
+           "width": 92,
+           "height": 16,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "height": "16px",
+            "width": "92px",
+            "position": "relative",
+            "flexShrink": 0
+           },
+           "children": [
+            {
+             "id": "129A-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 2,
+             "y": 0,
+             "worldX": 2179,
+             "worldY": 2915,
+             "width": 16,
+             "height": 16,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/09X3KSWX84GCD33C3FMTYYRAT2.png",
+             "styles": {
+              "left": "2px",
+              "top": "0px",
+              "width": "16px",
+              "height": "16px",
+              "position": "absolute",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/09X3KSWX84GCD33C3FMTYYRAT2.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": [
+              {
+               "id": "129B-0",
+               "name": "IconPic",
+               "type": "Frame",
+               "x": 0,
+               "y": 0,
+               "worldX": 2179,
+               "worldY": 2915,
+               "width": 16,
+               "height": 16,
+               "visible": true,
+               "text": null,
+               "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1D0V7T1Y82KFPFB3MQH1GGMRVM.png",
+               "styles": {
+                "width": "16px",
+                "height": "16px",
+                "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/1D0V7T1Y82KFPFB3MQH1GGMRVM.png)",
+                "backgroundSize": "100% 100%",
+                "backgroundPosition": "50%",
+                "backgroundRepeat": "no-repeat"
+               },
+               "children": []
+              }
+             ]
+            },
+            {
+             "id": "129C-0",
+             "name": "6/6",
+             "type": "Text",
+             "x": 21,
+             "y": -1.5,
+             "worldX": 2198,
+             "worldY": 2913.5,
+             "width": 20,
+             "height": 19,
+             "visible": true,
+             "text": "6/6",
+             "imageFill": null,
+             "styles": {
+              "left": "21px",
+              "top": "-1.5px",
+              "width": "max-content",
+              "fontSize": "12px",
+              "lineHeight": "19px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "position": "absolute",
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "color": "#454545"
+             },
+             "children": []
+            },
+            {
+             "id": "129D-0",
+             "name": "IconPic",
+             "type": "Frame",
+             "x": 51,
+             "y": 0,
+             "worldX": 2228,
+             "worldY": 2915,
+             "width": 16,
+             "height": 16,
+             "visible": true,
+             "text": null,
+             "imageFill": "https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/02AZWFA7HK2JGTNFV03N33PQ29.png",
+             "styles": {
+              "left": "51px",
+              "top": "0px",
+              "width": "16px",
+              "height": "16px",
+              "position": "absolute",
+              "backgroundImage": "url(https://app.paper.design/file-assets/01M4XB1NAX45Y7V9FT3DQMTQK1/02AZWFA7HK2JGTNFV03N33PQ29.png)",
+              "backgroundSize": "100% 100%",
+              "backgroundPosition": "50%",
+              "backgroundRepeat": "no-repeat"
+             },
+             "children": []
+            },
+            {
+             "id": "129E-0",
+             "name": "0/3",
+             "type": "Text",
+             "x": 70,
+             "y": -1.5,
+             "worldX": 2247,
+             "worldY": 2913.5,
+             "width": 20,
+             "height": 19,
+             "visible": true,
+             "text": "0/3",
+             "imageFill": null,
+             "styles": {
+              "left": "70px",
+              "top": "-1.5px",
+              "width": "max-content",
+              "fontSize": "12px",
+              "lineHeight": "19px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "position": "absolute",
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "color": "#454545"
+             },
+             "children": []
+            }
+           ]
+          },
+          {
+           "id": "129F-0",
+           "name": "Frame",
+           "type": "Frame",
+           "x": 16.5,
+           "y": 92,
+           "worldX": 2191.5,
+           "worldY": 2935,
+           "width": 63,
+           "height": 16,
+           "visible": true,
+           "text": null,
+           "imageFill": null,
+           "styles": {
+            "display": "flex",
+            "alignItems": "start"
+           },
+           "children": [
+            {
+             "id": "129G-0",
+             "name": "2750",
+             "type": "Text",
+             "x": 0,
+             "y": 0,
+             "worldX": 2191.5,
+             "worldY": 2935,
+             "width": 29,
+             "height": 16,
+             "visible": true,
+             "text": "2750",
+             "imageFill": null,
+             "styles": {
+              "width": "max-content",
+              "fontSize": "12px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "flexShrink": 0,
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "lineHeight": "16px",
+              "color": "#454545"
+             },
+             "children": []
+            },
+            {
+             "id": "129H-0",
+             "name": "Shipyard",
+             "type": "Text",
+             "x": 29,
+             "y": 0,
+             "worldX": 2220.5,
+             "worldY": 2935,
+             "width": 34,
+             "height": 16,
+             "visible": true,
+             "text": "/2750",
+             "imageFill": null,
+             "styles": {
+              "width": "max-content",
+              "fontSize": "12px",
+              "textAlign": "left",
+              "whiteSpace": "pre",
+              "flexShrink": 0,
+              "fontFamily": "\"Space Grotesk\", system-ui, sans-serif",
+              "fontWeight": 400,
+              "lineHeight": "16px",
+              "color": "#454545"
+             },
+             "children": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
