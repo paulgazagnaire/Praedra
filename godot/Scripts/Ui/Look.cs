@@ -28,6 +28,7 @@ public static class Look
     // the dark tile behind a picture on a window that is itself Bg (the Ground window): one step darker, as Bg is under Band in the Fleet
     // window (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now")
     public static readonly Color PicTile = new("0e0e10");
+    public static readonly Color CellHover = new("17171a"); // a strip cell not open, under the mouse (the Fleet window's strip)
 
     /// <summary>A label in the design's face: Space Grotesk, Medium for names and headings, Regular for numbers and states.</summary>
     public static Label Words(string text, int size, Color color, bool medium = false)

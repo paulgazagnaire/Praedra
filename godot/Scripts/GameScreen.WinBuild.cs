@@ -282,7 +282,7 @@ public partial class GameScreen
         cell.SetMeta(UiTest.FullName, $"Yard {n} {t}");
         var bg = open ? Look.Band : Look.Bg;
         cell.AddThemeStyleboxOverride("normal", Look.Box(bg));
-        cell.AddThemeStyleboxOverride("hover", Look.Box(open ? Look.Band : new Color("17171a")));
+        cell.AddThemeStyleboxOverride("hover", Look.Box(open ? Look.Band : Look.CellHover));
         cell.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
         cell.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
         cell.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());

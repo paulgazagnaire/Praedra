@@ -502,7 +502,7 @@ public partial class GameScreen
             var b = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = name == w.Tab, FocusMode = FocusModeEnum.None,
                 MouseDefaultCursorShape = CursorShape.PointingHand };
             b.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg));
-            b.AddThemeStyleboxOverride("hover", Look.Box(new Color("17171a")));
+            b.AddThemeStyleboxOverride("hover", Look.Box(Look.CellHover));
             b.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
             b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
             b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());

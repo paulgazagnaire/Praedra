@@ -30,6 +30,8 @@ public partial class Main
         // rim's light round in two 45-degree steps, then it settles in the top left
         foreach (var k in new[] { "fleet-defensive", "fleet-elusive", "fleet-unknown" })
             Expect(FleetLayer.MarkerTones(k, false, false, 0).SequenceEqual(PixelIconData.Map[k]), $"{k} pointing up-left is the icon as drawn");
+        Expect(!FleetLayer.Parked("fleet-elusive").SequenceEqual(PixelIconData.Map["fleet-elusive"]) && FleetLayer.Parked("fleet-group-3").SequenceEqual(PixelIconData.Map["fleet-group-3"]),
+            "off the map (the window's fleet rows, the legend) a fleet mark points up-right as parked; a numbered one stays as drawn");
         Expect(!FleetLayer.MarkerTones("fleet-defensive", true, true, 0).SequenceEqual(FleetLayer.MarkerTones("fleet-defensive", true, true, 6)),
             "the rim's light changes the pixels of a turned marker");
         var layer = new FleetLayer();

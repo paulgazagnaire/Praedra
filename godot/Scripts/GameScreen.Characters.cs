@@ -35,7 +35,6 @@ public partial class GameScreen
     {
         var list = S.MyCharacters;
         var alive = list.Where(c => c.Status != CharacterStatus.Dead).ToList();
-        Title("Your leaders", null);   // the count is in the heading below; the skills line shows a help cursor for what each post does
 
         // the race for the key leaders, both ways (rule: m5-setup-and-victory §Victory)
         var mineNeeded = EnemyTerms.ToList();
@@ -109,7 +108,7 @@ public partial class GameScreen
     }
 
     /// <summary>Gives a short button its full words (what it does to whom), which the playtest clicks by.</summary>
-    static Button Small(Button b) { b.CustomMinimumSize = new Vector2(96, 30); b.AddThemeFontSizeOverride("font_size", Ui.Small); return b; }
+    static Button Small(Button b) { b.CustomMinimumSize = new Vector2(0, 32); return b; }   // the Fleet window's button: as wide as its words
     static Button Named(Button b, string full) { b.SetMeta(UiTest.FullName, full); return b; }
 
     void CharacterBlock(CharacterRecord c)
@@ -119,6 +118,7 @@ public partial class GameScreen
         int id = c.Id;
         bool needed = EnemyTerms.Contains(id);
         using (Card(Ui.Panel, needed ? new Color(Ui.Gold, 0.5f) : Ui.Line, Ui.Gap))
+        using (BesidePicture(LeaderPic(id, status == CharacterStatus.Free ? Ui.You : Look.Soft)))
         {
             // the name, its state and a way to find it on the map; then where and what, one line each
             var h = Ui.HBox(Ui.Block);

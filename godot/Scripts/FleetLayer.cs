@@ -601,6 +601,18 @@ public partial class FleetLayer : Control
     /// <summary>True for a numbered group icon (drawn as is, lit from the top left).</summary>
     static bool IsNumbered(string key) => key.StartsWith("fleet-group-", StringComparison.Ordinal);
 
+    /// <summary>
+    /// A fleet mark as a parked fleet shows it on the map, pointing up-right with its rim lit from the top left, for pictures off the map: the
+    /// fleet rows of the window on the right and the map legend (review 20: the raw grid points up-left and reads as the mouse pointer).
+    /// A numbered mark, and any icon that is not a fleet's, comes back as drawn.
+    /// </summary>
+    internal static string[] Parked(string key)
+    {
+        if (IsNumbered(key) || !key.StartsWith("fleet-", StringComparison.Ordinal)) return PixelIconData.Map[key];
+        var (_, fx, fy) = Look(1, true, 0, ParkedHeading);
+        return MarkerTones(key, fx, fy, TopLeft);
+    }
+
     /// <summary>The numbered icon of several fleets of one side in orbit at a system: the bare arrow with their number where Defensive has its
     /// square (Paul 2026-11-22); ten or more show a plus.</summary>
     internal static string GroupIcon(int count) => count is >= 2 and <= 9 ? $"fleet-group-{count}" : "fleet-group-many";

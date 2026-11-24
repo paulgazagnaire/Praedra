@@ -382,6 +382,8 @@ public partial class GameScreen
     /// <summary>The advisor button right of the clock (Paul 2026-11-24) is lit while the window on the right is open.</summary>
     internal bool AdvisorLit => _advisorButton.ButtonPressed;
     internal string AdvisorTip => _advisorButton.TooltipText;
+    internal string AdvisorHead => _sibylName.Text;
+    internal string AdvisorStatus => _sibylStatusRow is { Visible: true } ? _sibylStatus.Text : "";
     internal bool SelectionCardOpen => _selCard.Visible;
     internal string SelectionCardText => _selCard.Visible ? LabelsIn(_selCard) : "";
     internal string PillText => _pill.Visible ? _banner.Text : "";
