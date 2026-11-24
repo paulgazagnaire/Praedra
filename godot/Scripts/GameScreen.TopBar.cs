@@ -85,7 +85,7 @@ public partial class GameScreen
         _barLeft.AddChild(ChipCell(_menuButton));
         BarLine(_barLeft);
 
-        // Layers: words only; the frame's icon there is a copy of Refined's, and the game has no layers icon (Paul: keep the game's icons)
+        // Layers: its stacked-sheets icon, then the word (Paul chose B 2026-11-25; the frame's icon there was a copy of Refined's)
         _layersButton = BarButton("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", BarFont, BarTextSize, BarLabel, ChipPad);
         _layersButton.ToggleMode = true;
         // the stacked-sheets icon left of the word (Paul chose B 2026-11-25; the frame's icon there was a copy of Refined's): drawn with
