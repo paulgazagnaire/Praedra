@@ -188,15 +188,14 @@ public partial class GameScreen
         var gen = Cm.SystemGeneralOf(name);
         if (gen != null && gen.Side != Me) gen = null; // only the player's own
         if (!mine && here.Count == 0 && gen == null) return;
-        Heading("Characters");
+        Heading("Leaders here");   // the word of the Leaders tab, Needs you and the Ground window (review 21)
         if (mine || gen != null)
         {
-            Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good);
+            // a General takes or leaves the post only by a drag in the Ground window, never by a click here (Paul 2026-11-22, UI review 4)
+            Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good, 13);
             if (gen != null) foreach (var (seq, p) in S.PendingOrdersOfCharacter(gen.Id)) OrderLine(seq, $"Ordered: {p}", 13);
-            // a General takes or leaves the post only by a drag in Ground at the system, never by a click here (Paul 2026-11-22, UI review 4)
-            if (mine) Line($"To seat or release a General, drag them in Leaders, Ground at {name}.", Dim, 13);
         }
-        if (here.Count == 0) { Line("None of your characters is here.", Dim, 13); return; }
+        if (here.Count == 0) { Line("None of your leaders is here.", Dim, 13); return; }
         foreach (var c in here)
         {
             var rc = c;

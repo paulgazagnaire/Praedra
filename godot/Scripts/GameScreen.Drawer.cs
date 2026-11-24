@@ -114,7 +114,7 @@ public partial class GameScreen
         foreach (var (job, words) in SibylJobs)
         {
             var j = job;
-            var cb = new CheckBox { Text = words, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(SibylHint(job) + $" She only uses yards you left idle and always keeps {SibylRoom} upkeep free. Also in Menu > Settings.") };
+            var cb = new CheckBox { Text = words, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(SibylHint(job) + $" She only uses yards you left idle and always keeps {SibylRoom} upkeep free. Also in Menu > Settings. A tick takes effect from tomorrow.") };
             cb.AddThemeFontSizeOverride("font_size", 12);
             foreach (var c in new[] { "font_color", "font_pressed_color", "font_focus_color" }) cb.AddThemeColorOverride(c, Look.Text);
             foreach (var c in new[] { "font_hover_color", "font_hover_pressed_color" }) cb.AddThemeColorOverride(c, Colors.White);
@@ -122,6 +122,7 @@ public partial class GameScreen
             foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) cb.AddThemeStyleboxOverride(st, new StyleBoxEmpty { ContentMarginTop = 4, ContentMarginBottom = 4 });
             cb.SetMeta(UiTest.FullName, $"Sibyl {words}");
             cb.Toggled += on => S.SetSibyl(j, on);
+            Ui.HoverTick(cb);
             _sibylSwitches[job] = cb;
             _sibylStatusRow.AddChild(cb);
         }

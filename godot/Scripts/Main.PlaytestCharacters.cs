@@ -136,8 +136,7 @@ public partial class Main
         if (gs.S.Host.Economy.Objects.Any(o => o.Category == Praedra.Core.Economy.ObjectCategory.Fighter && o.Side == gs.S.Player && o.System == gsys && o.AboardShip == 0 && o.Completed))
             Expect(gs.PanelText().Contains("Fighters based here"), $"the Selected tab of {gsys} lists the fighters based there");
         // a General is seated only by a drag in Ground at the system, never by a click in the side panel (Paul 2026-11-22, UI review 4)
-        Expect(!gs.PanelText().Contains($"Make {gname} the General") && gs.PanelText().Contains($"To seat or release a General, drag them in Leaders, Ground at {gsys}"),
-            "the Selected tab has no click to seat a General, and says where to drag");
+        Expect(!gs.PanelText().Contains($"Make {gname} the General"), "the Selected tab has no click to seat a General");
         gs.ShotWindow("ground", gsys); gs.PlayRefresh();
         why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} General");
         Expect(why == null, $"drag {gname} onto the General post of {gsys}: {why ?? "sent"}");

@@ -86,10 +86,15 @@ public partial class GameScreen
                 }
             }
 
+        // what you act on first comes first (review 21): the yards, the fleets, the leaders and their missions; then the troops in one
+        // line, and the slots, which are planning facts the Infrastructure window opens on
         YardsHere(name);
-        SlotsHere(name);
-        GroundHere(name);
         FleetsHere(name, true, pic);
+        CharactersAtSystem(name, true);
+        SpecialForcesAtSystem(name);
+        if (CanSendFrom(name)) Act($"Send a mission from {name}...", () => OpenPlanner(name), "Pick a team standing here (characters and special forces), the kind of mission and the target.");
+        GroundHere(name);
+        SlotsHere(name);
         // the Hearth: the Collective can move it (rule: m5-fog-and-hq §F6)
         if (Me == Side.Collective && name == S.MyHqSystem) HqSection(name);
     }
@@ -107,7 +112,8 @@ public partial class GameScreen
 
     /// <summary>
     /// Each yard here on one row, as the Infrastructure window's yard cells say it: its picture on the dark tile, its name, and "Idle",
-    /// "Building: X, 4 days left" or "Ordered: X" with a 2 px bar. A click opens the Infrastructure window on that yard.
+    /// "Building: X, 4 days left" or "Ordered: X" with a 2 px bar. A click opens the Infrastructure window on that yard. Under them, only
+    /// the buildings that are not yards (the rows already name those).
     /// </summary>
     void YardsHere(string name)
     {
@@ -141,9 +147,11 @@ public partial class GameScreen
                 $"Selected yard {name} {FamilyName(fam)}", () => OpenInfraOn(name, tab, f),
                 $"Opens the Infrastructure window of {name} on its {FamilyName(fam).ToLowerInvariant()}: what it can build, and its work."));
         }
-        var building = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name && !o.Completed).ToList();
-        Lead($"Buildings: {Counts(eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name && o.Completed).Select(o => o.Class))}."
-            + (building.Count > 0 ? $" Under construction: {Counts(building.Select(o => o.Class))}." : ""));
+        var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name).ToList();
+        var other = here.Where(o => o.Completed && !(FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k))).Select(o => o.Class).ToList();
+        var building = here.Where(o => !o.Completed).Select(o => o.Class).ToList();
+        if (other.Count > 0 || building.Count > 0)
+            Lead(string.Join(" ", new[] { other.Count > 0 ? $"Other buildings: {Tally(other)}." : null, building.Count > 0 ? $"Under construction: {Tally(building)}." : null }.Where(x => x != null)));
     }
 
     /// <summary>Opens the Infrastructure window of a system on one of its cells (a yard).</summary>
@@ -154,7 +162,7 @@ public partial class GameScreen
         if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Infra && x.System == name) is { } w && w.Shows != tab) { w.Shows = tab; RebuildMg(w); }
     }
 
-    /// <summary>The two slot gauges of the Infrastructure window, one under the other.</summary>
+    /// <summary>The two slot gauges of the Infrastructure window, side by side (one under the other when the page is too narrow).</summary>
     void SlotsHere(string name)
     {
         var eco = S.Host.Economy;
@@ -163,8 +171,9 @@ public partial class GameScreen
         int eBuilt = built.Count, eUsed = eco.EnergyUsed(name);
         int rBuilt = built.Count(o => FacilityKinds.TryParse(o.Class, out var k) && k == FacilityKind.Mine), rUsed = eco.RawUsed(name), rTotal = eco.EffectiveRaw(name);
         Heading("Slots");
-        var v = Boxed(new VBoxContainer(), 16);
-        v.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;   // each gauge as wide as its squares, its count at their end
+        var v = new HFlowContainer();
+        v.AddThemeConstantOverride("h_separation", 32);
+        v.AddThemeConstantOverride("v_separation", 16);
         v.AddChild(Gauge("System energy", eBuilt, eUsed, slots.Energy, Look.Accent, Look.AccentDeep,
             $"System energy: {eUsed} of {slots.Energy} slots taken, {Math.Max(0, slots.Energy - eUsed)} free. Every building takes one energy slot.\nBright: built. Mid: ordered or being built. Dark: free."));
         v.AddChild(Gauge("Raw material", rBuilt, rUsed, rTotal, Look.Raw, Look.RawDeep,
@@ -172,30 +181,38 @@ public partial class GameScreen
         Add(v);
     }
 
-    /// <summary>What stands on the planet: regiments and fighters in counts, the General and your leaders, special forces; and the orders
-    /// that start here (send a mission, fly fighters). Moving units is done by drag in the Ground window.</summary>
+    /// <summary>The troops on the planet in one line each (review 21: the head already counts the regiments), and the fighters based here with
+    /// their order. Moving and scrapping units is done in the Ground window.</summary>
     void GroundHere(string name)
     {
         var regs = S.Host.Troops.RegimentsOnSystem(name);
         var mineRegs = regs.Where(r => r.Side == Me).ToList();
-        Heading($"Regiments on the planet ({mineRegs.Count})", "Your regiments here keep order and defend the planet. Train them in the Infrastructure window; move them by drag, or scrap one with a right-click, in the Ground window.");
-        Lead(mineRegs.Count == 0 ? "None." : Counts(mineRegs.Select(r => r.Class)) + ".");
+        if ((_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(WinGap - Ui.Block * 2));   // a part of its own, as under a title
+        Tip(Line($"Regiments: {(mineRegs.Count == 0 ? "none" : Tally(mineRegs.Select(r => r.Class)))}", Look.Text, 13),
+            "Your regiments here keep order and defend the planet. Train them in the Infrastructure window; move them by drag, or scrap one with a right-click, in the Ground window.");
         foreach (var g in regs.Where(r => r.Side != Me).GroupBy(r => r.Side).OrderBy(g => g.Key))
-            Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))}: {Counts(g.Select(r => r.Class))}", Ui.Text2, 13);
+            Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))} regiments: {Tally(g.Select(r => r.Class))}", Ui.Text2, 13);
         var based = FightersBasedAt(name);
-        if (based.Count > 0)
-        {
-            Heading($"Fighters based here ({based.Count})", "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a hyperdrive can also fly on their own.");
-            Lead(Counts(based.Select(o => o.Class)) + ".");
-            // the same rating the core flies them at: a damaged hyperdrive can be 0 (rule: m3-ships-and-fighters §Hyperdrive and speed)
-            var mobile = based.Where(o => Fm.ClassOf(o) != null && Fm.SpeedOfShip(o) > 0).Select(o => o.Id).ToList();
-            if (mobile.Count > 0)
-                Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
-                    "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working hyperdrive: a carrier must take them." : ""));
-        }
-        CharactersAtSystem(name, true);
-        SpecialForcesAtSystem(name);
-        if (CanSendFrom(name)) Act($"Send a mission from {name}...", () => OpenPlanner(name), "Pick a team standing here (characters and special forces), the kind of mission and the target.");
+        if (based.Count == 0) return;
+        Tip(Line($"Fighters based here: {Tally(based.Select(o => o.Class))}", Look.Text, 13),
+            "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a hyperdrive can also fly on their own.");
+        // the same rating the core flies them at: a damaged hyperdrive can be 0 (rule: m3-ships-and-fighters §Hyperdrive and speed)
+        var mobile = based.Where(o => Fm.ClassOf(o) != null && Fm.SpeedOfShip(o) > 0).Select(o => o.Id).ToList();
+        if (mobile.Count > 0)
+            Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
+                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working hyperdrive: a carrier must take them." : ""));
+    }
+
+    /// <summary>"Pacifiers 13 · Tranches 1": each name, then how many, as the part titles say it (review 21: "13 x Pacifiers, Tranches."
+    /// read as 13 of each).</summary>
+    static string Tally(IEnumerable<string> names) =>
+        string.Join(" · ", names.GroupBy(x => x).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Count()}"));
+
+    /// <summary>A line that explains itself on hover.</summary>
+    static Label Tip(Label l, string tip)
+    {
+        l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help;
+        return l;
     }
 
     /// <summary>Too few troops: one click trains the missing regiments here, when the planet has a training facility.</summary>

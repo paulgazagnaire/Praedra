@@ -481,14 +481,14 @@ public partial class GameScreen
     // ================================================================== the strip of tabs
 
     /// <summary>
-    /// A strip cell's name: light on the open cell, grey on the others, light again under the mouse (Paul 2026-11-24: "the open tab is barely
-    /// lighter than the rest"; the lighter surface alone measured 1.07:1). Its count keeps its own colour. Returns the repaint, for a cell
-    /// pressed with no signal.
+    /// A strip cell's name: light on the open cell, the muted grey on the others (#7D8699, 4.8:1 on the strip: T5 keeps #676767 for notes,
+    /// zero counts and greyed-out things, review 21), light again under the mouse (Paul 2026-11-24: "the open tab is barely lighter than the
+    /// rest"; the lighter surface alone measured 1.07:1). Its count keeps its own colour. Returns the repaint, for a cell pressed with no signal.
     /// </summary>
     static Action CellWords(Button cell, Label words)
     {
         bool over = false;
-        void Paint() => words.AddThemeColorOverride("font_color", cell.ButtonPressed || over ? Look.Text : Look.Soft);
+        void Paint() => words.AddThemeColorOverride("font_color", cell.ButtonPressed || over ? Look.Text : Look.Muted);
         cell.Toggled += _ => Paint();
         cell.MouseEntered += () => { over = true; Paint(); };
         cell.MouseExited += () => { over = false; Paint(); };

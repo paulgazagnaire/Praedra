@@ -451,7 +451,7 @@ public partial class GameScreen
             {
                 var cb = new CheckBox { Text = text, ButtonPressed = S.SibylOn(job), FocusMode = FocusModeEnum.None, TooltipText = hint };
                 cb.Toggled += on => { S.SetSibyl(job, on); RefreshSibylStatus(); };   // her window's switches follow at once
-                body.AddChild(cb);
+                body.AddChild(Ui.HoverTick(cb));
                 body.AddChild(Ui.Label(hint, "Hint"));
             }
             foreach (var (job, words) in SibylJobs) Job(job, words, SibylHint(job));   // the same words as her window's switches
@@ -472,7 +472,7 @@ public partial class GameScreen
         {
             var cb = new CheckBox { Text = text, ButtonPressed = value, FocusMode = FocusModeEnum.None };
             cb.Toggled += on => { set(on); UiSettings.Save(); };
-            body.AddChild(cb);
+            body.AddChild(Ui.HoverTick(cb));
         }
         Check("a battle is fought (and show its report)", UiSettings.PauseBattle, on => UiSettings.PauseBattle = on);
         Check("a system changes hands", UiSettings.PauseCapture, on => UiSettings.PauseCapture = on);
