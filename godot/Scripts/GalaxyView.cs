@@ -406,7 +406,6 @@ public partial class GalaxyView : Control
     // everything else (lanes, sectors, unexplored systems) is drawn in quiet greys and blues so ownership reads first.
     static readonly Color LaneColor = new(0.58f, 0.60f, 0.65f);
     static readonly Color MajorRouteColor = new(0.72f, 0.75f, 0.80f);
-    static readonly Color DotOutline = new(0.03f, 0.04f, 0.07f, 0.95f);
     static readonly Color SectorColor = new(0.70f, 0.78f, 0.95f);
     // Route widths and brightness (Paul 2026-11-18, pick 4 "a bit too big": great 1.8 -> 1.0 px, others 1.0 -> 0.6 px, the pointed
     // system's links 2.6 / 1.8 -> 1.6 / 1.0 px). In layout px: the window scale multiplies them (x1.11 at 1600x1000, about x2.1 on Retina).
@@ -415,9 +414,11 @@ public partial class GalaxyView : Control
     const float FocusGreatWidth = 1.6f, FocusRouteWidth = 1.0f;
     // the move preview: solid legs on a route, dashes for a free jump (one dashed style per meaning, map declutter 2026-11-18)
     const float PreviewWidth = 3f, PreviewJumpWidth = 1.6f, PreviewJumpDash = 6f;
-    // unexplored systems: a smaller, fainter ring, so your blue and the grey dots read first (pick 5)
-    static readonly Color UnknownRing = new(0.45f, 0.48f, 0.55f, 0.30f);
-    const float UnknownRingSize = 0.6f, UnknownRingWidth = 1.0f;
+    // unexplored systems: a smaller dark grey sphere, so your blue and the grey ones read first (pick 5; Paul 2026-11-24: "dark grey for
+    // unexplored systems")
+    public static readonly Color UnknownColor = new("4e5159");
+    public const float UnknownSize = 0.6f, NeutralSize = 0.72f;
+    const int MinSphere = 5;
     // a black veil over the galaxy picture on the game map only (pick 6: 40% darker; the title screen keeps it as tuned)
     const float BackdropVeil = 0.4f;
 
@@ -522,7 +523,7 @@ public partial class GalaxyView : Control
                 for (int k = 4; k >= 1; k--) DrawCircle(p, r * k / 4f, new Color(m.Color, m.Color.A * 0.24f));
             }
 
-        // systems: the whole dot is the owner's colour; neutral = small grey dot; unexplored = faint hollow ring.
+        // systems: a pixel sphere in the owner's colour; neutral = a smaller grey one; unexplored = a smaller dark grey one (Paul 2026-11-24).
         // Bigger double ring = headquarters, red ring = uprising, yellow ring = blockade.
         float focusOut = 0, hoverOut = 0;   // the outermost state ring of the selected and the hovered system, so their marks go outside it
         for (int i = 0; i < _pos.Length; i++)
@@ -543,19 +544,17 @@ public partial class GalaxyView : Control
             if (IsUnknown?.Invoke(i) == true)
             {
                 // never explored by the player's side: nothing known about owner or state (fog of war)
-                DrawArc(p, radius * UnknownRingSize, 0, Mathf.Tau, 16, UnknownRing, UnknownRingWidth, true);
+                DrawSphere(p, UnknownColor, radius * UnknownSize);
                 continue;
             }
             var owner = OwnerOf?.Invoke(i);
             if (owner == null)
             {
-                DrawCircle(p, radius * 0.72f + 1f, DotOutline);
-                DrawCircle(p, radius * 0.72f, NeutralColor);
+                DrawSphere(p, NeutralColor, radius * NeutralSize);
                 continue;
             }
             var fill = SideColor(owner.Value);
-            DrawCircle(p, radius + 1.2f, DotOutline);
-            DrawCircle(p, radius, fill);
+            DrawSphere(p, fill, radius);
             if (IsHq?.Invoke(i) == true)
             {
                 DrawArc(p, radius + 5f, 0, Mathf.Tau, 28, Colors.White, 2f, true);
@@ -586,6 +585,15 @@ public partial class GalaxyView : Control
         if (sectorShape != null && lit) SectorName(sectorShape, hoverSector, taken, markers);
 
         DrawSystemNames(focus, radius, screenRect, taken);
+    }
+
+    /// <summary>A system's pixel sphere (<see cref="SystemSphere"/>), centred on its place and set on whole layout pixels so its pixels stay
+    /// square. Never under 5 pixels across: a 4-pixel disc is a square.</summary>
+    void DrawSphere(Vector2 p, Color c, float r)
+    {
+        var tex = SystemSphere.Of(c, Math.Max(MinSphere, Mathf.RoundToInt(2 * r)));
+        var size = tex.GetSize();
+        DrawTexture(tex, (p - size / 2f).Round());
     }
 
     /// <summary>A sector's name beside its outline: above it if that spot is free, else below, else at the top corners. Free means off
