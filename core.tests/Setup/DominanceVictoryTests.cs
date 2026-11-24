@@ -160,4 +160,18 @@ public class DominanceVictoryTests
         Assert.Equal(240, r.DominanceDays); // Paul 2026-11-24, was 180
         Assert.Equal(70, r.DominanceSharePercent);
     }
+
+    [Fact] // m5-setup-and-victory V29 (QA-121)
+    public void ASaveThatPinnedTheOld180DaysLoadsWith240()
+    {
+        var h = Make(StartPreset.MedA, new VictoryRules { DominanceDays = 180 });
+        h.Game.Step();
+        string save = h.SaveWithSettings();
+        Assert.Contains("\"DominanceDays\":180", save);
+        var l = GameHost.Load(save);
+        Assert.Equal(240, l.Victory.Rules.DominanceDays);
+        Assert.Equal(h.StateHash(), l.StateHash()); // the state itself is unchanged
+        var other = GameHost.Load(Make(StartPreset.MedA, new VictoryRules { DominanceDays = 30 }).SaveWithSettings());
+        Assert.Equal(30, other.Victory.Rules.DominanceDays); // any other pinned value stays as it was
+    }
 }

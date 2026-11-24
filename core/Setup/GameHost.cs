@@ -425,9 +425,22 @@ public sealed class GameHost
         ("\"OriginalRngWarmup\":", "\"ClassicRngWarmup\":"),
     };
 
+    /// <summary>
+    /// The capital-and-control run a save pinned before 2026-11-24 (180 days, the old DEFAULT; no setting ever let a player choose another
+    /// value). Paul raised it to 240 ("Make it 240 days") and wants the games he already has under way to follow, so a pinned 180 loads as
+    /// 240 (QA-121). rule: m5-setup-and-victory §Capital and control.
+    /// </summary>
+    internal const int OldDominanceDays = 180;
+    /// <summary>What a pinned <see cref="OldDominanceDays"/> becomes: the 2026-11-24 value, fixed, so a later change of the DEFAULT needs its own step.</summary>
+    internal const int NewDominanceDays = 240;
+
+    private static readonly System.Text.RegularExpressions.Regex OldDominance =
+        new("\"DominanceDays\":" + OldDominanceDays + "(?=[,}])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static string UpgradeSettingsJson(string json)
     {
         foreach (var (o, n) in RenamedSettings) json = json.Replace(o, n, StringComparison.Ordinal);
+        json = OldDominance.Replace(json, "\"DominanceDays\":" + NewDominanceDays);
         return json;
     }
 
