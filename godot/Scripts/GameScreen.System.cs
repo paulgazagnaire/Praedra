@@ -178,7 +178,7 @@ public partial class GameScreen
     {
         var regs = S.Host.Troops.RegimentsOnSystem(name);
         var mineRegs = regs.Where(r => r.Side == Me).ToList();
-        Heading($"Regiments on the planet ({mineRegs.Count})", "Your regiments here keep order and defend the planet. Train them in the Infrastructure window; move them by drag in the Ground window.");
+        Heading($"Regiments on the planet ({mineRegs.Count})", "Your regiments here keep order and defend the planet. Train them in the Infrastructure window; move them by drag, or scrap one with a right-click, in the Ground window.");
         Lead(mineRegs.Count == 0 ? "None." : Counts(mineRegs.Select(r => r.Class)) + ".");
         foreach (var g in regs.Where(r => r.Side != Me).GroupBy(r => r.Side).OrderBy(g => g.Key))
             Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))}: {Counts(g.Select(r => r.Class))}", Ui.Text2, 13);

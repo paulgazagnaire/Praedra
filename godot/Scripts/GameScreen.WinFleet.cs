@@ -481,11 +481,6 @@ public partial class GameScreen
     // ================================================================== the strip of tabs
 
     /// <summary>
-    /// The tabs as the design's strip: cells 1 px apart on the line colour, the open one on the lighter surface so it joins the page under
-    /// it; the name, and its count in the dim grey. Every page is built (so every drop place exists), only the open one shows. While a unit
-    /// is dragged over a cell, it opens, so a drop can reach a page that was hidden.
-    /// </summary>
-    /// <summary>
     /// A strip cell's name: light on the open cell, grey on the others, light again under the mouse (Paul 2026-11-24: "the open tab is barely
     /// lighter than the rest"; the lighter surface alone measured 1.07:1). Its count keeps its own colour. Returns the repaint, for a cell
     /// pressed with no signal.
@@ -501,6 +496,11 @@ public partial class GameScreen
         return Paint;   // for a cell pressed without its signal
     }
 
+    /// <summary>
+    /// The tabs as the design's strip: cells 1 px apart on the line colour, the open one on the lighter surface so it joins the page under
+    /// it; the name, and its count in the dim grey. Every page is built (so every drop place exists), only the open one shows. While a unit
+    /// is dragged over a cell, it opens, so a drop can reach a page that was hidden.
+    /// </summary>
     void FleetStrip(MgWin w, params (string Name, string Count, Color? Ink, Action Build)[] tabs)
     {
         if (w.Tab == null || !tabs.Any(t => t.Name == w.Tab)) w.Tab = tabs[0].Name;
