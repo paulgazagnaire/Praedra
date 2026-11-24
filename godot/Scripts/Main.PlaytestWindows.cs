@@ -39,15 +39,13 @@ public partial class Main
         // ---------------------------------------------------------------- open the two windows side by side
         gs.ShotWindow("ground", sys); gs.PlayRefresh();
         string ground = gs.MgText($"Ground {sys}");
-        Expect(gs.MgmtKeys.Contains($"Ground {sys}") && gs.MgTab($"Ground {sys}") == "Leaders" && ground.Contains("LEADERS ON THE PLANET") && ground.Contains("YOUR FLEETS IN ORBIT"),
-            "the system window opens on its Leaders tab, and its Fleets tab lists the fleets in orbit");
+        // Paul's new colors frames (2026-11-24): Command (the General, the characters here), Troops, Fighters, Fleets; the Lore tab is gone
+        Expect(gs.MgmtKeys.Contains($"Ground {sys}") && gs.MgTab($"Ground {sys}") == "Command" && ground.Contains("LEADERS") && ground.Contains("YOUR FLEETS"),
+            "the system window opens on its Command tab, and its Fleets tab lists the fleets in orbit");
+        Expect(string.Join(",", gs.MgTabs($"Ground {sys}")) == "Command,Troops,Fighters,Fleets", $"its tabs, no Lore: {string.Join(", ", gs.MgTabs($"Ground {sys}"))}");
         if (s.OwnerOf(sys) == me)
-            Expect(string.Join(",", gs.MgTabs($"Ground {sys}")) == "Leaders,Troops,Fighters,Fleets,Lore", $"its tabs: {string.Join(", ", gs.MgTabs($"Ground {sys}"))}");
-        // the Lore tab (Paul 2026-11-04): the Lore Master's text for this system
-        var lore = SystemLore.Of(sys);
-        Expect(lore != null && gs.Click($"Tab Ground {sys} Lore") && gs.MgTab($"Ground {sys}") == "Lore"
-            && gs.MgText($"Ground {sys}") is var lt && lt.Contains("THE WORLD") && lt.Contains(lore.World) && lt.Contains(lore.Story),
-            $"the Lore tab shows {sys}'s world and story");
+            Expect(ground.Contains("GROUND COMMAND") && gs.MgHasZone($"Ground {sys} General") && gs.MgPageText($"Ground {sys}", "Command") is var cmdText && !cmdText.Contains("Commander"),
+                "your planet's Command tab has the General's post and no Commander (Paul 2026-11-24: the rules have none on a planet)");
         Expect(gs.Click($"Tab Ground {sys} Fleets") && gs.MgTab($"Ground {sys}") == "Fleets", "a click on the Fleets tab shows it");
         Expect(gs.Click($"Open {fleet.Name}"), $"the Fleets tab's Open button opens {fleet.Name}");
         gs.PlayRefresh();
@@ -65,8 +63,8 @@ public partial class Main
         string zone = post == CharacterPost.None ? $"Fleet {fid} Passengers" : $"Fleet {fid} {post}";
         string why = gs.MgDrop($"L:{lead.Id}", zone);
         Expect(why == null, $"drop {lname} on {zone}: {why ?? "sent"}");
-        // the Leaders tab only: Charter's Lore tab names The Chair (route thinning 2026-11-11 made The Chair the leader picked here)
-        Expect(!gs.MgPageText($"Ground {sys}", "Leaders").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
+        // the Command tab only (route thinning 2026-11-11 made The Chair the leader picked here)
+        Expect(!gs.MgPageText($"Ground {sys}", "Command").Contains(lname) && gs.MgText($"Fleet {fid}").Contains(lname), "the drop shows at once: the chip leaves the planet and stands in the fleet");
         Expect(gs.MgDrop($"L:{lead.Id}", $"Fleet {fid} Passengers") != null, "a chip already moved today can't be dropped again");
         gs.PlayDay();
         Expect(lead.AttachedFleet == fid && lead.Post == post, $"next day {lname} is aboard {fleet.Name} as {GameSession.PostWords(post)}");
@@ -102,7 +100,7 @@ public partial class Main
             int qd = s.QueuedOrders;
             Expect(gs.MgDrop($"L:{far.Id}", $"Fleet {fid} Passengers") != null || s.QueuedOrders == qd, "dropping them again does not queue a second trip");
             gs.PlayDay(); gs.PlayRefresh();
-            Expect(far.Transit != null && far.JoinFleet == fid && gs.MgText($"Fleet {fid}").Contains("On the way"), $"next day {fname} travels to {sys}, listed under On the way");
+            Expect(far.Transit != null && far.JoinFleet == fid && gs.MgText($"Fleet {fid}").Contains("On the way", StringComparison.OrdinalIgnoreCase), $"next day {fname} travels to {sys}, listed under On the way");
         }
 
         // ---------------------------------------------------------------- a regiment aboard and back
@@ -357,7 +355,7 @@ public partial class Main
 
         // ---------------------------------------------------------------- the sector tile opens them
         gs.TileClick(sys, "infra"); gs.PlayRefresh();
-        Expect(gs.MgmtKeys.Contains($"Infra {sys}") && gs.MgText($"Infra {sys}").Contains(s.OwnerOf(sys) == me ? "System energy" : "Energy slots"), "a click on a tile's dots opens its Infrastructure window");
+        Expect(gs.MgmtKeys.Contains($"Infra {sys}") && gs.MgText($"Infra {sys}").Contains("System energy"), "a click on a tile's dots opens its Infrastructure window (the same window, held or not)");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         PlaytestInfra(gs, sys);
         gs.TileClick(sys, "infra"); gs.PlayRefresh();

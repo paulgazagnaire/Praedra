@@ -66,10 +66,10 @@ public static class Ui
     // rounded corners, no divider lines. The greys are those of his Infrastructure design (Paper, 2026-11-18; see Look), which Paul gave
     // to every window (2026-11-19, answer 10): one grey for the words you read, as the design has, and the bluish #909EBD only for the
     // window buttons.
-    public static readonly Color WinActive = Look.Text;     // #BABABA names, values, the chosen tab, links, the window's name
-    public static readonly Color WinText = Look.Text;       // #BABABA every other line you read, small labels, the other tabs
+    public static readonly Color WinActive = Look.Text;     // #DFDFDF names, values, the chosen tab, links, the window's name
+    public static readonly Color WinText = Look.Text;       // #DFDFDF every other line you read, small labels, the other tabs
     public static readonly Color WinHover = Look.Soft;      // #676767 the outline under the mouse (a button: #2D2E32, hover, then #BABABA pressed)
-    public static readonly Color WinButtonInk = Look.Accent; // #909EBD the window buttons ⋮⋮ – × ‹ ›
+    public static readonly Color WinButtonInk = Look.Text;   // #DFDFDF the window buttons ⋮⋮ – × ‹ › (new colors frames, 2026-11-24)
     public static readonly Color WinDim = Look.Dim;         // #454545 greyed out: unexplored, not researched, placeholders like "Empty"
     public static readonly Color WinLine = Look.Edge;       // #2D2E32 the outline of tiles, bar tracks, empty slots
     /// <summary>The edge of a window and of the pieces on the map: lighter than the lines inside, so a window stands off the map
@@ -125,6 +125,21 @@ public static class Ui
     /// <summary>The name that fits: <paramref name="room"/> px wide at 48 px, else 32 px.</summary>
     public static int NameSize(string upper, float room) =>
         NameFont(NameBig, upper).GetStringSize(upper, HorizontalAlignment.Left, -1, NameBig).X <= room ? NameBig : NameSmall;
+
+    static Font _section;
+    /// <summary>A section's title in a window (the new colors frames, 2026-11-24): BitPotion 24 px in capitals, 0.05 em apart (1 px).</summary>
+    public static Font SectionFont
+    {
+        get
+        {
+            if (_section != null) return _section;
+            if (PixelFace == null) return ThemeDB.FallbackFont;
+            var v = new FontVariation { BaseFont = PixelFace, SpacingGlyph = 1 };
+            if (GroteskMedium != null) v.Fallbacks = new Godot.Collections.Array<Font> { GroteskMedium };   // a letter BitPotion lacks
+            return _section = v;
+        }
+    }
+    public const int SectionSize = 24;
 
     static Font _glyphs;
     /// <summary>The window buttons' face (⋮⋮ – × ‹ ›): JetBrains Mono 24 px, its line trimmed to the frame's 24 px box.</summary>
@@ -460,15 +475,16 @@ public static class Ui
             t.SetColor("font_color", type, color);
         }
 
-        // buttons: a thin square outline, no fill; a brighter edge under the mouse (the text keeps its grey: four greys only); greyed out
-        // when they can't be used
-        void Outlined(string type, Color edge, Color ink, int size, int padX = 8, int padY = 3)
+        // buttons: a thin outline with 4 px corners (W2, the new colors frames 2026-11-24; rows stay square), no fill; a brighter edge under
+        // the mouse (the text keeps its grey: four greys only); greyed out when they can't be used
+        void Outlined(string type, Color edge, Color ink, int size, int padX = 8, int padY = 3, int radius = 4)
         {
-            t.SetStylebox("normal", type, Box(clear, 0, edge, 1, padX, padY));
-            t.SetStylebox("hover", type, Box(clear, 0, WinHover, 1, padX, padY));
-            t.SetStylebox("pressed", type, Box(clear, 0, WinActive, 1, padX, padY));
-            t.SetStylebox("hover_pressed", type, Box(clear, 0, WinActive, 1, padX, padY));
-            t.SetStylebox("disabled", type, Box(clear, 0, WinLine, 1, padX, padY));
+            StyleBoxFlat Round(StyleBoxFlat b) { b.SetCornerRadiusAll(radius); b.AntiAliasing = radius > 0; return b; }
+            t.SetStylebox("normal", type, Round(Box(clear, 0, edge, 1, padX, padY)));
+            t.SetStylebox("hover", type, Round(Box(clear, 0, WinHover, 1, padX, padY)));
+            t.SetStylebox("pressed", type, Round(Box(clear, 0, WinActive, 1, padX, padY)));
+            t.SetStylebox("hover_pressed", type, Round(Box(clear, 0, WinActive, 1, padX, padY)));
+            t.SetStylebox("disabled", type, Round(Box(clear, 0, WinLine, 1, padX, padY)));
             t.SetStylebox("focus", type, new StyleBoxEmpty());
             Inks(type, ink, size, Grotesk);
         }
@@ -494,12 +510,12 @@ public static class Ui
         t.SetConstant("h_separation", "Button", 6);
         // the build stepper's − and +: one 24 x 24 square each, the glyph centred
         t.SetTypeVariation("Step", "Button"); Outlined("Step", WinLine, WinActive, 13, 0, 0);
-        foreach (var v in new[] { "Chip", "Row", "Primary" }) { t.SetTypeVariation(v, "Button"); Outlined(v, v == "Primary" ? WinText : WinLine, WinActive, v == "Row" ? Body : v == "Chip" ? 13 : 14); }
+        foreach (var v in new[] { "Chip", "Row", "Primary" }) { t.SetTypeVariation(v, "Button"); Outlined(v, v == "Primary" ? WinText : WinLine, WinActive, v == "Row" ? Body : v == "Chip" ? 13 : 14, radius: v == "Row" ? 0 : 4); }
         t.SetTypeVariation("DangerButton", "Button"); Outlined("DangerButton", new Color(Danger, 0.8f), Danger, 14);
         t.SetTypeVariation("WarnButton", "Button"); Outlined("WarnButton", new Color(Warn, 0.7f), Warn, 14);
         // a row in a list: no line until the mouse is on it
         t.SetTypeVariation("Flat", "Button");
-        Outlined("Flat", clear, WinActive, 13);
+        Outlined("Flat", clear, WinActive, 13, radius: 0);
         // a link: just the words (the windows' own links are LinkButtons, underlined)
         t.SetTypeVariation("Link", "Button");
         Plain("Link", WinActive, Small, Grotesk, 2, 1);

@@ -309,22 +309,6 @@ public partial class GameScreen
         else Line("unknown", Dim);
     }
 
-    /// <summary>Your fighter squadrons based on this planet (not aboard a ship): what they are, scrap, and fly the ones with a hyperdrive.
-    /// rule: m3-fleets §Fighters based at a system, §Unescorted squadrons.</summary>
-    void FightersHere(string name)
-    {
-        Heading("Fighters based here", "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a hyperdrive can also fly on their own.");
-        var based = FightersBasedAt(name);
-        if (based.Count == 0) { Line("none", Dim); return; }
-        ScrapRows(based, name);
-        // the same rating the core flies them at: a damaged hyperdrive can be 0 (rule: m3-ships-and-fighters §Hyperdrive and speed)
-        var mobile = based.Where(o => Fm.ClassOf(o) != null && Fm.SpeedOfShip(o) > 0).Select(o => o.Id).ToList();
-        if (mobile.Count > 0)
-            Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
-                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working hyperdrive: a carrier must take them." : ""));
-        else Note("These fighters have no working hyperdrive: a fleet with hangar room must carry them.");
-    }
-
     void DestroyedPanel(string name)
     {
         using (Card(Look.Bg, new Color(Ui.Danger, 0.7f), 8))

@@ -109,10 +109,10 @@ public partial class GameScreen
 
     static float WidthOf(MgWin w) => w.Wide ? WideWidth : MgWidth;
 
-    /// <summary>Your own planet's Infrastructure window is two columns wide: what stands there on the left, what it can build on the right,
-    /// so it needs no scrolling (Paul 2026-11-14, impeccable critique). Someone else's planet shows only its buildings: one column.</summary>
-    /// A fleet's window is one column, so four fleets stand side by side (Paul 2026-11-21).
-    bool WantsWide(MgWin w) => w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System) && S.OwnerOf(w.System) == Me;
+    /// <summary>A planet's Infrastructure window is two columns wide: what stands there on the left, what it can build on the right, so it
+    /// needs no scrolling (Paul 2026-11-14, impeccable critique); one you don't hold has the same window (Paul 2026-11-24). A fleet's window
+    /// and a Ground window are one column, so four stand side by side (Paul 2026-11-21).</summary>
+    bool WantsWide(MgWin w) => w.Kind == MgKind.Infra && w.System != null && !S.IsDestroyed(w.System);
 
     internal int MgmtCount => _mgWins.Count;
     internal IEnumerable<string> MgmtKeys => _mgWins.Select(w => w.Key);
@@ -226,12 +226,12 @@ public partial class GameScreen
         ApplyLook(w);
     }
 
-    /// <summary>Your planet's Infrastructure window has Paul's Paper design (2026-11-18): its head and its yard strip run to the window's
-    /// edges on the darker surface, the part under them on the lighter one with 16 px all round and 24 px between its parts. The other
-    /// windows keep the "styles" layout, in the design's colours (Paul 2026-11-19).</summary>
+    /// <summary>Every window has Paul's Paper design (the Infrastructure window 2026-11-18, the Fleet window 2026-11-21, the Ground window
+    /// and the new colors 2026-11-24): its head and its strip run to the window's edges on the darker surface, the page under them on the
+    /// lighter one with 16 px all round and 24 px between its parts, a 1 px #181B21 edge.</summary>
     void ApplyLook(MgWin w)
     {
-        bool look = w.Kind == MgKind.Infra && w.Wide || w.Kind == MgKind.Fleet;   // and a fleet's window: Paul's design of 2026-11-21
+        bool look = w.Kind is MgKind.Infra or MgKind.Fleet or MgKind.Ground;
         if (look == w.NewLook && w.Panel.HasThemeStyleboxOverride("panel")) return;
         w.NewLook = look;
         void Margins(MarginContainer m, int l, int r, int t, int b)
@@ -245,7 +245,7 @@ public partial class GameScreen
             Margins(w.BodyPad, WinPad, WinPad, WinPad, WinPad);
             w.Head.AddThemeConstantOverride("separation", 0);
             w.Body.AddThemeConstantOverride("separation", WinGap);
-            var box = Look.Box(Look.Band, Ui.WinEdge, 1, 1, 1, 1);
+            var box = Look.Box(Look.Band, Look.Frame, 1, 1, 1, 1);
             box.ContentMarginLeft = box.ContentMarginRight = box.ContentMarginTop = box.ContentMarginBottom = 1;
             w.Panel.AddThemeStyleboxOverride("panel", box);
         }
@@ -433,7 +433,7 @@ public partial class GameScreen
                 var gd = x.D.Value;
                 string words = x.Words;
                 string sub = Travels(words) ? words : gd.Kind == 'L' ? LeaderPosts(Cm.Get(gd.Id)) : "moved";
-                var ghost = w.Kind == MgKind.Fleet ? FleetGhost(gd, sub) : DragTile(gd, sub, 1, ghost: true);   // a fleet's window: its own cards and rows
+                var ghost = w.NewLook ? FleetGhost(gd, sub) : DragTile(gd, sub, 1, ghost: true);   // the design's cards
                 ghost.TooltipText = Ui.Wrap($"{ThingName(gd)}: {words}. It can move again tomorrow.");
                 ghost.SetMeta(UiTest.FullName, "Arriving " + gd.Key);
                 z.Flow.AddChild(ghost);
@@ -446,7 +446,8 @@ public partial class GameScreen
             bool post = z.Key.EndsWith(" General", StringComparison.Ordinal) || z.Key.EndsWith(" Admiral", StringComparison.Ordinal)
                 || z.Key.EndsWith(" Commander", StringComparison.Ordinal);
             bool riders = z.Key.EndsWith(" Passengers", StringComparison.Ordinal);
-            z.Flow.AddChild(w.Kind == MgKind.Fleet ? EmptyCard(post || riders ? DropLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
+            bool leaders = riders || z.Key.EndsWith(" Leaders", StringComparison.Ordinal);
+            z.Flow.AddChild(w.NewLook ? EmptyCard(post || leaders ? DropLeader : "Empty") : EmptySlot(post ? DropLeader : "Empty", slot: post));
         }
         Fit(w, keep);
     }
