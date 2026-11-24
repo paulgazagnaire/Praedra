@@ -175,6 +175,7 @@ public partial class GameScreen : Control
         };
         if (why != null && oc.Popup != null) ShowReport(oc.Popup);
         note ??= ChosenPause(oc.New);
+        note ??= CapitalThreatPause();
         if (note != null) { Pause(note); return false; }
         RefreshTop();
         return true;

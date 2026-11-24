@@ -481,6 +481,7 @@ public partial class GameScreen
         Check("an enemy fleet arrives at one of your systems", UiSettings.PauseEnemyAtMine, on => UiSettings.PauseEnemyAtMine = on);
         Check("an uprising starts on one of your systems", UiSettings.PauseUprising, on => UiSettings.PauseUprising = on);
         Check("a Sensor Station sees an enemy fleet coming", UiSettings.PauseSensors, on => UiSettings.PauseSensors = on);
+        Check("an enemy fleet threatens your capital", UiSettings.PauseCapitalThreat, on => UiSettings.PauseCapitalThreat = on);
         Check("a ship, troop or building is finished", UiSettings.PauseCompleted, on => UiSettings.PauseCompleted = on);
         Check("a mission succeeds or fails", UiSettings.PauseMission, on => UiSettings.PauseMission = on);
         ShowModal(_settingsPanel);
