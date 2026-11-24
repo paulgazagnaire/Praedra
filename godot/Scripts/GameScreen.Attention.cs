@@ -48,14 +48,14 @@ public partial class GameScreen
             if (lead == Me) list.Add(new Item("dominance-me", Level.Info, $"You win on day {due} ({Ui.InDays(left)})", $"Keep at least {S.Host.Victory.Rules.DominanceSharePercent}% of the claimed worlds until then.", null, new() { ("Goal", ShowGoal, null) }));
             else list.Add(new Item("dominance-enemy", Level.Danger, $"The {S.NameOf(lead)} wins on day {due} ({Ui.InDays(left)})", $"It holds {S.Host.Victory.Rules.DominanceSharePercent}% of the claimed worlds after your capital fell. Take systems back to break its hold.", null, new() { ("Goal", ShowGoal, null) }));
         }
-        foreach (var k in S.Host.Victory.Keys.Where(k => k.Standard && k.Side == S.Enemy).OrderBy(k => k.Character))
-            if (Cm.Get(k.Character) is { Status: CharacterStatus.Captured } c)
+        var enemyWinKeys = S.Host.Victory.Keys.Where(k => k.Standard && k.Side == S.Enemy).Select(k => k.Character).OrderBy(id => id).ToList();
+        foreach (int id in enemyWinKeys)
+            if (Cm.Get(id) is { Status: CharacterStatus.Captured } c)
                 list.Add(new Item($"key-{c.Id}", Level.Danger, $"{S.CharName(c.Id)} is a prisoner{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}",
                     $"The {S.NameOf(S.Enemy)} needs this leader captive to win. Send a team on a Rescue mission.", c.HeldAt, new() { ("Leaders", () => ShowTab(DrawerTab.Leaders), null) }));
 
         // ---- your own leaders in prison who are not a win target: amber (Paul 2026-11-24)
-        var keyIds = S.Host.Victory.Keys.Where(k => k.Standard && k.Side == S.Enemy).Select(k => k.Character).ToHashSet();
-        foreach (var c in S.MyCharacters.Where(c => c.Status == CharacterStatus.Captured && !keyIds.Contains(c.Id)))
+        foreach (var c in S.MyCharacters.Where(c => c.Status == CharacterStatus.Captured && !enemyWinKeys.Contains(c.Id)))
             list.Add(new Item($"prisoner-{c.Id}", Level.Warn, $"{S.CharName(c.Id)} is a prisoner{(c.HeldAt != null ? $" at {c.HeldAt}" : "")}",
                 "Send a team on a Rescue mission to get this leader back.", c.HeldAt, new() { ("Leaders", () => ShowTab(DrawerTab.Leaders), null) }));
 
@@ -155,7 +155,8 @@ public partial class GameScreen
 
     bool CapitalHeld(string sys) => sys == S.MyHqSystem && S.OwnerOf(sys) == Me && !S.IsDestroyed(sys);
 
-    /// <summary>Systems you held that changed hands or were destroyed in the last <see cref="LostSystemDays"/> days and are not yours again: one red item.</summary>
+    /// <summary>Systems you held that changed hands or were destroyed in the last <see cref="LostSystemDays"/> days and are not yours again: one red item.
+    /// Read from the side's event feed, which is not saved: after a Load only losses since the load show (Ponytail on #375; accepted for now).</summary>
     void LostSystems(List<Item> list)
     {
         int from = S.Game.Day - LostSystemDays;
@@ -177,7 +178,7 @@ public partial class GameScreen
             .Select(kv => { string sys = kv.Key; return ($"{sys}: {kv.Value.How}, day {kv.Value.Day}", (Action)(() => GoTo(sys, true))); }).ToList();
         string first = lost.OrderByDescending(kv => kv.Value.Day).First().Key;
         list.Add(new Item("lost-systems", Level.Danger, lost.Count == 1 ? $"You lost {first}" : $"You lost {lost.Count} systems",
-            $"In the last {LostSystemDays} days. Take them back with a fleet and troops, or they count for the enemy.", lost.Count == 1 ? first : null,
+            $"In the last {LostSystemDays} days. Take them back with a fleet and troops.", lost.Count == 1 ? first : null,
             lost.Count == 1 ? new() { ("Go there", () => GoTo(first, true), null) } : new()) { Rows = lost.Count == 1 ? null : rows });
     }
 
@@ -206,7 +207,7 @@ public partial class GameScreen
         var lines = new List<string>();
         if (warned != null) lines.Add($"Your Sensor Station saw a {(warned.Size?.ToString() ?? "").ToLowerInvariant()} {S.NameOf(warned.Side)} fleet coming, expected day {warned.ReachDay}.");
         foreach (var n in near.OrderBy(n => n.Days).ThenBy(n => n.Sys, StringComparer.Ordinal).Take(MaxRows))
-            lines.Add($"At {n.Sys}, {Ui.InDays(n.Days)} away: {n.Fleet}.");
+            lines.Add($"At {n.Sys}, about {Ui.InDays(n.Days)} away: {n.Fleet}.");
         if (near.Count > MaxRows) lines.Add($"And {near.Count - MaxRows} more enemy fleets close by.");
         lines.Add("Bring fleets and troops home before it falls.");
         list.Add(new Item("capital-threat", Level.Danger, $"Your capital {cap} is threatened", string.Join(" ", lines), cap,
