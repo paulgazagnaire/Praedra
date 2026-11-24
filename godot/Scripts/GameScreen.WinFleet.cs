@@ -283,7 +283,7 @@ public partial class GameScreen
         bar.SetMeta(UiTest.FullName, $"Fleet status bar {f.Id}");
         bar.SetMeta("shown", st.Share != null);
         v.AddChild(bar);
-        var orders = S.PendingOrdersOf(f.Id).ToList();
+        var orders = S.PendingOrdersOf(f.Id, incoming: true).ToList();
         if (orders.Count > 0)
         {
             var ov = Boxed(new VBoxContainer(), 4);
@@ -322,6 +322,10 @@ public partial class GameScreen
         }
         if (_moved.TryGetValue(new Drag('M', f.Id).Key, out var mto))
             return new(new List<string> { char.ToUpperInvariant(mto.Words[0]) + mto.Words[1..] }, null, Ui.You, false, $"{S.NameOf(f)} {mto.Words} when the clock moves." + more);
+        // every ship moved into other fleets here: it acts as a merge (Paul 2026-11-24). rule: m3-fleets §Fleet invariant 1
+        if (AllShipsLeave(f))
+            return new(new List<string> { $"Merges into {LeavesInto(f)}" }, null, Ui.You, false,
+                $"All of {S.NameOf(f)}'s ships join {LeavesInto(f)} when the clock moves, so {S.NameOf(f)} is then gone, as after a merge; its leaders join the fleet its last ship joins. Cancel a ship's move to keep it." + more);
         if (S.PlannedMoveOf(f.Id) is { } pm)
         {
             int days = Math.Max(1, pm.ArrivalDay - S.Game.Day);
@@ -624,9 +628,11 @@ public partial class GameScreen
         foreach (var row in new[] { hit, go }) { row.AddThemeConstantOverride("h_separation", 8); row.AddThemeConstantOverride("v_separation", 8); bar.AddChild(row); }
         bool still = Still(f);
         string travelling = $"Travelling: give this order when it reaches {f.Transit?.Path[^1] ?? "its destination"}.";
-        bool canHit = CanAttackHere(f);
+        // a fleet that merges away today takes no order of its own: the core would refuse it once the fleet is gone (P2, review 18)
+        string gone = MergesAwayWhy(f);
+        bool canHit = gone == null && CanAttackHere(f);
         int regs = S.Host.Troops.RegimentsAboard(f).Count;
-        string hitWhy = canHit ? null : AttackWhyNot(f);
+        string hitWhy = gone ?? (canHit ? null : AttackWhyNot(f));
 
         hit.AddChild(MenuAction("Bombardment", "Fleet Bombard", !canHit ? Array.Empty<(string, Action)>() : new (string, Action)[]
         {
@@ -639,11 +645,12 @@ public partial class GameScreen
             !canHit || regs == 0));
         int fid = f.Id;
         hit.AddChild(FleetAction("Move", "Fleet Move", () => { if (S.Game.State.Fleets.TryGetValue(fid, out var ff)) { CloseSectorView(); StartMove(ff); } },
-            still ? "Pick a destination on the map. To send several fleets at once, Shift+click them on the map and right-click a system." : travelling, !still));
+            gone ?? (still ? "Pick a destination on the map. To send several fleets at once, Shift+click them on the map and right-click a system." : travelling), !still || gone != null));
         // Merge, as Bombardment: a short list, the fleets here first (they join at once), then the others closest first (they fly here)
-        var merge = still ? MergeLines(f) : new List<(string Text, Action Do)>();
+        var merge = still && gone == null ? MergeLines(f) : new List<(string Text, Action Do)>();
         go.AddChild(MenuAction("Merge", "Fleet Merge", merge.Select(l => (l.Text, (Action)(() => { l.Do(); MgRefreshSoon(); }))).ToArray(),
-            !still ? travelling
+            gone != null ? gone
+            : !still ? travelling
             : merge.Count == 0 ? "No other fleet of yours can join this one now: none can reach it, or each already has an order today."
             : $"Another fleet joins {S.NameOf(f)}: a fleet here joins at once, one elsewhere flies here and joins when it arrives."));
 
@@ -653,8 +660,8 @@ public partial class GameScreen
             bool struck = S.PendingOf(f.Id).Any(p => p.StartsWith("Destroy System", StringComparison.Ordinal));
             int? readyDay = S.HarvesterRechargingUntil(f);
             go.AddChild(FleetAction("Destroy System...", "Fleet Destroy", () => AskDestroySystem(f.Id),
-                S.IsDestroyed(f.At) ? $"{f.At} is already destroyed." + (readyDay is int rd0 ? " " + S.HarvestWaitText(rd0) : "") : struck ? "The strike is ordered: it happens as soon as the clock moves." : readyDay is int rd ? S.HarvestWaitText(rd) : "Wipes out the system the harvester is at. Asks first.",
-                S.IsDestroyed(f.At) || struck || readyDay != null, Ui.Danger));
+                gone ?? (S.IsDestroyed(f.At) ? $"{f.At} is already destroyed." + (readyDay is int rd0 ? " " + S.HarvestWaitText(rd0) : "") : struck ? "The strike is ordered: it happens as soon as the clock moves." : readyDay is int rd ? S.HarvestWaitText(rd) : "Wipes out the system the harvester is at. Asks first."),
+                gone != null || S.IsDestroyed(f.At) || struck || readyDay != null, Ui.Danger));
         }
         return bar;
     }

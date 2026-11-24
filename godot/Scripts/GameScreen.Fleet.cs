@@ -57,7 +57,7 @@ public partial class GameScreen
             nav.AddChild(Ui.Button("Next fleet here", () => CycleFleetHere(1), "Tab", "Chip"));
             Add(nav);
         }
-        foreach (var (seq, pend) in S.PendingOrdersOf(f.Id)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
+        foreach (var (seq, pend) in S.PendingOrdersOf(f.Id, incoming: true)) OrderLine(seq, $"Ordered: {pend}", Ui.Small);
 
         var eco = S.Host.Economy;
         int fighters = FightersAboard(f).Count + f.Squadrons.Count, regiments = S.Host.Troops.RegimentsAboard(f).Count;

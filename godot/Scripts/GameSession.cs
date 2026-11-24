@@ -82,6 +82,8 @@ public sealed partial class GameSession
     // What each order the player queued was, by sequence number, so a refusal can be explained in words.
     readonly Dictionary<long, string> _pending = new();
     readonly Dictionary<long, int> _pendingFleet = new();
+    // the fleet a queued ship transfer goes into: its window shows the order too (Paul 2026-11-24: the fleet that remains)
+    readonly Dictionary<long, int> _pendingInto = new();
     readonly Dictionary<int, PlannedMove> _plannedMoves = new();
     // Character orders: which character each queued order is about, and the sequences that are character orders (their refusals use WhyCharacter).
     readonly Dictionary<long, int> _pendingChar = new();
@@ -230,10 +232,13 @@ public sealed partial class GameSession
         return sequence;
     }
 
-    /// <summary>Like <see cref="Track"/>, and remember which fleet the order belongs to (shown as "Ordered: ..." on the fleet, with Cancel).</summary>
-    public long TrackFleet(int fleet, long sequence, string what)
+    /// <summary>Like <see cref="Track"/>, and remember which fleet the order belongs to (shown as "Ordered: ..." on the fleet, with Cancel).
+    /// A ship transfer names the fleet it goes <paramref name="into"/> too, whose window shows it as well: when every ship leaves, the fleet
+    /// that gave the order is gone and only that one remains (Paul 2026-11-24).</summary>
+    public long TrackFleet(int fleet, long sequence, string what, int into = 0)
     {
         _pendingFleet[sequence] = fleet;
+        if (into > 0) _pendingInto[sequence] = into;
         return Track(sequence, what);
     }
 
@@ -244,7 +249,7 @@ public sealed partial class GameSession
     public bool Withdraw(long sequence)
     {
         if (!Game.Withdraw(sequence)) return false;
-        _pending.Remove(sequence); _pendingFleet.Remove(sequence);
+        _pending.Remove(sequence); _pendingFleet.Remove(sequence); _pendingInto.Remove(sequence);
         _pendingChar.Remove(sequence); _charOrders.Remove(sequence);
         _missionOrders.Remove(sequence); _pendingMissions.Remove(sequence);
         foreach (var k in _plannedMoves.Where(kv => kv.Value.Seq == sequence).Select(kv => kv.Key).ToList()) _plannedMoves.Remove(k);
@@ -265,9 +270,11 @@ public sealed partial class GameSession
     /// <summary>Orders given to this fleet that the core carries out as soon as the clock moves.</summary>
     public IEnumerable<string> PendingOf(int fleet) => PendingOrdersOf(fleet).Select(o => o.What);
 
-    /// <summary>The same, with each order's sequence (for its Cancel button).</summary>
-    public IEnumerable<(long Seq, string What)> PendingOrdersOf(int fleet) =>
-        _pendingFleet.Where(kv => kv.Value == fleet && _pending.ContainsKey(kv.Key)).OrderBy(kv => kv.Key).Select(kv => (kv.Key, _pending[kv.Key]));
+    /// <summary>The same, with each order's sequence (for its Cancel button). With <paramref name="incoming"/>, also the ship transfers
+    /// into it that other fleets were given (a fleet's window shows them, Paul 2026-11-24).</summary>
+    public IEnumerable<(long Seq, string What)> PendingOrdersOf(int fleet, bool incoming = false) =>
+        _pendingFleet.Where(kv => (kv.Value == fleet || incoming && _pendingInto.TryGetValue(kv.Key, out int to) && to == fleet) && _pending.ContainsKey(kv.Key))
+            .OrderBy(kv => kv.Key).Select(kv => (kv.Key, _pending[kv.Key]));
 
     /// <summary>A move order that was given but not yet started (the fleet leaves as soon as the clock moves).</summary>
     public readonly record struct PlannedMove(string To, IReadOnlyList<string> Path, int Days, int ArrivalDay, long Seq);
@@ -317,7 +324,7 @@ public sealed partial class GameSession
         }
         ReadEvents(outcome);
         // Every order given before this day was judged in this Step: nothing is "waiting" any more.
-        _pending.Clear(); _pendingFleet.Clear(); _plannedMoves.Clear(); PendingHqMove = null; _hqSeq = -1;
+        _pending.Clear(); _pendingFleet.Clear(); _pendingInto.Clear(); _plannedMoves.Clear(); PendingHqMove = null; _hqSeq = -1;
         _pendingChar.Clear(); _charOrders.Clear(); _plannedCharMoves.Clear();
         _pendingMissions.Clear(); _missionOrders.Clear();
         Winner = GameBoot.WinnerOf(Host);
