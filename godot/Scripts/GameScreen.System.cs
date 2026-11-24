@@ -10,9 +10,9 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The system panel (Selected tab). One of your systems opens with what matters most (support, garrison, problems) and splits the rest into
-/// Overview, Build, Forces and Fleets so nothing needs a long scroll. A system you don't hold shows only your side's picture of it, with
-/// the age of every part (rule: m5-fog-and-hq §N2, §N8).
+/// The system panel (Selected tab). One of your systems is a summary: its head, the links to its Infrastructure and Ground windows, what is
+/// wrong, then its yards, fleets, leaders, troops and slots; building and moving units happen in those windows. A system you don't hold shows
+/// only your side's picture of it, with the age of every part (rule: m5-fog-and-hq §N2, §N8).
 /// </summary>
 public partial class GameScreen
 {
