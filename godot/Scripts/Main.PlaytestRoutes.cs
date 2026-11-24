@@ -53,6 +53,7 @@ public partial class Main
         gs.ShiftPickSystem(dest);
         Expect(s.QueuedOrders == q0 + 1 && s.PlannedMoveOf(mover.Id) is { } shiftSent && shiftSent.To == dest && gs.OrderBarText == "",
             $"a second Shift+click on {dest} sends the move there");
+        Expect(s.Messages.Any(m => m.Text == $"Order sent: move {mover.Name} to {dest}."), "the order is not sent via its own destination: " + s.Messages[^1].Text);
         gs.TakeBackMove(mover.Id);
         Expect(gs.Click("Move..."), "click Move... for the Enter check");
         gs.ShiftPickSystem(dest);

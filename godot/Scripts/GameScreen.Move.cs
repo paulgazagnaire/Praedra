@@ -322,6 +322,7 @@ public partial class GameScreen
         string to = G.Systems[idx].Name;
         if (to == f.At) return;
         var via = _waypoints.ToList();
+        if (via.Count > 0 && via[^1] == to) via.RemoveAt(via.Count - 1);   // sent to its last waypoint: no "to Alumen via Alumen" (Ponytail on #382)
         var plan = S.Host.PlanMove(Me, f.Id, to, via); // the same path the order will fly
         if ((plan.Ok && plan.Red) || (_moveAlso.Count > 0 && RedOthers(to).Count > 0))
         {
