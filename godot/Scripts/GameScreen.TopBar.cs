@@ -19,10 +19,9 @@ public partial class GameScreen
     static readonly Color BarBg = new("000000");       // the strip, and its chips at rest (black on black: the frame draws them so)
     static readonly Color BarEdge = new("181b21");     // the line under the strip and between its cells (the windows' edge)
     static readonly Color BarCellBg = new("000000");   // the cells inside a drop-down
-    static readonly Color BarHover = new("131313");    // a chip under the mouse: the frame shows only the chips at rest; the head band's grey
     static readonly Color BarLabel = new("84878e");    // labels: GOAL, Search, Layers, Raw, DAY, 2x
     static readonly Color BarValue = new("dfdfdf");    // values (0/3, 9999), and a switch that is on (the speed, Layers open, the clock running)
-    static readonly Color BarMenu = new("b0b2b7");     // the menu's ≡, and a label under the mouse
+    static readonly Color BarMenu = new("b0b2b7");     // the menu's ≡, and a label under the mouse (the chip stays black: Paul 2026-11-24, "B")
     static readonly Color BarIcon = new("dddddd");     // the pixel icons of Raw, Refined and Upkeep
 
     // ---- the frame's sizes
@@ -45,6 +44,7 @@ public partial class GameScreen
     Control _barLayer;
     HBoxContainer _barLeft, _barRight, _dayWords;
     PanelContainer _barStrip, _searchBox, _layersBox;
+    ColorRect _searchEnd;   // the search's closing line: hidden once the search narrows and reaches the stocks' line
     Control _rawCell, _refinedCell, _upkeepCell;   // one stock each: its icon, name and number, in the stocks' cell
     Label _goalCaption, _goalValue, _rawCaption, _refinedCaption;
     readonly List<PanelContainer> _barTextCells = new();
@@ -122,7 +122,7 @@ public partial class GameScreen
         sh.AddChild(lens);
         _barLeft.AddChild(_searchBox = ChipCell(sc));
         SearchWidth = SearchWide;
-        BarLine(_barLeft);
+        _searchEnd = BarLine(_barLeft);
 
         // ---- right, each cell opened by a line: your stocks, the day, the clock, the advisor
         BarLine(_barRight);
@@ -204,8 +204,12 @@ public partial class GameScreen
     // ================================================================== the pieces
 
     /// <summary>The 1 px line between two cells, the strip's height above its own line.</summary>
-    static void BarLine(HBoxContainer into) =>
-        into.AddChild(new ColorRect { Color = BarEdge, CustomMinimumSize = new Vector2(1, BarBoxH - 1), MouseFilter = MouseFilterEnum.Ignore });
+    static ColorRect BarLine(HBoxContainer into)
+    {
+        var line = new ColorRect { Color = BarEdge, CustomMinimumSize = new Vector2(1, BarBoxH - 1), MouseFilter = MouseFilterEnum.Ignore };
+        into.AddChild(line);
+        return line;
+    }
 
     /// <summary>A cell that holds chips: 4 px round them (3 below, over the strip's line).</summary>
     static PanelContainer ChipCell(Control content)
@@ -301,8 +305,8 @@ public partial class GameScreen
         }
     }
 
-    /// <summary>A chip you click. The words are grey, lighter under the mouse, and light while the switch is on; under the mouse the chip
-    /// itself shows, a step lighter than the strip.</summary>
+    /// <summary>A chip you click. The words are grey, lighter under the mouse, and light while the switch is on. The chip itself stays black
+    /// under the mouse: only the words change (Paul 2026-11-24 chose "B": a #131313 chip on black was too faint to see).</summary>
     Button BarButton(string text, Action onPressed, string tip, Font font, int size, Color color, int padX)
     {
         var b = Ui.Button(text, onPressed, tip);
@@ -318,9 +322,7 @@ public partial class GameScreen
     static void SetChipPad(Button b, int padX)
     {
         var rest = ChipBox(BarBg, padX);
-        var over = ChipBox(BarHover, padX);
-        foreach (var st in new[] { "normal", "pressed", "disabled" }) b.AddThemeStyleboxOverride(st, rest);
-        foreach (var st in new[] { "hover", "hover_pressed" }) b.AddThemeStyleboxOverride(st, over);
+        foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) b.AddThemeStyleboxOverride(st, rest);
     }
 
     /// <summary>The words' colour at rest; one step lighter under the mouse; light while the switch is on.</summary>
@@ -460,7 +462,9 @@ public partial class GameScreen
     /// <summary>
     /// The frame is 1440 px wide, the game's own width. A larger interface size (Settings) leaves fewer px: then the search narrows first
     /// (down to 150 px), then the stocks drop their names and keep their icons (their tooltips still name them), then the cells lose half
-    /// their padding. DAY stays: its tooltip is the only place that says which side you play and against what level.
+    /// their padding. DAY stays: its tooltip is the only place that says which side you play and against what level. Once the search
+    /// narrows it takes all the room left, and the stocks' opening line closes it: a sliver of strip between two lines read as an empty
+    /// cell (review 24).
     /// </summary>
     void PlaceBar() => PlaceBarIn(_barLayer?.Size.X ?? 0);
 
@@ -468,6 +472,7 @@ public partial class GameScreen
     {
         if (_barLayer == null) return;
         float room = screenWidth - BarMinGap;
+        _searchEnd.Visible = true;
         for (int level = 0; level <= 2; level++)
         {
             SetBarLevel(level);
@@ -476,9 +481,10 @@ public partial class GameScreen
             if (over <= 0) break;
             if (over <= SearchWide - SearchNarrow || level == 2)
             {
-                // whole pixels, measured again: the containers round their sizes up
-                SearchWidth = Math.Max(SearchNarrow, SearchWide - Mathf.Ceil(over));
-                if (BarOver(room) is float left && left > 0) SearchWidth = Math.Max(SearchNarrow, SearchWidth - Mathf.Ceil(left));
+                // the search reaches the stocks' line; whole pixels, measured again: the containers round their sizes up
+                _searchEnd.Visible = false;
+                SearchWidth = Math.Max(SearchNarrow, SearchWide - Mathf.Ceil(BarOver(screenWidth)));
+                if (BarOver(screenWidth) is float left && left > 0) SearchWidth = Math.Max(SearchNarrow, SearchWidth - Mathf.Ceil(left));
                 break;
             }
         }
