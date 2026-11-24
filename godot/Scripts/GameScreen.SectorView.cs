@@ -39,7 +39,7 @@ public partial class GameScreen
     const int TileHeight = SystemTile.H;
     const int CardGap = 10;
     const int GridPad = 16;           // the margin round the tiles
-    const int TopClear = BarBoxH + Ui.Block; // the top bar's boxes (49 px) stay uncovered, with 8 px so a window's edge never sits on a box's
+    const int TopClear = BarBoxH + Ui.Block; // the top bar (40 px) stays uncovered, with 8 px so a window's edge never sits on its line
     const int BottomClear = 16;       // windows reach down to the foot of the screen, with the same gap as at the side
     const int MonthDays = 30;         // output is shown per 30 days, a span a player can picture
 

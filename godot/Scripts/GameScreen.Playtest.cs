@@ -150,8 +150,8 @@ public partial class GameScreen
     /// <summary>
     /// Paul's top bar (ui-update-nov-24): the stocks, the day and the clock are in it; it and what it opens (search results, the layers
     /// list) are over the windows and under the notes and dialogs; the windows start under it. At the widths the interface sizes leave
-    /// (1440 px at 100%, then 110%, 125%, 140%) its two sides fit without meeting: at full width as drawn, narrower by shrinking the
-    /// search, then dropping the stocks' names. Null, or what is wrong.
+    /// (1440 px at 100%, then 110%, 125%, 140%) its two sides fit without overlapping: at full width as drawn, narrower by shrinking the
+    /// search until it reaches the stocks' line, then dropping the stocks' names. Null, or what is wrong.
     /// </summary>
     internal string TopBarProblem()
     {
@@ -214,8 +214,10 @@ public partial class GameScreen
         {
             PlaceBarIn(w);
             float left = _barLeft.GetCombinedMinimumSize().X, right = _barRight.GetCombinedMinimumSize().X;
-            if (left + BarMinGap + right > w + 0.5f) { why = $"at {w:0} px the bar's sides meet ({left:0} + {right:0})"; break; }
-            if (w == 1440f && (_barLevel != 0 || SearchWidth != SearchWide)) { why = "at 1440 px the bar is not as Paul drew it"; break; }
+            bool joined = !_searchEnd.Visible;   // a narrowed search reaches the stocks' line (review 24)
+            if (left + (joined ? 0 : BarMinGap) + right > w + 0.5f) { why = $"at {w:0} px the bar's sides overlap ({left:0} + {right:0})"; break; }
+            if (joined && left + right < w - 1f) { why = $"at {w:0} px a narrowed search leaves {w - left - right:0} px of strip before the stocks"; break; }
+            if (w == 1440f && (_barLevel != 0 || SearchWidth != SearchWide || joined)) { why = "at 1440 px the bar is not as Paul drew it"; break; }
         }
         PlaceBar();
         return why;
