@@ -43,7 +43,7 @@ public partial class Main
         Expect(gs.View.SideColor(me) == Ui.You && gs.View.SideColor(s.Enemy) == Ui.Enemy, "the map draws you blue and the enemy orange");
         Expect(gs.TopText.StartsWith("Day 0"), "the clock shows the day: " + gs.TopText);
         string barWhy = gs.TopBarProblem();
-        Expect(barWhy == null, "the top bar as Paul drew it (ui-update-nov-15): stocks, day and clock in it, over the windows, and it fits at every interface size" + (barWhy != null ? ": " + barWhy : ""));
+        Expect(barWhy == null, "the top bar as Paul drew it (ui-update-nov-24): stocks, day and clock in it, over the windows, and it fits at every interface size" + (barWhy != null ? ": " + barWhy : ""));
         // rule: none (screen only). Paul 2026-11-24: the window on the right becomes the advisor's (Sibyl for the Hand), opened from a button right of the clock
         Expect(!gs.WindowOpen && !gs.AdvisorLit, "the game opens with the advisor's window shut and its button unlit");
         Expect(gs.Click("Advisor") && gs.WindowOpen && gs.AdvisorLit, "the advisor button right of the clock opens the window on the right and stays lit");
