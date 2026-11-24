@@ -36,17 +36,18 @@ public partial class GameScreen
     {
         var host = Ui.VBox(8);
         host.SizeFlagsVertical = SizeFlags.ExpandFill;
-        var margin = Pad(WinPad, WinPad, WinGap, WinPad);   // as the other tabs: 24 px under the tabs, 16 at the sides
+        var margin = Pad(WinPad, WinPad, WinPad, WinPad);   // as the other tabs: the page's 16 px all round
         margin.SizeFlagsVertical = SizeFlags.ExpandFill;
-        var v = Ui.VBox(8);
+        var v = Ui.VBox(Ui.Block);
         v.SizeFlagsVertical = SizeFlags.ExpandFill;
         margin.AddChild(v);
-        var title = Ui.Label("LOG", null, Ui.WinText, Ui.NameSmall, wrap: false);   // the tab's own name, in the windows' pixel capitals
-        title.AddThemeFontOverride("font", Ui.NameFont(Ui.NameSmall));
-        v.AddChild(title);
-        v.AddChild(Ui.Label("Click a message to go there; a battle or invasion opens its report.", "Hint"));
+        // the tab's name is the strip's; one line says what a click does (the status grey, as every tab's first line)
+        var lead = Look.Words("Click a message to go there; a battle or invasion opens its report.", 12, Look.Muted);
+        lead.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        v.AddChild(lead);
+        // the kinds as the Fleet window's buttons, 8 px apart as its Defensive and Elusive; the one shown has the light line
         var flow = new HFlowContainer();
-        flow.AddThemeConstantOverride("h_separation", 4); flow.AddThemeConstantOverride("v_separation", 4);
+        flow.AddThemeConstantOverride("h_separation", 8); flow.AddThemeConstantOverride("v_separation", 8);
         var group = new ButtonGroup();
         foreach (var (name, tip) in Filters)
         {
@@ -57,7 +58,7 @@ public partial class GameScreen
         }
         v.AddChild(flow);
         _log = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, AutoHeight = false, FocusMode = FocusModeEnum.None, SameColumnWidth = true };
-        _log.AddThemeFontSizeOverride("font_size", 14);
+        _log.AddThemeFontSizeOverride("font_size", Ui.Small);
         // the window look: no box round the list; the ladder of every window control: #676767 line under the mouse, #BABABA when chosen
         var clear = new Color(0, 0, 0, 0);
         _log.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());

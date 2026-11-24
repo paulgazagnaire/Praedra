@@ -54,7 +54,7 @@ public partial class GameScreen
 
     void MissionsPanel()
     {
-        Title("Your missions", "Send a team from Leaders, or from the system where it stands.");
+        Lead("Send a team from Leaders, or from the system where it stands.");
         var pending = S.PendingMissions.ToList();
         var list = S.MyMissions;
         if (pending.Count == 0 && list.Count == 0) { Line("No mission under way.", Dim); Note(MissionAdvice); } // the empty list says what is worth trying

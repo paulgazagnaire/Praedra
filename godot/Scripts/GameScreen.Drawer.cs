@@ -38,7 +38,12 @@ public partial class GameScreen
     {
         using var look = Ui.Window();
         var drawer = _drawer = Ui.Hud(0, 0);
-        drawer.Theme = Ui.WindowTheme;
+        drawer.Theme = SibylTheme;
+        // Paul 2026-11-24 ("update the style according to the recent tabs that we redesigned, especially the fleet and ground tabs"): the
+        // Fleet window's look. The window on the lighter surface with its 1 px edge, the head on the darker one, the strip of tabs, the page.
+        var frame = Look.Box(Look.Band, Ui.WinEdge, 1, 1, 1, 1);
+        frame.ContentMarginLeft = frame.ContentMarginRight = frame.ContentMarginTop = frame.ContentMarginBottom = 1;
+        drawer.AddThemeStyleboxOverride("panel", frame);
         drawer.Visible = false;
         drawer.SetAnchorsPreset(LayoutPreset.RightWide);
         drawer.GrowHorizontal = GrowDirection.Begin;
@@ -46,13 +51,102 @@ public partial class GameScreen
         drawer.OffsetTop = TopClear; drawer.OffsetBottom = -Edge;
         var v = Ui.VBox(0);
         drawer.AddChild(v);
+        v.AddChild(BuildSibylHead());
+        v.AddChild(BuildSibylStrip());
 
-        // the tab row on the window's 16 px margin, with no line under it: the chosen tab's underline is the line (Paul's "styles" frame)
-        var tabsBox = Pad(WinPad, WinPad, WinPad, 0);
-        v.AddChild(tabsBox);
-        var tabs = Ui.HBox(10);
-        _tabRow = tabs;
-        tabsBox.AddChild(tabs);
+        _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
+        v.AddChild(_scroll);
+        var margin = Pad(WinPad, WinPad, WinPad, WinPad);   // the page's 16 px all round, as the Fleet window's
+        margin.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _scroll.AddChild(margin);
+        _pv = Ui.VBox(Ui.Block);
+        _pv.CustomMinimumSize = new Vector2(PageWidth, 0);
+        margin.AddChild(_pv);
+
+        _logHost = BuildLogTab();
+        _logHost.Visible = false;
+        v.AddChild(_logHost);
+        return drawer;
+    }
+
+    /// <summary>The page's width: the window less its 1 px edges, the 16 px margins, and 4 px spare for the scroll grabber.</summary>
+    const int PageWidth = DrawerWidth - 2 - 2 * WinPad - 4;
+
+    // ================================================================== the head and the strip (the Fleet window's design)
+
+    Label _sibylStatus, _sibylName;
+    HBoxContainer _sibylStatusRow;
+
+    /// <summary>
+    /// The head, on the darker surface with 24 px all round as the Fleet window's: the advisor's name in BitPotion 48 (Sibyl for the Hand;
+    /// "Advisor" for the Collective, which has no name yet) with × on the right, then her status line: what her two switches do.
+    /// </summary>
+    Control BuildSibylHead()
+    {
+        var head = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
+        head.AddChild(pad);
+        var parts = Boxed(new VBoxContainer(), FleetHeadPad);
+        pad.AddChild(parts);
+
+        var row = Boxed(new HBoxContainer(), NameGap);
+        string word = (AdvisorName ?? "Advisor").ToUpperInvariant();
+        var name = Look.Words(word, Ui.NameBig, Look.Text);
+        name.AddThemeFontOverride("font", Ui.NameFont(Ui.NameBig, word));
+        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        _sibylName = name;
+        row.AddChild(name);
+        var close = Ui.Button("×", CloseDrawer, "Close (Esc)", "Clock");   // the Fleet window's ×: the design's grey
+        close.SetMeta(UiTest.FullName, "Close window");
+        close.AddThemeFontOverride("font", Ui.Grotesk);
+        foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color" }) close.AddThemeColorOverride(c, Look.Text);
+        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
+        close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(close);
+        parts.AddChild(row);
+
+        // her status, as the Fleet window's "Status:" line: what she does for you, from the Settings switches (rule: m6-advisor-sibyl §Switches)
+        _sibylStatusRow = Boxed(new HBoxContainer(), StatusGap);
+        _sibylStatusRow.MouseFilter = MouseFilterEnum.Stop;
+        _sibylStatusRow.AddChild(Look.Words("Status:", 12, Look.Text, true));
+        _sibylStatus = Look.Words("", 12, Look.Muted);
+        _sibylStatus.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _sibylStatus.HorizontalAlignment = HorizontalAlignment.Right;
+        _sibylStatusRow.AddChild(_sibylStatus);
+        _sibylStatusRow.Visible = S.HasAdvisor;
+        parts.AddChild(_sibylStatusRow);
+        RefreshSibylStatus();
+        return head;
+    }
+
+    /// <summary>Her status line: "Garrisons on · Production off", from the switches as they will be tomorrow.</summary>
+    void RefreshSibylStatus()
+    {
+        if (_sibylStatus == null || !S.HasAdvisor) return;
+        static string OnOff(bool on) => on ? "on" : "off";
+        bool g = S.SibylOn(Praedra.Core.AI.SibylJob.ManageGarrisons), p = S.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction);
+        _sibylStatus.Text = g || p ? $"Garrisons {OnOff(g)} · Production {OnOff(p)}" : "Advising only";
+        _sibylStatusRow.TooltipText = Ui.Wrap("Sibyl can also act for you: train the garrisons your worlds need, and build mines and refineries at "
+            + "idle construction yards. Switch each on or off in Menu > Settings." + (g || p ? "" : " Both are off: she only advises here."));
+    }
+
+    readonly Dictionary<DrawerTab, Label> _tabCounts = new();
+
+    /// <summary>
+    /// The tabs as the Fleet window's strip: cells 1 px apart on the line colour, the open one on the lighter surface so it joins the page
+    /// under it; the name, and its count in the dim grey (Needs you's count red or amber when something needs a decision).
+    /// </summary>
+    Control BuildSibylStrip()
+    {
+        var strip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        var lines = Look.Box(Look.Line);
+        lines.ContentMarginTop = 1;   // the line above the cells
+        strip.AddThemeStyleboxOverride("panel", lines);
+        var h = Boxed(new HBoxContainer(), 1);   // the line between cells
+        _tabRow = h;
+        strip.AddChild(h);
         var group = new ButtonGroup();
         foreach (var (tab, name, tip) in new[]
         {
@@ -65,32 +159,63 @@ public partial class GameScreen
         })
         {
             var t = tab;
-            var b = Ui.Button(name, () => ShowTab(t), tip, "TabChip");   // drawn like a window's tabs
-            b.ToggleMode = true; b.ButtonGroup = group; b.ButtonPressed = tab == _tab;
+            var b = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = tab == _tab, FocusMode = FocusModeEnum.None,
+                MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(tip) };
+            b.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg));
+            b.AddThemeStyleboxOverride("hover", Look.Box(new Color("17171a")));
+            b.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
+            b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
+            b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+            b.SetMeta(UiTest.FullName, name);
+            b.SetMeta("words", name);
+            var row = Boxed(new HBoxContainer(), TabCountGap);
+            row.Alignment = BoxContainer.AlignmentMode.Center;
+            row.AddChild(Look.Words(name, 12, Look.Text));
+            var count = Look.Words("", 12, Look.Dim);
+            count.Visible = false;
+            row.AddChild(count);
+            _tabCounts[tab] = count;
+            Fill(b, row, TabPadX, 8);
+            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            b.Pressed += () => ShowTab(t);
             _tabButtons[tab] = b;
-            tabs.AddChild(b);
+            h.AddChild(b);
         }
-        var close = Ui.Button("×", CloseDrawer, "Close (Esc)", "Clock");   // a window's ×, pushed to the right edge
-        close.SetMeta(UiTest.FullName, "Close window");
-        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
-        close.SizeFlagsVertical = SizeFlags.ShrinkBegin;
-        close.SizeFlagsHorizontal = SizeFlags.Expand | SizeFlags.ShrinkEnd;
-        tabs.AddChild(close);
-
-        _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
-        v.AddChild(_scroll);
-        var margin = Pad(WinPad, WinPad, WinGap, WinPad);   // 24 px under the tabs, 16 at the sides, as in a window
-        margin.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _scroll.AddChild(margin);
-        _pv = Ui.VBox(Ui.Block);
-        _pv.CustomMinimumSize = new Vector2(DrawerWidth - 2 * WinPad - 2 - 4, 0);
-        margin.AddChild(_pv);
-
-        _logHost = BuildLogTab();
-        _logHost.Visible = false;
-        v.AddChild(_logHost);
-        return drawer;
+        return strip;
     }
+
+    const int TabPadX = 8, TabCountGap = 6;
+
+    /// <summary>
+    /// The window theme with the Fleet window's buttons (Paul's design, 2026-11-21): 12 px words, 8 px inside, a 1 px #36363C line, #676767
+    /// under the mouse, #BABABA when chosen or pressed, a #1E1E21 line and #454545 words when it can't act. A warning or danger button keeps
+    /// its colour. Words with no size of their own are 13 px, as the Ground window's.
+    /// </summary>
+    static Theme SibylTheme
+    {
+        get
+        {
+            if (_sibylTheme != null) return _sibylTheme;
+            var t = (Theme)Ui.WindowTheme.Duplicate();
+            t.DefaultFontSize = Ui.Small;
+            var clear = new Color(0, 0, 0, 0);
+            void Outlined(string type, Color rest, Color ink)
+            {
+                foreach (var (state, line) in new[] { ("normal", rest), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text), ("disabled", Look.Line) })
+                    t.SetStylebox(state, type, Look.Box(clear, line, 1, 1, 1, 1, 8));
+                t.SetStylebox("focus", type, new StyleBoxEmpty());
+                t.SetFont("font", type, Ui.Grotesk);
+                t.SetFontSize("font_size", type, 12);
+                foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" }) t.SetColor(c, type, ink);
+                t.SetColor("font_disabled_color", type, Look.Dim);
+            }
+            foreach (var v in new[] { "Button", "Row", "Primary", "Chip" }) Outlined(v, Look.Outline, Look.Text);
+            Outlined("WarnButton", new Color(Ui.Warn, 0.7f), Ui.Warn);
+            Outlined("DangerButton", new Color(Ui.Danger, 0.8f), Ui.Danger);
+            return _sibylTheme = t;
+        }
+    }
+    static Theme _sibylTheme;
 
     void CloseDrawer()
     {
@@ -119,23 +244,26 @@ public partial class GameScreen
     {
         // the count is what wants a decision (red and yellow); chances to do better never make the tab shout
         int n = _attention.Count(a => a.Level != Level.Info);
-        var b = _tabButtons[DrawerTab.Needs];
-        b.Text = n == 0 ? "Needs you" : $"Needs you {n}";
         bool urgent = _attention.Any(a => a.Level == Level.Danger);
-        // the window's tab greys when nothing needs you; red or amber words when something does
-        b.AddThemeColorOverride("font_color", n == 0 ? Ui.WinText : urgent ? Ui.Danger : Ui.Warn);
-        b.AddThemeColorOverride("font_hover_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
-        b.AddThemeColorOverride("font_pressed_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
-        b.AddThemeColorOverride("font_hover_pressed_color", n == 0 ? Ui.WinActive : urgent ? new Color("ff9a9a") : new Color("ffe08a"));
+        SetTabCount(DrawerTab.Needs, n == 0 ? null : n.ToString(), urgent ? Ui.Danger : Ui.Warn);
         int f = S.Game.State.Fleets.Values.Count(x => x.Side == Me);
-        _tabButtons[DrawerTab.Fleets].Text = $"Fleets {f}";
-        _tabButtons[DrawerTab.Log].Text = _unread == 0 ? "Log" : _unread > 99 ? "Log 99+" : $"Log {_unread}";
-        // tabs 10 px apart as in Paul's "styles" frame, closer when the counts make the row long: the row never widens the panel
-        // (review 2026-11-14: "Needs you 3 ... Fleets 6 ... Log 12" needed 421 px of the 408)
-        var font = Ui.Grotesk ?? ThemeDB.FallbackFont;
-        float words = _tabButtons.Values.Sum(t => font.GetStringSize(t.Text, HorizontalAlignment.Left, -1, 13).X + 1);
-        int sep = Math.Clamp((int)((DrawerWidth - 2 * WinPad - WinButton - words) / _tabButtons.Count), 4, 10);
-        _tabRow.AddThemeConstantOverride("separation", sep);
+        SetTabCount(DrawerTab.Fleets, f.ToString());
+        int m = S.MyMissions.Count + S.PendingMissions.Count();
+        SetTabCount(DrawerTab.Missions, m == 0 ? null : m.ToString());
+        SetTabCount(DrawerTab.Log, _unread == 0 ? null : _unread > 99 ? "99+" : _unread.ToString());
+        RefreshSibylStatus();
+    }
+
+    /// <summary>A tab's count, in the dim grey unless it has a colour of its own; none hides it. The playtest reads the tab by name and count.</summary>
+    void SetTabCount(DrawerTab tab, string count, Color? ink = null)
+    {
+        var l = _tabCounts[tab];
+        l.Text = count ?? "";
+        l.Visible = count != null;
+        l.AddThemeColorOverride("font_color", ink ?? Look.Dim);
+        var b = _tabButtons[tab];
+        string words = b.GetMeta("words").AsString();
+        b.SetMeta(UiTest.FullName, count == null ? words : $"{words} {count}");
     }
 
     // ================================================================== the panel switch
@@ -190,9 +318,21 @@ public partial class GameScreen
     /// <summary>A muted explanation line.</summary>
     Label Note(string text) => Add(Ui.Label(text, "Hint"));
 
-    /// <summary>A section head: a clear gap above it (a new group starts), then the name in small capitals.</summary>
+    /// <summary>True while a tab of the window on the right is being built (the sector window builds with the same helpers).</summary>
+    bool InDrawer => _drawer != null && (_into ?? _pv) is Node n && (n == _pv || _drawer.IsAncestorOf(n));
+
+    /// <summary>A section head: a clear gap above it (a new group starts), then the name in small capitals. In the window on the right,
+    /// the Fleet window's part title (Paul 2026-11-24): 16 px words, a count in the dim grey beside them ("At your systems 3"), 24 px above.</summary>
     void Heading(string text, string tip = null)
     {
+        if (InDrawer)
+        {
+            if ((_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(WinGap - Ui.Block * 2));
+            var m = System.Text.RegularExpressions.Regex.Match(text, @"^(.*) \((\d+)\)$");
+            var hd = Add(Heading2(m.Success ? m.Groups[1].Value : text, m.Success ? m.Groups[2].Value : null));
+            if (tip != null) { hd.TooltipText = Ui.Wrap(tip); hd.MouseFilter = MouseFilterEnum.Stop; hd.MouseDefaultCursorShape = CursorShape.Help; }
+            return;
+        }
         // the panel list already puts Block above and below this spacer, so Group - 2*Block makes the gap before a section exactly Group
         // in a window the first part of a page sits on the window's 24 px margin, with no gap of its own (Paul 2026-11-14)
         if (!Ui.InWindow || (_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(Ui.Group - Ui.Block * 2));
@@ -200,7 +340,33 @@ public partial class GameScreen
         if (tip != null) { l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help; }
     }
 
-    Button Act(string text, Action a, string tip = null, bool disabled = false, string variation = null) => Add(Ui.Action(text, a, tip, disabled, variation));
+    Button Act(string text, Action a, string tip = null, bool disabled = false, string variation = null)
+    {
+        var b = Ui.Action(text, a, tip, disabled, variation);
+        if (InDrawer) Hug(b);
+        return Add(b);
+    }
+
+    /// <summary>The Fleet window's button in the window on the right: as wide as its words (12 px, 8 px inside, 32 px high); words too long
+    /// for the page keep the full width and wrap.</summary>
+    static void Hug(Button b)
+    {
+        b.CustomMinimumSize = new Vector2(0, 32);
+        float words = Ui.Grotesk.GetStringSize(b.Text, HorizontalAlignment.Left, -1, 12).X + 2 * 8 + 2;
+        if (words > PageWidth - 2 * Ui.Pad) return;
+        b.AutowrapMode = TextServer.AutowrapMode.Off;
+        b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+    }
+
+    /// <summary>What a tab of the window on the right is about, under the strip: one line in the status grey (the tab's name is the strip's).</summary>
+    void Lead(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        var l = Look.Words(text, 12, Look.Muted);
+        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        Add(l);
+    }
 
     /// <summary>Lines added inside <c>using (Card(...))</c> go into a framed card.</summary>
     IDisposable Card(Color? bg = null, Color? border = null, int gap = 6)
@@ -211,6 +377,26 @@ public partial class GameScreen
         card.AddChild(v);
         var prev = _into;
         _into = v;
+        return new Restore(() => _into = prev);
+    }
+
+    /// <summary>Lines added inside <c>using (BesidePicture(pic))</c> go in a column to the right of the picture, which sits on the dark
+    /// tile as every picture on the redesigned windows (Paul 2026-11-24, "I need the dark tile behind pictures everywhere").</summary>
+    IDisposable BesidePicture(Control pic)
+    {
+        var h = Boxed(new HBoxContainer(), 12);
+        var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(RowTile, RowTile), SizeFlagsVertical = SizeFlags.ShrinkBegin };
+        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        var c = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        c.AddChild(pic);
+        tile.AddChild(c);
+        h.AddChild(tile);
+        var col = Ui.VBox(Ui.Gap);
+        col.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        h.AddChild(col);
+        Add(h);
+        var prev = _into;
+        _into = col;
         return new Restore(() => _into = prev);
     }
 
@@ -290,7 +476,7 @@ public partial class GameScreen
     void FleetsPanel()
     {
         var mine = S.Game.State.Fleets.Values.Where(f => f.Side == Me).ToList();
-        Title("Your fleets", mine.Count == 0 ? "You have no fleet." : $"{Ui.Count(mine.Count, "fleet", "fleets")}, {Ui.Count(mine.Sum(f => f.Ships.Count), "ship", "ships")}. Click one to select it.");
+        Lead(mine.Count == 0 ? "You have no fleet." : $"{Ui.Count(mine.Count, "fleet", "fleets")}, {Ui.Count(mine.Sum(f => f.Ships.Count), "ship", "ships")}. Click one to select it.");
         bool AtEnemy(Fleet f) => f.At != null && (S.OwnerOf(f.At) != Me || S.VisibleEnemyFleetsAt(f.At).Count > 0);
         var groups = new[]
         {
@@ -324,20 +510,32 @@ public partial class GameScreen
         var b = Ui.Button("", () => SelectFleet(fl.Id, true), tip, "Row");
         b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         b.SetMeta(UiTest.FullName, $"{S.NameOf(f)}\n{RowStatus(f)}");   // its words for the playtest: the name, then the trip
+        // its map mark on the dark tile at the left, as every picture on the redesigned windows (Paul 2026-11-24): the square for
+        // Defensive, the chevron for Elusive, in your blue
+        var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        tile.AnchorBottom = 1;
+        tile.OffsetLeft = 1; tile.OffsetTop = 1; tile.OffsetRight = 1 + RowTile; tile.OffsetBottom = -1;
+        var mark = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        mark.AddChild(IconPic.Of(PixelIconData.Map[elusive ? "fleet-elusive" : "fleet-defensive"], 2, Ui.You));
+        tile.AddChild(mark);
+        b.AddChild(tile);
         var lines = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        lines.AddThemeConstantOverride("separation", 0);
+        lines.AddThemeConstantOverride("separation", 2);
         lines.AnchorRight = lines.AnchorBottom = 1;
-        lines.OffsetLeft = 12; lines.OffsetRight = -12; lines.OffsetTop = 6; lines.OffsetBottom = -6;
+        lines.OffsetLeft = 1 + RowTile + 12; lines.OffsetRight = -12; lines.OffsetTop = 8; lines.OffsetBottom = -8;
         b.AddChild(lines);
-        void Fit() => b.CustomMinimumSize = new Vector2(0, lines.GetCombinedMinimumSize().Y + 12);
+        void Fit() => b.CustomMinimumSize = new Vector2(0, Math.Max(RowTile + 2, lines.GetCombinedMinimumSize().Y + 16));
         lines.MinimumSizeChanged += Fit;
-        HBoxContainer Line(string left, (string To, int Day)? trip = null)
+        HBoxContainer Line(string left, (string To, int Day)? trip = null, bool status = false)
         {
             var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             h.AddThemeConstantOverride("separation", 0);
             var right = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End, SizeFlagsVertical = SizeFlags.ShrinkCenter };
             right.AddThemeConstantOverride("separation", 0);
-            var words = Ui.Label(left, null, Ui.WinActive, Ui.Body, wrap: false);
+            // the name as a card's name; where it is or goes in the Fleet window's status grey
+            var words = Ui.Label(left, null, status ? Look.Muted : Look.Text, status ? 12 : 13, wrap: false);
+            if (!status) words.AddThemeFontOverride("font", Ui.GroteskMedium);
             words.ClipText = true;
             words.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             words.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -364,17 +562,17 @@ public partial class GameScreen
             lines.AddChild(h);
             return right;
         }
-        void Part(HBoxContainer h, string words, Color ink) => h.AddChild(Ui.Label(words, null, ink, Ui.Small, wrap: false));
+        void Part(HBoxContainer h, string words, Color ink) => h.AddChild(Ui.Label(words, null, ink, 12, wrap: false));
         // line 1: ships (those under half their hull in amber, red when one is under a quarter: the Ships tab's marks), then strength
         var top = Line(S.NameOf(f));
-        Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Ui.Text3);
+        Part(top, Ui.Count(f.Ships.Count, "ship", "ships"), Look.Text);
         if (hull.Low > 0) Part(top, $", {hull.Low} damaged", hull.Critical > 0 ? Ui.Danger : Ui.Warn);
         // no bare strength number: it had no scale (Paul 2026-11-22, F7 answer B); it stays in the row's hover
         // line 2: where it is or goes, then Elusive and troops aboard out of room (when it has transports)
-        var low = Line(RowStatus(f), RowTrip(f));
+        var low = Line(RowStatus(f), RowTrip(f), status: true);
         if (elusive) Part(low, "Elusive", Look.Muted);
-        if (elusive && room > 0) Part(low, " · ", Ui.Text3);
-        if (room > 0) Part(low, $"Troops {regs}/{room}", Ui.Text3);
+        if (elusive && room > 0) Part(low, " · ", Look.Muted);
+        if (room > 0) Part(low, $"Troops {regs}/{room}", Look.Muted);
         // the selected fleet: the window look's "chosen" line (#BABABA), kept under the mouse; no fill, the row's own padding
         // (ui-inspo review 2026-11-14: one ladder everywhere, rest line, #676767 under the mouse, #BABABA chosen)
         if (_view.SelectedFleet == f.Id)
@@ -385,6 +583,9 @@ public partial class GameScreen
         Add(b);
         Fit();
     }
+
+    /// <summary>The dark tile at the left of a Fleets row: 48 px wide, the 32 px map mark centred on it.</summary>
+    const int RowTile = 48;
 
     /// <summary>Where a Fleets list row's fleet goes and the day it arrives, if it is moving or about to leave.</summary>
     (string To, int Day)? RowTrip(Fleet f) =>

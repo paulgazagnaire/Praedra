@@ -175,7 +175,7 @@ public partial class GameScreen
     {
         var items = _attention;
         int urgent = items.Count(i => i.Level == Level.Danger), watch = items.Count(i => i.Level == Level.Warn);
-        Title("Needs you", items.Count == 0 ? "Nothing needs a decision right now."
+        Lead(items.Count == 0 ? "Nothing needs a decision right now."
             : urgent + watch == 0 ? "Nothing urgent." : string.Join(", ", new[] { urgent > 0 ? $"{urgent} urgent" : null, watch > 0 ? $"{watch} to watch" : null }.Where(x => x != null)) + ".");
         var run = Act(_runUntilNeeded ? "Running until something needs you... (Space stops)" : "Run until something needs me", () => { if (_runUntilNeeded) Pause(); else RunUntilNeeded(); },
             $"Plays {RunUntilDaysPerSecond:0} days a second, whatever the speed, and stops as soon as a new red or yellow item appears here (and on battles, captures and invasions, as always).", S.Winner != null, "Primary");
@@ -226,7 +226,7 @@ public partial class GameScreen
                     var r = Ui.Button(text, act, "Show it on the map", "Row");
                     r.Alignment = HorizontalAlignment.Left;
                     r.ClipText = true;
-                    r.AddThemeFontSizeOverride("font_size", Ui.Small);
+                    if (!InDrawer) r.AddThemeFontSizeOverride("font_size", Ui.Small);   // in the window: the Fleet window's 12 px button words
                     list.AddChild(r);
                 }
                 Add(list);

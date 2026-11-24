@@ -450,7 +450,7 @@ public partial class GameScreen
             void Job(SibylJob job, string text, string hint)
             {
                 var cb = new CheckBox { Text = text, ButtonPressed = S.SibylOn(job), FocusMode = FocusModeEnum.None, TooltipText = hint };
-                cb.Toggled += on => S.SetSibyl(job, on);
+                cb.Toggled += on => { S.SetSibyl(job, on); RefreshSibylStatus(); };   // her status line in the head says it at once
                 body.AddChild(cb);
                 body.AddChild(Ui.Label(hint, "Hint"));
             }

@@ -49,7 +49,12 @@ public partial class Main
         Expect(gs.Click("Advisor") && gs.WindowOpen && gs.AdvisorLit, "the advisor button right of the clock opens the window on the right and stays lit");
         Expect(gs.AdvisorTip.Contains(me == Side.Hand ? "Sibyl" : "Your advisor") && gs.AdvisorTip.Contains("close"), "its hover names the advisor and says a click closes it: " + gs.AdvisorTip);
         Expect(gs.Click("Advisor") && !gs.WindowOpen && !gs.AdvisorLit, "a second click on the advisor closes the window and unlights the button");
-        gs.Click("Advisor"); gs.PressKey(Key.Escape);
+        gs.Click("Advisor");
+        // rule: none (screen only). Paul 2026-11-24: her window in the Fleet window's look: her name, her status line, the strip of tabs with counts
+        Expect(gs.AdvisorHead == (me == Side.Hand ? "SIBYL" : "ADVISOR") && (me != Side.Hand || gs.AdvisorStatus.Length > 0),
+            $"the window's head names the advisor, with her status for the Hand: {gs.AdvisorHead} / {gs.AdvisorStatus}");
+        Expect(gs.Has($"Fleets {s.Game.State.Fleets.Values.Count(f => f.Side == me)}"), "the strip's Fleets tab carries the fleet count");
+        gs.PressKey(Key.Escape);
         Expect(!gs.WindowOpen && !gs.AdvisorLit, "Esc closes the advisor's window and the button goes dark with it");
         string dialogWhy = gs.DialogFitProblem();
         Expect(dialogWhy == null, "every dialog fits the 1029 x 579 screen of 140% text, its body scrolling under the head (QA-105)" + (dialogWhy != null ? ": " + dialogWhy : ""));
@@ -74,7 +79,7 @@ public partial class Main
         gs.OpenTab("Needs");
         var titles = gs.AttentionTitles;
         GD.Print("  needs you: " + string.Join(" | ", titles));
-        Expect(gs.PanelText().Contains("Needs you"), "the Needs you tab opens");
+        Expect(gs.TabName == "Needs" && (gs.PanelText().Contains("urgent") || gs.PanelText().Contains("to watch") || gs.PanelText().Contains("Nothing")), "the Needs you tab opens on its count line: " + gs.PanelText()[..Math.Min(80, gs.PanelText().Length)]);
         Expect(gs.Has("Run until something needs me"), "it offers Run until something needs me");
         int day0 = s.Game.Day;
         Expect(gs.Click("Run until something needs me") && gs.Playing, "Run until something needs me starts the clock");
@@ -225,6 +230,7 @@ public partial class Main
         // Sibyl, the Hand's advisor (rule: m6-advisor-sibyl): her two switches are in the settings, and a click only marks the wish for today
         Expect(gs.SetCheck("Manage production", true) && s.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction) && !s.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction),
             "Sibyl's Manage production can be ticked; it takes effect when the day runs");
+        Expect(gs.AdvisorStatus.Contains("Production on"), "her window's status line says it at once: " + gs.AdvisorStatus);
         gs.SetCheck("Manage production", false);
         Expect(!s.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction) && gs.SetCheck("Manage garrisons", false), "and unticked again, next to Manage garrisons");
         gs.PressKey(Key.Escape);

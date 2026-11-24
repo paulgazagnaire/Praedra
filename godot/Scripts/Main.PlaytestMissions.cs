@@ -28,7 +28,8 @@ public partial class Main
         // ---------------------------------------------------------------- the Missions list: button and key M
         Expect(gs.Click("Missions") && gs.MissionsOpen, "click Missions in the top bar");
         gs.PlayRefresh();
-        Expect(gs.PanelText().Contains("Your missions") && gs.PanelText().Contains("No mission under way") && gs.PanelText().Contains("Espionage"), "the Missions list opens, empty, with the advice line");
+        // the tab's name is in the strip now (Sibyl's window, Paul 2026-11-24); its first line says how to send a team
+        Expect(gs.TabName == "Missions" && gs.PanelText().Contains("Send a team from Leaders") && gs.PanelText().Contains("No mission under way") && gs.PanelText().Contains("Espionage"), "the Missions list opens, empty, with the advice line");
         gs.PressKey(Key.M); gs.PlayRefresh();
         Expect(!gs.MissionsOpen, "key M closes it");
 
