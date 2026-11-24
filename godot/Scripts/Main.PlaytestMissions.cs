@@ -87,7 +87,6 @@ public partial class Main
                 GD.Print($"  Midwife at {midwife.System}: espionage on {enemy}");
                 for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first
                 gs.SelectSystem(midwife.System); gs.PlayRefresh();
-                gs.Click("Forces"); gs.PlayRefresh();
                 Expect(gs.Has($"Send a mission from {midwife.System}..."), "the system panel offers Send a mission from...");
                 SpyAndCheck(gs, $"Send a mission from {midwife.System}...", "Midwife", enemy);
             }
@@ -129,10 +128,11 @@ public partial class Main
         Expect(yard != null, "you hold a system with a Training Facility");
         if (yard == null) return;
         for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);   // a report the days opened goes first
-        gs.SelectSystem(yard); gs.PlayRefresh();
-        gs.Click("Build"); gs.PlayRefresh();
-        gs.Click("Troops"); gs.PlayRefresh();
-        Expect(gs.Click(cls), $"click {cls} in the Troops build list at {yard}");
+        // trained from the Infrastructure window's training facility (Paul 2026-11-24: the Selected tab sums up, the windows act)
+        gs.OpenMgmt(GameScreen.MgKind.Infra, yard); gs.Click($"Yard {yard} Training"); gs.PlayRefresh();
+        var st = gs.InfraState(yard);   // the window rebuilt on its training facility
+        Expect(gs.Click($"Build {cls}"), $"click {cls}'s card at the training facility of {yard}: {st?.Cell} / " + string.Join(", ", st?.Cards.Select(c => c.Name + (c.Usable ? "" : " (no)")) ?? new string[0]));
+        gs.MgCloseAll();
         gs.PlayRefresh();
         bool Ready() => eco.Objects.Any(o => o.Category == Praedra.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
         Expect(RunUntil(gs, Ready, 120), $"{cls} trained at {yard} (day {s.Game.Day})");
@@ -140,7 +140,6 @@ public partial class Main
         var unit = eco.Objects.First(o => o.Category == Praedra.Core.Economy.ObjectCategory.SpecialForce && o.Side == me && o.Class == cls && o.Completed && o.System == yard);
         string uname = s.SpecialForceName(unit.Id);
         gs.SelectSystem(yard); gs.PlayRefresh();
-        gs.Click("Forces"); gs.PlayRefresh();
         Expect(gs.PanelText().Contains("Special forces") && gs.PanelText().Contains($"{uname} - ready"), $"the system panel lists {uname} under Special forces");
         Expect(gs.Click($"Send a mission from {yard}..."), "open the planner from the system panel");
         gs.PlayRefresh();

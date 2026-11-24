@@ -309,7 +309,7 @@ public partial class GameScreen
         var cb = new CheckBox { Text = text, ButtonPressed = set.Contains(id), FocusMode = FocusModeEnum.None, AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         cb.AddThemeFontSizeOverride("font_size", 13);
         cb.Toggled += on => { if (on) set.Add(id); else set.Remove(id); _panelDirty = true; _panelTimer = 0; };
-        Add(cb);
+        Add(Ui.HoverTick(cb));
     }
 
     string NotJoinReason(CharacterRecord c)

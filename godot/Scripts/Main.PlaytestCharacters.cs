@@ -132,13 +132,11 @@ public partial class Main
         string gname = s.CharName(gen.Id), gsys = gen.System;
         GD.Print($"  system General: {gname} at {gsys}");
         gs.SelectSystem(gsys); gs.PlayRefresh();
-        Expect(gs.Click("Forces"), $"open the Forces tab of {gsys}");
-        gs.PlayRefresh();
-        Expect(gs.PanelText().Contains("System General: none"), $"the panel of {gsys} says it has no General");
-        Expect(gs.PanelText().Contains("Fighters based here"), $"the Forces tab of {gsys} lists the fighters based there");
+        Expect(gs.PanelText().Contains("System General: none"), $"the Selected tab of {gsys} says it has no General");
+        if (gs.S.Host.Economy.Objects.Any(o => o.Category == Praedra.Core.Economy.ObjectCategory.Fighter && o.Side == gs.S.Player && o.System == gsys && o.AboardShip == 0 && o.Completed))
+            Expect(gs.PanelText().Contains("Fighters based here"), $"the Selected tab of {gsys} lists the fighters based there");
         // a General is seated only by a drag in Ground at the system, never by a click in the side panel (Paul 2026-11-22, UI review 4)
-        Expect(!gs.PanelText().Contains($"Make {gname} the General") && gs.PanelText().Contains($"To seat or release a General, drag them in Leaders, Ground at {gsys}"),
-            "the Forces tab has no click to seat a General, and says where to drag");
+        Expect(!gs.PanelText().Contains($"Make {gname} the General"), "the Selected tab has no click to seat a General");
         gs.ShotWindow("ground", gsys); gs.PlayRefresh();
         why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} General");
         Expect(why == null, $"drag {gname} onto the General post of {gsys}: {why ?? "sent"}");
@@ -148,9 +146,8 @@ public partial class Main
         Expect(cm.SystemGeneralOf(gsys)?.Id == gen.Id, $"{gname} is the General of {gsys}");
         Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith($"{gname} is now the General of {gsys}", StringComparison.Ordinal)), "message: the new General");
         gs.SelectSystem(gsys); gs.PlayRefresh();
-        gs.Click("Forces"); gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"System General: {gname} (leadership"), "the system panel shows the General");
-        Expect(!gs.PanelText().Contains($"Release {gname} as General"), "the Forces tab has no click to release the General");
+        Expect(!gs.PanelText().Contains($"Release {gname} as General"), "the Selected tab has no click to release the General");
         gs.ShotWindow("ground", gsys); gs.PlayRefresh();
         why = gs.MgDrop($"L:{gen.Id}", $"Ground {gsys} Leaders");
         Expect(why == null, $"drag {gname} off the General post onto {gsys}'s Leaders: {why ?? "sent"}");

@@ -54,6 +54,15 @@ public partial class Main
         Expect(gs.AdvisorHead == (me == Side.Hand ? "SIBYL" : "ADVISOR") && (me != Side.Hand || gs.AdvisorStatus.Length > 0),
             $"the window's head names the advisor, with her status for the Hand: {gs.AdvisorHead} / {gs.AdvisorStatus}");
         Expect(gs.Has($"Fleets {s.Game.State.Fleets.Values.Count(f => f.Side == me)}"), "the strip's Fleets tab carries the fleet count");
+        if (me == Side.Hand)
+        {
+            // Paul 2026-11-24 ("we're missing the controls. Add them KISS"): her two switches in her window's head, one state with Menu > Settings
+            Expect(gs.AdvisorStatus == "Manage garrisons off · Manage production off", "her head shows her two switches, both off at a new game: " + gs.AdvisorStatus);
+            Expect(gs.AdvisorSwitch("Manage garrisons", true) && s.SibylOn(Praedra.Core.AI.SibylJob.ManageGarrisons) && !s.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageGarrisons),
+                "Manage garrisons can be ticked in her head; it takes effect when the day runs");
+            Expect(gs.AdvisorSwitch("Manage garrisons", false) && !s.SibylOn(Praedra.Core.AI.SibylJob.ManageGarrisons), "and unticked again");
+        }
+        else Expect(gs.AdvisorStatus == "", "the Collective's advisor has no switches");
         gs.PressKey(Key.Escape);
         Expect(!gs.WindowOpen && !gs.AdvisorLit, "Esc closes the advisor's window and the button goes dark with it");
         string dialogWhy = gs.DialogFitProblem();
@@ -236,7 +245,7 @@ public partial class Main
         // Sibyl, the Hand's advisor (rule: m6-advisor-sibyl): her two switches are in the settings, and a click only marks the wish for today
         Expect(gs.SetCheck("Manage production", true) && s.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction) && !s.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction),
             "Sibyl's Manage production can be ticked; it takes effect when the day runs");
-        Expect(gs.AdvisorStatus.Contains("Production on"), "her window's status line says it at once: " + gs.AdvisorStatus);
+        Expect(gs.AdvisorStatus.Contains("Manage production on"), "her window's switch follows at once: " + gs.AdvisorStatus);
         gs.SetCheck("Manage production", false);
         Expect(!s.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction) && gs.SetCheck("Manage garrisons", false), "and unticked again, next to Manage garrisons");
         gs.PressKey(Key.Escape);

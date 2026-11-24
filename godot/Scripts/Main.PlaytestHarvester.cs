@@ -169,12 +169,13 @@ public partial class Main
             {
                 fm.AddFleet(Side.Hand, "DS Guard", new[] { Praedra.Core.Harvester.HarvesterModule.ShipClass }, yard);
                 if (gs.ReportVisible) gs.Click("Close"); // a report of the day may be open over the screen
-                gs.SelectSystem(yard); gs.PlayRefresh();
-                gs.Click("Build"); gs.PlayRefresh();
-                gs.Click("Ships"); gs.PlayRefresh();
-                var row = gs.BuildRowsShown.FirstOrDefault(r => r.Name == "harvester");
-                Expect(row.Name != null && !row.Usable && row.Why != null && row.Why.Contains("one per system"), "the harvester row says 'one per system' where one already stands: " + row.Why);
-                Expect(!gs.Enabled("harvester"), "and it cannot be ordered there");
+                // its Infrastructure window, on the shipyard: where ships are ordered (Paul 2026-11-24: the Selected tab sums up)
+                gs.OpenMgmt(GameScreen.MgKind.Infra, yard); gs.Click($"Yard {yard} Shipyard"); gs.PlayRefresh();
+                var row = gs.InfraState(yard)?.Cards.FirstOrDefault(r => r.Name == "harvester") ?? default;
+                string why = gs.InfraWhy(yard, "harvester");
+                Expect(row.Name != null && !row.Usable && why != null && why.Contains("one per system"), "the harvester card says 'one per system' where one already stands: " + why);
+                Expect(!gs.Enabled("Build harvester"), "and it cannot be ordered there");
+                gs.MgCloseAll();
                 // the core still refuses it if the order comes anyway (the screen only saves the player a wasted day)
                 int b3 = s.Messages.Count;
                 s.Track(s.Host.Construction.SubmitBuild(me, yard, Praedra.Core.Construction.YardFamily.Shipyard, "harvester", 1), "Build a harvester");

@@ -127,8 +127,10 @@ public partial class GameScreen
             var idle = IdleYardFamilies(n);
             if (idle.Count == 0 || S.Host.Support.IsUprising(n)) continue;
             string sys = n;
-            string sec = idle[0] switch { YardFamily.Shipyard => "Ships", YardFamily.Training => "Troops", _ => "Facilities" };
-            idleRows.Add(($"{n}: {string.Join(", ", idle.Select(FamilyName))}", () => { GoTo(sys, true); _sysTab = SysTab.Build; _buildSection = sec; _panelDirty = true; _panelTimer = 0; }));
+            var fam = idle[0];
+            var tab = fam switch { YardFamily.Shipyard => InfraTab.Shipyard, YardFamily.Training => InfraTab.Training, _ => InfraTab.Construction };
+            // the system, and its Infrastructure window on the first idle yard: where its work is chosen (Paul 2026-11-24, Selected sums up)
+            idleRows.Add(($"{n}: {string.Join(", ", idle.Select(FamilyName))}", () => { GoTo(sys, true); OpenInfraOn(sys, tab, fam); }));
         }
         if (idleRows.Count > 0)
             infos.Add(new Item("idle-yards", Level.Info, $"Idle yards at {Ui.Count(idleRows.Count, "system", "systems")}", "An idle yard builds nothing. Click a system to give it work, or keep the refined for something else.", null,

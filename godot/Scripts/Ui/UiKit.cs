@@ -622,27 +622,45 @@ public static class Ui
         });
     }
 
-    static ImageTexture TickIcon(bool on, bool disabled)
+    /// <summary>
+    /// The tick box (review 21, W2 and C5: square corners, no fill, selection is an outline): a square 1 px line, #36363C at rest, #676767
+    /// under the mouse (<see cref="HoverTick"/>), and a #BABABA line with a #BABABA pixel tick when ticked. Drawn with hard edges at
+    /// four texels a pixel and shown at 16 px, so its pixels stay square at any UI size.
+    /// </summary>
+    static ImageTexture TickIcon(bool on, bool disabled, bool hover = false)
     {
-        const int n = 18;
-        var edge = on ? You : LineHi; var fill = on ? You : new Color(0, 0, 0, 0);
-        if (disabled) { edge = new Color(edge, 0.4f); fill = new Color(fill, fill.A * 0.4f); }
-        static float Seg(float x, float y, float ax, float ay, float bx, float by)
+        const int n = 16, k = 4;
+        var ink = on ? Look.Text : hover ? Look.Soft : Look.Outline;
+        if (disabled) ink = new Color(ink, 0.4f);
+        var none = new Color(0, 0, 0, 0);
+        var img = Image.CreateEmpty(n * k, n * k, false, Image.Format.Rgba8);
+        for (int y = 0; y < n * k; y++) for (int x = 0; x < n * k; x++)
         {
-            float vx = bx - ax, vy = by - ay, t = Math.Clamp(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy), 0, 1);
-            float dx = x - (ax + t * vx), dy = y - (ay + t * vy);
-            return MathF.Sqrt(dx * dx + dy * dy);
+            int px = x / k, py = y / k;
+            bool edge = (px is 1 or 14 && py is >= 1 and <= 14) || (py is 1 or 14 && px is >= 1 and <= 14);
+            img.SetPixel(x, y, edge || (on && OnTick(px, py)) ? ink : none);
         }
-        return Paint(n, n, (x, y) =>
-        {
-            // a rounded square (radius 4) inset by 1
-            float qx = MathF.Abs(x - n / 2f) - (n / 2f - 5f), qy = MathF.Abs(y - n / 2f) - (n / 2f - 5f);
-            float d = MathF.Sqrt(MathF.Max(qx, 0) * MathF.Max(qx, 0) + MathF.Max(qy, 0) * MathF.Max(qy, 0)) + MathF.Min(MathF.Max(qx, qy), 0) - 4f;
-            var c = Over(new Color(0, 0, 0, 0), fill, Cover(d));
-            c = Over(c, edge, Cover(MathF.Abs(d + 0.75f) - 0.75f));
-            if (on) c = Over(c, Colors.White, Cover(MathF.Min(Seg(x, y, 4.5f, 9.5f, 7.5f, 12.5f), Seg(x, y, 7.5f, 12.5f, 13.5f, 5.5f)) - 1.1f));
-            return c;
-        });
+        var tex = ImageTexture.CreateFromImage(img);
+        tex.SetSizeOverride(new Vector2I(n, n));
+        return tex;
+    }
+
+    /// <summary>The tick, two pixels thick: a short arm down from (4, 8) to (6, 10), a long arm up to (11, 5).</summary>
+    static bool OnTick(int x, int y)
+    {
+        int top = x switch { 4 => 8, 5 => 9, 6 => 10, 7 => 9, 8 => 8, 9 => 7, 10 => 6, 11 => 5, _ => -9 };
+        return y == top || y == top + 1;
+    }
+
+    static ImageTexture _tickHover;
+
+    /// <summary>A tick box's line turns #676767 under the mouse while it is unticked. Godot's CheckBox has no icon for the hover, so this
+    /// swaps the unticked one on the box itself.</summary>
+    public static CheckBox HoverTick(CheckBox cb)
+    {
+        cb.MouseEntered += () => { if (!cb.Disabled) cb.AddThemeIconOverride("unchecked", _tickHover ??= TickIcon(false, false, true)); };
+        cb.MouseExited += () => cb.RemoveThemeIconOverride("unchecked");
+        return cb;
     }
 
     // ---------------------------------------------------------------- factories

@@ -85,7 +85,7 @@ public partial class GameScreen
                     h.AddChild(Ui.Label($"{FamilyName(fam)}: idle", "Strong", new Color("ffe7a8"), wrap: false));
                     h.AddChild(Ui.Grow());
                     string sec = fam switch { YardFamily.Shipyard => "Ships", YardFamily.Training => "Troops", _ => "Facilities" };
-                    var b = Ui.Button("Choose what to build", () => { _sysTab = SysTab.Build; _buildSection = sec; _panelDirty = true; _panelTimer = 0; }, "Opens the build table for this yard");
+                    var b = Ui.Button("Choose what to build", () => { _buildSection = sec; _panelDirty = true; _panelTimer = 0; }, "Opens the build table below on this yard");
                     b.CustomMinimumSize = new Vector2(0, 30);
                     h.AddChild(b);
                     Add(h);

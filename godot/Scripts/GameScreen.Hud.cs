@@ -122,6 +122,6 @@ public partial class GameScreen
         if (ownFleets > 0)
             CardButton("Fleets", () => OpenFromTile(name, "fleets"), "Open the windows of your fleets here");
         _selActions.AddChild(Ui.Grow());
-        CardButton("Details →", () => { _sysTab = SysTab.Overview; ShowTab(DrawerTab.Selected); }, "Everything about this system, in the window");
+        CardButton("Details →", () => ShowTab(DrawerTab.Selected), "This system at a glance, in the window on the right");
     }
 }

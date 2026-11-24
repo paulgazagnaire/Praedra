@@ -450,14 +450,11 @@ public partial class GameScreen
             void Job(SibylJob job, string text, string hint)
             {
                 var cb = new CheckBox { Text = text, ButtonPressed = S.SibylOn(job), FocusMode = FocusModeEnum.None, TooltipText = hint };
-                cb.Toggled += on => { S.SetSibyl(job, on); RefreshSibylStatus(); };   // her status line in the head says it at once
-                body.AddChild(cb);
+                cb.Toggled += on => { S.SetSibyl(job, on); RefreshSibylStatus(); };   // her window's switches follow at once
+                body.AddChild(Ui.HoverTick(cb));
                 body.AddChild(Ui.Label(hint, "Hint"));
             }
-            Job(SibylJob.ManageGarrisons, "Manage garrisons",
-                "Trains regiments for every world short of its garrison, worlds in uprising first, and builds training facilities when none is free.");
-            Job(SibylJob.ManageProduction, "Manage production",
-                "Builds mines, refineries and more construction yards at your idle construction yards, founds one if you have none left, and never scraps.");
+            foreach (var (job, words) in SibylJobs) Job(job, words, SibylHint(job));   // the same words as her window's switches
             body.AddChild(Ui.Label($"She only uses yards you left idle, always keeps {SibylRoom} upkeep free, and starts the day after you switch her on.", "Hint"));
         }
         body.AddChild(Ui.Section("Size of text and panels"));
@@ -475,7 +472,7 @@ public partial class GameScreen
         {
             var cb = new CheckBox { Text = text, ButtonPressed = value, FocusMode = FocusModeEnum.None };
             cb.Toggled += on => { set(on); UiSettings.Save(); };
-            body.AddChild(cb);
+            body.AddChild(Ui.HoverTick(cb));
         }
         Check("a battle is fought (and show its report)", UiSettings.PauseBattle, on => UiSettings.PauseBattle = on);
         Check("a system changes hands", UiSettings.PauseCapture, on => UiSettings.PauseCapture = on);

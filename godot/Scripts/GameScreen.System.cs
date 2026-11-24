@@ -10,15 +10,12 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The system panel (Selected tab). One of your systems opens with what matters most (support, garrison, problems) and splits the rest into
-/// Overview, Build, Forces and Fleets so nothing needs a long scroll. A system you don't hold shows only your side's picture of it, with
-/// the age of every part (rule: m5-fog-and-hq §N2, §N8).
+/// The system panel (Selected tab). One of your systems is a summary: its head, the links to its Infrastructure and Ground windows, what is
+/// wrong, then its yards, fleets, leaders, troops and slots; building and moving units happen in those windows. A system you don't hold shows
+/// only your side's picture of it, with the age of every part (rule: m5-fog-and-hq §N2, §N8).
 /// </summary>
 public partial class GameScreen
 {
-    enum SysTab { Overview, Build, Forces, Fleets }
-    SysTab _sysTab = SysTab.Overview;
-
     void SystemPanel(int idx)
     {
         var sys = G.Systems[idx];
@@ -39,8 +36,15 @@ public partial class GameScreen
         else if (!ownerKnown) tags.Add(("OWNER ?", Ui.Text3));
         else if (owner == null) tags.Add(("NOBODY'S", Ui.Neutral));
         else tags.Add(("ENEMY", Ui.Enemy));
-        string held = mine ? $"Held by the {S.You(Me)}, seen live." : null;
-        Title(name, held != null ? $"{held} {sector}." : $"{sector}. {RouteWords(idx)}.", tags.ToArray());
+        // the Ground window's head (Paul 2026-11-24: "the Selected tab still uses the old layout inside the new frame -> it should be updated"):
+        // the sector in small capitals, the name in the pixel capitals with its tag, then one line of what matters
+        string sub = $"{RouteWords(idx)}.";
+        if (mine)
+        {
+            int have0 = S.Host.Support.RegimentCount(name), need0 = S.Host.Support.RequiredGarrison(name);
+            sub = $"Held by you · Loyalty {eco.SupportOf(name, Me)}% · {Ui.Count(have0, "regiment", "regiments")}{(need0 == 0 ? "" : $" of {need0} needed")}";
+        }
+        SystemHead(sector, name, sub, tags.ToArray());
         if (name == S.EnemyHqSystem) Line(Me == Side.Hand ? "The Collective headquarters: take it to win (with the two leaders, see Goal)." : "The Hand's capital: take it to win (with the two leaders, see Goal).", Ui.Enemy, Ui.Small);
 
         // ---- destroyed by the harvester: nothing is left to see, build, invade or target. rule: m5-harvester §2 effect 5
@@ -49,9 +53,9 @@ public partial class GameScreen
         // ---- fog of war: anything not yours shows only the side's picture, with its age. rule: m5-fog-and-hq §N2, §N8
         if (!mine && pic == null)
         {
-            using (Card())
+            using (Card(Look.Bg, Look.Outline, 8))
             {
-                Line("Unexplored. You know nothing about this system yet: who holds it, what is built there or who is there.", Ui.Text2);
+                Line("Unexplored. You know nothing about this system yet: who holds it, what is built there or who is there.", Look.Text, 13);
                 Note("Send a fleet there to look, or a spy on an Espionage mission. Systems you hold or have a fleet at are seen live; the rest show what you saw last.");
             }
             CharactersAtSystem(name, false);
@@ -60,72 +64,155 @@ public partial class GameScreen
         }
         if (!mine) { ForeignSystem(name, sees, ownerKnown, owner, pic); return; }
 
-        // ---- your system: the state that matters first
+        // ---- your system at a glance (Paul 2026-11-24, A: the Selected tab sums the system up; building happens in its Infrastructure
+        // window and units move in its Ground window, so the windows are one click away and nothing here repeats them)
+        SystemLinks(name, true);
         int sup = eco.SupportOf(name, Me);
         int have = S.Host.Support.RegimentCount(name), need = S.Host.Support.RequiredGarrison(name);
-        using (Card())
-        {
-            var supRow = Stat("Support for you", $"{sup}%", sup < 40 ? Ui.Enemy : sup >= 60 ? Ui.You : Ui.Text,
-                $"How much the people here back you (the {S.NameOf(S.Enemy)} has {100 - sup}%). Low support needs more troops to keep order, and below a point the planet may go over to the other side.");
-            Add(Ui.Bar(sup / 100f, sup < 40 ? Ui.Enemy : Ui.You, 6));
-            Stat("Garrison", need == 0 ? $"{Ui.Count(have, "regiment", "regiments")}, none needed" : $"{have} of {need} regiments needed", have < need ? Ui.Warn : Ui.Text,
-                "Below 60% support a system needs troops to stay calm: one regiment for every 10 points under 60. Too few and it revolts: its yards and mines stop.");
-            if (have < need) GarrisonFix(name, need - have);
-            if (S.Host.Support.IsUprising(name)) Line("UPRISING! The people are in revolt here: yards and mines stop until it ends. Station more regiments, or send a leader on Subdue Uprising.", Bad);
-            if (S.Game.State.Blockades.TryGetValue(name, out var blockader))
-                Line(blockader == Me ? "Blockaded by you: mines and yards here stop." : $"Blockaded by the {S.NameOf(blockader)}: mines and yards here stop until their fleet is driven off.", Bad);
-            var enemy = S.VisibleEnemyFleetsAt(name);
-            if (enemy.Count > 0) Line($"Enemy fleet here now: {string.Join("; ", enemy)}", Bad);
-        }
+        var enemy = S.VisibleEnemyFleetsAt(name);
+        bool uprising = S.Host.Support.IsUprising(name);
+        bool blockaded = S.Game.State.Blockades.TryGetValue(name, out var blockader);
+        if (have < need || uprising || blockaded || enemy.Count > 0 || sup < 40)
+            using (Card(Look.Bg, have < need && !uprising && enemy.Count == 0 && !blockaded ? new Color(Ui.Warn, 0.6f) : new Color(Ui.Danger, 0.7f), 8))
+            {
+                if (uprising) Line("Uprising: the people are in revolt. Yards and mines stop until it ends. Station more regiments, or send a leader on Subdue Uprising.", Bad, 13);
+                if (blockaded) Line(blockader == Me ? "Blockaded by you: mines and yards here stop." : $"Blockaded by the {S.NameOf(blockader)}: mines and yards here stop until their fleet is driven off.", Bad, 13);
+                if (enemy.Count > 0) Line($"Enemy fleet here now: {string.Join("; ", enemy)}", Bad, 13);
+                if (sup < 40) Line($"Loyalty {sup}%: the people lean to the {S.NameOf(S.Enemy)}. Low loyalty needs more troops to keep order.", Bad, 13);
+                if (have < need)
+                {
+                    Line($"Short of troops: {have} of {need} regiments. Below 60% loyalty a system needs one regiment for every 10 points under 60, or it revolts.", Ui.Warn, 13);
+                    GarrisonFix(name, need - have);
+                }
+            }
 
-        // ---- sub-tabs
-        int ownFleets = S.Game.State.Fleets.Values.Count(f => f.At == name && f.Side == Me);
-        var row = Ui.HBox(10);
-        var group = new ButtonGroup();
-        foreach (var (t, label) in new[] { (SysTab.Overview, "Overview"), (SysTab.Build, "Build"), (SysTab.Forces, "Forces"), (SysTab.Fleets, ownFleets > 0 ? $"Fleets here {ownFleets}" : "Fleets here") })
-        {
-            var tt = t;
-            var b = Ui.Chip(label, () => { _sysTab = tt; _panelDirty = true; _panelTimer = 0; }, null, _sysTab == t, group);
-            b.ThemeTypeVariation = "TabChip";   // drawn like a window's tabs (Paul 2026-11-14)
-            b.FocusMode = FocusModeEnum.None;
-            row.AddChild(b);
-        }
-        Add(Ui.Space(2));
-        Add(row);
-        Add(Ui.Space(2));
-
-        switch (_sysTab)
-        {
-            case SysTab.Build: BuildMenu(name); break;
-            case SysTab.Forces:
-                RegimentsHere(name, true, pic);
-                FightersHere(name);
-                CharactersAtSystem(name, true);
-                SpecialForcesAtSystem(name);
-                if (CanSendFrom(name)) Act($"Send a mission from {name}...", () => OpenPlanner(name), "Pick a team standing here (characters and special forces), the kind of mission and the target.");
-                break;
-            case SysTab.Fleets: FleetsHere(name, true, pic); break;
-            default: OwnOverview(name); break;
-        }
-    }
-
-    /// <summary>Overview of your system: what is being built, the facilities, the slots, and the side-only slot (move the Hearth).</summary>
-    void OwnOverview(string name)
-    {
-        var eco = S.Host.Economy;
-        Heading("Being built here");
-        BuildQueues(name);
-        Heading("Facilities");
-        var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name).ToList();
-        if (here.Count(o => o.Completed) == 0) Line("none", Ui.Text2);
-        else ScrapRows(here.Where(o => o.Completed), name);
-        var building = here.Where(o => !o.Completed).ToList();
-        if (building.Count > 0) Line($"Under construction: {Counts(building.Select(o => o.Class))}", Dim, Ui.Small);
-        var slots = eco.SlotsOf(name);
-        Stat("Energy slots", $"{eco.EnergyUsed(name)} used of {slots.Energy}, {eco.FreeEnergy(name)} free", null, "Every facility takes one energy slot.");
-        Stat("Raw material slots", $"{eco.RawUsed(name)} used of {eco.EffectiveRaw(name)}, {eco.FreeRaw(name)} free", null, "A mine also needs a raw material slot.");
+        // what you act on first comes first (review 21): the yards, the fleets, the leaders and their missions; then the troops in one
+        // line, and the slots, which are planning facts the Infrastructure window opens on
+        YardsHere(name);
+        FleetsHere(name, true, pic);
+        CharactersAtSystem(name, true);
+        SpecialForcesAtSystem(name);
+        if (CanSendFrom(name)) Act($"Send a mission from {name}...", () => OpenPlanner(name), "Pick a team standing here (characters and special forces), the kind of mission and the target.");
+        GroundHere(name);
+        SlotsHere(name);
         // the Hearth: the Collective can move it (rule: m5-fog-and-hq §F6)
         if (Me == Side.Collective && name == S.MyHqSystem) HqSection(name);
+    }
+
+    /// <summary>The way to the system's two windows, as the Infrastructure window's own links: outlined, its picture and its name.</summary>
+    void SystemLinks(string name, bool mine)
+    {
+        var h = Boxed(new HBoxContainer(), 8);
+        if (mine) h.AddChild(OutlinedButton(PixelIconData.Tile["buildings"], "Infrastructure", $"Infrastructure at {name}", () => OpenMgmt(MgKind.Infra, name),
+            $"The Infrastructure window of {name}: its buildings, its slots, and what its yards build."));
+        h.AddChild(OutlinedButton(PixelIconData.Tile["troops"], "Ground", $"Ground at {name}", () => OpenMgmt(MgKind.Ground, name),
+            $"The Ground window of {name}: leaders, troops and fighters on the planet, and the fleets in orbit. Drag them from window to window."));
+        Add(h);
+    }
+
+    /// <summary>
+    /// Each yard here on one row, as the Infrastructure window's yard cells say it: its picture on the dark tile, its name, and "Idle",
+    /// "Building: X, 4 days left" or "Ordered: X" with a 2 px bar. A click opens the Infrastructure window on that yard. Under them, only
+    /// the buildings that are not yards (the rows already name those).
+    /// </summary>
+    void YardsHere(string name)
+    {
+        var fams = YardFamiliesAt(name).ToList();
+        var eco = S.Host.Economy;
+        int built = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.System == name && o.Completed);
+        Heading("Yards");
+        if (fams.Count == 0) { Lead("No yard here. Its Infrastructure window can still order buildings from a planet that has a construction yard."); return; }
+        var idle = IdleYardFamilies(name);
+        foreach (var fam in fams)
+        {
+            var p = S.Host.Construction.ProjectAt(name, fam);
+            var queued = QueuedBuilds(name, fam);
+            string state, right = "";
+            Color ink = Look.Text;
+            float share = 0;
+            if (p is { Units.Count: > 0 })
+            {
+                string cur = eco.Find(p.Units[0])?.Class ?? "?";
+                int cost = CostOf(cur), left = BuildDaysAt(name, fam, cost - p.Progress);
+                state = $"Building: {cur}";
+                right = left <= 0 ? "done next cycle" : $"{left} {Plural(left, "day", "days")} left";
+                share = cost <= 0 ? 0 : (float)p.Progress / cost;
+            }
+            else if (queued.Count > 0) { state = "Ordered: " + string.Join(", ", queued.Select(o => o.Count > 1 ? $"{o.Count} {o.Class}" : o.Class)); right = "next day"; }
+            else { state = idle.Contains(fam) ? "Idle" : "Nothing to build"; ink = Ui.Warn; }
+            var tab = fam switch { YardFamily.Shipyard => InfraTab.Shipyard, YardFamily.Training => InfraTab.Training, _ => InfraTab.Construction };
+            var kind = fam switch { YardFamily.Shipyard => UnitIcon.Kind.Shipyard, YardFamily.Training => UnitIcon.Kind.Training, _ => UnitIcon.Kind.Construction };
+            var f = fam;
+            Add(PictureRow(IconPic.Of(PixelIcons.Building(kind) ?? PixelIcons.Building(UnitIcon.Kind.Building), 2, Look.Text), FamilyName(fam), state, ink, right, share,
+                $"Selected yard {name} {FamilyName(fam)}", () => OpenInfraOn(name, tab, f),
+                $"Opens the Infrastructure window of {name} on its {FamilyName(fam).ToLowerInvariant()}: what it can build, and its work."));
+        }
+        var here = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name).ToList();
+        var other = here.Where(o => o.Completed && !(FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k))).Select(o => o.Class).ToList();
+        var building = here.Where(o => !o.Completed).Select(o => o.Class).ToList();
+        if (other.Count > 0 || building.Count > 0)
+            Lead(string.Join(" ", new[] { other.Count > 0 ? $"Other buildings: {Tally(other)}." : null, building.Count > 0 ? $"Under construction: {Tally(building)}." : null }.Where(x => x != null)));
+    }
+
+    /// <summary>Opens the Infrastructure window of a system on one of its cells (a yard).</summary>
+    void OpenInfraOn(string name, InfraTab tab, YardFamily fam)
+    {
+        _buildSection = SectionOfFamily(fam);   // a new window opens on the yard last opened
+        OpenMgmt(MgKind.Infra, name);
+        if (_mgWins.FirstOrDefault(x => x.Kind == MgKind.Infra && x.System == name) is { } w && w.Shows != tab) { w.Shows = tab; RebuildMg(w); }
+    }
+
+    /// <summary>The two slot gauges of the Infrastructure window, side by side (one under the other when the page is too narrow).</summary>
+    void SlotsHere(string name)
+    {
+        var eco = S.Host.Economy;
+        var slots = eco.SlotsOf(name);
+        var built = eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.System == name && o.Completed).ToList();
+        int eBuilt = built.Count, eUsed = eco.EnergyUsed(name);
+        int rBuilt = built.Count(o => FacilityKinds.TryParse(o.Class, out var k) && k == FacilityKind.Mine), rUsed = eco.RawUsed(name), rTotal = eco.EffectiveRaw(name);
+        Heading("Slots");
+        var v = new HFlowContainer();
+        v.AddThemeConstantOverride("h_separation", 32);
+        v.AddThemeConstantOverride("v_separation", 16);
+        v.AddChild(Gauge("System energy", eBuilt, eUsed, slots.Energy, Look.Accent, Look.AccentDeep,
+            $"System energy: {eUsed} of {slots.Energy} slots taken, {Math.Max(0, slots.Energy - eUsed)} free. Every building takes one energy slot.\nBright: built. Mid: ordered or being built. Dark: free."));
+        v.AddChild(Gauge("Raw material", rBuilt, rUsed, rTotal, Look.Raw, Look.RawDeep,
+            $"Raw material: {rUsed} of {rTotal} raw slots taken by mines, {Math.Max(0, rTotal - rUsed)} free. A mine needs a raw slot as well as an energy slot."));
+        Add(v);
+    }
+
+    /// <summary>The troops on the planet in one line each (review 21: the head already counts the regiments), and the fighters based here with
+    /// their order. Moving and scrapping units is done in the Ground window.</summary>
+    void GroundHere(string name)
+    {
+        var regs = S.Host.Troops.RegimentsOnSystem(name);
+        var mineRegs = regs.Where(r => r.Side == Me).ToList();
+        if ((_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(WinGap - Ui.Block * 2));   // a part of its own, as under a title
+        Tip(Line($"Regiments: {(mineRegs.Count == 0 ? "none" : Tally(mineRegs.Select(r => r.Class)))}", Look.Text, 13),
+            "Your regiments here keep order and defend the planet. Train them in the Infrastructure window; move them by drag, or scrap one with a right-click, in the Ground window.");
+        foreach (var g in regs.Where(r => r.Side != Me).GroupBy(r => r.Side).OrderBy(g => g.Key))
+            Line($"{(g.Key == null ? "Neutral" : S.You(g.Key.Value))} regiments: {Tally(g.Select(r => r.Class))}", Ui.Text2, 13);
+        var based = FightersBasedAt(name);
+        if (based.Count == 0) return;
+        Tip(Line($"Fighters based here: {Tally(based.Select(o => o.Class))}", Look.Text, 13),
+            "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a hyperdrive can also fly on their own.");
+        // the same rating the core flies them at: a damaged hyperdrive can be 0 (rule: m3-ships-and-fighters §Hyperdrive and speed)
+        var mobile = based.Where(o => Fm.ClassOf(o) != null && Fm.SpeedOfShip(o) > 0).Select(o => o.Id).ToList();
+        if (mobile.Count > 0)
+            Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
+                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working hyperdrive: a carrier must take them." : ""));
+    }
+
+    /// <summary>"Pacifiers 13 · Tranches 1": each name, then how many, as the part titles say it (review 21: "13 x Pacifiers, Tranches."
+    /// read as 13 of each).</summary>
+    static string Tally(IEnumerable<string> names) =>
+        string.Join(" · ", names.GroupBy(x => x).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Count()}"));
+
+    /// <summary>A line that explains itself on hover.</summary>
+    static Label Tip(Label l, string tip)
+    {
+        l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help;
+        return l;
     }
 
     /// <summary>Too few troops: one click trains the missing regiments here, when the planet has a training facility.</summary>
@@ -149,15 +236,17 @@ public partial class GameScreen
         // the age of the picture decides how much to trust it: live (green), recent (plain), old (yellow)
         int age = last is int l0 ? S.Game.Day - l0 : int.MaxValue;
         bool old = !sees && age > 10;
-        using (Card(sees ? Ui.GoodDeep : old ? Ui.WarnDeep : Ui.Panel, sees ? new Color(Ui.Good, 0.6f) : old ? new Color(Ui.Warn, 0.6f) : Ui.Line))
+        SystemLinks(name, false);
+        // how fresh your picture is, in the windows' look: the dark surface, a line in the colour of its age (live, recent, old)
+        using (Card(Look.Bg, sees ? new Color(Ui.Good, 0.6f) : old ? new Color(Ui.Warn, 0.6f) : Look.Outline, 8))
             Line(sees ? "Seen live now (you have a fleet here)."
                 : last is int ld ? $"Last seen day {ld} ({Ui.DaysAgo(age)}). Fleets there are not seen: it may have changed since." : "Not seen since the start of the war.",
-                sees ? new Color("bff0d2") : old ? new Color("ffe7a8") : Ui.Text2);
+                sees ? Ui.Good : old ? Ui.Warn : Look.Text, 13);
         Line(!ownerKnown ? "Owner: unknown" : owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", !ownerKnown || owner == null ? Ui.Text2 : Ui.Enemy);
         if (pic.Owner is { } po)
         {
             int s = Me == Side.Collective ? po.Value.CollectiveSupport : 100 - po.Value.CollectiveSupport;
-            Stat("Support for you", $"{s}%  (seen day {po.Stamp})", s >= 50 ? Ui.You : Ui.Text2, "What the people thought of you when you last looked. A Diplomacy mission raises it.");
+            Stat("Loyalty to you", $"{s}%  (seen day {po.Stamp})", s >= 50 ? Ui.You : Ui.Text2, "What the people thought of you when you last looked. A Diplomacy mission raises it.");
         }
         if (sees)
         {
@@ -167,7 +256,7 @@ public partial class GameScreen
         if (pic.Status is { } st)
             Stat("Slots", $"{st.Value.Energy} energy, {st.Value.Raw} raw{(st.Value.Populated ? "" : " (unpopulated)")}", Ui.Text2);
 
-        Heading("Facilities");
+        Heading("Buildings");
         if (pic.Facilities is { } fac)
             Line((fac.Value.Count == 0 ? "none" : string.Join(", ", fac.Value.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))) + $"   (seen day {fac.Stamp})", Ui.Text2);
         else Line("unknown (nobody has looked at the ground yet)", Dim);
@@ -238,7 +327,7 @@ public partial class GameScreen
 
     void DestroyedPanel(string name)
     {
-        using (Card(Ui.DangerDeep, new Color(Ui.Danger, 0.6f)))
+        using (Card(Look.Bg, new Color(Ui.Danger, 0.7f), 8))
         {
             Line(S.DestroyedWords(name), new Color("ffc2c2"), 17);
             Line("The planet and everything on it are gone for good: no buildings, troops or people. Nobody holds this system and nobody can build on it, invade it, bombard it or send missions there.", Ui.Text2, Ui.Small);

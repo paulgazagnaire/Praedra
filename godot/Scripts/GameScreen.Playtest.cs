@@ -259,7 +259,6 @@ public partial class GameScreen
     internal void SubmitSearch() { if (_hits.Count > 0) PickHit(0); }
     internal int SelectedSystemIndex => _view.Selected;
     /// <summary>The rows of the Build tab now: name, can it be ordered here, and the reason shown when not (or the warning when it can).</summary>
-    internal IReadOnlyList<(string Name, bool Usable, string Why)> BuildRowsShown => _tab == DrawerTab.Selected && _sysTab == SysTab.Build ? _shownBuildRows.Select(b => (b.Row.Name, b.Usable, b.Why)).ToList() : new();
     internal string SelectedSystemName => _view.Selected >= 0 ? G.Systems[_view.Selected].Name : null;
     internal IReadOnlyList<string> EnemyMarkerSystems() => _fleets.EnemyMarkerSystems();
     internal IReadOnlyList<int> DrawnFleetIds() => _fleets.DrawnFleetIds();
@@ -291,11 +290,10 @@ public partial class GameScreen
 {
     // Screenshot helpers (command-line options of the exporter, see README).
     public void ShotShowHowTo() => ShowHowTo();
-    /// <summary>Screenshot helper: open a drawer tab (Needs, Selected, Fleets, Leaders, Missions, Log) or a system sub-tab (Overview, Build, Forces, Fleets here).</summary>
+    /// <summary>Screenshot helper: open a drawer tab (Needs, Selected, Fleets, Leaders, Missions, Log) .</summary>
     public void ShotOpenSection(string name)
     {
         if (Enum.TryParse<DrawerTab>(name, out var t)) ShowTab(t);
-        else if (Enum.TryParse<SysTab>(name.Replace(" here", "").Replace("Fleets", "Fleets"), out var st)) { _sysTab = st; ShowTab(DrawerTab.Selected); }
         _panelDirty = true; _panelTimer = 0;
     }
     public int SelectedFleetId => _view.SelectedFleet;
@@ -383,7 +381,16 @@ public partial class GameScreen
     internal bool AdvisorLit => _advisorButton.ButtonPressed;
     internal string AdvisorTip => _advisorButton.TooltipText;
     internal string AdvisorHead => _sibylName.Text;
-    internal string AdvisorStatus => _sibylStatusRow is { Visible: true } ? _sibylStatus.Text : "";
+    /// <summary>Her two switches in the window's head, as shown: "Manage garrisons off · Manage production on"; empty with no advisor.</summary>
+    internal string AdvisorStatus => _sibylStatusRow is { Visible: true } ? string.Join(" · ", _sibylSwitches.Values.Select(c => $"{c.Text} {(c.ButtonPressed ? "on" : "off")}")) : "";
+    /// <summary>Tick or untick one of her switches in the window's head, as a click would.</summary>
+    internal bool AdvisorSwitch(string words, bool on)
+    {
+        var cb = _sibylSwitches.Values.FirstOrDefault(c => c.Text == words && c.IsVisibleInTree());
+        if (cb == null) return false;
+        cb.ButtonPressed = on;
+        return true;
+    }
     internal bool SelectionCardOpen => _selCard.Visible;
     internal string SelectionCardText => _selCard.Visible ? LabelsIn(_selCard) : "";
     internal string PillText => _pill.Visible ? _banner.Text : "";
