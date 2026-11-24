@@ -47,14 +47,12 @@ public partial class GameScreen
 
         if (_view.Selected != _lastSelectedSystem || _view.SelectedFleet != _lastSelectedFleet)
         {
-            bool newSystem = _view.Selected != _lastSelectedSystem;
             _lastSelectedSystem = _view.Selected; _lastSelectedFleet = _view.SelectedFleet;
             if (_moveFleet >= 0 && _view.SelectedFleet != _moveFleet) CancelMove();
             if (!Input.IsKeyPressed(Key.Shift)) ClearMapPicks();   // a plain click lets the fleets picked on the map go
             if (_view.Selected >= 0 || _view.SelectedFleet >= 0)
             {
                 if (_plan != null && !_pickMission) _plan = null; // a map selection closes the planner
-                if (newSystem) _sysTab = SysTab.Overview;
                 if (_drawer.Visible) ShowTab(DrawerTab.Selected); // a map click fills the selection card; the window follows only when open
             }
             _panelDirty = true; _panelTimer = 0;

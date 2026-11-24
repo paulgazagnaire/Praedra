@@ -130,6 +130,9 @@ public partial class GameScreen
         UiTest.Find<BaseButton>(this, fullName) is HoverWordsButton h ? (h.Normal ?? h.Target?.Text, h.Hover) : (null, null);
 
     /// <summary>The Infrastructure window's open cell and page, the build cards it shows, and how wide its content wants to be.</summary>
+    /// <summary>Why a card of the Infrastructure window of a system cannot be ordered (its hover's reason), or null.</summary>
+    internal string InfraWhy(string system, string card) => InfraState(system) == null ? null : _shownBuildRows.FirstOrDefault(b => b.Row.Name == card)?.Why;
+
     internal (string Cell, int Page, List<(string Name, bool Usable)> Cards, float Want, float Width)? InfraState(string system)
     {
         if (_mgWins.FirstOrDefault(w => w.Kind == MgKind.Infra && w.System == system) is not { } w) return null;

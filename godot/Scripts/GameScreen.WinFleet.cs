@@ -485,6 +485,22 @@ public partial class GameScreen
     /// it; the name, and its count in the dim grey. Every page is built (so every drop place exists), only the open one shows. While a unit
     /// is dragged over a cell, it opens, so a drop can reach a page that was hidden.
     /// </summary>
+    /// <summary>
+    /// A strip cell's name: light on the open cell, grey on the others, light again under the mouse (Paul 2026-11-24: "the open tab is barely
+    /// lighter than the rest"; the lighter surface alone measured 1.07:1). Its count keeps its own colour. Returns the repaint, for a cell
+    /// pressed with no signal.
+    /// </summary>
+    static Action CellWords(Button cell, Label words)
+    {
+        bool over = false;
+        void Paint() => words.AddThemeColorOverride("font_color", cell.ButtonPressed || over ? Look.Text : Look.Soft);
+        cell.Toggled += _ => Paint();
+        cell.MouseEntered += () => { over = true; Paint(); };
+        cell.MouseExited += () => { over = false; Paint(); };
+        Paint();
+        return Paint;   // for a cell pressed without its signal
+    }
+
     void FleetStrip(MgWin w, params (string Name, string Count, Color? Ink, Action Build)[] tabs)
     {
         if (w.Tab == null || !tabs.Any(t => t.Name == w.Tab)) w.Tab = tabs[0].Name;
@@ -511,6 +527,7 @@ public partial class GameScreen
             var l = Look.Words(name, 12, Look.Text);
             l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             row.AddChild(l);
+            CellWords(b, l);
             if (count != null)
             {
                 var c = Look.Words(count, 12, ink ?? Look.Dim);

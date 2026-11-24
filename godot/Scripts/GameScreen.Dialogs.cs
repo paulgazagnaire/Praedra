@@ -450,14 +450,11 @@ public partial class GameScreen
             void Job(SibylJob job, string text, string hint)
             {
                 var cb = new CheckBox { Text = text, ButtonPressed = S.SibylOn(job), FocusMode = FocusModeEnum.None, TooltipText = hint };
-                cb.Toggled += on => { S.SetSibyl(job, on); RefreshSibylStatus(); };   // her status line in the head says it at once
+                cb.Toggled += on => { S.SetSibyl(job, on); RefreshSibylStatus(); };   // her window's switches follow at once
                 body.AddChild(cb);
                 body.AddChild(Ui.Label(hint, "Hint"));
             }
-            Job(SibylJob.ManageGarrisons, "Manage garrisons",
-                "Trains regiments for every world short of its garrison, worlds in uprising first, and builds training facilities when none is free.");
-            Job(SibylJob.ManageProduction, "Manage production",
-                "Builds mines, refineries and more construction yards at your idle construction yards, founds one if you have none left, and never scraps.");
+            foreach (var (job, words) in SibylJobs) Job(job, words, SibylHint(job));   // the same words as her window's switches
             body.AddChild(Ui.Label($"She only uses yards you left idle, always keeps {SibylRoom} upkeep free, and starts the day after you switch her on.", "Hint"));
         }
         body.AddChild(Ui.Section("Size of text and panels"));

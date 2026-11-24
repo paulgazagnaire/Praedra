@@ -340,32 +340,27 @@ public partial class Main
         Expect(yardSys != null, "I own a system with a shipyard");
         if (yardSys != null)
         {
+            // the Selected tab sums the system up; its yard row opens the Infrastructure window, where work is chosen (Paul 2026-11-24)
             gs.SelectSystem(yardSys); gs.PlayRefresh();
-            Expect(gs.Click("Build"), "open the Build tab of " + yardSys);
+            Expect(gs.Has($"Selected yard {yardSys} Shipyard"), $"the Selected tab of {yardSys} has a row for its shipyard");
+            Expect(gs.Click($"Selected yard {yardSys} Shipyard") && gs.InfraState(yardSys)?.Cell == "Shipyard", $"the row opens the Infrastructure window of {yardSys} on its shipyard");
             gs.PlayRefresh();
-            Expect(gs.Has("Facilities") && gs.Has("Ships") && gs.Has("Fighters") && gs.Has("Troops"), "Build has Facilities / Ships / Fighters / Troops");
-            Expect(gs.Click("Ships"), "open Ships");
-            gs.PlayRefresh();
-            Expect(gs.PanelText().Contains("Research (ship design): level"), "the Ships list says where ship research stands and what comes next");
-            var rows = gs.BuildRowsShown;
-            if (me == Side.Hand) Expect(rows.Any(r => r.Name == "harvester"), "the harvester is in the Hand's Ships build list");
-            else Expect(rows.Count > 0 && !rows.Any(r => r.Name == "harvester"), "the Collective's Ships build list has no harvester");
-            Expect(rows.Where(r => !r.Usable).All(r => r.Why != null && !gs.Enabled(r.Name)), "every row that cannot be ordered is greyed out and says why");
-            var ship = rows.FirstOrDefault(r => r.Usable && r.Name != "harvester");
-            Expect(ship.Name != null, "a basic ship can be chosen in the Ships list");
+            var cards = gs.InfraState(yardSys)?.Cards ?? new();
+            if (me == Side.Hand) Expect(cards.Any(r => r.Name == "harvester"), "the harvester is among the Hand's shipyard cards");
+            else Expect(cards.Count > 0 && !cards.Any(r => r.Name == "harvester"), "the Collective's shipyard cards have no harvester");
+            var ship = cards.FirstOrDefault(r => r.Usable && r.Name != "harvester");
+            Expect(ship.Name != null, "a basic ship can be chosen at the shipyard");
             if (ship.Name != null)
             {
                 int before = s.Messages.Count;
-                Expect(gs.Click(ship.Name), "click the ship to build it");
+                Expect(gs.Click($"Build {ship.Name}"), "click the ship's card to build it");
                 gs.PlayDay();
                 Expect(s.Messages.Skip(before).Any(m => m.Text.StartsWith("Construction started at " + yardSys, StringComparison.Ordinal)), "the shipyard started building it: " + string.Join(" | ", s.Messages.Skip(before).Select(m => m.Text)));
-                gs.SelectSystem(yardSys); gs.Click("Overview"); gs.PlayRefresh();
-                Expect(gs.PanelText().Contains("Shipyard is building") || gs.PanelText().Contains("is building"), "Overview says what the shipyard builds: " + gs.PanelText().Replace("\n", " / "));
+                if (gs.ReportVisible) gs.Click("Close");
+                gs.SelectSystem(yardSys); gs.PlayRefresh();
+                Expect(gs.PanelText().Contains("Building: "), "the Selected tab's shipyard row says what it builds: " + gs.PanelText().Replace("\n", " / "));
             }
-            gs.Click("Build"); gs.PlayRefresh();
-            Expect(gs.Click("Troops"), "open Troops");
-            gs.PlayRefresh();
-            gs.Click("Fighters"); gs.PlayRefresh();
+            gs.MgCloseAll();
         }
         // facility: a system I own with a construction yard and a free energy slot. The Collective's drawn base (GameSettings.CollectiveBaseDraw)
         // can start with every energy slot of its yard systems in use (seed 1: Fallout, 0 free; the setup's refineries fill it): then the test
@@ -384,17 +379,18 @@ public partial class Main
         if (facSys != null)
         {
             gs.SelectSystem(facSys); gs.PlayRefresh();
-            gs.Click("Build"); gs.PlayRefresh();
-            Expect(gs.Click("Facilities"), "open Facilities");
+            Expect(gs.Click($"Selected yard {facSys} Construction yard") && gs.InfraState(facSys)?.Cell == "Construction", $"the Selected tab's construction yard row opens the Infrastructure window of {facSys}");
             gs.PlayRefresh();
-            Expect(gs.Enabled("Refinery"), "Refinery is offered at " + facSys);
-            Expect(gs.BuildRowsShown.Any(r => r.Name == "Sensor Station"), "the Sensor Station is in the Facilities build list (generated from the facility list)");
+            Expect(gs.InfraState(facSys)?.Cards.Any(r => r.Name == "Sensor Station") == true, "the Sensor Station is among the construction yard's cards (generated from the facility list)");
+            Expect(gs.InfraState(facSys)?.Cards.Any(r => r.Name == "Refinery" && r.Usable) == true, "Refinery is offered at " + facSys);
             int before = s.Messages.Count;
-            Expect(gs.Click("Refinery"), "click Refinery to build it");
+            Expect(gs.Click("Build Refinery"), "click Refinery to build it");
             gs.PlayDay();
             Expect(s.Messages.Skip(before).Any(m => m.Text.Contains("Construction started at " + facSys) && m.Text.Contains("Refinery")), "construction of the Refinery started");
-            gs.Click("Overview"); gs.PlayRefresh();
-            Expect(gs.PanelText().Contains("is building") || gs.PanelText().Contains("Under construction"), "system panel shows it being built");
+            if (gs.ReportVisible) gs.Click("Close");
+            gs.MgCloseAll();
+            gs.SelectSystem(facSys); gs.PlayRefresh();
+            Expect(gs.PanelText().Contains("Building: ") || gs.PanelText().Contains("Under construction"), "the Selected tab shows it being built");
         }
 
         // ---------------------------------------------------------------- save, then load with the confirm dialog

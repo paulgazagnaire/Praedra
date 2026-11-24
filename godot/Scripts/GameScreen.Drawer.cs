@@ -74,12 +74,14 @@ public partial class GameScreen
 
     // ================================================================== the head and the strip (the Fleet window's design)
 
-    Label _sibylStatus, _sibylName;
+    Label _sibylName;
     HBoxContainer _sibylStatusRow;
+    readonly Dictionary<Praedra.Core.AI.SibylJob, CheckBox> _sibylSwitches = new();
 
     /// <summary>
     /// The head, on the darker surface with 24 px all round as the Fleet window's: the advisor's name in BitPotion 48 (Sibyl for the Hand;
-    /// "Advisor" for the Collective, which has no name yet) with × on the right, then her status line: what her two switches do.
+    /// "Advisor" for the Collective, which has no name yet) with × on the right, then her two switches (Paul 2026-11-24: "we're missing the
+    /// controls. Add them KISS"): the same tick boxes as in Menu > Settings, the same state.
     /// </summary>
     Control BuildSibylHead()
     {
@@ -107,32 +109,43 @@ public partial class GameScreen
         row.AddChild(close);
         parts.AddChild(row);
 
-        // her status, as the Fleet window's "Status:" line: what she does for you, from the Settings switches (rule: m6-advisor-sibyl §Switches)
-        _sibylStatusRow = Boxed(new HBoxContainer(), StatusGap);
-        _sibylStatusRow.MouseFilter = MouseFilterEnum.Stop;
-        _sibylStatusRow.AddChild(Look.Words("Status:", 12, Look.Text, true));
-        _sibylStatus = Look.Words("", 12, Look.Muted);
-        _sibylStatus.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _sibylStatus.HorizontalAlignment = HorizontalAlignment.Right;
-        _sibylStatusRow.AddChild(_sibylStatus);
+        // her two switches, ticked here or in Menu > Settings: one state (rule: m6-advisor-sibyl §Switches)
+        _sibylStatusRow = Boxed(new HBoxContainer(), FleetHeadPad);
+        foreach (var (job, words) in SibylJobs)
+        {
+            var j = job;
+            var cb = new CheckBox { Text = words, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(SibylHint(job) + $" She only uses yards you left idle and always keeps {SibylRoom} upkeep free. Also in Menu > Settings.") };
+            cb.AddThemeFontSizeOverride("font_size", 12);
+            foreach (var c in new[] { "font_color", "font_pressed_color", "font_focus_color" }) cb.AddThemeColorOverride(c, Look.Text);
+            foreach (var c in new[] { "font_hover_color", "font_hover_pressed_color" }) cb.AddThemeColorOverride(c, Colors.White);
+            // no box of its own: the tick lines up with her name above it
+            foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) cb.AddThemeStyleboxOverride(st, new StyleBoxEmpty { ContentMarginTop = 4, ContentMarginBottom = 4 });
+            cb.SetMeta(UiTest.FullName, $"Sibyl {words}");
+            cb.Toggled += on => S.SetSibyl(j, on);
+            _sibylSwitches[job] = cb;
+            _sibylStatusRow.AddChild(cb);
+        }
         _sibylStatusRow.Visible = S.HasAdvisor;
         parts.AddChild(_sibylStatusRow);
         RefreshSibylStatus();
         return head;
     }
 
-    /// <summary>Her status line: "Garrisons on · Production off", from the switches as they will be tomorrow.</summary>
+    /// <summary>Her two switches in the words of Menu > Settings.</summary>
+    static readonly (Praedra.Core.AI.SibylJob Job, string Words)[] SibylJobs =
+        { (Praedra.Core.AI.SibylJob.ManageGarrisons, "Manage garrisons"), (Praedra.Core.AI.SibylJob.ManageProduction, "Manage production") };
+
+    /// <summary>What a switch makes her do, as the advisor plans it (rule: m6-advisor-sibyl §Manage Garrisons, §Manage Production; Ponytail on #372).</summary>
+    static string SibylHint(Praedra.Core.AI.SibylJob job) => job == Praedra.Core.AI.SibylJob.ManageGarrisons
+        ? "Trains regiments for every world short of its garrison, worlds in uprising first, and builds training facilities when none is free."
+        : "Builds mines, refineries and more construction yards at your idle construction yards, founds one if you have none left, and never scraps.";
+
+    /// <summary>Her switches as they will be tomorrow (a tick in Menu > Settings shows here at once).</summary>
     void RefreshSibylStatus()
     {
-        if (_sibylStatus == null || !S.HasAdvisor) return;
-        static string OnOff(bool on) => on ? "on" : "off";
-        bool g = S.SibylOn(Praedra.Core.AI.SibylJob.ManageGarrisons), p = S.SibylOn(Praedra.Core.AI.SibylJob.ManageProduction);
-        _sibylStatus.Text = g || p ? $"Garrisons {OnOff(g)} · Production {OnOff(p)}" : "Advising only";
-        // what each switch does, as the advisor plans it (rule: m6-advisor-sibyl §Manage Garrisons, §Manage Production; Ponytail on #372)
-        _sibylStatusRow.TooltipText = Ui.Wrap("Sibyl can also act for you, at construction yards you left idle. Garrisons: she trains the regiments "
-            + "your worlds are short of, uprisings first, and builds training facilities when none is free. Production: she builds mines and "
-            + $"refineries and more construction yards, and founds one if you have none left. She always keeps {SibylRoom} upkeep free. "
-            + "Switch each on or off in Menu > Settings." + (g || p ? "" : " Both are off: she only advises here."));
+        if (!S.HasAdvisor) return;
+        foreach (var (job, cb) in _sibylSwitches)
+            if (IsInstanceValid(cb) && cb.ButtonPressed != S.SibylOn(job)) cb.SetPressedNoSignal(S.SibylOn(job));
     }
 
     /// <summary>The upkeep room Sibyl always leaves free, from the advisor's own parameters (rule: m6-advisor-sibyl §Manage Garrisons 6).</summary>
@@ -176,12 +189,14 @@ public partial class GameScreen
             b.SetMeta("words", name);
             var row = Boxed(new HBoxContainer(), TabCountGap);
             row.Alignment = BoxContainer.AlignmentMode.Center;
-            row.AddChild(Look.Words(name, 12, Look.Text));
+            var words = Look.Words(name, 12, Look.Text);
+            row.AddChild(words);
             var count = Look.Words("", 12, Look.Dim);
             count.Visible = false;
             row.AddChild(count);
             _tabCounts[tab] = count;
             Fill(b, row, TabPadX, 8);
+            _tabPaint[tab] = CellWords(b, words);   // light on the open tab, grey on the others
             b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             b.Pressed += () => ShowTab(t);
             _tabButtons[tab] = b;
@@ -190,6 +205,7 @@ public partial class GameScreen
         return strip;
     }
 
+    readonly Dictionary<DrawerTab, Action> _tabPaint = new();
     const int TabPadX = 8, TabCountGap = 6;
 
     /// <summary>
@@ -237,7 +253,7 @@ public partial class GameScreen
         _tab = t;
         bool opening = !_drawer.Visible;
         _drawer.Visible = true;
-        foreach (var (k, b) in _tabButtons) b.SetPressedNoSignal(k == t);
+        foreach (var (k, b) in _tabButtons) { b.SetPressedNoSignal(k == t); if (_tabPaint.TryGetValue(k, out var paint)) paint(); }
         _scroll.Visible = t != DrawerTab.Log;
         _logHost.Visible = t == DrawerTab.Log;
         if (t == DrawerTab.Log) { ScrollLogToEnd(); _unread = 0; }
@@ -307,7 +323,7 @@ public partial class GameScreen
     }
 
     string _lastPanelKey;
-    string PanelKey() => $"{_tab}|{_view.Selected}|{_view.SelectedFleet}|{_sysTab}|{_plan?.Home}";
+    string PanelKey() => $"{_tab}|{_view.Selected}|{_view.SelectedFleet}|{_plan?.Home}";
 
     void ClearPanel() { Ui.Clear(_pv); _into = null; }
 
@@ -416,6 +432,75 @@ public partial class GameScreen
         public void Dispose() => _a();
     }
 
+    /// <summary>
+    /// A system's head on the Selected page, as the Ground window's head (Paul 2026-11-24): its sector in small capitals, its name in the
+    /// pixel capitals (32 px) with its tags on the right, then one line of what matters most. The name keeps its case for the playtest.
+    /// </summary>
+    void SystemHead(string kicker, string name, string sub, params (string Text, Color Color)[] tags)
+    {
+        var v = Boxed(new VBoxContainer(), 4);
+        var cap = Look.Words(kicker.ToUpperInvariant(), Ui.Tiny, Look.Soft);
+        cap.AddThemeFontOverride("font", Ui.Caps);
+        v.AddChild(cap);
+        var h = Boxed(new HBoxContainer(), 12);
+        var t = Look.Words(name, Ui.NameSmall, Look.Text);
+        t.Uppercase = true;   // drawn in capitals; the text keeps its case
+        t.AddThemeFontOverride("font", Ui.NameFont(Ui.NameSmall, name.ToUpperInvariant()));
+        t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        t.ClipText = true;
+        t.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        h.AddChild(t);
+        foreach (var (text, color) in tags) h.AddChild(Ui.Tag(text, color));
+        v.AddChild(h);
+        if (sub != null)
+        {
+            var l = Look.Words(sub, 13, Look.Muted);
+            l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            v.AddChild(l);
+        }
+        Add(v);
+    }
+
+    /// <summary>
+    /// A row in the fleet rows' look: a picture on the dark tile at the left, a name, under it a state with words on its right, and a 2 px bar
+    /// while work is under way. A click does <paramref name="act"/>.
+    /// </summary>
+    Button PictureRow(Control pic, string name, string state, Color stateInk, string right, float share, string key, Action act, string tip)
+    {
+        var b = Ui.Button("", act, tip, "Row");
+        b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        b.SetMeta(UiTest.FullName, key);
+        var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        tile.AnchorBottom = 1;
+        tile.OffsetLeft = 1; tile.OffsetTop = 1; tile.OffsetRight = 1 + RowTile; tile.OffsetBottom = -1;
+        var c = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        c.AddChild(pic);
+        tile.AddChild(c);
+        b.AddChild(tile);
+        var lines = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        lines.AddThemeConstantOverride("separation", 2);
+        lines.AnchorRight = lines.AnchorBottom = 1;
+        lines.OffsetLeft = 1 + RowTile + 12; lines.OffsetRight = -12; lines.OffsetTop = 8; lines.OffsetBottom = -8;
+        b.AddChild(lines);
+        lines.AddChild(Look.Words(name, 13, Look.Text, true));
+        var h = Boxed(new HBoxContainer(), 8);
+        var st = Look.Words(state, 12, stateInk);
+        st.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        st.ClipText = true;
+        st.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        h.AddChild(st);
+        if (!string.IsNullOrEmpty(right)) h.AddChild(Look.Words(right, 12, Look.Muted));
+        lines.AddChild(h);
+        if (share > 0)
+            lines.AddChild(new ThinBar { Share = share, Fill = Look.Accent, Track = new Color(Look.AccentDeep, 0.5f), CustomMinimumSize = new Vector2(0, 2), MouseFilter = MouseFilterEnum.Ignore });
+        void Fit() => b.CustomMinimumSize = new Vector2(0, Math.Max(RowTile + 2, lines.GetCombinedMinimumSize().Y + 16));
+        lines.MinimumSizeChanged += Fit;
+        Fit();
+        return b;
+    }
+
     /// <summary>The panel title: the name in the windows' pixel capitals (32 px, #BABABA), a line under it, and tags on the right.</summary>
     void Title(string name, string sub, params (string Text, Color Color)[] tags)
     {
@@ -454,13 +539,12 @@ public partial class GameScreen
 
     void HelpPanel()
     {
-        Title("Nothing selected", "Click a system or one of your fleets on the map.");
-        using (Card())
-        {
-            Line("Click a system to see it, and to build there if it is yours.", Ui.Text2, Ui.Small);
-            Line("Click one of your fleets (blue arrows), then right-click a system to send it there; double-click it (or F) for its window. Several fleets at a system share one arrow: click it for their list, or Tab steps through them.", Ui.Text2, Ui.Small);
-            Line("Needs you (Q) lists what wants a decision, worst first. Press Play (Space) and the game stops by itself when it matters.", Ui.Text2, Ui.Small);
-        }
+        // the windows' look (Paul 2026-11-24): a lead line, then parts with their titles; no framed card
+        Lead("Nothing selected. Click a system or one of your fleets on the map.");
+        Heading("How it works");
+        Line("Click a system to see it at a glance; its Infrastructure and Ground windows build and move what is there.", Look.Text, 13);
+        Line("Click one of your fleets (blue arrows), then right-click a system to send it there; double-click it (or F) for its window. Several fleets at a system share one arrow: click it for their list, or Tab steps through them.", Look.Text, 13);
+        Line("Needs you (Q) lists what wants a decision, worst first. Press Play (Space) and the game stops by itself when it matters.", Look.Text, 13);
         Heading("Keys");
         foreach (var (k, what) in new[]
         {
