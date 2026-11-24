@@ -6,42 +6,46 @@ using Godot;
 namespace PraedraViewer;
 
 /// <summary>
-/// The top bar, after Paul's Paper frame "ui-update-nov-15" (2026-11-15): a dark strip across the top of the map with boxes hanging from
-/// it. Left: the menu and the goal, then the search and the map layers. Right: Raw, Refined and Upkeep, then the day and the clock with
-/// its speeds. Pixel text (BitPotion 24): grey labels, light values, on black cells. No dividers: the groups of boxes stand apart.
+/// The top bar, after Paul's Paper frame "ui-update-nov-24" (2026-11-24): one black strip 40 px tall, a 1 px line under it and 1 px lines
+/// between its cells. Left, from the screen's edge: the menu, Layers, the goal, the search. Right, to the edge: Raw, Refined and Upkeep in
+/// one cell, the day, the clock with its speeds, then the advisor. Pixel words (BitPotion 24): grey labels, light values. A cell you click
+/// holds a 32 px chip 4 px in, with 4 px corners; the cells of words (the stocks, the day) keep 16 px each side.
 /// The bar has a layer of its own over the windows, so the search results and the layers list it opens are never hidden under a window;
 /// the windows themselves start under it (TopClear) and never cover it.
 /// </summary>
 public partial class GameScreen
 {
     // ---- the frame's colours
-    static readonly Color BarBg = new("0b0b0d");       // the strip and the boxes
-    static readonly Color BarEdge = new("181b21");     // their 1 px edge
-    static readonly Color BarCellBg = new("000000");   // the cells inside the boxes
-    static readonly Color BarLabel = new("84878e");    // labels: GOAL, Search, Layers, Raw, DAY, 1x
+    static readonly Color BarBg = new("000000");       // the strip, and its chips at rest (black on black: the frame draws them so)
+    static readonly Color BarEdge = new("181b21");     // the line under the strip and between its cells (the windows' edge)
+    static readonly Color BarCellBg = new("000000");   // the cells inside a drop-down
+    static readonly Color BarHover = new("131313");    // a chip under the mouse: the frame shows only the chips at rest; the head band's grey
+    static readonly Color BarLabel = new("84878e");    // labels: GOAL, Search, Layers, Raw, DAY, 2x
     static readonly Color BarValue = new("dfdfdf");    // values (0/3, 9999), and a switch that is on (the speed, Layers open, the clock running)
     static readonly Color BarMenu = new("b0b2b7");     // the menu's ≡, and a label under the mouse
     static readonly Color BarIcon = new("dddddd");     // the pixel icons of Raw, Refined and Upkeep
 
     // ---- the frame's sizes
-    const int BarStrip = 32;      // the strip's height
-    const int BarBoxH = 49;       // a box: 4 px above its cell, the 40 px cell, 4 px and the 1 px edge below
-    const int BarCellH = 40;
-    const int BarPad = 16;        // a text cell: 16 px each side of its words
-    const int BarSide = 16;       // from the screen's left and right edges
-    const int BarGroupGap = 32;   // between groups of boxes
+    const int BarBoxH = 40;       // the strip, its 1 px line included: the windows and the drop-downs start under it
+    const int BarCellH = 32;      // a chip
+    const int BarInset = 4;       // a chip's cell: 4 px round the chip (the 1 px line takes the last of the 4 below it)
+    const int BarPad = 16;        // a cell of words (the stocks, the day): 16 px each side of them; a drop-down row's words too
+    const int ChipPad = 8;        // words in a chip: 8 px each side
+    const int StockGap = 16;      // between Raw, Refined and Upkeep
+    const int BarSide = 16;       // the map's layer key under the bar, from the screen's left edge
     const int BarTextSize = 24;   // BitPotion 24: 1.5 px to a font pixel, 3 screen pixels on a Retina screen
-    const int SearchWide = 290, SearchNarrow = 150;   // Paul's frame drew 320; 30 px went to the advisor's box (2026-11-24) so the 1440 px bar keeps every word
-    const int BarMinGap = 16;     // the least room left between the left and the right boxes
+    const int SearchWide = 288, SearchNarrow = 150;   // the search chip: the frame's 288 (it drew 320 on nov-15; 290 once the advisor came)
+    const int BarMinGap = 16;     // the least room left between the left and the right cells
     const int SearchResultsWidth = 360;
     const int DropRowH = 32;      // a row of the search results or the layers list: the bar's words, 32 px apart
-    const int DropPad = 5;        // a drop-down's box round its black cells: the 1 px edge and 4 px, as round the bar's cells
-    // the frame's widths of the stock and day boxes, made for 9999 and 9999/9999: the bar keeps them, so it does not shift as numbers grow
-    const int RawBoxW = 120, RefinedBoxW = 144, UpkeepBoxW = 179, DayBoxW = 97;
+    const int DropPad = 5;        // a drop-down's box round its black cells
+    // the frame's widths of the stocks and the day, made for 9999 and 9999/9999: the bar keeps them, so it does not shift as numbers grow
+    const int RawW = 78, RefinedW = 102, UpkeepW = 137, DayW = 55;
 
     Control _barLayer;
-    HBoxContainer _barLeft, _barRight;
-    PanelContainer _barStrip, _searchBox, _layersBox, _dayBox, _rawCell, _refinedCell, _upkeepCell;
+    HBoxContainer _barLeft, _barRight, _dayWords;
+    PanelContainer _barStrip, _searchBox, _layersBox;
+    Control _rawCell, _refinedCell, _upkeepCell;   // one stock each: its icon, name and number, in the stocks' cell
     Label _goalCaption, _goalValue, _rawCaption, _refinedCaption;
     readonly List<PanelContainer> _barTextCells = new();
     static Font _barFont;
@@ -59,28 +63,35 @@ public partial class GameScreen
         _barStrip = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
         _barStrip.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = BarBg, BorderColor = BarEdge, BorderWidthBottom = 1 });
         _barStrip.SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
-        _barStrip.OffsetBottom = BarStrip;
+        _barStrip.OffsetBottom = BarBoxH;
         _barLayer.AddChild(_barStrip);
 
-        _barLeft = Ui.HBox(BarGroupGap);
+        _barLeft = Ui.HBox(0);
         _barLeft.MouseFilter = MouseFilterEnum.Ignore;
         _barLeft.SetAnchorsPreset(LayoutPreset.TopLeft);
-        _barLeft.OffsetLeft = _barLeft.OffsetRight = BarSide;
+        _barLeft.OffsetLeft = _barLeft.OffsetRight = 0;
         _barLayer.AddChild(_barLeft);
-        _barRight = Ui.HBox(BarGroupGap);
+        _barRight = Ui.HBox(0);
         _barRight.MouseFilter = MouseFilterEnum.Ignore;
         _barRight.SetAnchorsPreset(LayoutPreset.TopRight);
         _barRight.GrowHorizontal = GrowDirection.Begin;
-        _barRight.OffsetLeft = _barRight.OffsetRight = -BarSide;
+        _barRight.OffsetLeft = _barRight.OffsetRight = 0;
         _barLayer.AddChild(_barRight);
 
-        // ---- the menu and the goal
-        var g = BarGroup(_barLeft);
+        // ---- left, each cell closed by a line: the menu, Layers, the goal, the search
         _menuButton = BarButton("≡", ToggleMenu, "Menu: fleets, leaders, missions, goal, sectors, save, load, settings (Esc closes)", Ui.MonoMedium, 22, BarMenu, 0);
         _menuButton.SetMeta(UiTest.FullName, "Menu");
         _menuButton.CustomMinimumSize = new Vector2(BarCellH, BarCellH);
-        g.AddChild(BarBox(_menuButton));
-        _goalButton = BarButton("", ShowGoal, "How you win, and how close each side is (G).", BarFont, BarTextSize, BarLabel, BarPad);
+        _barLeft.AddChild(ChipCell(_menuButton));
+        BarLine(_barLeft);
+
+        // Layers: words only; the frame's icon there is a copy of Refined's, and the game has no layers icon (Paul: keep the game's icons)
+        _layersButton = BarButton("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", BarFont, BarTextSize, BarLabel, ChipPad);
+        _layersButton.ToggleMode = true;
+        _barLeft.AddChild(_layersBox = ChipCell(_layersButton));
+        BarLine(_barLeft);
+
+        _goalButton = BarButton("", ShowGoal, "How you win, and how close each side is (G).", BarFont, BarTextSize, BarLabel, ChipPad);
         _goalCaption = BarText("GOAL", BarLabel);
         _goalValue = BarText("", BarValue);
         var gw = Ui.HBox(4);
@@ -92,11 +103,11 @@ public partial class GameScreen
         _goalButton.AddChild(gw);
         _goalButton.MouseEntered += () => _goalCaption.AddThemeColorOverride("font_color", BarMenu);
         _goalButton.MouseExited += () => _goalCaption.AddThemeColorOverride("font_color", BarLabel);
-        g.AddChild(BarBox(_goalButton));
+        _barLeft.AddChild(ChipCell(_goalButton));
+        BarLine(_barLeft);
 
-        // ---- the search and the map layers
-        g = BarGroup(_barLeft);
-        var sc = BarCell(BarPad);
+        var sc = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(0, BarCellH) };
+        sc.AddThemeStyleboxOverride("panel", ChipBox(BarBg, ChipPad));
         sc.MouseDefaultCursorShape = CursorShape.Ibeam;
         sc.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) FocusSearch(); };
         var sh = Ui.HBox(4);
@@ -109,36 +120,35 @@ public partial class GameScreen
         lens.TooltipText = _search.TooltipText;
         lens.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) FocusSearch(); };
         sh.AddChild(lens);
-        g.SortChildren += PlaceDrops;   // the layers box moves when the search narrows
-        g.AddChild(_searchBox = BarBox(sc));
-        _searchBox.CustomMinimumSize = new Vector2(SearchWide, BarBoxH);
-        _layersButton = BarButton("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", BarFont, BarTextSize, BarLabel, BarPad);
-        _layersButton.ToggleMode = true;
-        g.AddChild(_layersBox = BarBox(_layersButton));
+        _barLeft.AddChild(_searchBox = ChipCell(sc));
+        SearchWidth = SearchWide;
+        BarLine(_barLeft);
 
-        // ---- your stocks
-        g = BarGroup(_barRight);
-        (_rawCell, _rawCaption, _rawLabel) = StockCell(g, RawIcon, "Raw", RawTip);
-        (_refinedCell, _refinedCaption, _refinedLabel) = StockCell(g, RefinedIcon, "Refined", RefinedTip);
-        (_upkeepCell, _upkeepCaption, _upkeepLabel) = StockCell(g, UpkeepIcon, "Upkeep", "");
+        // ---- right, each cell opened by a line: your stocks, the day, the clock, the advisor
+        BarLine(_barRight);
+        var stocks = Ui.HBox(StockGap);
+        stocks.MouseFilter = MouseFilterEnum.Ignore;
+        _barRight.AddChild(TextCell(stocks));
+        (_rawCell, _rawCaption, _rawLabel) = StockItem(stocks, RawIcon, "Raw", RawTip);
+        (_refinedCell, _refinedCaption, _refinedLabel) = StockItem(stocks, RefinedIcon, "Refined", RefinedTip);
+        (_upkeepCell, _upkeepCaption, _upkeepLabel) = StockItem(stocks, UpkeepIcon, "Upkeep", "");
+        BarLine(_barRight);
 
-        // ---- the day, the clock and its speeds
-        g = BarGroup(_barRight);
-        var dc = BarCell(BarPad);
-        var dh = Ui.HBox(4);
-        dh.MouseFilter = MouseFilterEnum.Ignore;
-        dh.Alignment = BoxContainer.AlignmentMode.Center;
-        dc.AddChild(dh);
+        _dayWords = Ui.HBox(4);
+        _dayWords.MouseFilter = MouseFilterEnum.Ignore;
+        _dayWords.Alignment = BoxContainer.AlignmentMode.Center;
         _sideLabel = BarText("DAY", BarLabel);
         _sideLabel.MouseFilter = MouseFilterEnum.Stop;   // its tooltip says which side you play
-        dh.AddChild(_sideLabel);
+        _dayWords.AddChild(_sideLabel);
         _dayLabel = BarText("0", BarValue);
         _dayLabel.MouseFilter = MouseFilterEnum.Stop;
         _dayLabel.TooltipText = Ui.Wrap("The game day. Each day every order you gave is carried out, fleets fly, yards build. Press Play to let the days run.");
-        dh.AddChild(_dayLabel);
-        _barTextCells.Add(dc);
-        g.AddChild(_dayBox = BarBox(dc));
+        _dayWords.AddChild(_dayLabel);
+        _barRight.AddChild(TextCell(_dayWords));
+        BarLine(_barRight);
+
         var clock = Ui.HBox(2);
+        clock.MouseFilter = MouseFilterEnum.Ignore;
         // one button that plays and pauses (Paul 2026-11-14, impeccable critique): it shows what a click does, and is lit while the clock
         // runs; one day at a time is the N key
         _playButton = BarButton("▶", TogglePlay, "Play or pause (Space); N moves one day. The clock stops by itself after a battle, a capture or an invasion.", Ui.Mono, 16, BarLabel, 0);
@@ -154,10 +164,11 @@ public partial class GameScreen
             _speedChips.Add(c);
             clock.AddChild(c);
         }
-        g.AddChild(BarBox(clock));
+        _barRight.AddChild(ChipCell(clock));
+        BarLine(_barRight);
 
-        // ---- the advisor, right of the clock (Paul 2026-11-24): Sibyl for the Hand; a click opens or closes the window on the right
-        g = BarGroup(_barRight);
+        // ---- the advisor, right of the clock (Paul 2026-11-24): Sibyl for the Hand; a click opens or closes the window on the right.
+        // The frame leaves the strip empty there: the advisor's cell ends the bar at the screen's right edge, as the menu's starts it
         _advisorButton = BarButton("", ToggleAdvisor, "", BarFont, BarTextSize, BarLabel, 0);
         _advisorButton.SetMeta(UiTest.FullName, "Advisor");
         _advisorButton.CustomMinimumSize = new Vector2(BarCellH, BarCellH);
@@ -170,9 +181,9 @@ public partial class GameScreen
         _advisorButton.AddChild(ac);
         _advisorButton.MouseEntered += PaintAdvisor;
         _advisorButton.MouseExited += PaintAdvisor;
-        g.AddChild(BarBox(_advisorButton));
+        _barRight.AddChild(ChipCell(_advisorButton));
 
-        // ---- what the boxes open: the search results and the layers list hang under their boxes, over the windows
+        // ---- what the cells open: the search results and the layers list hang under them, over the windows
         BuildSearchResults(_barLayer);
         _searchResults.AddThemeStyleboxOverride("panel", BarDropBox(DropPad, DropPad));
         BuildMapTools();
@@ -192,25 +203,48 @@ public partial class GameScreen
 
     // ================================================================== the pieces
 
-    /// <summary>A group of boxes that touch: their 1 px edges overlap, as in the frame.</summary>
-    static HBoxContainer BarGroup(HBoxContainer into)
-    {
-        var g = Ui.HBox(-1);
-        g.MouseFilter = MouseFilterEnum.Ignore;
-        into.AddChild(g);
-        return g;
-    }
+    /// <summary>The 1 px line between two cells, the strip's height above its own line.</summary>
+    static void BarLine(HBoxContainer into) =>
+        into.AddChild(new ColorRect { Color = BarEdge, CustomMinimumSize = new Vector2(1, BarBoxH - 1), MouseFilter = MouseFilterEnum.Ignore });
 
-    /// <summary>A box hanging from the top: the strip's colour, a 1 px edge left, right and below, 4 px round its cell.</summary>
-    static PanelContainer BarBox(Control content)
+    /// <summary>A cell that holds chips: 4 px round them (3 below, over the strip's line).</summary>
+    static PanelContainer ChipCell(Control content)
     {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
-        var s = new StyleBoxFlat { BgColor = BarBg, BorderColor = BarEdge, BorderWidthLeft = 1, BorderWidthRight = 1, BorderWidthBottom = 1 };
-        s.ContentMarginLeft = 5; s.ContentMarginRight = 5; s.ContentMarginTop = 4; s.ContentMarginBottom = 5;
+        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(0, BarBoxH - 1) };
+        var s = new StyleBoxEmpty { ContentMarginLeft = BarInset, ContentMarginRight = BarInset, ContentMarginTop = BarInset, ContentMarginBottom = BarInset - 1 };
         p.AddThemeStyleboxOverride("panel", s);
-        p.CustomMinimumSize = new Vector2(0, BarBoxH);
+        content.SizeFlagsVertical = SizeFlags.ShrinkBegin;
         p.AddChild(content);
         return p;
+    }
+
+    /// <summary>A cell of words (the stocks, the day): 16 px each side, the words centred on the strip's height.</summary>
+    PanelContainer TextCell(Control content)
+    {
+        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(0, BarBoxH - 1) };
+        p.AddThemeStyleboxOverride("panel", TextCellBox(BarPad));
+        content.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        p.AddChild(content);
+        _barTextCells.Add(p);
+        return p;
+    }
+
+    static StyleBoxEmpty TextCellBox(int padX) => new() { ContentMarginLeft = padX, ContentMarginRight = padX };
+
+    /// <summary>A chip's look: the fill, 4 px corners, and its words' padding.</summary>
+    static StyleBoxFlat ChipBox(Color fill, int padX)
+    {
+        var s = new StyleBoxFlat { BgColor = fill, AntiAliasing = true };
+        s.SetCornerRadiusAll(4);
+        s.ContentMarginLeft = padX; s.ContentMarginRight = padX; s.ContentMarginTop = 0; s.ContentMarginBottom = 0;
+        return s;
+    }
+
+    /// <summary>The search chip's width (the frame's 288; narrower when the interface is larger).</summary>
+    float SearchWidth
+    {
+        get => _searchBox.CustomMinimumSize.X - 2 * BarInset;
+        set => _searchBox.CustomMinimumSize = new Vector2(value + 2 * BarInset, BarBoxH - 1);
     }
 
     /// <summary>The look of what a box opens under it (search results, the layers list): the box's colours, edged all round.</summary>
@@ -267,33 +301,26 @@ public partial class GameScreen
         }
     }
 
-    static StyleBoxFlat BarCellBox(int padX)
-    {
-        var s = new StyleBoxFlat { BgColor = BarCellBg };
-        s.ContentMarginLeft = padX; s.ContentMarginRight = padX; s.ContentMarginTop = 0; s.ContentMarginBottom = 0;
-        return s;
-    }
-
-    /// <summary>A black cell that shows words (the stocks, the day, the search).</summary>
-    static PanelContainer BarCell(int padX)
-    {
-        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(0, BarCellH) };
-        p.AddThemeStyleboxOverride("panel", BarCellBox(padX));
-        return p;
-    }
-
-    /// <summary>A black cell you click. The words are grey, lighter under the mouse, and light while the switch is on.</summary>
+    /// <summary>A chip you click. The words are grey, lighter under the mouse, and light while the switch is on; under the mouse the chip
+    /// itself shows, a step lighter than the strip.</summary>
     Button BarButton(string text, Action onPressed, string tip, Font font, int size, Color color, int padX)
     {
         var b = Ui.Button(text, onPressed, tip);
-        var cell = BarCellBox(padX);
-        foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) b.AddThemeStyleboxOverride(st, cell);
+        SetChipPad(b, padX);
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         b.AddThemeFontOverride("font", font);
         b.AddThemeFontSizeOverride("font_size", size);
         SetBarButtonColour(b, color);
         b.CustomMinimumSize = new Vector2(0, BarCellH);
         return b;
+    }
+
+    static void SetChipPad(Button b, int padX)
+    {
+        var rest = ChipBox(BarBg, padX);
+        var over = ChipBox(BarHover, padX);
+        foreach (var st in new[] { "normal", "pressed", "disabled" }) b.AddThemeStyleboxOverride(st, rest);
+        foreach (var st in new[] { "hover", "hover_pressed" }) b.AddThemeStyleboxOverride(st, over);
     }
 
     /// <summary>The words' colour at rest; one step lighter under the mouse; light while the switch is on.</summary>
@@ -323,30 +350,26 @@ public partial class GameScreen
         return l;
     }
 
-    /// <summary>One of your stocks: its pixel icon, its name and its number. The tooltip says what it is.</summary>
-    (PanelContainer Cell, Label Caption, Label Value) StockCell(HBoxContainer group, string[] icon, string caption, string tip)
+    /// <summary>One of your stocks in the stocks' cell: its pixel icon, its name and its number. The tooltip says what it is.</summary>
+    static (Control Item, Label Caption, Label Value) StockItem(HBoxContainer stocks, string[] icon, string caption, string tip)
     {
-        var c = BarCell(BarPad);
-        c.TooltipText = Ui.Wrap(tip);
         var h = Ui.HBox(4);
-        h.MouseFilter = MouseFilterEnum.Ignore;
-        h.Alignment = BoxContainer.AlignmentMode.Center;
-        c.AddChild(h);
+        h.MouseFilter = MouseFilterEnum.Stop;
+        h.TooltipText = Ui.Wrap(tip);
         h.AddChild(PixelIcon(icon, BarIcon));
         var cap = BarText(caption, BarLabel);
         h.AddChild(cap);
         var v = BarText("0", BarValue);
         h.AddChild(v);
-        _barTextCells.Add(c);
-        group.AddChild(BarBox(c));
-        return (c, cap, v);
+        stocks.AddChild(h);
+        return (h, cap, v);
     }
 
-    /// <summary>A stock's tooltip, on its cell and its number.</summary>
-    static void SetStockTip(PanelContainer cell, Label value, string tip)
+    /// <summary>A stock's tooltip, on its words and its number.</summary>
+    static void SetStockTip(Control item, Label value, string tip)
     {
-        cell.TooltipText = Ui.Wrap(tip);
-        value.TooltipText = cell.TooltipText;
+        item.TooltipText = Ui.Wrap(tip);
+        value.TooltipText = item.TooltipText;
     }
 
     // ---- the top bar's 16 px pixel icons (tone grids from PixelIconData, Paul 2026-11-18: code only)
@@ -444,19 +467,18 @@ public partial class GameScreen
     void PlaceBarIn(float screenWidth)
     {
         if (_barLayer == null) return;
-        float room = screenWidth - 2 * BarSide - BarMinGap;
+        float room = screenWidth - BarMinGap;
         for (int level = 0; level <= 2; level++)
         {
             SetBarLevel(level);
-            _searchBox.CustomMinimumSize = new Vector2(SearchWide, BarBoxH);
+            SearchWidth = SearchWide;
             float over = BarOver(room);
             if (over <= 0) break;
             if (over <= SearchWide - SearchNarrow || level == 2)
             {
                 // whole pixels, measured again: the containers round their sizes up
-                _searchBox.CustomMinimumSize = new Vector2(Math.Max(SearchNarrow, SearchWide - Mathf.Ceil(over)), BarBoxH);
-                if (BarOver(room) is float left && left > 0)
-                    _searchBox.CustomMinimumSize = new Vector2(Math.Max(SearchNarrow, _searchBox.CustomMinimumSize.X - Mathf.Ceil(left)), BarBoxH);
+                SearchWidth = Math.Max(SearchNarrow, SearchWide - Mathf.Ceil(over));
+                if (BarOver(room) is float left && left > 0) SearchWidth = Math.Max(SearchNarrow, SearchWidth - Mathf.Ceil(left));
                 break;
             }
         }
@@ -472,35 +494,26 @@ public partial class GameScreen
         if (_barLevel == level) return;
         _barLevel = level;
         _rawCaption.Visible = _refinedCaption.Visible = _upkeepCaption.Visible = level < 1;
-        int pad = level < 2 ? BarPad : BarPad / 2;
-        // the frame's widths while the names show; without them each box takes what its words need
-        SetBoxWidth(_rawCell, level < 1 ? RawBoxW : 0);
-        SetBoxWidth(_refinedCell, level < 1 ? RefinedBoxW : 0);
-        SetBoxWidth(_upkeepCell, level < 1 ? UpkeepBoxW : 0);
-        SetBoxWidth(_dayBox, level < 2 ? DayBoxW : 0);
-        foreach (var c in _barTextCells) c.AddThemeStyleboxOverride("panel", BarCellBox(pad));
-        foreach (var b in new[] { _goalButton, _layersButton })
-            foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) b.AddThemeStyleboxOverride(st, BarCellBox(pad));
+        // the frame's widths while the names show; without them each stock takes what its words need
+        _rawCell.CustomMinimumSize = new Vector2(level < 1 ? RawW : 0, 0);
+        _refinedCell.CustomMinimumSize = new Vector2(level < 1 ? RefinedW : 0, 0);
+        _upkeepCell.CustomMinimumSize = new Vector2(level < 1 ? UpkeepW : 0, 0);
+        _dayWords.CustomMinimumSize = new Vector2(level < 2 ? DayW : 0, 0);
+        foreach (var c in _barTextCells) c.AddThemeStyleboxOverride("panel", TextCellBox(level < 2 ? BarPad : BarPad / 2));
+        foreach (var b in new[] { _goalButton, _layersButton }) SetChipPad(b, level < 2 ? ChipPad : ChipPad / 2);
         FitGoalButton();
     }
 
-    /// <summary>Sets a box's least width; given a cell, its box's.</summary>
-    static void SetBoxWidth(PanelContainer cellOrBox, int width)
-    {
-        var box = cellOrBox.GetParent() is PanelContainer outer ? outer : cellOrBox;
-        box.CustomMinimumSize = new Vector2(width, BarBoxH);
-    }
-
-    /// <summary>The search results and the layers list hang under their boxes; the map's layer key stays at the top left, under the menu.</summary>
+    /// <summary>The search results and the layers list hang under their chips; the map's layer key stays at the top left, under the menu.</summary>
     void PlaceDrops()
     {
         if (_barLayer == null) return;
         var origin = _barLayer.GlobalPosition;
-        Hang(_searchResults, _searchBox.GlobalPosition.X - origin.X, Math.Max(SearchResultsWidth, _searchBox.Size.X));
-        Hang(_layersCard, _layersBox.GlobalPosition.X - origin.X, _layersBox.Size.X);
+        Hang(_searchResults, _searchBox.GlobalPosition.X - origin.X + BarInset, Math.Max(SearchResultsWidth, SearchWidth));
+        Hang(_layersCard, _layersBox.GlobalPosition.X - origin.X + BarInset, _layersBox.Size.X - 2 * BarInset);
     }
 
-    /// <summary>Puts a drop-down under its box, at least as wide. Zero-sized offsets: it keeps exactly the size its contents need.</summary>
+    /// <summary>Puts a drop-down under its chip, at least as wide. Zero-sized offsets: it keeps exactly the size its contents need.</summary>
     static void Hang(Control c, float x, float width)
     {
         if (c == null) return;
