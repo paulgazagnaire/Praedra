@@ -192,7 +192,8 @@ public partial class GameScreen
         if (mine || gen != null)
         {
             // a General takes or leaves the post only by a drag in the Ground window, never by a click here (Paul 2026-11-22, UI review 4)
-            Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good, 13);
+            var g = Line($"System General: {LeaderLine(gen)}", gen == null ? Dim : Good, 13);
+            if (mine) Tip(g, gen == null ? $"Drag a leader onto the General post in Ground at {name}." : $"Drag them off the General post in Ground at {name} to release them.");
             if (gen != null) foreach (var (seq, p) in S.PendingOrdersOfCharacter(gen.Id)) OrderLine(seq, $"Ordered: {p}", 13);
         }
         if (here.Count == 0) { Line("None of your leaders is here.", Dim, 13); return; }
