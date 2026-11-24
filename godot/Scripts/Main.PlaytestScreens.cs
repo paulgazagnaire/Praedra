@@ -81,6 +81,18 @@ public partial class Main
         GD.Print("  needs you: " + string.Join(" | ", titles));
         Expect(gs.TabName == "Needs" && (gs.PanelText().Contains("urgent") || gs.PanelText().Contains("to watch") || gs.PanelText().Contains("Nothing")), "the Needs you tab opens on its count line: " + gs.PanelText()[..Math.Min(80, gs.PanelText().Length)]);
         Expect(!gs.Has("Run until something needs me"), "Run until something needs me is gone (Paul 2026-11-24)");
+        // a badly damaged fleet (at most half its hull left) is a Needs you item (Paul 2026-11-24); its hulls are put back after
+        var hurt = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.Ships.Count > 0).OrderBy(f => f.Id).FirstOrDefault();
+        if (hurt != null)
+        {
+            var hulls = hurt.Ships.Select(s.Host.Economy.Find).Where(o => o != null && s.Host.Fleets.ClassOf(o) is { Hull: > 0 }).Select(o => (o, o.Hull)).ToList();
+            foreach (var (o, _) in hulls) o.Hull = Math.Max(1, s.Host.Fleets.ClassOf(o)!.Hull * 30 / 100);
+            gs.PlayRefresh();
+            Expect(gs.AttentionTitles.Contains($"{s.NameOf(hurt)} is badly damaged"), $"a fleet at 30% hull is in Needs you: " + string.Join(" | ", gs.AttentionTitles));
+            foreach (var (o, h) in hulls) o.Hull = h;
+            gs.PlayRefresh();
+            Expect(!gs.AttentionTitles.Contains($"{s.NameOf(hurt)} is badly damaged"), "and leaves it once whole again");
+        }
 
         // ---------------------------------------------------------------- search
         gs.SetSearch("chart");
