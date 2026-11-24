@@ -579,6 +579,25 @@ public static partial class PixelIconData
     /// Draw each pixel as a square, size 1 or 2 (never a fraction). Greyed out: every tone in one grey.</summary>
     public static readonly IReadOnlyDictionary<string, string[]> Bar = new Dictionary<string, string[]>
     {
+        ["advisor"] = new[]
+        {
+            "................",
+            "............333.",
+            "............321.",
+            "............311.",
+            ".........33.....",
+            ".......3311.....",
+            ".......31.......",
+            ".....33.........",
+            ".....31.........",
+            "...33...........",
+            "...31...........",
+            ".33.............",
+            ".31.............",
+            "................",
+            ".33333333333333.",
+            ".31111111111111.",
+        },
         ["clear"] = new[]
         {
             "................",

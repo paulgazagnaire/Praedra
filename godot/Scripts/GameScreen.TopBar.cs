@@ -31,7 +31,7 @@ public partial class GameScreen
     const int BarSide = 16;       // from the screen's left and right edges
     const int BarGroupGap = 32;   // between groups of boxes
     const int BarTextSize = 24;   // BitPotion 24: 1.5 px to a font pixel, 3 screen pixels on a Retina screen
-    const int SearchWide = 320, SearchNarrow = 150;
+    const int SearchWide = 290, SearchNarrow = 150;   // Paul's frame drew 320; 30 px went to the advisor's box (2026-11-24) so the 1440 px bar keeps every word
     const int BarMinGap = 16;     // the least room left between the left and the right boxes
     const int SearchResultsWidth = 360;
     const int DropRowH = 32;      // a row of the search results or the layers list: the bar's words, 32 px apart
@@ -155,6 +155,22 @@ public partial class GameScreen
             clock.AddChild(c);
         }
         g.AddChild(BarBox(clock));
+
+        // ---- the advisor, right of the clock (Paul 2026-11-24): Sibyl for the Hand; a click opens or closes the window on the right
+        g = BarGroup(_barRight);
+        _advisorButton = BarButton("", ToggleAdvisor, "", BarFont, BarTextSize, BarLabel, 0);
+        _advisorButton.SetMeta(UiTest.FullName, "Advisor");
+        _advisorButton.CustomMinimumSize = new Vector2(BarCellH, BarCellH);
+        _advisorButton.ToggleMode = true;
+        _advisorTex = new[] { PixelTexture(AdvisorIcon, BarLabel), PixelTexture(AdvisorIcon, BarMenu), PixelTexture(AdvisorIcon, BarValue) };
+        _advisorIcon = PixelIcon(AdvisorIcon, BarLabel);
+        var ac = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        ac.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        ac.AddChild(_advisorIcon);
+        _advisorButton.AddChild(ac);
+        _advisorButton.MouseEntered += PaintAdvisor;
+        _advisorButton.MouseExited += PaintAdvisor;
+        g.AddChild(BarBox(_advisorButton));
 
         // ---- what the boxes open: the search results and the layers list hang under their boxes, over the windows
         BuildSearchResults(_barLayer);
@@ -341,6 +357,34 @@ public partial class GameScreen
     static string[] MagnifierIcon => PixelIconData.Bar["search"];
     /// <summary>The search's clear button, white so the field's clear-button colours tint it.</summary>
     static string[] ClearIcon => PixelIconData.Bar["clear"];
+    /// <summary>The advisor: Sibyl's forecast mark, a line rising over the ground with a dot ahead of it and the forecast square (Paul chose it
+    /// 2026-11-24 over a robot head: Praevisio machines have no head, face or eye, and Sibyl speaks only in forecasts).</summary>
+    static string[] AdvisorIcon => PixelIconData.Bar["advisor"];
+
+    Button _advisorButton;
+    TextureRect _advisorIcon;
+    ImageTexture[] _advisorTex;   // at rest, under the mouse, open: the bar's grey, its lighter grey, its light value
+
+    /// <summary>The advisor's name: Sibyl, Praevisio's assistant, for the Hand (specs/creative/02-the-hand.md); the Collective has none yet.</summary>
+    string AdvisorName => Me == Praedra.Core.Clock.Side.Hand ? "Sibyl" : null;
+
+    /// <summary>The advisor button opens the window on the right where it was last left (Needs you at first), and closes it.</summary>
+    void ToggleAdvisor()
+    {
+        if (_drawer.Visible) CloseDrawer(); else ShowTab(_tab);
+        PaintAdvisor();
+    }
+
+    /// <summary>Lit while the window is open, a step lighter under the mouse, the bar's grey otherwise; its hover names the advisor.</summary>
+    void PaintAdvisor()
+    {
+        if (_advisorButton == null) return;
+        bool open = _drawer.Visible;
+        _advisorButton.SetPressedNoSignal(open);
+        _advisorIcon.Texture = _advisorTex[open ? 2 : _advisorButton.IsHovered() ? 1 : 0];
+        string who = AdvisorName is string n ? $"{n}, your advisor" : "Your advisor";
+        _advisorButton.TooltipText = Ui.Wrap($"{who}: what needs you, your fleets, leaders and missions, and the log. {(open ? "Click or Esc to close." : "Click to open.")}");
+    }
 
     static ImageTexture PixelTexture(string[] rows, Color color)
     {

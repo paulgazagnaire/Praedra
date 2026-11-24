@@ -200,6 +200,7 @@ public partial class GameScreen
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
         _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
         _playButton.Text = _playing ? "||" : "\u25b6";
+        PaintAdvisor();   // lit while the window on the right is open
         SetBarButtonColour(_playButton, _playing ? BarValue : BarLabel);   // lit while the clock runs
         _playButton.SetMeta(UiTest.FullName, _playing ? "Pause" : "Play");
         RefreshGoalButton();
