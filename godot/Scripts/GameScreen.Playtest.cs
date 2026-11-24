@@ -176,6 +176,14 @@ public partial class GameScreen
         bool back = _layersCard.MouseBehaviorRecursive != MouseBehaviorRecursiveEnum.Disabled;
         if (!wasOpen) ToggleLayers();
         if (!through || !back) return "the drop-downs do not let a dragged chip through (or keep blocking it after)";
+        // the Layers chip's stacked-sheets icon (Paul 2026-11-25, "B") is lit with its word: light while the list is open, grey when shut
+        if (_layersCard.Visible) ToggleLayers();
+        bool iconRest = _layersIcon.Texture == _layersTex[0];
+        ToggleLayers();
+        bool iconLit = _layersIcon.Texture == _layersTex[2];
+        ToggleLayers();
+        if (wasOpen) ToggleLayers();
+        if (_layersIcon.GetParent() != _layersButton || !iconRest || !iconLit) return "the Layers chip has no icon, or its icon does not light with the word";
         // one drop-down at a time: they hang side by side and the results are wider than the search box
         if (_layersCard.Visible) ToggleLayers();
         ToggleLayers();

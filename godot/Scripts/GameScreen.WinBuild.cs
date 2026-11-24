@@ -232,7 +232,7 @@ public partial class GameScreen
         var h = Boxed(new HBoxContainer(), 16);
         h.AddChild(Look.Words(label, 12, Look.Text, true));
         h.AddChild(Ui.Grow());
-        var num = Look.Words($"{used}/{total}", 10, Look.Quiet);   // the frame's #525252
+        var num = Look.Words($"{used}/{total}", 10, Look.Quiet);   // the status grey (Paul 2026-11-25: #7D8699)
         num.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(num);
         v.AddChild(h);

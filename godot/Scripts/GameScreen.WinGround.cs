@@ -48,7 +48,8 @@ public partial class GameScreen
             int have = S.Host.Support.RegimentCount(n), need = S.Host.Support.RequiredGarrison(n);
             FleetStrip(w,
                 ("Command", null, null, () => GroundCommand(n, gen, here, null)),
-                ("Troops", $"{have}/{need}", have < need ? Ui.Warn : null, () => GroundTroops(n, regs, sf)),
+                // a planet that needs no garrison shows the regiments alone, "14" not "14/0" (Paul 2026-11-25, "B"); none and none: no count
+                ("Troops", need > 0 ? $"{have}/{need}" : have > 0 ? have.ToString() : null, have < need ? Ui.Warn : null, () => GroundTroops(n, regs, sf)),
                 ("Fighters", based.Count == 0 ? null : based.Count.ToString(), null, () => GroundFighters(n, based)),
                 ("Fleets", fleetsCount, null, () => GroundFleets(n, own, foes, foesDay)));
             if (w.Pages.TryGetValue("Troops", out var tt))

@@ -531,7 +531,7 @@ public partial class GameScreen
             CellWords(b, l);
             if (count != null)
             {
-                var c = Look.Words(count, 12, ink ?? Look.Quiet);   // the frames' #525252
+                var c = Look.Words(count, 12, ink ?? Look.Quiet);   // the status grey (Paul 2026-11-25: #7D8699)
                 c.SetMeta(UiTest.FullName, $"Tab {w.Key} {name} count");
                 row.AddChild(c);
             }
@@ -1042,7 +1042,7 @@ public partial class GameScreen
         cap.Alignment = BoxContainer.AlignmentMode.Center;
         cap.CustomMinimumSize = new Vector2(CardW, 16);
         string side = Me == Side.Hand ? "hand" : "collective";
-        var ink = Look.Muted;   // Paul 2026-11-23 picked the readable grey #7D8699 for these (backlog R9), over the frame's #454545
+        var ink = Look.Dim;   // the frame's #454545 (Paul 2026-11-25 chose "B", over #7D8699 that he had picked on 2026-11-23, backlog R9)
         void Cargo(string icon, int have, int room)
         {
             if (room <= 0) return;
