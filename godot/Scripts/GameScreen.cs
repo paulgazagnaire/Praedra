@@ -283,6 +283,7 @@ public partial class GameScreen : Control
             case Key.Tab when _view.SelectedFleet >= 0: CycleFleetHere(k.ShiftPressed ? -1 : 1); break;
             case Key.Slash: FocusSearch(); break;
             case Key.Backspace when _moveFleet >= 0: DropWaypoint(); break;
+            case Key.Enter or Key.KpEnter when _moveFleet >= 0 && _waypoints.Count > 0: SendToLastWaypoint(); break;
             case Key.Escape: Escape(); break;
             case Key.Left when SectorViewOpen: StepSector(-1); break;
             case Key.Right when SectorViewOpen: StepSector(1); break;
