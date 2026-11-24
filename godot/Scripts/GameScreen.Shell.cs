@@ -480,10 +480,12 @@ public partial class GameScreen
         }
         // the map's own pixel icons, as the map draws them (Paul 2026-11-23: no placeholder pictures anywhere; the map icons are #359-#361)
         Control Map(string key, Color ink) => IconPic.Of(FleetLayer.Parked(key), 1, ink);   // a fleet's mark pointing up-right, as parked (review 20)
-        Item(new Glyph(Glyph.Kind.Dot, Ui.You, 11), "Your system");
-        Item(new Glyph(Glyph.Kind.Dot, Ui.Enemy, 11), "Enemy system (as last seen)");
-        Item(new Glyph(Glyph.Kind.Dot, Ui.Neutral, 8), "Nobody's system");
-        Item(new Glyph(Glyph.Kind.Ring, new Color(Ui.Neutral, 0.6f), 9), "Never explored");
+        // the systems' pixel spheres, as the map draws them (Paul 2026-11-24)
+        Control Sphere(Color c, int across) => new TextureRect { Texture = SystemSphere.Of(c, across), MouseFilter = MouseFilterEnum.Ignore, StretchMode = TextureRect.StretchModeEnum.KeepCentered };
+        Item(Sphere(Ui.You, 12), "Your system");
+        Item(Sphere(Ui.Enemy, 12), "Enemy system (as last seen)");
+        Item(Sphere(Ui.Neutral, 9), "Nobody's system");
+        Item(Sphere(GalaxyView.UnknownColor, 7), "Never explored");
         Item(new Glyph(Glyph.Kind.Cross, Ui.Danger, 11), "Destroyed by a harvester");
         Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the dot");   // as the map draws it
         Item(new Glyph(Glyph.Kind.Ring, Ui.Danger, 14), "Uprising: yards and mines stop");
