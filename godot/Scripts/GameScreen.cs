@@ -23,7 +23,6 @@ public partial class GameScreen : Control
 
     static readonly int[] Speeds = { 1, 2, 5 };           // the speed buttons: 1x, 2x, 5x (Paul's top bar 2026-11-15 dropped 10x)
     const double SecondsPerDay = 8.0;                      // a day lasts 8 seconds at 1x (Paul 2026-10-29), 1.6 s at 5x
-    const double RunUntilDaysPerSecond = 10.0;             // "Run until something needs me" skips quiet days at its own speed (QA-63)
     const int DefaultSpeedIndex = 2;                       // 5x when the player presses Play
     const int MaxStepsPerFrame = 30;
     const float PanPixelsPerSecond = 700f;
@@ -125,7 +124,6 @@ public partial class GameScreen : Control
     {
         if (S.Winner != null || OverlayOpen) return;
         _playing = !_playing;
-        _runUntilNeeded = false;
         if (_playing) { _pauseNote = null; HideModal(_reportPanel); }
         RefreshTop();
     }
@@ -133,7 +131,6 @@ public partial class GameScreen : Control
     void Pause(string note = null)
     {
         _playing = false;
-        _runUntilNeeded = false;
         if (note != null) _pauseNote = note;
         RefreshTop();
     }
@@ -165,7 +162,7 @@ public partial class GameScreen : Control
         if (oc.Winner is Side w) { ShowVictory(w); Pause(); return false; }
 
         // The core's own pauses (a battle, a capture, an invasion, a harvest), each of which the Settings can switch off; then the events the
-        // player chose to stop on; then "Run until something needs me".
+        // player chose to stop on.
         string why = oc.PauseReason != null && UiSettings.PausesOn(oc.PauseReason) ? oc.PauseReason : null;
         string note = why switch
         {
@@ -178,7 +175,6 @@ public partial class GameScreen : Control
         };
         if (why != null && oc.Popup != null) ShowReport(oc.Popup);
         note ??= ChosenPause(oc.New);
-        if (note == null && _runUntilNeeded && NewAttention() is { } item) note = "Paused: " + item;
         if (note != null) { Pause(note); return false; }
         RefreshTop();
         return true;
@@ -196,7 +192,7 @@ public partial class GameScreen : Control
 
         if (_playing)
         {
-            _acc += delta * (_runUntilNeeded ? RunUntilDaysPerSecond : Speeds[_speedIndex] / SecondsPerDay);
+            _acc += delta * (Speeds[_speedIndex] / SecondsPerDay);
             int steps = 0;
             while (_acc >= 1.0 && steps < MaxStepsPerFrame && _playing) { _acc -= 1.0; steps++; if (!RunDay()) break; }
             if (_acc > MaxStepsPerFrame || !_playing) _acc = 0;
