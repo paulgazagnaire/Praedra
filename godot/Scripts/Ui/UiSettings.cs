@@ -22,6 +22,8 @@ public static class UiSettings
     /// <summary>Map: draw your units and buildings on their way from the yard and troops sent alone (Layers > Deliveries; Paul 2026-11-17).</summary>
     public static bool ShowDeliveries = true;
     public static bool PauseEnemyAtMine, PauseUprising, PauseSensors, PauseCompleted, PauseMission;
+    /// <summary>Stop when Needs you starts showing "Your capital X is threatened" (Paul 2026-11-24 picked "Pause, on").</summary>
+    public static bool PauseCapitalThreat = true;
 
     public static void Load()
     {
@@ -37,6 +39,7 @@ public static class UiSettings
         PauseSensors = (bool)c.GetValue("pause", "sensors", false);
         PauseCompleted = (bool)c.GetValue("pause", "completed", false);
         PauseMission = (bool)c.GetValue("pause", "mission", false);
+        PauseCapitalThreat = (bool)c.GetValue("pause", "capital_threat", true);
         ShowDeliveries = (bool)c.GetValue("map", "deliveries", true);
     }
 
@@ -53,6 +56,7 @@ public static class UiSettings
         c.SetValue("pause", "sensors", PauseSensors);
         c.SetValue("pause", "completed", PauseCompleted);
         c.SetValue("pause", "mission", PauseMission);
+        c.SetValue("pause", "capital_threat", PauseCapitalThreat);
         c.SetValue("map", "deliveries", ShowDeliveries);
         var err = c.Save(Path);
         if (err != Error.Ok) GD.PrintErr($"Could not save the settings: {err}");

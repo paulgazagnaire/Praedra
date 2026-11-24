@@ -155,6 +155,23 @@ public partial class GameScreen
     /// <summary>An enemy fleet the player sees that could reach the capital within this many days (its class speed, no navigator) is a threat.</summary>
     const int CapitalThreatDays = 10;
 
+    bool _capitalThreatWas;
+
+    /// <summary>
+    /// The day a capital threat first shows (it was not there the day before), the clock stops, if Settings say so (DEFAULT on, Paul
+    /// 2026-11-24 "Pause, on"). A threat that stays does not stop it again until it has gone and come back. Called every day, even when
+    /// another stop fired, so a threat seen on a day that already paused does not stop the clock again the next day (Ponytail on #378).
+    /// </summary>
+    string CapitalThreatPause()
+    {
+        var probe = new List<Item>();
+        CapitalThreat(probe);
+        bool now = probe.Count > 0, was = _capitalThreatWas;
+        _capitalThreatWas = now;
+        if (!now || was || !UiSettings.PauseCapitalThreat) return null;
+        return $"Paused: your capital {S.MyHqSystem} is threatened";
+    }
+
     bool CapitalHeld(string sys) => sys == S.MyHqSystem && S.OwnerOf(sys) == Me && !S.IsDestroyed(sys);
 
     /// <summary>Systems you held that changed hands or were destroyed in the last <see cref="LostSystemDays"/> days and are not yours again: one red item.
