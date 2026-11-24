@@ -123,6 +123,10 @@ public partial class GameScreen
     internal string PanelText() => LabelsIn(_pv);
     static string LabelsIn(Node n) => string.Join("\n", AllNodes(n).OfType<Label>().Where(l => l.IsVisibleInTree() || !l.IsInsideTree()).Select(l => l.Text));
     internal void PickSystem(string name) { if (G.TryFindSystem(name, out int i)) OnSystemPicked(i); }
+    /// <summary>A shift-click on a system, as the map's Shift+click would do.</summary>
+    internal void ShiftPickSystem(string name) { if (G.TryFindSystem(name, out int i)) OnSystemPicked(i, shift: true); }
+    /// <summary>Withdraws the move order given to a fleet today, as a new order for it would.</summary>
+    internal void TakeBackMove(int fleet) => ReplaceFleetMove(fleet);
     internal void Frame(double seconds) => _Process(seconds);
     internal int LogRows => _log.ItemCount;
     internal string ToastText => string.Join("\n", _toasts.SelectMany(t => AllNodes(t.Card).OfType<Label>()).Select(l => l.Text));

@@ -168,7 +168,10 @@ public partial class GameScreen
         bool hovering = forcedTo != null || (h >= 0 && G.Systems[h].Name != f.At);
         string to = forcedTo ?? (hovering ? G.Systems[h].Name : _waypoints.Count > 0 ? _waypoints[^1] : null);
         var via = hovering ? _waypoints : _waypoints.Take(Math.Max(0, _waypoints.Count - 1)).ToList();
-        string tail = _waypoints.Count == 0 ? "Click to send it. Shift-click adds a waypoint." : "Click to send it. Shift-click adds another waypoint, Backspace drops the last.";
+        // "Not sent yet" in so many words: a shift-click (Paul's habit from picking fleets) only adds a waypoint, and a bar that read like a
+        // confirmed order left a fleet sitting at home (Paul 2026-11-24, "my fleet doesn't leave")
+        string tail = _waypoints.Count == 0 ? "Not sent yet: click to send it. Shift-click adds a waypoint."
+            : $"Not sent yet: click to send it, or press Enter to send it to {_waypoints[^1]}. Shift-click adds another waypoint, Backspace drops the last.";
         _moveWarn = false; _view.PathTraps = null; _around = null;
         if (to == null)
         {
@@ -279,7 +282,8 @@ public partial class GameScreen
         _orderActions.Visible = true;
     }
 
-    /// <summary>Shift-click in move mode: the system becomes the next waypoint (not the fleet's own system, not twice in a row).</summary>
+    /// <summary>Shift-click in move mode: the system becomes the next waypoint (not the fleet's own system). A shift-click on the last
+    /// waypoint again sends the move there, as a plain click does: it used to do nothing, so a player holding Shift could never send it.</summary>
     void AddWaypoint(int idx)
     {
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) return;
@@ -298,7 +302,15 @@ public partial class GameScreen
         UpdatePreview();
     }
 
-    void OnSystemPicked(int idx)
+    void OnSystemPicked(int idx) => OnSystemPicked(idx, Input.IsKeyPressed(Key.Shift));
+
+    /// <summary>Enter in move mode with waypoints: the move is sent to the last waypoint.</summary>
+    void SendToLastWaypoint()
+    {
+        if (_waypoints.Count > 0 && G.TryFindSystem(_waypoints[^1], out int i)) OnSystemPicked(i, shift: false);
+    }
+
+    void OnSystemPicked(int idx, bool shift)
     {
         if (_moveHq) { OnHqPicked(idx); return; }
         if (_moveFighters != null) { OnFightersPicked(idx); return; }
@@ -306,7 +318,7 @@ public partial class GameScreen
         if (_pickMission) { OnMissionPicked(idx); return; }
         if (_moveFleet < 0) return;
         if (!S.Game.State.Fleets.TryGetValue(_moveFleet, out var f) || f.At == null) { CancelMove(); return; }
-        if (Input.IsKeyPressed(Key.Shift)) { AddWaypoint(idx); return; }
+        if (shift && !(_waypoints.Count > 0 && _waypoints[^1] == G.Systems[idx].Name)) { AddWaypoint(idx); return; }
         string to = G.Systems[idx].Name;
         if (to == f.At) return;
         var via = _waypoints.ToList();

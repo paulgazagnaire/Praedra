@@ -42,6 +42,26 @@ public partial class Main
         var before = gs.PlanWithWaypoints(mover.Id, Array.Empty<string>(), dest, confirm: false);
         Expect(!before.Red && !before.Banner.Contains("TRAP"), "with no known interdictor the preview is not red: " + before.Banner);
 
+        // a destination picked with Shift held (Paul's habit from picking fleets) is only a waypoint: the bar says "Not sent yet" and how
+        // to send; a second Shift+click on it, or Enter, sends the move (Paul 2026-11-24: "my fleet doesn't leave")
+        int q0 = s.QueuedOrders;
+        SelectFleetByList(gs, mover);
+        Expect(gs.Click("Move..."), "click Move... for the Shift+click check");
+        gs.ShiftPickSystem(dest);
+        Expect(s.QueuedOrders == q0 && gs.OrderBarText.Contains("Not sent yet") && gs.OrderBarText.Contains($"press Enter to send it to {dest}"),
+            "a Shift+click on the destination only adds a waypoint and the bar says it is not sent yet: " + gs.OrderBarText.Replace("\n", " / "));
+        gs.ShiftPickSystem(dest);
+        Expect(s.QueuedOrders == q0 + 1 && s.PlannedMoveOf(mover.Id) is { } shiftSent && shiftSent.To == dest && gs.OrderBarText == "",
+            $"a second Shift+click on {dest} sends the move there");
+        gs.TakeBackMove(mover.Id);
+        Expect(gs.Click("Move..."), "click Move... for the Enter check");
+        gs.ShiftPickSystem(dest);
+        gs.PressKey(Key.Enter);
+        Expect(s.QueuedOrders == q0 + 1 && s.PlannedMoveOf(mover.Id) is { } enterSent && enterSent.To == dest, "Enter sends the move to the last waypoint");
+        gs.TakeBackMove(mover.Id);
+        Expect(s.QueuedOrders == q0, "the test's move is taken back");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
         s.OpponentIdle = true; // the Hand AI would fly the planted ship away before the picture is taken
         fm.SetOwner(trap, me); // the Collective holds it, so it sees the fleets there live
         fm.AddFleet(Side.Hand, "Net", new[] { "Subpoena" }, trap);
