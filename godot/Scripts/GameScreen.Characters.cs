@@ -41,7 +41,7 @@ public partial class GameScreen
         if (mineNeeded.Count > 0)
         {
             Heading("Key leaders");   // a title is a few words, the reason a note (review 23: a sentence in pixel capitals is slow to read)
-            Note("The enemy needs them to win: keep them free.");
+            Note("The enemy needs them to win: keep them free.").AddThemeColorOverride("font_color", Look.Soft);
             using (Card(Ui.Panel, Ui.Line))
                 foreach (int id in mineNeeded)
                 {

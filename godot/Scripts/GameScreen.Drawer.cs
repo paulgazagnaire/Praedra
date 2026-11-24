@@ -222,17 +222,23 @@ public partial class GameScreen
             var t = (Theme)Ui.WindowTheme.Duplicate();
             t.DefaultFontSize = Ui.Small;
             var clear = new Color(0, 0, 0, 0);
-            void Outlined(string type, Color rest, Color ink)
+            // 4 px corners on buttons, rows square (W2, the new colors frames 2026-11-24)
+            void Outlined(string type, Color rest, Color ink, int radius = 4)
             {
                 foreach (var (state, line) in new[] { ("normal", rest), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text), ("disabled", Look.Line) })
-                    t.SetStylebox(state, type, Look.Box(clear, line, 1, 1, 1, 1, 8));
+                {
+                    var b = Look.Box(clear, line, 1, 1, 1, 1, 8);
+                    b.SetCornerRadiusAll(radius);
+                    b.AntiAliasing = radius > 0;
+                    t.SetStylebox(state, type, b);
+                }
                 t.SetStylebox("focus", type, new StyleBoxEmpty());
                 t.SetFont("font", type, Ui.Grotesk);
                 t.SetFontSize("font_size", type, 12);
                 foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" }) t.SetColor(c, type, ink);
                 t.SetColor("font_disabled_color", type, Look.Dim);
             }
-            foreach (var v in new[] { "Button", "Row", "Primary", "Chip" }) Outlined(v, Look.Outline, Look.Text);
+            foreach (var v in new[] { "Button", "Row", "Primary", "Chip" }) Outlined(v, Look.Outline, Look.Text, v == "Row" ? 0 : 4);
             Outlined("WarnButton", new Color(Ui.Warn, 0.7f), Ui.Warn);
             Outlined("DangerButton", new Color(Ui.Danger, 0.8f), Ui.Danger);
             return _sibylTheme = t;
