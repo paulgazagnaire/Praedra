@@ -357,7 +357,8 @@ public partial class GameScreen
     static string[] MagnifierIcon => PixelIconData.Bar["search"];
     /// <summary>The search's clear button, white so the field's clear-button colours tint it.</summary>
     static string[] ClearIcon => PixelIconData.Bar["clear"];
-    /// <summary>The advisor: a robot head with a visor, no eye (the Praevisio has none). Paul 2026-11-24: "a small bot icon".</summary>
+    /// <summary>The advisor: Sibyl's forecast mark, a line rising over the ground with a dot ahead of it and the forecast square (Paul chose it
+    /// 2026-11-24 over a robot head: Praevisio machines have no head, face or eye, and Sibyl speaks only in forecasts).</summary>
     static string[] AdvisorIcon => PixelIconData.Bar["advisor"];
 
     Button _advisorButton;
