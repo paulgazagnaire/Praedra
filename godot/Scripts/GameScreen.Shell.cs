@@ -248,6 +248,7 @@ public partial class GameScreen
         if (!_layersCard.Visible && _searchResults.Visible) CloseSearch();
         _layersCard.Visible = !_layersCard.Visible;
         _layersButton.SetPressedNoSignal(_layersCard.Visible);
+        PaintLayers();
         PlaceDrops();
         _view.QueueRedraw();
     }

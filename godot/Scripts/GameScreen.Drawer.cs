@@ -192,7 +192,7 @@ public partial class GameScreen
             row.Alignment = BoxContainer.AlignmentMode.Center;
             var words = Look.Words(name, 12, Look.Text);
             row.AddChild(words);
-            var count = Look.Words("", 12, Look.Dim);
+            var count = Look.Words("", 12, Look.Quiet);   // a tab's count, as in the windows' strips (Paul 2026-11-25: the status grey)
             count.Visible = false;
             row.AddChild(count);
             _tabCounts[tab] = count;
@@ -283,13 +283,13 @@ public partial class GameScreen
         RefreshSibylStatus();
     }
 
-    /// <summary>A tab's count, in the dim grey unless it has a colour of its own; none hides it. The playtest reads the tab by name and count.</summary>
+    /// <summary>A tab's count, in the status grey unless it has a colour of its own; none hides it. The playtest reads the tab by name and count.</summary>
     void SetTabCount(DrawerTab tab, string count, Color? ink = null)
     {
         var l = _tabCounts[tab];
         l.Text = count ?? "";
         l.Visible = count != null;
-        l.AddThemeColorOverride("font_color", ink ?? Look.Dim);
+        l.AddThemeColorOverride("font_color", ink ?? Look.Quiet);   // as the windows' tab counts (Paul 2026-11-25: #7D8699)
         var b = _tabButtons[tab];
         string words = b.GetMeta("words").AsString();
         b.SetMeta(UiTest.FullName, count == null ? words : $"{words} {count}");

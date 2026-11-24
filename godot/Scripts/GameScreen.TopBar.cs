@@ -85,9 +85,20 @@ public partial class GameScreen
         _barLeft.AddChild(ChipCell(_menuButton));
         BarLine(_barLeft);
 
-        // Layers: words only; the frame's icon there is a copy of Refined's, and the game has no layers icon (Paul: keep the game's icons)
+        // Layers: its stacked-sheets icon, then the word (Paul chose B 2026-11-25; the frame's icon there was a copy of Refined's)
         _layersButton = BarButton("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", BarFont, BarTextSize, BarLabel, ChipPad);
         _layersButton.ToggleMode = true;
+        // the stacked-sheets icon left of the word (Paul chose B 2026-11-25; the frame's icon there was a copy of Refined's): drawn with
+        // square pixels, and lit with the word: grey at rest, lighter under the mouse, light while the list is open
+        _layersTex = new[] { PixelTexture(LayersIcon, BarLabel), PixelTexture(LayersIcon, BarMenu), PixelTexture(LayersIcon, BarValue) };
+        _layersIcon = PixelIcon(LayersIcon, BarLabel);
+        _layersIcon.AnchorTop = _layersIcon.AnchorBottom = 0.5f;
+        _layersIcon.OffsetTop = -8; _layersIcon.OffsetBottom = 8;
+        _layersButton.AddChild(_layersIcon);
+        PadLayers(ChipPad);
+        _layersButton.MouseEntered += PaintLayers;
+        _layersButton.MouseExited += PaintLayers;
+        _layersButton.Toggled += _ => PaintLayers();
         _barLeft.AddChild(_layersBox = ChipCell(_layersButton));
         BarLine(_barLeft);
 
@@ -319,9 +330,10 @@ public partial class GameScreen
         return b;
     }
 
-    static void SetChipPad(Button b, int padX)
+    static void SetChipPad(Button b, int padX, int lead = 0)
     {
         var rest = ChipBox(BarBg, padX);
+        rest.ContentMarginLeft += lead;   // room for an icon drawn before the words
         foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) b.AddThemeStyleboxOverride(st, rest);
     }
 
@@ -380,6 +392,27 @@ public partial class GameScreen
     static string[] RefinedIcon => PixelIconData.Bar["refined"];
     static string[] UpkeepIcon => PixelIconData.Bar["upkeep"];
     static string[] MagnifierIcon => PixelIconData.Bar["search"];
+    /// <summary>Layers: three sheets stacked, seen from above (Paul chose B 2026-11-25).</summary>
+    static string[] LayersIcon => PixelIconData.Bar["layers"];
+    const int IconGap = 4;   // between a 16 px icon and its word, as in the stocks
+
+    TextureRect _layersIcon;
+    ImageTexture[] _layersTex;   // at rest, under the mouse, open: as the advisor's
+
+    /// <summary>The Layers chip's padding, with room for its icon before the word.</summary>
+    void PadLayers(int padX)
+    {
+        SetChipPad(_layersButton, padX, 16 + IconGap);
+        _layersIcon.OffsetLeft = padX;
+        _layersIcon.OffsetRight = padX + 16;
+    }
+
+    /// <summary>The Layers icon takes the word's state: light while the list is open, a step lighter under the mouse, grey otherwise.</summary>
+    void PaintLayers()
+    {
+        if (_layersIcon == null) return;
+        _layersIcon.Texture = _layersTex[_layersButton.ButtonPressed ? 2 : _layersButton.IsHovered() ? 1 : 0];
+    }
     /// <summary>The search's clear button, white so the field's clear-button colours tint it.</summary>
     static string[] ClearIcon => PixelIconData.Bar["clear"];
     /// <summary>The advisor: Sibyl's forecast mark, a line rising over the ground with a dot ahead of it and the forecast square (Paul chose it
@@ -506,7 +539,8 @@ public partial class GameScreen
         _upkeepCell.CustomMinimumSize = new Vector2(level < 1 ? UpkeepW : 0, 0);
         _dayWords.CustomMinimumSize = new Vector2(level < 2 ? DayW : 0, 0);
         foreach (var c in _barTextCells) c.AddThemeStyleboxOverride("panel", TextCellBox(level < 2 ? BarPad : BarPad / 2));
-        foreach (var b in new[] { _goalButton, _layersButton }) SetChipPad(b, level < 2 ? ChipPad : ChipPad / 2);
+        SetChipPad(_goalButton, level < 2 ? ChipPad : ChipPad / 2);
+        PadLayers(level < 2 ? ChipPad : ChipPad / 2);
         FitGoalButton();
     }
 

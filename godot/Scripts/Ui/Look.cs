@@ -27,9 +27,9 @@ public static class Look
     public static readonly Color Divider = new(0x61 / 255f, 0x61 / 255f, 0x61 / 255f, 0.4f); // between the two gauges; a bar's track
     public static readonly Color Outline = new("36363c");   // a button's and a card's outline (Paul's fleet window design, 2026-11-21)
     public static readonly Color Muted = new("7d8699");     // the drawer's status words (Paul's fleet design, 2026-11-21; 4.8:1)
-    // the frames' status grey (new colors, 2026-11-24): what a fleet is doing, a tab's count, a card's cargo, a gauge's count. Only 2.4:1
-    // on the page: short labels beside their meaning, never a sentence to read (notes take Soft)
-    public static readonly Color Quiet = new("525252");
+    // the status grey: what a fleet is doing, a tab's count, a gauge's count, a planet's loyalty %. The new colors frames drew it #525252
+    // (2.4:1 on the page, hard to read); Paul 2026-11-25 chose "B": lift it to the drawer's #7D8699 (4.8:1)
+    public static readonly Color Quiet = Muted;
     // the dark tile behind a picture (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now"): the head's colour, on the
     // lighter page, as the new colors frames draw a card's picture
     public static readonly Color PicTile = Bg;
