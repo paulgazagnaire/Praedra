@@ -176,6 +176,15 @@ public sealed class FogModule
             }
         }
 
+        // §N6c (New, Paul 2026-11-25): the fleets one jump from the target, group E only, every system the spy's side does not hold, in index
+        // (= ordinal name) order; no draw, so the extras' and the tip's draws are unchanged
+        if (Params.EspionageSeesNearbyFleets)
+            foreach (int n in _galaxy.NearOf(ti).OrderBy(i => i))
+            {
+                string near = _galaxy.Systems[n].Name;
+                if (_fleets.OwnerOf(near) != side) Write(ctx, truth, side, near, RevealKind.NearbyFleets, stamp);
+            }
+
         // §N6 sector suspicion (Proposal, off by default): an espionage success on a Collective system in the sector that holds the HQ.
         if (Params.SectorSuspicion == SectorSuspicion.OnEspionage && side != Side.Collective && holder == Side.Collective
             && Hq.Status == HqStatus.AtRest && Hq.System != null && _galaxy.Get(Hq.System).Sector == _galaxy.Systems[ti].Sector)
@@ -246,6 +255,7 @@ public sealed class FogModule
             case RevealKind.LossNotice: case RevealKind.HeartlandReport: b = true; a = c = d = e = false; break;
             case RevealKind.Destroyed: a = b = true; c = d = e = false; break;
             case RevealKind.HearthTip: a = b = true; c = d = e = false; break; // §N6a: where it is and who holds it, plus HqHere below
+            case RevealKind.NearbyFleets: e = true; a = b = c = d = false; break; // §N6c: the fleets only; not a look (LastLookDay stays)
             default: throw new ArgumentOutOfRangeException(nameof(kind));
         }
         var know = F.Of(side);
@@ -303,7 +313,8 @@ public sealed class FogModule
         if (e)
         {
             k.Fleets = truth.FleetsAt(sys).Where(f => f.Side != side).Select(truth.Picture).ToList();
-            k.StampE = stamp; k.LastLookDay = stamp;
+            k.StampE = stamp;
+            if (kind != RevealKind.NearbyFleets) k.LastLookDay = stamp;
         }
     }
 

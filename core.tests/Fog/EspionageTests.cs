@@ -22,9 +22,9 @@ public class EspionageTests
         return GameData.Default with { Galaxy = g, Slots = SlotValues.Parse(slots, g) };
     });
 
-    private static GameHost HostE(ulong seed, string hq = "A01")
+    private static GameHost HostE(ulong seed, string hq = "A01", GameSettings? settings = null)
     {
-        var h = GameHost.New(seed, data: MapE.Value);
+        var h = GameHost.New(seed, settings, MapE.Value);
         h.Fleets.SetOwner("E0", Side.Hand);
         for (int i = 1; i <= 12; i++) h.Fleets.SetOwner($"A{i:00}", Side.Collective);
         h.Fog.PlaceHq(hq);
@@ -138,6 +138,34 @@ public class EspionageTests
         Assert.Null(k.StampC); Assert.Null(k.StampD);
         Assert.False(k.HqHere);
         Assert.Null(w.Fog.KnownHq(Side.Hand));
+    }
+
+    // m5-fog-and-hq §N6c FE8 (New, Paul 2026-11-25, pick 1A): an espionage success on A05 also writes the fleets (group E only) of A04 and A06,
+    // the systems one jump away; A07 (two jumps) is not written; no extra draw; the neighbours' owner, facilities and ground are not written,
+    // and the fleets-only write is not a look. Off (Classic): nothing next door.
+    [Fact]
+    public void FE8_EspionageSeesTheFleetsOneJumpAway()
+    {
+        foreach (bool on in new[] { true, false })
+        {
+            var h = HostE(1, settings: new GameSettings { Fog = new FogParams { EspionageSeesNearbyFleets = on } });
+            h.Fleets.AddFleet(Side.Collective, "near", new[] { Corvette }, "A04");
+            h.Fleets.AddFleet(Side.Collective, "far", new[] { Corvette }, "A07");
+            var (draws, stamp) = Espionage(h, Side.Hand, "A05"); // A05 unexplored to the Hand: no extras, no draw for them
+            var hand = h.Game.State.Fog.Of(Side.Hand).Systems;
+            Assert.Equal(stamp, hand["A05"].StampD);
+            Assert.False(hand.TryGetValue("A07", out var a7) && a7.StampE == stamp);
+            if (on)
+            {
+                Assert.Equal((Side.Collective, 1), hand["A04"].Fleets.Select(f => (f.Side, f.ShipCount)).Single());
+                Assert.Equal((stamp, stamp), (hand["A04"].StampE, hand["A06"].StampE));
+                Assert.Empty(hand["A06"].Fleets);
+                var k4 = hand["A04"];
+                Assert.Equal((false, (int?)null, (int?)null, (int?)null, (int?)null), (k4.Explored, k4.StampB, k4.StampC, k4.StampD, k4.LastLookDay));
+            }
+            else Assert.False(hand.TryGetValue("A04", out var a4) && a4.StampE == stamp);
+            Assert.Equal(1, draws); // the Hearth tip's one draw only (§N6a), on or off
+        }
     }
 
     // m5-fog-and-hq FE7

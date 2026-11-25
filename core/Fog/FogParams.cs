@@ -58,6 +58,12 @@ public sealed record FogParams
     /// (§N6 HqSectorClue). New, Decided with HearthTipPermille (Paul 2026-10-26). DEFAULT 50 (5%), AI trainer's ask. rule: §N6a.
     /// </summary>
     public int HearthTipSectorPermille { get; init; } = 50;
+    /// <summary>
+    /// An espionage success also writes the fleets (group E only) of every system one jump from the target that the spy's side does not hold:
+    /// what enemy fleets stand next door. New, Decided (Paul 2026-11-25, pick 1A after the espionage stats: "spies almost never see fleets").
+    /// DEFAULT on; off = Classic (the target and the extras only). No draw. rule: m5-fog-and-hq §N6c.
+    /// </summary>
+    public bool EspionageSeesNearbyFleets { get; init; } = true;
     /// <summary>Days a look stays "Observed", and the age at which a sighting is dropped. Proposal. rule: §N1, §N3.</summary>
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>

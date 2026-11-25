@@ -119,7 +119,8 @@ public class HqRevealTests
     [Fact]
     public void HR12_HearthTipTellsTheHandWhereTheHearthIs()
     {
-        var w = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 1000 } });
+        // R2 is one jump from R3: §N6c (the fleets next door) is off here so the picture of R2 is the tip's alone
+        var w = new FogWorld(new GameSettings { Fog = new FogParams { HearthTipPermille = 1000, EspionageSeesNearbyFleets = false } });
         int stamp = Espionage(w, Side.Hand, R3);
         Assert.Equal(new KnownHqInfo(R2, stamp), w.Fog.KnownHq(Side.Hand));
         var p = w.Pic(Side.Hand, R2)!;
