@@ -142,6 +142,11 @@ public class TrainTalentTests
         Assert.Equal((30, 15), slow.Characters.TrainingOdds(60));
         var loaded = GameHost.Load(slow.SaveWithSettings()).Characters.Params;
         Assert.Equal((100, 50), (loaded.TalentTrainingChancePercent, loaded.TalentTrainingGainPercent));
+        // QA-123: a save from before the Talent names pins ForceTraining*; it is renamed first, then upgraded
+        string named = slow.SaveWithSettings().Replace("\"TalentTraining", "\"ForceTraining", StringComparison.Ordinal);
+        Assert.Contains("\"ForceTrainingGainPercent\":25", named);
+        var renamed = GameHost.Load(named).Characters.Params;
+        Assert.Equal((100, 50), (renamed.TalentTrainingChancePercent, renamed.TalentTrainingGainPercent));
 
         var other = NewGame.Create(new NewGameOptions { Seed = 3, Settings = new GameSettings { Characters = new CharacterParams { TalentTrainingChancePercent = 70, TalentTrainingGainPercent = 25 } } });
         var kept = GameHost.Load(other.SaveWithSettings()).Characters.Params;
