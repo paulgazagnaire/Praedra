@@ -174,7 +174,7 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Underground: systems where the side sees an enemy harvester: with fog, group E of a picture at most SpikeSeenDays old (Held or Observed
+    /// Cells: systems where the side sees an enemy harvester: with fog, group E of a picture at most SpikeSeenDays old (Held or Observed
     /// look); without fog, the real fleets. Ordinal order.
     /// </summary>
     private List<string> HarvesterSeenAt()
