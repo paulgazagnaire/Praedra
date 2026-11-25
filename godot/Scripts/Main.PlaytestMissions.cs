@@ -36,6 +36,8 @@ public partial class Main
         bool Free(CharacterRecord c) => cm.IsAvailable(c) && c.Transit == null && c.System != null;
         int Ticks(string a, string b) => fm.FindPath(a, b, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
 
+        PlaytestTrainTalent(gs);
+
         if (me == Side.Collective)
         {
             // ---------------------------------------------------------------- Mae Abara: a refused kind, then Diplomacy on a neutral system
@@ -114,6 +116,58 @@ public partial class Main
             SpyAndCheck(gs, $"Send {name} on a mission...", null, target, checkRefusedKind: true, defer: true);
         }
         gs.View.Select(-1); gs.PlayRefresh();
+    }
+
+    /// <summary>
+    /// Train Talent on screen (design specs/ui/train-talent-2026-11-25 rev 3, Paul 2026-11-25): a trainer and a weaker talented leader on one
+    /// planet; the hovers say who trains whom, the trainer's right-click offers Train Talent, the planner opens with both ticked and says the
+    /// odds read from the switches, the student alone is refused with the trainer named, and the Leaders tab has the training line. Nothing
+    /// is sent, so the rest of the playtest keeps its days. rule: m5-characters-and-talent §Rule (New) 4b, §Talent (Train Talent).
+    /// </summary>
+    void PlaytestTrainTalent(GameScreen gs)
+    {
+        var s = gs.S; var cm = s.Host.Characters; var mm = s.Missions;
+        bool Ready(CharacterRecord c) => cm.IsAvailable(c) && c.Transit == null && c.System != null && s.PendingMissionOf(c.Id) == null && s.SystemPostOf(c) == null;
+        var trainer = s.MyCharacters.Where(c => cm.IsTrainer(c) && Ready(c) && s.OwnerOf(c.System) == s.Player).OrderByDescending(c => c.EffectiveTalent).ThenBy(c => c.Id).FirstOrDefault();
+        Expect(trainer != null, "one of your trainers is free on a planet you hold");
+        if (trainer == null) return;
+        var student = s.MyCharacters.Where(c => c.Id != trainer.Id && Ready(c) && c.TalentHolder && c.TalentDiscovered && c.EffectiveTalent < trainer.EffectiveTalent)
+            .OrderBy(c => c.System == trainer.System ? 0 : 1).ThenBy(c => c.Id).FirstOrDefault();
+        Expect(student != null, "a free talented leader with less Talent than the trainer");
+        if (student == null) return;
+        string home = trainer.System, was = student.System, tn = s.CharName(trainer.Id), sn = s.CharName(student.Id);
+        if (was != home) { student.System = home; GD.Print($"  {sn} put beside {tn} at {home} (test only, put back after)"); }
+        try
+        {
+            gs.ShotWindow("ground", home); gs.PlayRefresh();
+            string ttip = gs.CardTip("Leader " + tn), stip = gs.CardTip("Leader " + sn);
+            Expect(ttip.Contains("Trains Talent.") && ttip.Contains($"Can train here: {sn} (") && ttip.Contains("Right-click: Train Talent"), $"{tn}'s hover says who they can train here: {ttip}");
+            Expect(stip.Contains($"Can learn from: {tn} (") && stip.Contains(") here"), $"{sn}'s hover names the trainer here: {stip}");
+            var menu = gs.MenuOf("Leader " + tn);
+            Expect(menu.Contains("Train Talent..."), $"right-click {tn}: Train Talent is offered: {string.Join(" | ", menu)}");
+            Expect(gs.MenuOf("Leader " + sn).Contains("Train Talent..."), $"right-click {sn}: Train Talent is offered from the student too");
+            Expect(gs.RunMenu("Leader " + tn, "Train Talent...") && gs.PlannerOpen, "pick Train Talent: the planner opens");
+            gs.MgCloseAll(); gs.PlayRefresh();
+            string panel = gs.PanelText();
+            var (team, _) = gs.PlanTeam;
+            int gap = trainer.EffectiveTalent - student.EffectiveTalent;
+            var (chance, most) = cm.TrainingOdds(gap);
+            string odds = chance > 0 && most > 0 ? $"{chance}% chance to gain up to {most}, never reaching {trainer.EffectiveTalent}" : "no gain possible";
+            Expect(team.Contains(trainer.Id) && team.Contains(student.Id), $"the team is ticked: {tn} and {sn}");
+            Expect(panel.Contains($"Trainer: {tn} (Talent {trainer.EffectiveTalent}). Trains on {home}") && panel.Contains($"{sn} (Talent {student.EffectiveTalent}): {odds}")
+                && panel.Contains("Lasts 60 to 90 days") && panel.Contains($"Stops if you lose {home}."), "step 3 says the trainer, the odds from the switches and how long: " + panel.Replace("\n", " / "));
+            Expect(gs.Enabled($"Send: Train Talent on {home}"), "Send is open");
+            Expect(gs.Click("Close without sending") && !gs.PlannerOpen, "close the planner without sending");
+            // the student alone: Train Talent greyed in the planner with the free trainer here named
+            gs.ClickViaMenu("Leaders"); gs.PlayRefresh();
+            Expect(gs.PanelText().Contains($"Trains Talent: {sn} (") && gs.PanelText().Contains($"Learns from: {tn} ("), "the Leaders tab has a training line for both: " + gs.PanelText().Replace("\n", " / "));
+            Expect(gs.Click($"Send {sn} on a mission..."), $"open the planner for {sn} alone");
+            gs.PlayRefresh();
+            string train = gs.ButtonTexts().FirstOrDefault(x => x.StartsWith("Train Talent", StringComparison.Ordinal));
+            Expect(train != null && train.Contains($"needs a trainer in the team ({tn}") && !gs.Enabled("Train Talent"), $"Train Talent is greyed with the trainer named: {train}");
+            gs.Click("Close without sending");
+        }
+        finally { student.System = was; gs.MgCloseAll(); gs.View.Select(-1); gs.PlayRefresh(); }
     }
 
     /// <summary>
@@ -244,10 +298,21 @@ public partial class Main
         if (checkRefusedKind)
         {
             // Train Talent runs since 2026-11-25 (m5-characters-and-talent Rule New 4b): without a trainer and a weaker talented leader it is greyed
-            // with a plain reason that names who can train, never the old "rule book" refusal
+            // with a plain reason that names who is missing, never the old "rule book" refusal (Train Talent design piece 2)
             string train = texts.FirstOrDefault(t => t.StartsWith("Train Talent", StringComparison.Ordinal));
-            Expect(train != null && !train.Contains("rule book") && (gs.Enabled("Train Talent") || train.Contains("trainer") || train.Contains("nobody to train")),
+            Expect(train != null && !train.Contains("rule book") && (gs.Enabled("Train Talent") || train.Contains("trainer") || train.Contains("student") || train.Contains("Talent is here")
+                || train.Contains("only leaders train") || train.Contains("planet you hold")),
                 "Train Talent is offered, or greyed out with a plain reason: " + train);
+            // review 28: no Train Talent line uses a trainer's bare name as subject or object ("needs Nobody" reads as "needs no one"), for each side
+            var cd = s.Host.Characters.Data;
+            foreach (var side in new[] { Side.Hand, Side.Collective })
+            {
+                var names = cd.Trainers.Where(x => cd.TryGet(x.Character, out var k) && k.Side == side).Select(x => s.CharName(x.Character)).ToList();
+                Expect(names.Count == 2, $"two {side} trainers in data: " + string.Join(", ", names));
+                if (names.Count < 2) continue;
+                foreach (var line in TrainWords.AllLines(names[0], names[1], "Lucrio Vance"))
+                    Expect(TrainWords.BareTrainer(line, names) == null, $"no bare trainer name in: {line}");
+            }
             Expect(!texts.Any(t => t.StartsWith(s.Player == Side.Collective ? "Assassination" : "harvester", StringComparison.Ordinal)), "the other side's kind is not offered");
         }
         Expect(gs.Enabled(kw), $"{kw} is allowed for this team");

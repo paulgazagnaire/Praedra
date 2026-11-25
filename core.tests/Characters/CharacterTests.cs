@@ -146,12 +146,14 @@ public class CharacterTests
         Assert.Equal(68, w.Ch.EffectiveSkill(nobody, Skill.Combat));
     }
 
-    // m5-characters-and-talent CH36: New training (chance percent 50, gain percent 25, DEFAULT): Ravilla 120, student 20 (gap 100): chance 50,
+    // m5-characters-and-talent CH36: the slower training of 2026-10-18 (chance percent 50, gain percent 25; set here, the DEFAULT is Classic speed
+    // since Paul's card B of 2026-11-25, CH45): Ravilla 120, student 20 (gap 100): chance 50,
     // r = 49 succeeds, g = rand(0..25), g = 25 → 45; r = 50 fails with no g draw. Nobody 50, Ledger 10 (gap 40): chance 20, r = 19 succeeds, max gain 10
     [Fact]
-    public void CH36_NewTrainingChanceAndGain()
+    public void CH36_SlowTrainingChanceAndGain()
     {
-        var (w, ravilla, s) = Training(Ravilla, 120, Tura, 20);
+        var slow = new CharacterParams { TalentTrainingChancePercent = 50, TalentTrainingGainPercent = 25 };
+        var (w, ravilla, s) = Training(Ravilla, 120, Tura, 20, slow);
         w.Stub!.Expect(0, 99, 49).Expect(0, 25, 25);
         w.StepWith("6.10", ctx => w.Ch.TalentTrainingRound(ctx, ravilla, new[] { s }));
         var e = Assert.Single(w.Events<TalentTrainingResult>());
@@ -164,7 +166,7 @@ public class CharacterTests
         Assert.Equal(20, s.EffectiveTalent);
         Assert.Equal(new[] { (0, 99) }, w.Stub.Requests.Skip(before).Select(r => (r.Min, r.Max)));
 
-        var (w2, nobody, ledger) = Training(Nobody, 50, Ledger, 10);
+        var (w2, nobody, ledger) = Training(Nobody, 50, Ledger, 10, slow);
         w2.Stub!.Expect(0, 99, 19).Expect(0, 10, 10);
         w2.StepWith("6.10", ctx => w2.Ch.TalentTrainingRound(ctx, nobody, new[] { ledger }));
         Assert.Equal(20, ledger.EffectiveTalent);
@@ -881,8 +883,8 @@ public class CharacterTests
         Assert.True(p.LoyaltyTriggers); Assert.True(p.SeatOfPower); // B2e: Seat of Power Traced, DEFAULT on
         Assert.Equal(TalentDiscoveryMode.Trainer, p.TalentDiscovery); Assert.False(p.TalentGrowth); Assert.False(p.SkillGrowth); // B2e: trainers awaken talented characters
         Assert.False(p.TrainerNeedsAnomaly); Assert.Equal(1, p.TalentDeviationMin); Assert.Equal(80, p.TalentAnomalyMin); Assert.Equal(100, p.TalentUnforecastableMin);
-        Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.HarvesterHitPercent); Assert.Equal(25, p.TalentTrainingGainPercent);
-        Assert.Equal(40, p.TalentSkillPercent); Assert.Equal(50, p.TalentTrainingChancePercent); // m5-characters-and-talent §Talent (New, Paul 2026-10-18)
+        Assert.False(p.NavigatorBonus); Assert.Equal(25, p.NavigatorFloor); Assert.Equal(50, p.HarvesterHitPercent); Assert.Equal(50, p.TalentTrainingGainPercent);
+        Assert.Equal(40, p.TalentSkillPercent); Assert.Equal(100, p.TalentTrainingChancePercent); // m5-characters-and-talent §Talent (New, Paul 2026-10-18; training speed Classic, Paul 2026-11-25)
         Assert.Equal(100, p.CharacterSpeed); Assert.Equal(4, p.StartExtrasPerSide); Assert.Equal(StartCastOfficers.Classic, p.StartCastOfficers);
     }
 

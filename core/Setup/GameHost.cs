@@ -448,8 +448,20 @@ public sealed class GameHost
     /// </summary>
     private const string OldTrainerPick = "\"TrainerPick\":\"Random\"", NewTrainerPick = "\"TrainerPick\":\"Pair\"";
 
+    /// <summary>
+    /// The training speed a save pinned before 2026-11-25 (chance 50, gain 25: the slower 2026-10-18 DEFAULTs; no setting ever let a player choose
+    /// them). Paul chose Classic speed (card B) for the game he is playing too, so that exact pair loads as Classic 100 and 50.
+    /// rule: m5-characters-and-talent §Talent (Rule (New), training speed).
+    /// </summary>
+    internal const int OldTrainingChancePercent = 50, OldTrainingGainPercent = 25;
+    private static readonly System.Text.RegularExpressions.Regex OldTrainingSpeed = new(
+        "\"TalentTrainingGainPercent\":" + OldTrainingGainPercent + "(?=[,}])(?<between>.*?)\"TalentTrainingChancePercent\":" + OldTrainingChancePercent + "(?=[,}])",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static string UpgradeSettingsJson(string json)
     {
+        json = OldTrainingSpeed.Replace(json, m => "\"TalentTrainingGainPercent\":" + Praedra.Core.Characters.CharacterParams.ClassicTrainingGainPercent
+            + m.Groups["between"].Value + "\"TalentTrainingChancePercent\":" + Praedra.Core.Characters.CharacterParams.ClassicTrainingChancePercent);
         foreach (var (o, n) in RenamedSettings) json = json.Replace(o, n, StringComparison.Ordinal);
         json = json.Replace(OldTrainerPick, NewTrainerPick, StringComparison.Ordinal);
         json = OldDominance.Replace(json, "\"DominanceDays\":" + NewDominanceDays);

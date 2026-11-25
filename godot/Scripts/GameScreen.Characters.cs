@@ -137,6 +137,7 @@ public partial class GameScreen
             skills.TooltipText = Ui.Wrap(S.CapabilityOf(c) + "\n" + LeaderHelp);
             skills.MouseFilter = MouseFilterEnum.Stop;
             skills.MouseDefaultCursorShape = CursorShape.Help;
+            if (TrainTabLine(c) is string train) Line(train, Look.Quiet, Ui.Small); // who they train or learn from (Train Talent design piece 4)
             foreach (var (seq, p) in S.PendingOrdersOfCharacter(id)) OrderLine(seq, $"Ordered: {p}", Ui.Small);
             // two small buttons on one line; the card already names the leader (the full words stay on the button for the playtest)
             var acts = Ui.HBox(Ui.Block);

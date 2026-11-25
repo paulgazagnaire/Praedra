@@ -11,7 +11,7 @@ public sealed partial class CharacterModule
     /// <summary>
     /// One Train Talent round (the mission calls it at the end of its timer): for each student in id order, gap = trainer - student (effective);
     /// draw r = rand(0..99) always; success if gap &gt; 0 and r &lt; min(gap, 100) * TalentTrainingChancePercent / 100; on success draw
-    /// g = rand(0..gap * TalentTrainingGainPercent / 100) (New DEFAULTs 50 and 25; Classic 100 and 50) and add it to the
+    /// g = rand(0..gap * TalentTrainingGainPercent / 100) (DEFAULTs 100 and 50, Classic speed, Paul 2026-11-25) and add it to the
     /// student's acquired Talent. Events TalentTrainingResult, then TalentRankChanged if the rank changed. No student reaches the trainer.
     /// rule: §Talent (Train Talent: the roll), Traced 0x55c7c0, 0x53e2f0, 0x55ca20 (chance reading [inferred]); CH3 to CH6.
     /// </summary>
@@ -23,13 +23,12 @@ public sealed partial class CharacterModule
             var before = RankOf(s);
             int gap = trainer.EffectiveTalent - s.EffectiveTalent;
             int r = ctx.Rng.NextInt(0, 99);
-            // rule: m5-characters-and-talent §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100 / 50)
-            int chance = Math.Min(gap, Params.TrainingChanceCap) * Params.TalentTrainingChancePercent / CharacterRecord.PercentDivisor;
+            var (chance, most) = TrainingOdds(gap);
             bool success = gap > 0 && r < chance;
             int gain = 0;
             if (success)
             {
-                gain = ctx.Rng.NextInt(0, gap * Params.TalentTrainingGainPercent / CharacterRecord.PercentDivisor);
+                gain = ctx.Rng.NextInt(0, most);
                 s.TalentTraining += gain;
             }
             int sid = s.Id, tid = trainer.Id, nf = s.EffectiveTalent, g2 = gain; var side = s.Side;
@@ -38,6 +37,15 @@ public sealed partial class CharacterModule
             if (after != before) ctx.Emit((i, _) => new TalentRankChanged(i, day, sid, side, before, after));
         }
     }
+
+    /// <summary>
+    /// The odds of one Train Talent roll for a Talent gap: the chance in percent, <c>min(gap, 100) * TalentTrainingChancePercent / 100</c>, and the most
+    /// a success can add, <c>gap * TalentTrainingGainPercent / 100</c> (the draw is rand(0..most)); 0 and 0 when gap &lt;= 0. The screens read it so the
+    /// planner says what the roll does. rule: m5-characters-and-talent §Talent (Train Talent: the roll).
+    /// </summary>
+    public (int Chance, int Most) TrainingOdds(int gap) => gap <= 0 ? (0, 0)
+        : (Math.Min(gap, Params.TrainingChanceCap) * Params.TalentTrainingChancePercent / CharacterRecord.PercentDivisor,
+           gap * Params.TalentTrainingGainPercent / CharacterRecord.PercentDivisor);
 
     /// <summary>
     /// A story discovery (Classic's film story missions called it; they are cut, data/design/cut-classes.csv, so only tests do now): a hidden talented character becomes discovered. Event TalentDiscovered.

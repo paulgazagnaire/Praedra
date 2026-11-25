@@ -65,10 +65,11 @@ public sealed record CharacterParams
     /// <summary>harvester hit chance on a minor, percent (GNPRTB 0x606 = 50). Traced, Decided (Paul).</summary>
     public int HarvesterHitPercent { get; init; } = 50;
     /// <summary>
-    /// Train Talent gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 25 (New, Paul 2026-10-18: five or six trainers, so
-    /// training is slower); <see cref="ClassicTrainingGainPercent"/> 50 = Classic (GNPRTB 6173). rule: m5-characters-and-talent §Talent (Train Talent: the roll).
+    /// Train Talent gain cap, percent of the gap: <c>g = rand(0..gap * this / 100)</c>. DEFAULT 50 = Classic (GNPRTB 6173; Paul 2026-11-25 chose Classic
+    /// speed, card B, once only two trainers per side were left); 25 = the slower 2026-10-18 rule (five or six trainers were planned then).
+    /// rule: m5-characters-and-talent §Talent (Train Talent: the roll; Rule (New), training speed).
     /// </summary>
-    public int TalentTrainingGainPercent { get; init; } = 25;
+    public int TalentTrainingGainPercent { get; init; } = ClassicTrainingGainPercent;
     /// <summary>
     /// Prisoners land (New, Paul 2026-10-18 decision card "Land them"): at day end a fleet standing at a system its own side holds, not blockaded,
     /// puts the prisoners it holds aboard ashore there, where an ordinary Rescue can reach them. DEFAULT true; false = Classic (a prisoner aboard stays
@@ -80,10 +81,10 @@ public sealed record CharacterParams
     /// <summary>Training chance cap, percent (min(gap, 100)). Traced code, reading [inferred].</summary>
     public int TrainingChanceCap { get; init; } = 100;
     /// <summary>
-    /// Train Talent chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 50 (New, Paul 2026-10-18); 100 = Classic (Traced, reading [inferred]).
-    /// rule: m5-characters-and-talent §Talent (Train Talent: the roll; New, Paul 2026-10-18; Classic = 100).
+    /// Train Talent chance scale: <c>chance = min(gap, 100) * this / 100</c>. DEFAULT 100 = Classic (Traced, reading [inferred]; Paul 2026-11-25 chose
+    /// Classic speed, card B); 50 = the slower 2026-10-18 rule. rule: m5-characters-and-talent §Talent (Train Talent: the roll; Rule (New), training speed).
     /// </summary>
-    public int TalentTrainingChancePercent { get; init; } = 50;
+    public int TalentTrainingChancePercent { get; init; } = ClassicTrainingChancePercent;
     /// <summary>
     /// Share of Talent that multiplies diplomacy, espionage and combat: <c>B + B * F * this / 10000</c>. DEFAULT 40 (New, Paul 2026-10-18: an Unforecastable
     /// at 120 gives +48% instead of +120%); 100 = Classic (Traced B2e §1). rule: m5-characters-and-talent §Talent (New, Paul 2026-10-18; Classic = 100).
