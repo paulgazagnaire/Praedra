@@ -242,7 +242,8 @@ public class B2bTalentAndBetrayalTests
     }
 
     // m5-missions §3 Betrayal, BetrayalCapPercent (New, Paul 2026-11-25, pick 3A): Ledger alone at loyalty 0 betrays at 25, not 100 (a draw of 25
-    // passes, 24 betrays); two members at loyalty 0 share the cap, 12 each; a loyal member (100) takes no share; cap 0 = Classic, 100.
+    // passes, 24 betrays); two members at loyalty 0 share the cap, 12 each; a loyal member (100) takes no share and a near-loyal one (99) almost
+    // none (Ledger keeps 24, not 12); a team whose chances add up to the cap or less is unchanged; cap 0 = Classic, 100.
     [Fact]
     public void BetrayalIsCappedPerMission()
     {
@@ -259,6 +260,8 @@ public class B2bTalentAndBetrayalTests
         Assert.Equal(new[] { (25, true) }, Rolls(25, 24, (Ledger, 0)));
         Assert.Equal(new[] { (12, false), (12, false) }, Rolls(25, 12, (Ledger, 0), (Midwife, 0)));
         Assert.Equal(new[] { (25, false), (0, false) }, Rolls(25, 30, (Midwife, 100), (Ledger, 0))); // team in id order: Ledger first
+        Assert.Equal(new[] { (24, false), (0, false) }, Rolls(25, 30, (Ledger, 0), (Midwife, 99))); // 100 x 25 / 101, 1 x 25 / 101
+        Assert.Equal(new[] { (10, false), (15, false) }, Rolls(25, 50, (Ledger, 90), (Midwife, 85))); // 25 in all: unchanged
         Assert.Equal(new[] { (10, false) }, Rolls(25, 50, (Ledger, 90))); // below the cap: unchanged
         Assert.Equal(new[] { (100, true) }, Rolls(0, 99, (Ledger, 0)));
         Assert.Equal(25, new MissionParams().BetrayalCapPercent);
