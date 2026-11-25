@@ -106,7 +106,7 @@ public class ParamsPinTests
         yield return ("BombardParams.CriticalTableMax", bomb.CriticalTableMax, G, 2051, 1);
         // m5 characters
         yield return ("CharacterParams.HarvesterHitPercent", ch.HarvesterHitPercent, G, 0x606, 1);
-        yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the New DEFAULT TalentTrainingGainPercent is 25 (Paul 2026-10-18)
+        yield return ("CharacterParams.ClassicTrainingGainPercent", CharacterParams.ClassicTrainingGainPercent, G, 6173, 1); // the DEFAULT TalentTrainingGainPercent is this Classic 50 again (Paul 2026-11-25)
         yield return ("CharacterParams.TalentAnomalyMin (2560)", ch.TalentAnomalyMin, G, 2560, 1);
         yield return ("CharacterParams.TalentAnomalyMin (2580)", ch.TalentAnomalyMin, G, 2580, 1);
         yield return ("CharacterParams.TalentUnforecastableMin", ch.TalentUnforecastableMin, G, 2581, 1);

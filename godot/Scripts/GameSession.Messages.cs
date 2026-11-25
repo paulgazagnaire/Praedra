@@ -281,12 +281,12 @@ public sealed partial class GameSession
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was killed{At(c.System)}{CauseWords(c.Cause)}." : $"Enemy leader {CharName(c.Character)} was killed{At(c.System)}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
                 break;
             case TalentTrainingResult t when Mine(t.Side):
-                yield return new Message(d, t.Success
-                    ? $"Train Talent: {CharName(t.Student)} grew in Talent under {CharName(t.Trainer)} (Talent now {t.NewTalent})."
-                    : $"Train Talent: {CharName(t.Student)} made no progress with {CharName(t.Trainer)} this time.", null, t.Success ? MsgKind.Good : MsgKind.Info);
+                yield return new Message(d, t.Success   // the trainer in brackets: "with Nobody" reads as "with no one" (review 28)
+                    ? TrainWords.Grew(CharName(t.Student), t.NewTalent, CharName(t.Trainer))
+                    : TrainWords.NoProgress(CharName(t.Student), CharName(t.Trainer)), null, t.Success ? MsgKind.Good : MsgKind.Info);
                 break;
             case TalentRankChanged r when Mine(r.Side) && r.To is TalentRank to:
-                yield return new Message(d, $"{CharName(r.Character)} is now a {RankWords(to)}.", null, MsgKind.Good);
+                yield return new Message(d, $"{CharName(r.Character)} is now {(to is TalentRank.Anomaly or TalentRank.Unforecastable ? "an" : "a")} {RankWords(to)}.", null, MsgKind.Good);
                 break;
             case TalentDiscovered f:
                 yield return new Message(d, Mine(f.Side) ? $"{CharName(f.Character)} shows Talent! Train Talent is now possible." : $"Enemy leader {CharName(f.Character)} shows Talent.", null, Mine(f.Side) ? MsgKind.Good : MsgKind.Warn);

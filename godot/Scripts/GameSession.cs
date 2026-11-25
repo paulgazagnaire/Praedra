@@ -603,10 +603,10 @@ public sealed partial class GameSession
     }
 
     /// <summary>The skills the sheet uses (leadership feeds the posts), and Talent rank only when the side knows the character is a talented character. rule: m5-characters-and-talent §Posts, §Talent (Rank).</summary>
-    public string SkillsOf(CharacterRecord c)
+    public string SkillsOf(CharacterRecord c, bool talent = true)
     {
         string s = $"Leadership {Chars.EffectiveSkill(c, Skill.Leadership)}, combat {Chars.EffectiveSkill(c, Skill.Combat)}, diplomacy {Chars.EffectiveSkill(c, Skill.Diplomacy)}, espionage {Chars.EffectiveSkill(c, Skill.Espionage)}";
-        if (c.TalentHolder && c.TalentDiscovered && Chars.RankOf(c) is TalentRank r) s += $"; Talent: {RankWords(r)} ({c.EffectiveTalent})";
+        if (talent && c.TalentHolder && c.TalentDiscovered && Chars.RankOf(c) is TalentRank r) s += $"; Talent: {RankWords(r)} ({c.EffectiveTalent})";
         return s;
     }
 

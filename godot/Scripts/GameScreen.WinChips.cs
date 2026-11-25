@@ -36,8 +36,7 @@ public partial class GameScreen
         string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : null;
         var tile = Tile(null, false, 0, GameSession.CardName(name), sub, 1, can ? Ui.You : Ui.Text3, avatar: LeaderSprite(c.Id));
         bool mission = CanJoin(c);
-        tile.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}.{(role != null ? $"\n{role}." : "")}" + (can ? (LeaderPosts(c) == "passenger" ? "\nDrag onto a fleet to ride it." : "\nDrag onto a post or a fleet.") : "")
-            + (mission ? " Right-click to send them on a mission." : ""));
+        tile.TooltipText = LeaderHover(c, role, can, mission);
         tile.SetMeta(UiTest.FullName, "Leader " + name);
         if (can) MakeDraggable(tile, new List<Drag> { d }, name);
         if (mission) MissionMenu(tile, c.System, c.Id, null);

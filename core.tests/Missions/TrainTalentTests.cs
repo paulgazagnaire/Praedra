@@ -126,4 +126,25 @@ public class TrainTalentTests
         var fresh = NewGame.Create(new NewGameOptions { Seed = 3 });
         Assert.Equal(fresh.StateHash(), GameHost.Load(fresh.SaveWithSettings()).StateHash());
     }
+
+    // m5-characters-and-talent CH45 (Rule (New), training speed, Paul 2026-11-25 card B): the DEFAULT is Classic speed (chance 100, gain 50), so
+    // The Chair (150) training a student at 90 is a 60% chance to gain up to 30; a save pinned to the old 50 / 25 loads at Classic speed, any
+    // other pinned pair loads unchanged
+    [Fact]
+    public void CH45_ClassicTrainingSpeedAndOldSaves()
+    {
+        var fresh = NewGame.Create(new NewGameOptions { Seed = 3 });
+        Assert.Equal((60, 30), fresh.Characters.TrainingOdds(60));
+        Assert.Equal((1, 0), fresh.Characters.TrainingOdds(1));
+        Assert.Equal((0, 0), fresh.Characters.TrainingOdds(0));
+
+        var slow = NewGame.Create(new NewGameOptions { Seed = 3, Settings = new GameSettings { Characters = new CharacterParams { TalentTrainingChancePercent = 50, TalentTrainingGainPercent = 25 } } });
+        Assert.Equal((30, 15), slow.Characters.TrainingOdds(60));
+        var loaded = GameHost.Load(slow.SaveWithSettings()).Characters.Params;
+        Assert.Equal((100, 50), (loaded.TalentTrainingChancePercent, loaded.TalentTrainingGainPercent));
+
+        var other = NewGame.Create(new NewGameOptions { Seed = 3, Settings = new GameSettings { Characters = new CharacterParams { TalentTrainingChancePercent = 70, TalentTrainingGainPercent = 25 } } });
+        var kept = GameHost.Load(other.SaveWithSettings()).Characters.Params;
+        Assert.Equal((70, 25), (kept.TalentTrainingChancePercent, kept.TalentTrainingGainPercent));
+    }
 }
