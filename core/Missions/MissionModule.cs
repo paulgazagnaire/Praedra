@@ -431,6 +431,29 @@ public sealed partial class MissionModule
         _ => true,
     };
 
+    /// <summary>
+    /// The trainer of a Train Talent team: its member who can train with the highest effective Talent, ties to the lower id; null when none.
+    /// rule: m5-characters-and-talent §Talent (Train Talent: the team; DEFAULT, Dev lead 2026-11-25).
+    /// </summary>
+    public CharacterRecord? TrainerOf(IEnumerable<int> chars) => chars.Select(id => _ch.Get(id)).OfType<CharacterRecord>()
+        .Where(c => c.Status == CharacterStatus.Free && _ch.IsTrainer(c)).OrderByDescending(c => c.EffectiveTalent).ThenBy(c => c.Id).FirstOrDefault();
+
+    /// <summary>
+    /// The students of a Train Talent team: every other member who is an aware talented character, free, with less Talent than the trainer (a
+    /// student at or above the trainer could never gain). rule: m5-characters-and-talent §Talent (Eligibility; Train Talent: the team).
+    /// </summary>
+    public List<CharacterRecord> StudentsOf(IEnumerable<int> chars, CharacterRecord trainer) => chars.Where(id => id != trainer.Id)
+        .Select(id => _ch.Get(id)).OfType<CharacterRecord>()
+        .Where(c => c.TalentHolder && c.TalentDiscovered && c.Status == CharacterStatus.Free && c.Side == trainer.Side && c.EffectiveTalent < trainer.EffectiveTalent)
+        .OrderBy(c => c.Id).ToList();
+
+    // rule: m5-characters-and-talent §Talent (Train Talent: the team): a trainer [NoTrainer], then at least one student [NoStudent].
+    private string? TrainTeamReason(List<int> chars)
+    {
+        if (TrainerOf(chars) is not { } t) return MissionReject.NoTrainer;
+        return StudentsOf(chars, t).Count == 0 ? MissionReject.NoStudent : null;
+    }
+
     private bool CharacterFree(CharacterRecord c) => _ch.IsAvailable(c) && c.Transit == null && c.System != null;
     private string? Where(int character) => _ch.Get(character) is { } c ? _ch.LocationOf(c) : null;
 
@@ -492,6 +515,7 @@ public sealed partial class MissionModule
                 if (Params.DiplomacyNeedsCalm && _support.IsUprising(system)) return MissionReject.BadTarget;
                 return null;
             case MissionKind.Recruitment: return holder == side ? null : MissionReject.BadTarget;
+            case MissionKind.TrainTalent: return holder == side ? null : MissionReject.BadTarget; // rule: m5-missions §Targets (own); m5-characters-and-talent §Talent (Train Talent)
             case MissionKind.Sabotage: return holder == side ? MissionReject.BadTarget : null;
             case MissionKind.Espionage or MissionKind.Reconnaissance: return null;
             case MissionKind.InciteUprising: return holder == Other(side) ? null : MissionReject.BadTarget;
@@ -591,7 +615,8 @@ public sealed partial class MissionModule
         List<int> Chars, List<int> Sfs, List<int> DChars, List<int> DSfs);
 
     // rule: §Orders (StartMission), rejections in the sheet's order. RuleMissing (ours) comes before the target checks: a decoy while the decoy
-    // table is Missing, Recruitment while the recruit pick is Missing; Train Talent right after WrongSide (the two sheets each name the other as owner).
+    // table is Missing, Recruitment while the recruit pick is Missing. Train Talent (owned by m5-characters-and-talent since 2026-11-25): NoTrainer,
+    // NoStudent right after the skill checks.
     // Shared by the handler and CheckStart: reads only.
     private (string? Reason, StartPlan? Plan) Validate(StartMissionOrder o)
     {
@@ -599,11 +624,11 @@ public sealed partial class MissionModule
         if (o.Kind == MissionKind.BurnTheBooks && !Params.BurnTheBooks) return (MissionReject.UnknownKind, null); // rule: m5-missions §6b (switch BurnTheBooks off: no such kind)
         if (rec.Hidden) return (MissionReject.HiddenKind, null);
         if (!rec.AvailableTo(o.Side)) return (MissionReject.WrongSide, null);
-        if (o.Kind == MissionKind.TrainTalent) return (MissionReject.RuleMissing, null);
         var chars = o.Characters ?? new List<int>(); var sfs = o.SpecialForces ?? new List<int>();
         var dSfs = o.Decoys ?? new List<int>(); var dChars = o.DecoyCharacters ?? new List<int>();
         if (CheckMembers(o.Side, chars, sfs, dChars, dSfs, out var home) is { } bad) return (bad, null);
         foreach (var id in chars) if (!CanDo(_ch.Get(id)!, o.Kind)) return (MissionReject.NotAbleToDo, null);
+        if (o.Kind == MissionKind.TrainTalent && TrainTeamReason(chars) is { } train) return (train, null); // rule: m5-characters-and-talent §Talent (Train Talent: the team)
         foreach (var id in sfs)
             if (_troops.Data.SpecialForce(E.Objects[id].Class) is not { } k || (k.MissionBit & rec.SpecialForceMask) == 0)
                 return (MissionReject.NotEligibleSpecialForce, null);

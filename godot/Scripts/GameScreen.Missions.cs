@@ -157,15 +157,40 @@ public partial class GameScreen
         try
         {
             return OfferedKinds.Where(k => Mm.Data.TryGet(k, out var rec) && !rec.Hidden && rec.AvailableTo(Me)
-                && (k != MissionKind.BurnTheBooks || S.BooksOffered) && KindRefusal(k) == null).ToList();
+                && (k != MissionKind.BurnTheBooks || S.BooksOffered) && (KindRefusal(k) == null || (k == MissionKind.TrainTalent && TrainPartners(home, character) != null))).ToList();
         }
         finally { _plan = keep; }
+    }
+
+    /// <summary>
+    /// Train Talent from one leader's card: the leaders here who would make it a legal team with them (the students for a trainer, the trainer for a
+    /// student), or null when there are none. The planner opens with them ticked. rule: m5-characters-and-talent §Talent (Train Talent: the team).
+    /// </summary>
+    List<int> TrainPartners(string home, int? character)
+    {
+        if (character is not int me || _plan == null || Cm.Get(me) is not { } self || !CanJoin(self)) return null; // Ponytail on #387: a leader who cannot go offers nothing
+        var here = S.MyCharacters.Where(c => c.Id != me && Cm.LocationOf(c) == home && CanJoin(c)).Select(c => c.Id).ToList();
+        var all = here.Append(me).ToList();
+        if (Mm.TrainerOf(all) is not { } t) return null;
+        var students = Mm.StudentsOf(all, t).Select(c => c.Id).ToList();
+        if (students.Count == 0) return null;
+        if (t.Id == me) return students;
+        return students.Contains(me) ? new List<int> { t.Id } : null;
     }
 
     void QuickMission(string home, int? character, int? unit, MissionKind k)
     {
         if (_pickMission) CancelMove();
         CloseSectorView();
+        if (k == MissionKind.TrainTalent)
+        {
+            // Train Talent trains where the team stands: tick the partners, target this planet, no map pick
+            OpenPlanner(home, character, unit);
+            foreach (var id in TrainPartners(home, character) ?? new List<int>()) _plan.Chars.Add(id);
+            ChooseKind(k);
+            _plan.Target = home;
+            return;
+        }
         OpenPlanner(home, character, unit);
         ChooseKind(k);
         if (k != MissionKind.Rescue) StartMissionPick();   // Rescue picks a prisoner in the planner, not a system
@@ -204,6 +229,8 @@ public partial class GameScreen
             return $"{string.Join(", ", who)} cannot do this kind of mission";
         }
         if (r == MissionReject.RuleMissing) return "not available yet: the rule book does not cover it";
+        if (r == MissionReject.NoTrainer) // the side's trainers from data/design/talent-trainers.csv, never a name in the code (m5-characters-and-talent Rule New 4b)
+            return $"{GameSession.WhyMission(r)} (your trainers: {string.Join(", ", Cm.Data.Trainers.Where(t => Cm.Data.TryGet(t.Character, out var tc) && tc.Side == Me).Select(t => S.CharName(t.Character)))})";
         return GameSession.WhyMission(r);
     }
 
@@ -326,7 +353,7 @@ public partial class GameScreen
     void ChooseKind(MissionKind k)
     {
         if (_plan == null) return;
-        if (_plan.Kind != k) { _plan.Kind = k; _plan.TargetChar = null; if (k == MissionKind.Rescue) _plan.Target = null; }
+        if (_plan.Kind != k) { _plan.Kind = k; _plan.TargetChar = null; if (k == MissionKind.Rescue) _plan.Target = null; if (k == MissionKind.TrainTalent) _plan.Target ??= _plan.Home; }
         _panelDirty = true; _panelTimer = 0;
     }
 

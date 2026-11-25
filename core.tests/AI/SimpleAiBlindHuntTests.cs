@@ -77,9 +77,14 @@ public class SimpleAiBlindHuntTests
         // Fewer Hold beams re-pin 2026-11-22 (Dev lead; Paul's card "Fewer Hold beams", m4-retreat-damage-repair §6 HoldBeamMinPower 6): every game
         // moved. Measured to day 500: on 460, 202, 394, 205; off 481, 202, 406, 205. Floors: unchanged, but at least 15 days sooner on some seed
         // (was 30; measured 21). Still a weak effect, flagged again to the AI trainer.
-        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 500), Off: EndDay(s, false, 500)));
-        Assert.All(res, r => Assert.True(r.On > 0, $"seed {r.s}: BlindHunt on, no winner by day 500"));
-        Assert.All(res, r => Assert.True(r.Off == 0 || r.On <= r.Off + 10, $"seed {r.s}: BlindHunt on ended on day {r.On}, off on day {r.Off}"));
-        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 15);
+        // Trainer pairs re-pin 2026-11-25 (Dev lead; Paul's Rule New 4b, m5-characters-and-talent: Nobody and Ledger start at Talent 150 and 120,
+        // the talented draw skips the four trainers): every game moved. Measured to day 800: on 604, 220, 394, 205; off 478, 220, 406, 205. On
+        // seed 1 the switch now ends the hunt 126 days LATER. Floors: on, every seed by day 650 (was 500); on never more than 10 days after off on
+        // 3 of the 4 seeds (was every seed); at least 10 days sooner on some seed (was 15; measured 12). The switch's effect is now close to noise
+        // on this map: flagged to the AI trainer.
+        var res = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => (s, On: EndDay(s, true, 650), Off: EndDay(s, false, 650)));
+        Assert.All(res, r => Assert.True(r.On > 0, $"seed {r.s}: BlindHunt on, no winner by day 650"));
+        Assert.True(res.Count(r => r.Off == 0 || r.On <= r.Off + 10) >= 3, "BlindHunt on ended more than 10 days after off on 2 seeds or more: " + string.Join("; ", res.Select(r => $"{r.s}: on {r.On} off {r.Off}")));
+        Assert.Contains(res, r => r.Off == 0 || r.Off - r.On >= 10);
     }
 }

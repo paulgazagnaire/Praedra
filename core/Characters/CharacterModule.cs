@@ -205,10 +205,15 @@ public sealed partial class CharacterModule
     }
 
     /// <summary>
-    /// Can train and awaken: the data flag <c>trainer</c> under <see cref="TrainerPick.Fixed"/> (Classic), the setup draw under Random (New).
-    /// rule: §Talent (Eligibility); §Rule (New) 4.
+    /// Can train and awaken: the data flag <c>trainer</c> under <see cref="TrainerPick.Fixed"/> (Classic), the setup draw under Random, and under
+    /// Pair (DEFAULT) a listed trainer who is an aware talented character. rule: §Talent (Eligibility); §Rule (New) 4, 4b.
     /// </summary>
-    public bool IsTrainer(CharacterRecord c) => Params.TrainerPick == TrainerPick.Random ? c.Talented : ClassOf(c).TalentTrainer;
+    public bool IsTrainer(CharacterRecord c) => Params.TrainerPick switch
+    {
+        TrainerPick.Random => c.Talented,
+        TrainerPick.Pair => Data.IsListedTrainer(c.Id) && c.TalentHolder && c.TalentDiscovered,
+        _ => ClassOf(c).TalentTrainer,
+    };
 
     // ================================================================== creation and setup (outside a Step)
 
@@ -308,13 +313,30 @@ public sealed partial class CharacterModule
                     break;
             }
         }
-        if (Params.TrainerPick == TrainerPick.Random) PickTalented(rng);
+        if (Params.TrainerPick == TrainerPick.Pair) SetUpTrainers();
+        if (Params.TrainerPick is TrainerPick.Random or TrainerPick.Pair) PickTalented(rng);
         RefreshSeatOfPower(); // rule: §Seat of Power (B2e §6), The Chair's start place
     }
 
     /// <summary>
+    /// The fixed trainers (Pair, DEFAULT), at setup and again when a game is loaded under Pair (a save from before 2026-11-25 is upgraded to it,
+    /// GameHost.UpgradeSettingsJson); on a game set up under Pair it changes nothing. rule: §Rule (New) 4b.
+    /// </summary>
+    public void SetUpTrainers()
+    {
+        // rule: §Rule (New) 4b (Paul 2026-11-25): each placed listed trainer is a talented character, aware, with the listed start Talent unless his
+        // own is higher (as the draw, Q16); no draw. Before the draw, so the draw never lands on them.
+        foreach (var row in Data.Trainers)
+        {
+            if (Get(row.Character) is not { Placed: true } c) continue;
+            c.TalentHolder = true; c.TalentDiscovered = true;
+            if (row.StartTalent is int f) c.TalentExperience = Math.Max(c.TalentExperience, f - c.TalentTraining);
+        }
+    }
+
+    /// <summary>
     /// Random trainers (New, Paul 2026-10-18), after the start cast: for the Collective then the Hand (DEFAULT order), up to TalentedPerSide draws
-    /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a talented character and aware,
+    /// k = rand(0..n-1) over that side's placed characters in id order, without replacement; each drawn one is Talented, a talented character and aware (under Pair a student only, never a trainer),
     /// with Talent = rand(TalentedMin..TalentedMax) unless his own is higher (Q16 DEFAULT): one more draw each. The pool leaves out the already
     /// strong (own Talent at TalentedMin or more) and the never_talented characters (Q17, Paul 2026-10-18). rule: §Rule (New) 4.
     /// </summary>
@@ -323,6 +345,7 @@ public sealed partial class CharacterModule
         foreach (var side in new[] { Side.Collective, Side.Hand })
         {
             var pool = S.Characters.Values.Where(c => c.Placed && c.Side == side
+                && !(Params.TrainerPick == TrainerPick.Pair && Data.IsListedTrainer(c.Id))          // Rule (New) 4b: the trainers are never drawn
                 && !(Params.TalentedSkipStrong && c.EffectiveTalent >= Params.TalentedMin)   // Q17 (Paul 2026-10-18): never the already strong
                 && !(Params.TalentedSkipFlagged && ClassOf(c).NeverTalented)).ToList();          // Q17 (Paul 2026-10-18): never the Repossessors; id order
             for (int k = 0; k < Params.TalentedPerSide && pool.Count > 0; k++)

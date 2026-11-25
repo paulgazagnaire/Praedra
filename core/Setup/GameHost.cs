@@ -284,6 +284,8 @@ public sealed class GameHost
         var (ruleset, afterHeader) = ReadHeader(saveJson);
         data ??= GameData.Default;
         var (saved, body) = ReadSettings(afterHeader, data.Names);
+        bool upgradedTrainers = settings == null && saved != null && afterHeader.Length > body.Length
+            && afterHeader[..(afterHeader.Length - body.Length)].Contains(OldTrainerPick, StringComparison.Ordinal);
         settings ??= saved ?? new GameSettings();
         if (ruleset != null && settings.Battle == null)
             settings = settings with { Battle = new Praedra.Core.Battle.BattleParams { Ruleset = ruleset.Value } };
@@ -294,6 +296,8 @@ public sealed class GameHost
         if (cut.Count > 0) DropCutUnits(host.Game.State.Construction, cut.ToHashSet()); // QA-46: one still being built or delivered goes too
         foreach (int id in cut) host.Economy.RemoveObject(id);
         host._aiMemory.AddRange(memories);
+        // rule: m5-characters-and-talent §Rule (New) 4b: a save pinned to Random was upgraded to Pair (UpgradeSettingsJson): set up its trainer pairs
+        if (upgradedTrainers && host.Characters.Params.TrainerPick == Praedra.Core.Characters.TrainerPick.Pair) host.Characters.SetUpTrainers();
         return host;
     }
 
@@ -437,9 +441,17 @@ public sealed class GameHost
     private static readonly System.Text.RegularExpressions.Regex OldDominance =
         new("\"DominanceDays\":" + OldDominanceDays + "(?=[,}])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// The trainer rule a save pinned before 2026-11-25 (Random, the old DEFAULT; no setting ever let a player choose it). Paul fixed the trainers
+    /// to The Chair and Cassia, and Nobody and Ledger, after finding The Chair could not train in the game he is playing, so a pinned Random
+    /// loads as Pair, the trainers set up at load (only then: a Pair save loads unchanged). rule: m5-characters-and-talent §Rule (New) 4b.
+    /// </summary>
+    private const string OldTrainerPick = "\"TrainerPick\":\"Random\"", NewTrainerPick = "\"TrainerPick\":\"Pair\"";
+
     private static string UpgradeSettingsJson(string json)
     {
         foreach (var (o, n) in RenamedSettings) json = json.Replace(o, n, StringComparison.Ordinal);
+        json = json.Replace(OldTrainerPick, NewTrainerPick, StringComparison.Ordinal);
         json = OldDominance.Replace(json, "\"DominanceDays\":" + NewDominanceDays);
         return json;
     }

@@ -145,6 +145,10 @@ public class SimpleAiGuerrillaTests
             Assert.True(n >= 40, $"on: only {n} {kind} on 8 seeds (floor 40): {all}");
         int busy = on.Count(r => r.Sabotage >= 5 && r.Espionage >= 5 && r.AgentForces >= 5 && r.Raids >= 5 && r.CivilianStrikes >= 5);
         Assert.True(busy >= 4, $"on: only {busy} of 8 seeds have at least 5 of each: {all}");
-        Assert.All(off, r => Assert.True(r.Sabotage == 0 && r.Espionage == 0 && r.AgentForces == 0 && r.Raids == 0 && r.CivilianStrikes == 0, $"seed {r.Seed}: off {r}"));
+        // Trainer pairs re-pin 2026-11-25 (Dev lead; Rule New 4b: Nobody starts at Talent 150, so his combat and espionage rise 60%): off, seed 1 now
+        // starts 2 Sabotage missions by 300. They come from the old border subversion (SimpleAiAgents step 7: Incite and Sabotage on undefended
+        // border systems, not gated by Underground or Guerrilla, like the Incite already allowed here). So off checks Sabotage at most 3 (the
+        // border kind) and none of the rest.
+        Assert.All(off, r => Assert.True(r.Sabotage <= 3 && r.Espionage == 0 && r.AgentForces == 0 && r.Raids == 0 && r.CivilianStrikes == 0, $"seed {r.Seed}: off {r}"));
     }
 }

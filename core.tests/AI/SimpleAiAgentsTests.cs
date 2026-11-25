@@ -118,7 +118,11 @@ public class SimpleAiAgentsTests
         // Fewer Hold beams re-pin 2026-11-22 (Dev lead; Paul's card "Fewer Hold beams", m4-retreat-damage-repair §6 HoldBeamMinPower DEFAULT 6): in this
         // game's New battles a Mandate or Decree no longer holds a leaving ship, so the game changes; the AI code does not. With HoldBeamMinPower 1
         // the hash is exactly the previous pin f07c1ab5...64b2 (checked when re-pinned).
-        Assert.Equal("af96c35ef5dc0b40d6973abf23b001a4a573a4ef47dbe4c029445beb560bc734", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...) // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
+        // Trainer pairs re-pin 2026-11-25 (Dev lead; Paul: "Only The Chair and Cassia for the Hand, and equivalent for the Collective", card "Match
+        // the Hand"; m5-characters-and-talent Rule New 4b, TrainerPick DEFAULT Pair): Nobody and Ledger start aware at Talent 150 and 120 and the
+        // talented draw leaves the four trainers out, a core rule this old AI cannot switch off. With TrainerPick = Random the hash is exactly the
+        // previous pin af96c35e...c734 (checked when re-pinned).
+        Assert.Equal("762dab27b687fdf98e660542fd4b51fd2ee0c0e81d9e106e2178b9641f744879", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...) // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
@@ -510,6 +514,9 @@ public class SimpleAiAgentsTests
         var (_, h) = Match(1, Fog);
         Assert.Equal(Side.Hand, h.Fleets.OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem));
         if (talented) TalentedCollective(h, aware);
+        // no talented non-major: since Rule New 4b (2026-11-25) the setup draw skips Nobody and Ledger, so on seed 1 it lands on non-majors; clear them
+        else foreach (var c in h.Game.State.Characters.Characters.Values.Where(c => c.Side == Side.Collective && h.Characters.ClassOf(c).Kind != CharacterKind.Major))
+            (c.TalentHolder, c.TalentDiscovered) = (false, false);
         var ai = new SimpleAi(h, Side.Collective, Fog with { BurnTheBooks = on, BooksBlindPick = blind });
         List<StartMissionOrder> Books() => h.Game.Queue.OfType<StartMissionOrder>().Where(o => o.Kind == MissionKind.BurnTheBooks).ToList();
         for (int d = 0; d < 2 && Books().Count == 0; d++) { ai.PlanDay(); if (Books().Count == 0) h.Game.Step(); }

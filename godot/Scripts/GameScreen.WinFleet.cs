@@ -937,7 +937,7 @@ public partial class GameScreen
         string sub = c.Status != CharacterStatus.Free ? GameSession.StatusWords(c) : Cm.IsOnMission(c.Id) ? "on a mission" : null;
         var card = FleetCard(LeaderPic(c.Id, can ? Ui.You : Look.Soft), GameSession.CardName(name), sub);
         bool mission = CanJoin(c);
-        card.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}." + (can ? "\nDrag onto a post or a fleet." : "")
+        card.TooltipText = Ui.Wrap($"{S.CharTitle(c.Id)}. {S.SkillsOf(c)}\n{S.CapabilityOf(c)}\nCan hold: {LeaderPosts(c)}." + (can ? (LeaderPosts(c) == "passenger" ? "\nDrag onto a fleet to ride it." : "\nDrag onto a post or a fleet.") : "")
             + (mission ? " Right-click to send them on a mission." : ""));
         card.SetMeta(UiTest.FullName, "Leader " + name);
         if (can) MakeDraggable(card, new List<Drag> { d }, name);

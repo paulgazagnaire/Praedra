@@ -47,6 +47,9 @@ public sealed record VictoryKey(bool Standard, Side Side, int Character);
 /// <summary>One added hero breaking a stat-ceiling rule (the AddedHeroLimits import check). rule: m5-characters-and-talent CH32; heroes/stat-ceiling.</summary>
 public sealed record HeroLimitViolation(int Character, string Name, int Rule, string Detail);
 
+/// <summary>One fixed Talent trainer: the character and the Talent he starts with (null = his own). rule: m5-characters-and-talent §Rule (New) 4b.</summary>
+public readonly record struct TrainerRow(int Character, int? StartTalent);
+
 /// <summary>
 /// The character data files: the 60 original records, the added heroes, the roster (which records are in the game), the navigator table, the
 /// start cast and the character terms of the victory rules. Read once, immutable. rule: m5-characters-and-talent §The character object.
@@ -55,7 +58,7 @@ public sealed class CharacterData
 {
     public const string OriginalFile = "characters.csv", AddedFile = "added-heroes.csv", RosterFile = "roster.csv",
         NavigatorFile = "navigator_speed.csv", StartCastFile = "start-cast.csv", VictoryFile = "victory-rules.csv",
-        RanksFile = "character-ranks.csv";
+        RanksFile = "character-ranks.csv", TrainersFile = "talent-trainers.csv";
 
     /// <summary>Every record (in the game or not), by id ascending.</summary>
     public IReadOnlyList<CharacterClass> All { get; }
@@ -63,16 +66,26 @@ public sealed class CharacterData
     public IReadOnlyList<CharacterClass> Roster { get; }
     public IReadOnlyList<StartCastRow> StartCast { get; }
     public IReadOnlyList<VictoryKey> VictoryKeys { get; }
+    /// <summary>
+    /// The fixed Talent trainers (data/design/talent-trainers.csv), by id ascending: who trains and awakens under <see cref="TrainerPick.Pair"/>,
+    /// and the Talent each starts with (null = his own). rule: m5-characters-and-talent §Rule (New) 4b (Paul 2026-11-25).
+    /// </summary>
+    public IReadOnlyList<TrainerRow> Trainers { get; }
     private readonly Dictionary<int, CharacterClass> _byId; // lookup only
 
-    public CharacterData(IEnumerable<CharacterClass> all, IEnumerable<StartCastRow>? startCast = null, IEnumerable<VictoryKey>? victoryKeys = null)
+    public CharacterData(IEnumerable<CharacterClass> all, IEnumerable<StartCastRow>? startCast = null, IEnumerable<VictoryKey>? victoryKeys = null,
+        IEnumerable<TrainerRow>? trainers = null)
     {
         All = all.OrderBy(c => c.Id).ToList();
         _byId = All.ToDictionary(c => c.Id);
         Roster = All.Where(c => c.InGame).ToList();
         StartCast = (startCast ?? Array.Empty<StartCastRow>()).ToList();
         VictoryKeys = (victoryKeys ?? Array.Empty<VictoryKey>()).ToList();
+        Trainers = (trainers ?? Array.Empty<TrainerRow>()).OrderBy(t => t.Character).ToList();
     }
+
+    /// <summary>Is this character one of the fixed trainers of <see cref="Trainers"/>? rule: m5-characters-and-talent §Rule (New) 4b.</summary>
+    public bool IsListedTrainer(int id) => Trainers.Any(t => t.Character == id);
 
     public CharacterClass Get(int id) => _byId.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"No character record {id}.");
     public bool TryGet(int id, out CharacterClass c) => _byId.TryGetValue(id, out c!);
@@ -124,7 +137,23 @@ public sealed class CharacterData
             if (!all.Any(c => c.Id == id && c.InGame)) throw new DataLoadException($"{vt.Where(r)}: victory character {id} is not in the roster."); // m5-setup-and-victory P0.4, V18
             keys.Add(new VictoryKey(vt.Get(r, "mode").Trim() == "Standard", ParseSide(vt.Get(r, "side"), vt, r), id));
         }
-        return new CharacterData(all, cast, keys);
+        // rule: m5-characters-and-talent §Rule (New) 4b (Paul 2026-11-25): the fixed trainer pairs; an optional file (none = nobody listed)
+        var trainers = new List<TrainerRow>();
+        string tf = Path.Combine(design, TrainersFile);
+        if (File.Exists(tf))
+        {
+            var tt = CsvTable.Load(tf);
+            tt.Require("id", "start_talent");
+            for (int r = 0; r < tt.RowCount; r++)
+            {
+                int id = tt.GetInt(r, "id");
+                if (!all.Any(c => c.Id == id && c.InGame)) throw new DataLoadException($"{tt.Where(r)}: trainer {id} is not in the roster.");
+                string st = tt.Get(r, "start_talent").Trim();
+                trainers.Add(new TrainerRow(id, st.Length == 0 ? null : tt.GetInt(r, "start_talent")));
+            }
+            if (trainers.Select(t => t.Character).Distinct().Count() != trainers.Count) throw new DataLoadException($"{TrainersFile}: a trainer appears twice.");
+        }
+        return new CharacterData(all, cast, keys, trainers);
     }
 
     /// <summary>Splits the rank off the shown name: each row of character-ranks.csv must be "rank name" = the record's name exactly, so a renamed

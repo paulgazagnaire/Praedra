@@ -62,7 +62,10 @@ public class SimpleAiFogTests
             same++;
             if (ha.Victory.Winner != null || hb.Victory.Winner != null) break;
         }
-        Assert.True(same >= 100, $"the knowledge parted on day {same}");
+        // Trainer pairs re-pin 2026-11-25 (Dev lead; Rule New 4b moved the game): the knowledge now parts on day 68, when the Hand's Espionage at
+        // Adnor succeeds and its HQ sector clue names each game's own HQ sector (Eolande vs Fallout): a fair find, not a leak (checked by
+        // printing both games' events that day). Floor 60 (was 100).
+        Assert.True(same >= 60, $"the knowledge parted on day {same}");
         Assert.True(a.TotalSent > 20, $"sent {a.TotalSent} day {ha.Game.Day} winner {ha.Victory.Winner}");
     }
 
