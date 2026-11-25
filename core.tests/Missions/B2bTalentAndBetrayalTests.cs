@@ -225,7 +225,7 @@ public class B2bTalentAndBetrayalTests
     [Fact]
     public void B2b9_TraitorFoilsAndIsIdentified()
     {
-        var w = World(agents: new[] { (Ledger, 0), (Midwife, 0), (FortyOne, 100) });
+        var w = World(p: new MissionParams { BetrayalCapPercent = 0 }, agents: new[] { (Ledger, 0), (Midwife, 0), (FortyOne, 100) }); // Classic: no cap
         w.Ch.Get(Ledger)!.Loyalty = 0;
         w.Stub!.Expect(0, 99, 0, 0, 50);
         int id = StartEspionage(w, new[] { Ledger, Midwife, FortyOne });
@@ -239,6 +239,29 @@ public class B2bTalentAndBetrayalTests
         Assert.Equal((FortyOne, Ledger), w.Events<TraitorIdentified>().Select(e => (e.Identifier, e.Traitor)).Single());
         Assert.Equal((0, Ledger), (w.Ch.Get(Midwife)!.IdentifiedTraitor, w.Ch.Get(FortyOne)!.IdentifiedTraitor));
         Assert.Empty(w.Events<MissionMemberRoll>());
+    }
+
+    // m5-missions §3 Betrayal, BetrayalCapPercent (New, Paul 2026-11-25, pick 3A): Ledger alone at loyalty 0 betrays at 25, not 100 (a draw of 25
+    // passes, 24 betrays); two members at loyalty 0 share the cap, 12 each; a loyal member (100) takes no share; cap 0 = Classic, 100.
+    [Fact]
+    public void BetrayalIsCappedPerMission()
+    {
+        (int Chance, bool Betrays)[] Rolls(int cap, int roll, params (int Id, int Loyalty)[] team)
+        {
+            var w = World(p: new MissionParams { BetrayalCapPercent = cap }, agents: team.Select(t => (t.Id, 0)).ToArray());
+            foreach (var (id, loy) in team) w.Ch.Get(id)!.Loyalty = loy;
+            w.Stub!.Expect(0, 99, Enumerable.Repeat(roll, team.Length).ToArray());
+            int mid = StartEspionage(w, team.Select(t => t.Id).ToArray());
+            w.RunIteration(mid);
+            return w.Events<MissionBetrayalRoll>().Select(r => (r.Chance, r.Betrays)).ToArray();
+        }
+        Assert.Equal(new[] { (25, false) }, Rolls(25, 25, (Ledger, 0)));
+        Assert.Equal(new[] { (25, true) }, Rolls(25, 24, (Ledger, 0)));
+        Assert.Equal(new[] { (12, false), (12, false) }, Rolls(25, 12, (Ledger, 0), (Midwife, 0)));
+        Assert.Equal(new[] { (25, false), (0, false) }, Rolls(25, 30, (Midwife, 100), (Ledger, 0))); // team in id order: Ledger first
+        Assert.Equal(new[] { (10, false) }, Rolls(25, 50, (Ledger, 90))); // below the cap: unchanged
+        Assert.Equal(new[] { (100, true) }, Rolls(0, 99, (Ledger, 0)));
+        Assert.Equal(25, new MissionParams().BetrayalCapPercent);
     }
 
     // B2b-10: ShiftLoyalty(1, -5): a Collective character at 100 -> 95, a Hand at 98 -> 100 (clamped), Nobody unchanged (unable to betray),

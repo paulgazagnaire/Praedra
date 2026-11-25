@@ -207,6 +207,13 @@ public sealed record MissionParams
     public bool TalentSensing { get; init; } = true;
     /// <summary>Every member may betray on each check (0x589f10). DEFAULT true (Traced B2b).</summary>
     public bool Betrayal { get; init; } = true;
+    /// <summary>
+    /// The most a mission can be betrayed in one check, in percent: each member who could betray (loyalty below 100) betrays only if
+    /// rand(0..99) &lt; min(100 - loyalty, this / that number of members), so a whole team never passes this. The draws are made as before.
+    /// New, Decided (Paul 2026-11-25, pick 3A after the espionage stats: a losing side's own spies betrayed up to 6 missions in 10). DEFAULT 25;
+    /// 0 = no cap (Classic). rule: m5-missions §3 Betrayal (BetrayalCapPercent).
+    /// </summary>
+    public int BetrayalCapPercent { get; init; } = 25;
     /// <summary>DEFAULT CheckScope (the planet and fleet scopes of 0x589a40, B2d §3).</summary>
     public TalentSenseScope TalentSenseScope { get; init; } = TalentSenseScope.CheckScope;
     /// <summary>DEFAULT Foilable.</summary>
