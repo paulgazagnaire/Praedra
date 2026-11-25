@@ -146,7 +146,9 @@ public partial class Main
                    .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault() is string yardAt)
         {
             GD.Print($"  no construction yard of yours is left: planted one at {yardAt} (test only)");
-            eco.AddFacility(yardAt, FacilityKind.ConstructionYard); gs.PlayDay();   // the screens read yards once a day
+            // the screens read yards once a day; a played day can scrap the new yard again (a side over upkeep scraps construction yards first,
+            // seen 2026-11-25 when the trainer pairs moved this game), so the screen forgets its yard list instead
+            eco.AddFacility(yardAt, FacilityKind.ConstructionYard); gs.ForgetYards();
         }
         string bkey = $"Infra {bare}";
         gs.OpenMgmt(GameScreen.MgKind.Infra, bare); gs.PlayRefresh();

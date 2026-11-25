@@ -26,7 +26,8 @@ public static class MissionReject
         NotEligibleSpecialForce = "NotEligibleSpecialForce", BadDecoy = "BadDecoy", TooManyMembers = "TooManyMembers", BadTarget = "BadTarget",
         NoHarvester = "NoHarvester", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing",
         BooksGone = "BooksGone", // rule: m5-missions §6b (Target: the books not yet burned)
-        BooksTeamOut = "BooksTeamOut"; // rule: m5-missions §6b (Target: one team at a time, BooksOneTeam)
+        BooksTeamOut = "BooksTeamOut", // rule: m5-missions §6b (Target: one team at a time, BooksOneTeam)
+        NoTrainer = "NoTrainer", NoStudent = "NoStudent"; // rule: m5-characters-and-talent §Talent (Train Talent: the team, Paul 2026-11-25)
 }
 
 /// <summary>Why the character sheet's exposure hook is called. rule: m5-missions §4.</summary>

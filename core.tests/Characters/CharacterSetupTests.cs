@@ -56,14 +56,15 @@ public class CharacterSetupTests
         Assert.Empty(h.Game.Events); // setup raises no per-object events
     }
 
-    // m5-characters-and-talent CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT) draws 3 talented placed characters per side, each an
+    // m5-characters-and-talent CH39 (Rule New 4, Paul 2026-10-18): TrainerPick Random (DEFAULT until Rule New 4b, 2026-11-25; CH41 tests Pair) draws 3 talented placed characters per side, each an
     // aware talented character with Talent 80..120 (or his own if higher), and only they can train; Fixed (Classic) draws nothing and Nobody and Ravilla train
     [Fact]
     public void CH39_RandomTalentedTrainers()
     {
+        var random = new GameSettings { Characters = new CharacterParams { TrainerPick = TrainerPick.Random } };
         foreach (int seed in new[] { 1, 2, 3 })
         {
-            var h = Make(seed);
+            var h = Make(seed, random);
             var ch = h.Characters;
             foreach (var side in new[] { Side.Collective, Side.Hand })
             {
@@ -73,7 +74,7 @@ public class CharacterSetupTests
             }
             Assert.All(ch.All.Where(c => !c.Talented), c => Assert.False(ch.IsTrainer(c)));
         }
-        var picks = new[] { 1, 2, 3, 4 }.Select(seed => string.Join(",", Make(seed).Characters.All.Where(c => c.Talented).Select(c => c.Id))).Distinct().Count();
+        var picks = new[] { 1, 2, 3, 4 }.Select(seed => string.Join(",", Make(seed, random).Characters.All.Where(c => c.Talented).Select(c => c.Id))).Distinct().Count();
         Assert.True(picks > 1); // the pick changes with the seed
 
         var classic = Make(1, new GameSettings { Characters = new CharacterParams { TrainerPick = TrainerPick.Fixed } }).Characters;
@@ -83,23 +84,24 @@ public class CharacterSetupTests
 
     // m5-characters-and-talent CH40 (Q17, Paul 2026-10-18 cards "Skip the strong" and "Leave out hunters"): the draw never takes anyone already at
     // Talent 80+ (The Chair and Ravilla keep their Talent but never train) nor a character flagged never_talented (the Repossessors); Ledger and
-    // Oti stay in the pool. With both switches off the strong can be drawn again.
+    // Oti stay in the pool. With both switches off the strong can be drawn again. Pinned to Random (under Pair The Chair and Ravilla train, CH41).
     [Fact]
     public void CH40_TalentedDrawSkipsTheStrongAndTheHunters()
     {
+        var random = new CharacterParams { TrainerPick = TrainerPick.Random };
         var hunters = new[] { 928, 929, 930, 931 }; // Usura, Mora, Damnum, Pignus (roster.csv never_talented = 1)
-        var first = Make(1).Characters;
+        var first = Make(1, new GameSettings { Characters = random }).Characters;
         Assert.All(hunters, id => Assert.True(first.Data.Get(id).NeverTalented));
         Assert.False(first.Data.Get(577).NeverTalented); // Ledger
         foreach (int seed in Enumerable.Range(1, 12))
         {
-            var ch = Make(seed).Characters;
+            var ch = Make(seed, new GameSettings { Characters = random }).Characters;
             Assert.All(ch.All.Where(c => c.Talented), c => Assert.DoesNotContain(c.Id, hunters.Append(Chair).Append(Ravilla)));
             Assert.Equal(3, ch.InPlay.Count(c => c.Side == Side.Hand && c.Talented));
             Assert.True(ch.Get(Ravilla)!.EffectiveTalent >= 80);
             Assert.False(ch.IsTrainer(ch.Get(Ravilla)!));
         }
-        var open = new CharacterParams { TalentedSkipStrong = false, TalentedSkipFlagged = false };
+        var open = new CharacterParams { TrainerPick = TrainerPick.Random, TalentedSkipStrong = false, TalentedSkipFlagged = false };
         Assert.Contains(Enumerable.Range(1, 30), seed =>
             Make(seed, new GameSettings { Characters = open }).Characters.All.Any(c => c.Talented && (c.Id == Ravilla || c.Id == Chair)));
     }

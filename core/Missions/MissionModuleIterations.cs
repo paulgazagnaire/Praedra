@@ -34,6 +34,10 @@ public sealed partial class MissionModule
         if (RunCheck(ctx, m, t, CheckPoint.Job, rec)) return;
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
 
+        // Train Talent: no success roll; the Talent roll of each student at the end of the timer, then the group goes home.
+        // rule: m5-characters-and-talent §Talent (Train Talent: the roll; the mission, Paul 2026-11-25)
+        if (m.Kind == MissionKind.TrainTalent) { Train(ctx, m, t); return; }
+
         // 2. success rolls, one draw per non-decoy member (characters by id, then special forces by id); Research draws its points right after a success
         bool recon = m.Kind == MissionKind.Reconnaissance;
         var research = ResearchSkill(m.Kind);
@@ -109,6 +113,23 @@ public sealed partial class MissionModule
         }
         Expose(ctx, m, ExposureCause.Failed);
         End(ctx, m, MissionOutcome.Failed, t);
+    }
+
+    /// <summary>
+    /// Train Talent's end (not repeating): the trainer (still free, still able to train) runs one TalentTrainingRound over the students left, then
+    /// the mission ends Succeeded (the per-student results are the TalentTrainingResult events). No trainer or no student left: Cancelled, no draw.
+    /// rule: m5-characters-and-talent §Talent (Train Talent: the roll; the mission, DEFAULT Dev lead 2026-11-25).
+    /// </summary>
+    private void Train(StepContext ctx, MissionGroup m, int t)
+    {
+        var trainer = TrainerOf(m.Characters);
+        var students = trainer == null ? new List<CharacterRecord>() : StudentsOf(m.Characters, trainer);
+        if (trainer == null || students.Count == 0) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
+        _ch.TalentTrainingRound(ctx, trainer, students);
+        m.Iterations++;
+        int id = m.Id; var side = m.Side; var kind = m.Kind; string target = m.Target;
+        ctx.Emit((i, _) => new MissionSucceeded(i, t, id, side, kind, target, 1));
+        End(ctx, m, MissionOutcome.Succeeded, t);
     }
 
     /// <summary>

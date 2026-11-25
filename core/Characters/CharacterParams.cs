@@ -7,8 +7,14 @@ public enum TrainerPick
 {
     /// <summary>The Classic data flag <c>trainer</c> (Nobody, Ravilla). Classic.</summary>
     Fixed,
-    /// <summary>DEFAULT (New): <see cref="CharacterParams.TalentedPerSide"/> characters per side drawn at every game start.</summary>
+    /// <summary>New before 2026-11-25: the <see cref="CharacterParams.TalentedPerSide"/> characters per side drawn at every game start train and awaken.</summary>
     Random,
+    /// <summary>
+    /// DEFAULT (New, Paul 2026-11-25: "Only The Chair and Cassia for the Hand, and equivalent for the Collective"): only the fixed trainers of
+    /// data/design/talent-trainers.csv train and awaken (The Chair, Cassia Ravilla; Nobody, Ledger). The random draw still makes the talented
+    /// characters, who are students only. rule: m5-characters-and-talent §Rule (New) 4b.
+    /// </summary>
+    Pair,
 }
 
 /// <summary>Talent discovery mode. rule: m5-characters-and-talent §Talent (Talent discovery).</summary>
@@ -131,8 +137,8 @@ public sealed record CharacterParams
     public int EscapeDelaySpread { get; init; } = 1000;
 
     // ---- Talent (Traced B2e §4, §5). rule: §Talent
-    /// <summary>Who trains and awakens: DEFAULT Random (New, Paul 2026-10-18); Fixed = the Classic data flag. rule: §Rule (New) 4.</summary>
-    public TrainerPick TrainerPick { get; init; } = TrainerPick.Random;
+    /// <summary>Who trains and awakens: DEFAULT Pair (New, Paul 2026-11-25); Random = the drawn talented (New, 2026-10-18); Fixed = the Classic data flag. rule: §Rule (New) 4, 4b.</summary>
+    public TrainerPick TrainerPick { get; init; } = TrainerPick.Pair;
     /// <summary>Talented characters drawn per side at setup (Art Director proposal, 2026-10-18: 3 per side, 6 in all). rule: §Rule (New) 4.</summary>
     public int TalentedPerSide { get; init; } = 3;
     /// <summary>

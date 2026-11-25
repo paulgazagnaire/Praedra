@@ -243,9 +243,11 @@ public partial class Main
         var texts = gs.ButtonTexts().ToList();
         if (checkRefusedKind)
         {
-            // Recruitment runs since 2026-10-18 (m5-missions §6, the recruit pick); Train Talent is still refused by the rule book
-            string blocked = texts.FirstOrDefault(t => t.StartsWith("Train Talent - ", StringComparison.Ordinal));
-            Expect(blocked != null && blocked.Contains("rule book") && !gs.Enabled("Train Talent"), "Train Talent is greyed out with a plain reason: " + blocked);
+            // Train Talent runs since 2026-11-25 (m5-characters-and-talent Rule New 4b): without a trainer and a weaker talented leader it is greyed
+            // with a plain reason that names who can train, never the old "rule book" refusal
+            string train = texts.FirstOrDefault(t => t.StartsWith("Train Talent", StringComparison.Ordinal));
+            Expect(train != null && !train.Contains("rule book") && (gs.Enabled("Train Talent") || train.Contains("trainer") || train.Contains("nobody to train")),
+                "Train Talent is offered, or greyed out with a plain reason: " + train);
             Expect(!texts.Any(t => t.StartsWith(s.Player == Side.Collective ? "Assassination" : "harvester", StringComparison.Ordinal)), "the other side's kind is not offered");
         }
         Expect(gs.Enabled(kw), $"{kw} is allowed for this team");

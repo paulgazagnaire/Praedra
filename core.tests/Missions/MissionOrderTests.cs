@@ -375,7 +375,8 @@ public class MissionOrderTests
         Assert.NotNull(w.M.Recruit); // m5-missions §6 Recruitment (2026-10-18): the host wires the pick
         w.M.Recruit = null;
         Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.Recruitment, new() { Ledger }, new(), new(), T)));
-        Assert.Equal(MissionReject.RuleMissing, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.TrainTalent, new() { Nobody }, new(), new(), T)));
+        // Train Talent runs since 2026-11-25 (m5-characters-and-talent Rule New 4b): Nobody alone is a trainer with no student, not RuleMissing
+        Assert.Equal(MissionReject.NoStudent, w.Try(s => new StartMissionOrder(s, Side.Collective, MissionKind.TrainTalent, new() { Nobody }, new(), new(), T)));
         // with a recruit hook the mission runs (MI21: leadership 80 gives RCRTMSTB(80) = 60 on the full table, step lookup)
         CharacterRecord? recruited = null;
         w.M.Recruit = (ctx, side, sys) => { var c = w.Ch.Get(FortyOne) ?? w.Ch.Create(w.Ch.Data.Get(FortyOne), new Praedra.Core.Tests.Economy.StubRng()); w.Ch.Place(c.Id, sys, ctx); recruited = c; return c; };
@@ -529,7 +530,7 @@ public class MissionOrderTests
         Assert.Equal((H, T, 3, 3), (ok.Home, ok.Target, ok.Ticks, ok.ArrivalDay));
         Assert.Equal(H, ok.Path![0]); Assert.Equal(T, ok.Path[^1]);
         Assert.Equal(MissionReject.NotTogether, w.M.CheckStart(Order(MissionKind.Espionage, new() { Ledger, Nobody }, X)).Reason);
-        Assert.Equal(MissionReject.RuleMissing, w.M.CheckStart(Order(MissionKind.TrainTalent, new() { Nobody }, T)).Reason);
+        Assert.Equal(MissionReject.NoStudent, w.M.CheckStart(Order(MissionKind.TrainTalent, new() { Nobody }, T)).Reason); // m5-characters-and-talent §Talent (Train Talent: the team)
         Assert.Equal(MissionReject.BadTarget, w.M.CheckStart(Order(MissionKind.Espionage, new() { Ledger }, null)).Reason);
         Assert.Equal((hash, events, draws), (w.Host.StateHash(), w.Game.Events.Count, w.Stub.Requests.Count));
 
