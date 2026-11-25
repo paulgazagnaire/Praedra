@@ -141,9 +141,10 @@ public partial class GameScreen
             Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
     }
 
-    /// <summary>The yards that can build for a planet with no construction yard, soonest first, and the one picked.</summary>
     /// <summary>Test hook: forget the day's yard list and suppliers, so a yard planted by the test shows at once.</summary>
     internal void ForgetYards() { _yardIndex = null; _suppliers.Clear(); }
+
+    /// <summary>The yards that can build for a planet with no construction yard, soonest first, and the one picked.</summary>
     internal (List<string> Yards, string Picked) InfraSuppliers(string dest) => (SuppliersFor(dest).Select(x => x.Yard).ToList(), PickedSupplier(dest)?.Yard);
 
     /// <summary>A window's width, and how wide its head and its shown page want to be (a page wider than the window would widen it).</summary>

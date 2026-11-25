@@ -47,13 +47,13 @@ public sealed record VictoryKey(bool Standard, Side Side, int Character);
 /// <summary>One added hero breaking a stat-ceiling rule (the AddedHeroLimits import check). rule: m5-characters-and-talent CH32; heroes/stat-ceiling.</summary>
 public sealed record HeroLimitViolation(int Character, string Name, int Rule, string Detail);
 
+/// <summary>One fixed Talent trainer: the character and the Talent he starts with (null = his own). rule: m5-characters-and-talent §Rule (New) 4b.</summary>
+public readonly record struct TrainerRow(int Character, int? StartTalent);
+
 /// <summary>
 /// The character data files: the 60 original records, the added heroes, the roster (which records are in the game), the navigator table, the
 /// start cast and the character terms of the victory rules. Read once, immutable. rule: m5-characters-and-talent §The character object.
 /// </summary>
-/// <summary>One fixed Talent trainer: the character and the Talent he starts with (null = his own). rule: m5-characters-and-talent §Rule (New) 4b.</summary>
-public readonly record struct TrainerRow(int Character, int? StartTalent);
-
 public sealed class CharacterData
 {
     public const string OriginalFile = "characters.csv", AddedFile = "added-heroes.csv", RosterFile = "roster.csv",

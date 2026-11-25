@@ -104,7 +104,7 @@ public sealed partial class GameSession
         MissionKind.Recruitment => "Brings a new leader to your side at one of your systems.",
         MissionKind.SpikeTheHarvester => "Destroys an enemy harvester.",
         MissionKind.BurnTheBooks => "Charter only, while the Hand holds it: burn the debt books on the Tabularium. Once per game; every populated world leans to you. The hardest mission there is. Skill: combat and espionage.",
-        MissionKind.TrainTalent => "A trainer (for the Hand: the Chair, Cassia Ravilla; for the Collective: the leaders Nobody, Ledger) raises the Talent of weaker talented leaders on the same planet, never past their own. One result after 60 to 90 days.",
+        MissionKind.TrainTalent => "A trainer raises the Talent of weaker talented leaders on the same planet, never past their own. One roll each at the end.",
         _ => "",
     };
 
@@ -136,7 +136,7 @@ public sealed partial class GameSession
         MissionReject.WrongSide => "your side cannot carry out that mission",
         MissionReject.UnknownMember => "a team member is no longer in the game",
         MissionReject.DuplicateMember => "a team member was picked twice",
-        MissionReject.NoTrainer => "no trainer in the team (the trainers are, for the Hand: the Chair, Cassia Ravilla; for the Collective: the leaders Nobody, Ledger)", // rule: m5-characters-and-talent §Rule (New) 4b
+        MissionReject.NoTrainer => "no trainer in the team", // rule: m5-characters-and-talent §Rule (New) 4b (the planner adds the side's trainers)
         MissionReject.NoStudent => "nobody to train: add a talented leader with less Talent than the trainer, on the same planet", // rule: m5-characters-and-talent §Talent (Train Talent: the team)
         MissionReject.NoTeam => "the team is empty (pick at least one character or special forces unit)",
         MissionReject.NotFree => "a team member is busy (injured, captured, travelling, aboard a fleet, a system General, or already on a mission)",

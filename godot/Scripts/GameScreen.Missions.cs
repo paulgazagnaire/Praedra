@@ -168,7 +168,7 @@ public partial class GameScreen
     /// </summary>
     List<int> TrainPartners(string home, int? character)
     {
-        if (character is not int me || _plan == null) return null;
+        if (character is not int me || _plan == null || Cm.Get(me) is not { } self || !CanJoin(self)) return null; // Ponytail on #387: a leader who cannot go offers nothing
         var here = S.MyCharacters.Where(c => c.Id != me && Cm.LocationOf(c) == home && CanJoin(c)).Select(c => c.Id).ToList();
         var all = here.Append(me).ToList();
         if (Mm.TrainerOf(all) is not { } t) return null;
@@ -229,6 +229,8 @@ public partial class GameScreen
             return $"{string.Join(", ", who)} cannot do this kind of mission";
         }
         if (r == MissionReject.RuleMissing) return "not available yet: the rule book does not cover it";
+        if (r == MissionReject.NoTrainer) // the side's trainers from data/design/talent-trainers.csv, never a name in the code (m5-characters-and-talent Rule New 4b)
+            return $"{GameSession.WhyMission(r)} (your trainers: {string.Join(", ", Cm.Data.Trainers.Where(t => Cm.Data.TryGet(t.Character, out var tc) && tc.Side == Me).Select(t => S.CharName(t.Character)))})";
         return GameSession.WhyMission(r);
     }
 

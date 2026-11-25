@@ -107,4 +107,23 @@ public class TrainTalentTests
         Assert.Empty(lost.Events<TalentTrainingResult>());
         Assert.Equal(MissionOutcome.TargetInvalid, lost.Events<MissionEnded>().Single(e => e.Mission == m2).Outcome);
     }
+
+    // m5-characters-and-talent CH44 (Rule New 4b for games under way): a save pinned to TrainerPick Random (before 2026-11-25) loads as Pair with
+    // the trainer pairs set up (The Chair trains; Nobody 150, Ledger 120 and aware); a Pair save loads unchanged (same state hash)
+    [Fact]
+    public void CH44_OldRandomSaveLoadsWithThePairs()
+    {
+        var old = NewGame.Create(new NewGameOptions { Seed = 3, Settings = new GameSettings { Characters = new CharacterParams { TrainerPick = TrainerPick.Random } } });
+        Assert.False(old.Characters.IsTrainer(old.Characters.Get(Chair)!));
+        string save = old.SaveWithSettings();
+        Assert.Contains("\"TrainerPick\":\"Random\"", save);
+        var loaded = GameHost.Load(save);
+        var ch = loaded.Characters;
+        Assert.Equal(TrainerPick.Pair, ch.Params.TrainerPick);
+        Assert.Equal(new[] { Ledger, Nobody, Chair, Ravilla }, ch.All.Where(ch.IsTrainer).Select(c => c.Id).OrderBy(x => x));
+        Assert.Equal((150, 120), (ch.Get(Nobody)!.EffectiveTalent, ch.Get(Ledger)!.EffectiveTalent));
+
+        var fresh = NewGame.Create(new NewGameOptions { Seed = 3 });
+        Assert.Equal(fresh.StateHash(), GameHost.Load(fresh.SaveWithSettings()).StateHash());
+    }
 }

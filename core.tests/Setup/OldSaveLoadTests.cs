@@ -14,7 +14,9 @@ public class OldSaveLoadTests
     {
         var loaded = GameHost.Load(OldSave());
         Assert.Equal(60, loaded.Game.Day);
-        Assert.Equal("a1927576e37002cf10b4b5fe5b562a3d6172e6979b2f587821e95bc8d2146fe4", loaded.StateHash()); // per-fleet OnContact 2026-11-21: the two side fields left the state JSON (with them back the hash is exactly 8496893b...326f, the game is the same); loaded with the Praedra names and words (old-tongue names since 2026-11-16: Saleucami now loads as Kelmeer, was 9ca0a402...; accent-free since 2026-11-15, was d8fd8a1a...), ships named "<old class> <n>" renamed too (QA-44; before: bd7426f2..., up to the harvester words: 50bd1fea..., side words only: 9105e202...) (the state JSON names its fields, so the hash moved; with the names only: 7861e101..., before them: 620900ae..., the hash 492d052 printed for this game)
+        // trainer pairs 2026-11-25 (m5-characters-and-talent Rule New 4b): the save pins TrainerPick Random, so it loads as Pair and its trainers are
+        // set up at load (Nobody 150, Ledger 120 and aware); before: a1927576...6fe4
+        Assert.Equal("a380e8921f6cce254b604becd598babdd3ed557b1945658d4dcf18b750c3d667", loaded.StateHash()); // per-fleet OnContact 2026-11-21: the two side fields left the state JSON (with them back the hash is exactly 8496893b...326f, the game is the same); loaded with the Praedra names and words (old-tongue names since 2026-11-16: Saleucami now loads as Kelmeer, was 9ca0a402...; accent-free since 2026-11-15, was d8fd8a1a...), ships named "<old class> <n>" renamed too (QA-44; before: bd7426f2..., up to the harvester words: 50bd1fea..., side words only: 9105e202...) (the state JSON names its fields, so the hash moved; with the names only: 7861e101..., before them: 620900ae..., the hash 492d052 printed for this game)
         Assert.Equal(Praedra.Core.Battle.ClassicBattleRng.Classic, loaded.Settings.Battle!.BattleRng);
         Assert.Equal(Praedra.Core.Battle.ClassicTaskForces.Classic, loaded.Settings.Battle!.TaskForces);
         Assert.Equal(Praedra.Core.Characters.StartCastOfficers.Classic, loaded.Settings.Characters!.StartCastOfficers);

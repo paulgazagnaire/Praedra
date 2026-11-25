@@ -318,8 +318,11 @@ public sealed partial class CharacterModule
         RefreshSeatOfPower(); // rule: §Seat of Power (B2e §6), The Chair's start place
     }
 
-    /// <summary>The fixed trainers at setup (Pair, DEFAULT). rule: §Rule (New) 4b.</summary>
-    private void SetUpTrainers()
+    /// <summary>
+    /// The fixed trainers (Pair, DEFAULT), at setup and again when a game is loaded under Pair (a save from before 2026-11-25 is upgraded to it,
+    /// GameHost.UpgradeSettingsJson); on a game set up under Pair it changes nothing. rule: §Rule (New) 4b.
+    /// </summary>
+    public void SetUpTrainers()
     {
         // rule: §Rule (New) 4b (Paul 2026-11-25): each placed listed trainer is a talented character, aware, with the listed start Talent unless his
         // own is higher (as the draw, Q16); no draw. Before the draw, so the draw never lands on them.
