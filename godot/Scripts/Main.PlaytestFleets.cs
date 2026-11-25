@@ -35,10 +35,24 @@ public partial class Main
         Expect(!FleetLayer.MarkerTones("fleet-defensive", true, true, 0).SequenceEqual(FleetLayer.MarkerTones("fleet-defensive", true, true, 6)),
             "the rim's light changes the pixels of a turned marker");
         var layer = new FleetLayer();
-        var lights = new[] { layer.RimLight(1, true, false, 1000), layer.RimLight(1, true, true, 2000), layer.RimLight(1, true, true, 2090),
-            layer.RimLight(1, true, true, 2180), layer.RimLight(1, true, true, 9000) };
+        var lights = new[] { layer.RimLight(1, 1, 1000), layer.RimLight(1, 3, 2000), layer.RimLight(1, 3, 2090),
+            layer.RimLight(1, 3, 2180), layer.RimLight(1, 3, 9000) };
         layer.Free();
-        Expect(lights.SequenceEqual(new[] { 0, 6, 7, 0, 0 }), $"parked up-right then down-right: the light steps bottom-left, left, top-left ({string.Join(",", lights)})");
+        Expect(lights.SequenceEqual(new[] { 0, 2, 1, 0, 0 }), $"parked up-right then a quarter turn to down-right: the light turns with the ship to the top right, then steps top, top-left ({string.Join(",", lights)})");
+        // Paul 2026-11-25: a moving fleet's arrow points where it flies, the nearest of eight directions, never sliding sideways. Straight up,
+        // right, down and left are the "-up" drawing turned by whole quarter turns (crisp pixels); its shine (the nose) leads the way
+        foreach (var (h, oct, rot) in new[] { (new Vector2(0, -1), 0, 0), (new Vector2(1, -0.2f), 2, 1), (new Vector2(0.1f, 1), 4, 2), (new Vector2(-1, 0.3f), 6, 3) })
+        {
+            var look = FleetLayer.Look(1, true, 0, h.Normalized());
+            Expect(FleetLayer.Octant(h.Normalized()) == oct && look == ("fleet-defensive-up", false, false, rot), $"heading {h}: direction {oct}, the up arrow turned {rot} quarter(s) ({look})");
+            var g = FleetLayer.MarkerTones(look.Key, look.Fx, look.Fy, 0, look.Rot);
+            var ink = Enumerable.Range(0, 16).SelectMany(y => Enumerable.Range(0, 16).Where(x => g[y][x] != '.').Select(x => (x, y))).ToList();
+            var nose = ink.First(p => g[p.y][p.x] == '4');
+            bool leads = oct switch { 0 => nose.y == ink.Min(p => p.y), 2 => nose.x == ink.Max(p => p.x), 4 => nose.y == ink.Max(p => p.y), _ => nose.x == ink.Min(p => p.x) };
+            Expect(leads && ink.Count == PixelIconData.Map["fleet-defensive-up"].Sum(r => r.Count(c => c != '.')), $"heading {h}: the nose leads and no pixel is lost in the turn");
+        }
+        Expect(FleetLayer.Look(1, true, 1, new Vector2(1, 1).Normalized()) == ("fleet-elusive", true, true, 0) && FleetLayer.Look(1, false, 0, new Vector2(-1, 0)).Key == "fleet-unknown-up",
+            "a diagonal heading mirrors the arrow as before; an enemy's bare arrow turns too");
         List<Fleet> Still() => s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && f.Transit == null && f.Ships.Count > 0).OrderBy(f => f.Id).ToList();
         var still = Still();
         Expect(still.Count > 0, "you have a fleet standing at a system");
@@ -214,8 +228,8 @@ public partial class Main
         // review 10: a numbered group is parked, so its marker must not be mirrored with its number in it (2 read as 5). Paul 2026-11-22: two
         // of yours show two marks (two squares, two chevrons, or chevron then square); more than two of yours, or more than one of the
         // enemy's, their number, the same design for both sides
-        var (gk, gfx, gfy) = FleetLayer.Look(2, false, 0, FleetLayer.ParkedHeading);
-        var g2 = FleetLayer.MarkerTones(gk, gfx, gfy, 0);
+        var (gk, gfx, gfy, grot) = FleetLayer.Look(2, false, 0, FleetLayer.ParkedHeading);
+        var g2 = FleetLayer.MarkerTones(gk, gfx, gfy, 0, grot);
         string[] two = { "###", "..#", "###", "#..", "###" };
         bool upright = Enumerable.Range(0, g2.Length - 4).Any(r => Enumerable.Range(0, g2[0].Length - 2).Any(c =>
             Enumerable.Range(0, 5).All(i => Enumerable.Range(0, 3).All(j => (g2[r + i][c + j] != '.') == (two[i][j] == '#')))));
@@ -227,7 +241,7 @@ public partial class Main
         Expect(pairs.SequenceEqual(new[] { "fleet-pair-defensive", "fleet-pair-mixed", "fleet-pair-elusive" }) && pairs.All(PixelIconData.Map.ContainsKey),
             "two of yours: two squares, chevron and square, two chevrons: " + string.Join(", ", pairs));
         var three = FleetLayer.Look(3, true, 1, FleetLayer.ParkedHeading);
-        Expect(three == ("fleet-group-3", false, false), $"three of yours show their number, never mirrored ({three})");
+        Expect(three == ("fleet-group-3", false, false, 0), $"three of yours show their number, never mirrored or turned ({three})");
         var pairFlip = FleetLayer.Look(2, true, 0, FleetLayer.ParkedHeading);
         Expect(pairFlip.Fx, "a pair (no number in it) is mirrored to point up-right like one fleet, light and all");
         var pair = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).GroupBy(f => f.At).Where(g => g.Count() >= 2)

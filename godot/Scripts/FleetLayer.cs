@@ -554,9 +554,9 @@ public partial class FleetLayer : Control
             bool own = f.Side == Player;
             // Defensive or Elusive (Paul 2026-11-22, his sketches: a square behind the arrow, or a chevron), for each fleet sharing the marker
             int elusive = own && Elusive != null ? Sharing(f).Count(id => Elusive(id)) : 0;
-            int light = RimLight(f.Id, h.X > 0.01f, h.Y > 0.01f);
-            var (key, fx, fy) = Look(count, own, elusive, h);
-            DrawMarker(key, p, fx, fy, IsNumbered(key) ? TopLeft : light, col, selected);
+            int light = RimLight(f.Id, Octant(h));
+            var (key, fx, fy, rot) = Look(count, own, elusive, h);
+            DrawMarker(key, p, fx, fy, rot, IsNumbered(key) ? TopLeft : light, col, selected);
         }
         // a fleet out of sight (lost, merged, in a stack) starts afresh when it shows again: no turn from where it was last seen
         foreach (int gone in _facing.Keys.Where(k => !drawn.Contains(k)).ToList()) { _facing.Remove(gone); _turns.Remove(gone); }
@@ -565,8 +565,8 @@ public partial class FleetLayer : Control
         foreach (var (pic, p, count) in DrawnEnemy(layout.Enemy))
         {
             var col = ColorOf(pic.Side);
-            var (key, fx, fy) = Look(count, false, 0, ParkedHeading);                 // parked up-right, as yours
-            DrawMarker(key, p, fx, fy, TopLeft, col, false);
+            var (key, fx, fy, rot) = Look(count, false, 0, ParkedHeading);            // parked up-right, as yours
+            DrawMarker(key, p, fx, fy, rot, TopLeft, col, false);
         }
 
         // the words last, so no line or marker paints over them
@@ -589,13 +589,29 @@ public partial class FleetLayer : Control
     /// - more than two of yours, or more than one of the enemy's: the arrow with their number in place of the marks, the same design for both
     ///   sides, the colour telling whose (Paul: "the color is the differenciator").
     /// A numbered icon is drawn pointing up-right, as a parked marker shows, and is never mirrored, so its number reads upright (review 10).
+    /// Which way it points (Paul 2026-11-25: "aligned with the direction it's going, not sliding sideways"): the nearest of eight directions.
+    /// A diagonal is the icon mirrored, as before; straight up, right, down or left is its "-up" drawing turned by whole quarter turns (Rot,
+    /// clockwise), so the pixels stay square and crisp. A pair has no "-up" drawing: it only stands in orbit, pointing up-right.
     /// </summary>
-    internal static (string Key, bool Fx, bool Fy) Look(int count, bool own, int elusive, Vector2 heading)
+    internal static (string Key, bool Fx, bool Fy, int Rot) Look(int count, bool own, int elusive, Vector2 heading)
     {
-        bool fx = heading.X > 0.01f, fy = heading.Y > 0.01f;
-        if (count > 2 || (count > 1 && !own)) return (GroupIcon(count), false, false);
-        if (count == 2) return (elusive >= 2 ? "fleet-pair-elusive" : elusive == 1 ? "fleet-pair-mixed" : "fleet-pair-defensive", fx, fy);
-        return (!own ? "fleet-unknown" : elusive > 0 ? "fleet-elusive" : "fleet-defensive", fx, fy);
+        if (count > 2 || (count > 1 && !own)) return (GroupIcon(count), false, false, 0);
+        int oct = Octant(heading);
+        string key = count == 2 ? (elusive >= 2 ? "fleet-pair-elusive" : elusive == 1 ? "fleet-pair-mixed" : "fleet-pair-defensive")
+            : !own ? "fleet-unknown" : elusive > 0 ? "fleet-elusive" : "fleet-defensive";
+        if (oct % 2 == 0 && PixelIconData.Map.ContainsKey(key + "-up")) return (key + "-up", false, false, oct / 2);
+        // the diagonal nearest the heading (a straight heading with no "-up" drawing takes the diagonal clockwise of it)
+        int diag = oct % 2 == 1 ? oct : (oct + 1) % 8;
+        return (key, diag is 1 or 3, diag is 3 or 5, 0);
+    }
+
+    /// <summary>The nearest of eight directions to a heading, clockwise from straight up: 0 up, 1 up-right, 2 right, 3 down-right, 4 down,
+    /// 5 down-left, 6 left, 7 up-left (screen y grows down).</summary>
+    internal static int Octant(Vector2 heading)
+    {
+        if (heading.LengthSquared() < 1e-6f) return 1;   // no heading: as parked
+        float a = Mathf.Atan2(heading.X, -heading.Y);    // 0 up, positive clockwise
+        return ((int)Mathf.Round(a / (Mathf.Pi / 4)) % 8 + 8) % 8;
     }
 
     /// <summary>True for a numbered group icon (drawn as is, lit from the top left).</summary>
@@ -609,8 +625,8 @@ public partial class FleetLayer : Control
     internal static string[] Parked(string key)
     {
         if (IsNumbered(key) || !key.StartsWith("fleet-", StringComparison.Ordinal)) return PixelIconData.Map[key];
-        var (_, fx, fy) = Look(1, true, 0, ParkedHeading);
-        return MarkerTones(key, fx, fy, TopLeft);
+        var (_, fx, fy, rot) = Look(1, true, 0, ParkedHeading);
+        return MarkerTones(key, fx, fy, TopLeft, rot);
     }
 
     /// <summary>The numbered icon of several fleets of one side in orbit at a system: the bare arrow with their number where Defensive has its
@@ -631,9 +647,9 @@ public partial class FleetLayer : Control
     /// its shape sits on the fleet's point. A 1 px dark ring around the shape keeps it off routes and dots; a selected (or picked) fleet gets
     /// a second, white ring outside it, so it stands 2 px larger, as the old triangle grew when selected.
     /// </summary>
-    void DrawMarker(string key, Vector2 p, bool fx, bool fy, int light, Color col, bool selected)
+    void DrawMarker(string key, Vector2 p, bool fx, bool fy, int rot, int light, Color col, bool selected)
     {
-        var grid = MarkerTones(key, fx, fy, light);
+        var grid = MarkerTones(key, fx, fy, light, rot);
         int n = grid.Length;
         char Tone(int x, int y) => x < 0 || y < 0 || x >= n || y >= n ? '.' : grid[y][x];
         int x0 = n, y0 = n, x1 = -1, y1 = -1;
@@ -679,22 +695,22 @@ public partial class FleetLayer : Control
     const double LightStepMs = 90;
     /// <summary>How square an outline pixel must face the light (or away from it) to be lit (or dark); cosine of about 68 degrees.</summary>
     const float RimFacing = 0.38f;
-    readonly Dictionary<int, (bool Fx, bool Fy)> _facing = new();
+    readonly Dictionary<int, int> _facing = new();   // fleet id -> the direction its marker points (Octant)
     readonly Dictionary<int, (int From, int Dir, int Steps, ulong Start)> _turns = new();
-    static readonly Dictionary<(string Key, bool Fx, bool Fy, int Light), string[]> ToneCache = new();
+    static readonly Dictionary<(string Key, bool Fx, bool Fy, int Light, int Rot), string[]> ToneCache = new();
 
-    /// <summary>The light on a fleet's rim this frame (an index in <see cref="LightDirs"/>), starting a turn's steps when its marker flips.</summary>
-    internal int RimLight(int fleet, bool fx, bool fy, ulong? at = null)
+    /// <summary>The light on a fleet's rim this frame (an index in <see cref="LightDirs"/>), starting a turn's steps when its marker turns to
+    /// another of its eight directions (<see cref="Octant"/>).</summary>
+    internal int RimLight(int fleet, int octant, ulong? at = null)
     {
         ulong now = at ?? Time.GetTicksMsec();
-        if (_facing.TryGetValue(fleet, out var was) && was != (fx, fy))
+        if (_facing.TryGetValue(fleet, out var was) && was != octant)
         {
-            // the light as it lay on the ship before the turn, carried onto the new drawing, then round to the top left the short way
-            var from = new Vector2I(was.Fx != fx ? 1 : -1, was.Fy != fy ? 1 : -1);
-            int i = Array.IndexOf(LightDirs, from), cw = (TopLeft - i + 8) % 8;
+            // the light as it lay on the ship before the turn, turned with it, then round to the top left the short way
+            int i = ((TopLeft + octant - was) % 8 + 8) % 8, cw = (TopLeft - i + 8) % 8;
             if (cw != 0) _turns[fleet] = (i, cw <= 4 ? 1 : -1, cw <= 4 ? cw : 8 - cw, now);
         }
-        _facing[fleet] = (fx, fy);
+        _facing[fleet] = octant;
         if (!_turns.TryGetValue(fleet, out var t)) return TopLeft;
         int k = (int)((now - t.Start) / LightStepMs);
         if (k >= t.Steps) { _turns.Remove(fleet); return TopLeft; }
@@ -706,9 +722,10 @@ public partial class FleetLayer : Control
     /// pixel that faces the light differently from the light it was drawn with takes the light's tone (3 facing it, 1 facing away, 2 side on).
     /// Pointing up-left with the light at the top left it is the icon as drawn. Cached per icon (fleets and movers), way it faces and light.
     /// </summary>
-    internal static string[] MarkerTones(string key, bool fx, bool fy, int light)
+    internal static string[] MarkerTones(string key, bool fx, bool fy, int light, int rot = 0)
     {
-        if (ToneCache.TryGetValue((key, fx, fy, light), out var done)) return done;
+        rot = (rot % 4 + 4) % 4;
+        if (ToneCache.TryGetValue((key, fx, fy, light, rot), out var done)) return done;
         var grid = PixelIconData.Map[key];
         int n = grid.Length;
         var rows = new char[n][];
@@ -716,6 +733,17 @@ public partial class FleetLayer : Control
         {
             rows[y] = new char[n];
             for (int x = 0; x < n; x++) rows[y][x] = grid[fy ? n - 1 - y : y][fx ? n - 1 - x : x];
+        }
+        // whole quarter turns clockwise, each exact on the pixel grid: the pixel at (x, y) comes from (y, n - 1 - x)
+        for (int r = 0; r < rot; r++)
+        {
+            var turned = new char[n][];
+            for (int y = 0; y < n; y++)
+            {
+                turned[y] = new char[n];
+                for (int x = 0; x < n; x++) turned[y][x] = rows[n - 1 - x][y];
+            }
+            rows = turned;
         }
         bool On(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && rows[y][x] != '.';
         int? Facing(int x, int y, Vector2I l)
@@ -729,7 +757,8 @@ public partial class FleetLayer : Control
             float d = (nx * l.X + ny * l.Y) / (Mathf.Sqrt(nx * nx + ny * ny) * Mathf.Sqrt(l.X * l.X + l.Y * l.Y));
             return d > RimFacing ? 1 : d < -RimFacing ? -1 : 0;
         }
-        var drawn = new Vector2I(fx ? 1 : -1, fy ? 1 : -1);   // the light the icon's tones were drawn with, mirrored with it
+        var drawn = new Vector2I(fx ? 1 : -1, fy ? 1 : -1);   // the light the icon's tones were drawn with, mirrored and turned with it
+        for (int r = 0; r < rot; r++) drawn = new Vector2I(-drawn.Y, drawn.X);
         var output = rows.Select(r => (char[])r.Clone()).ToArray();
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
@@ -738,7 +767,7 @@ public partial class FleetLayer : Control
                 if (Facing(x, y, LightDirs[light]) is not int now || now == Facing(x, y, drawn)) continue;
                 output[y][x] = now > 0 ? '3' : now < 0 ? '1' : '2';
             }
-        return ToneCache[(key, fx, fy, light)] = output.Select(r => new string(r)).ToArray();
+        return ToneCache[(key, fx, fy, light, rot)] = output.Select(r => new string(r)).ToArray();
     }
 
     /// <summary>
@@ -802,7 +831,7 @@ public partial class FleetLayer : Control
             // its pixel icon (Paul 2026-11-22: every mover in the fleet icon's style, max 16 px). Ships and fighters face the way they go
             // (drawn nose left, mirrored when heading right, their rim re-lit from the top left); the others stand upright.
             bool faceRight = m.Kind is MoverKind.Ship or MoverKind.Fighter && h.X > 0.01f;
-            DrawMarker(MoverIcon(m.Kind), p, faceRight, false, TopLeft, col, false);
+            DrawMarker(MoverIcon(m.Kind), p, faceRight, false, 0, TopLeft, col, false);
             if (m.Count > 1) BadgeAt(font, p + MoverBadgeAt(m.Kind), m.Count, col);
         }
     }
