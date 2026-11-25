@@ -528,13 +528,14 @@ public sealed partial class MissionModule
         var all = Team(m).Concat(Decoys(m)).ToList();
         int id = m.Id; var side = m.Side; string target = m.Target;
         Agent? traitor = null;
-        // rule: §3 Betrayal (BetrayalCapPercent, New, Paul 2026-11-25): the cap is shared by the members who could betray, so the team's
-        // chance stays at or below it; 0 = no cap (Classic)
-        int able = all.Count(a => a.Loyalty < Data.Numbers.RollDie);
-        int each = Params.BetrayalCapPercent > 0 && able > 0 ? Params.BetrayalCapPercent / able : int.MaxValue;
+        // rule: §3 Betrayal (BetrayalCapPercent, New, Paul 2026-11-25): when the members' chances add up to more than the cap, each is scaled
+        // down in proportion (rounded down), so the team's chance stays at or below the cap and a near-loyal member takes almost none of it
+        // (Ponytail on #391: equal shares let a loyal companion halve a traitor's chance); 0 = no cap (Classic)
+        int cap = Params.BetrayalCapPercent, sum = all.Sum(a => Math.Max(0, Data.Numbers.RollDie - a.Loyalty));
         foreach (var a in all)
         {
-            int p = Math.Min(Data.Numbers.RollDie - a.Loyalty, each), r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
+            int raw = Data.Numbers.RollDie - a.Loyalty;
+            int p = cap > 0 && sum > cap && raw > 0 ? raw * cap / sum : raw, r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
             bool betrays = r < p;
             int mid = a.Id; bool isChar = a.IsCharacter;
             ctx.Emit((i, _) => new MissionBetrayalRoll(i, t, id, side, target, mid, isChar, p, r, betrays));
