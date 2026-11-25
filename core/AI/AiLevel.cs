@@ -9,7 +9,7 @@ public enum AiLevel
 {
     /// <summary>Today's AI, handicapped: slower reviews, one offensive at a time, sometimes a worse target, fewer scouts and spies.</summary>
     Easy,
-    /// <summary>The DEFAULT AI (<see cref="SimpleAiParams"/> defaults) playing to win, plus the Collective's guerrilla (SafeHearth, Underground, Guerrilla).</summary>
+    /// <summary>The DEFAULT AI (<see cref="SimpleAiParams"/> defaults) playing to win, plus the Collective's guerrilla (SafeHearth, Cells, Guerrilla).</summary>
     Medium,
     /// <summary>Medium plus every upgrade that beat Medium in a seeded tournament (sim tourney). Same view, same rules, same costs.</summary>
     Hard,
@@ -51,7 +51,7 @@ public static class AiLevels
             // Collective, MedE, fog, day 3000, Hand / Collective / open: 192 seeds on main 561755b before the big start 15 / 135 / 42; big start
             // (4 Mandate, 12 Gleaner) 61 / 99 / 32; 96 seeds: 4 Mandate fleet, every 3 days 24 / 54 / 18; 3 Mandate fleet, every 2 days
             // 14 / 70 / 12; 192 seeds, 3 Mandate fleet, every 2 days 34 / 132 / 26. Notes: specs/engine/ai-notes/2026-11-20-big-hand-start.md.
-            AiLevel.Medium => PlayToWin(p) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
+            AiLevel.Medium => PlayToWin(p) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -60,16 +60,16 @@ public static class AiLevels
             // enemy it knows; since 2026-10-18 every level does (FinishWhenAheadRatio DEFAULT 5, needed to end games under derived control).
             // AI trainer 2026-10-26: the Hard Collective keeps more agents out and raids more; on main f00fbb8 a Medium Hand won 24 of 96 against
             // Hard without these counts instead of 14 (more still cost wins: 32 forces, 16 missions, 6 looks and 4 raids gave 28 Hand wins).
-            // AI trainer 2026-11-20 (the Hand's big start): the Hard Collective reaches one step farther with its agents and fleets (UndergroundHops,
+            // AI trainer 2026-11-20 (the Hand's big start): the Hard Collective reaches one step farther with its agents and fleets (CellsHops,
             // GuerrillaHops 6, Medium 5); a drawn base can start far from the Hand. Medium Hand against the Hard Collective, MedE, fog, day 3000,
             // 192 seeds, Hand / Collective / open: before the big start 4 / 175 / 13; with it (3 Mandate fleet) 28 / 126 / 38 at reach 5,
             // 22 / 139 / 31 at reach 6 (Medium Collective 34 / 132 / 26). Its agent counts below no longer help (96 seeds: 15 / 66 / 15 with them,
             // 17 / 68 / 11 without) but are kept, as nothing better replaced them.
             AiLevel.Hard => PlayToWin(p) with
             {
-                MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Underground = true, Guerrilla = true,
-                UndergroundForcesWanted = 20, UndergroundSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
-                InvasionReadyAtRally = true, BooksTalentWindow = true, UndergroundHops = HardReach, GuerrillaHops = HardReach,
+                MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Cells = true, Guerrilla = true,
+                CellsForcesWanted = 20, CellsSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
+                InvasionReadyAtRally = true, BooksTalentWindow = true, CellsHops = HardReach, GuerrillaHops = HardReach,
                 FoundYardsBelow = FoundBelow,
             },
             _ => p,
@@ -92,7 +92,7 @@ public static class AiLevels
     /// <summary>The Medium Collective's military review interval in days (AI trainer 2026-11-20, against the big Hand start; the Hand keeps 3).</summary>
     private const int MediumCollectiveMilitaryEvery = 2;
 
-    /// <summary>The Hard Collective's UndergroundHops and GuerrillaHops (AI trainer 2026-11-20; DEFAULT 5).</summary>
+    /// <summary>The Hard Collective's CellsHops and GuerrillaHops (AI trainer 2026-11-20; DEFAULT 5).</summary>
     private const int HardReach = 6;
 
     /// <summary>The game plan's spreads at every level (AI trainer 2026-11-19).</summary>

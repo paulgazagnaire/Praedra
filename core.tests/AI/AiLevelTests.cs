@@ -28,7 +28,7 @@ public class AiLevelTests
     // counts only the troops at its rally system as ready to invade (InvasionReadyAtRally, AI trainer), and sends known Talent on Burn the
     // Books only while it believes no known senser is at Charter (BooksTalentWindow). Since 2026-11-20 (the Hand's big start) the Medium
     // Collective reviews its military every 2 days, the Hand every 3 (CollectiveMilitaryEvery).
-    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Underground), nameof(SimpleAiParams.Guerrilla), nameof(SimpleAiParams.HarvesterYardValue), nameof(SimpleAiParams.InvasionReadyAtRally), nameof(SimpleAiParams.BooksTalentWindow), nameof(SimpleAiParams.CollectiveMilitaryEvery) };
+    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Cells), nameof(SimpleAiParams.Guerrilla), nameof(SimpleAiParams.HarvesterYardValue), nameof(SimpleAiParams.InvasionReadyAtRally), nameof(SimpleAiParams.BooksTalentWindow), nameof(SimpleAiParams.CollectiveMilitaryEvery) };
     // AI trainer 2026-11-19: the game plan is on at every level (AiLevels.GamePlan), off in the SimpleAiParams DEFAULT.
     // AI trainer 2026-11-20: both sides found a construction yard when short of them (m2-construction §Founding), Easy only when none is left.
     private static readonly string[] Founding = { nameof(SimpleAiParams.FoundYardsBelow) };
@@ -41,11 +41,11 @@ public class AiLevelTests
         var d = new SimpleAiParams { UseFog = true }; var m = AiLevels.For(AiLevel.Medium);
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && !GamePlan.Contains(p.Name) && !Founding.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
-        Assert.True(m.SafeHearth && m.Underground && m.Guerrilla && m.HarvesterYardValue > 0 && m.InvasionReadyAtRally && m.BooksTalentWindow);
+        Assert.True(m.SafeHearth && m.Cells && m.Guerrilla && m.HarvesterYardValue > 0 && m.InvasionReadyAtRally && m.BooksTalentWindow);
         Assert.True(m.CollectiveMilitaryEvery > 0 && m.CollectiveMilitaryEvery < m.MilitaryEvery && d.CollectiveMilitaryEvery == 0);
         // AI trainer 2026-11-20 (Paul: a losing side must rebuild and fight to the end, smarter only): founding yards, off in the DEFAULT
         Assert.True(m.FoundYardsBelow > 0 && d.FoundYardsBelow == 0 && AiLevels.For(AiLevel.Easy).FoundYardsBelow > 0);
-        Assert.False(d.SafeHearth || d.Underground || d.Guerrilla || d.HarvesterYardValue > 0 || d.InvasionReadyAtRally || d.BooksTalentWindow);
+        Assert.False(d.SafeHearth || d.Cells || d.Guerrilla || d.HarvesterYardValue > 0 || d.InvasionReadyAtRally || d.BooksTalentWindow);
         Assert.True(m.PlanSectorSpreadPercent > 0 && m.PlanSystemSpreadPercent > 0 && d.PlanSectorSpreadPercent == 0 && d.PlanSystemSpreadPercent == 0);
         foreach (var level in new[] { AiLevel.Easy, AiLevel.Hard }) Assert.Equal(m.PlanSectorSpreadPercent, AiLevels.For(level).PlanSectorSpreadPercent);
         Assert.True(m.WinRushDefenders > d.WinRushDefenders && m.InvasionRegimentTarget > d.InvasionRegimentTarget && m.TroopCapacityTarget > d.TroopCapacityTarget && m.AfterCharterDiplomats > d.MaxDiplomats);
@@ -76,9 +76,9 @@ public class AiLevelTests
         // (AI trainer 2026-11-20: Medium's Collective-only review interval is not set at Hard, whose MilitaryEvery 1 is faster for both sides)
         Assert.Equal(0, h.CollectiveMilitaryEvery);
         var changed = new HashSet<string> { nameof(SimpleAiParams.MilitaryEvery), nameof(SimpleAiParams.CollectiveMilitaryEvery), nameof(SimpleAiParams.HuntSpeculators),
-                                            nameof(SimpleAiParams.UndergroundForcesWanted), nameof(SimpleAiParams.UndergroundSubversion),
+                                            nameof(SimpleAiParams.CellsForcesWanted), nameof(SimpleAiParams.CellsSubversion),
                                             nameof(SimpleAiParams.WatchLooks), nameof(SimpleAiParams.RaidStrikes),
-                                            nameof(SimpleAiParams.UndergroundHops), nameof(SimpleAiParams.GuerrillaHops) }; // reach 6, AI trainer 2026-11-20
+                                            nameof(SimpleAiParams.CellsHops), nameof(SimpleAiParams.GuerrillaHops) }; // reach 6, AI trainer 2026-11-20
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
     }
@@ -89,7 +89,7 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b with { SafeHearth = true, Underground = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

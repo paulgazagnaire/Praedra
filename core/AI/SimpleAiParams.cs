@@ -545,7 +545,7 @@ public sealed record SimpleAiParams
     /// harvester under construction (m5-fog-and-hq §N6b HarvesterQueued, from a picture at most HarvesterBuildSeenDays old; no fog: the truth)
     /// gets up to HarvesterYardSaboteurs Spike the Harvester missions worth HarvesterYardValue each (m5-harvester §5 SpikeInYard, Paul
     /// 2026-10-27: a success destroys the unfinished harvester; at any distance, defenders or not) and is a raid target worth HarvesterYardValue more
-    /// for the strike piles, at any distance. With Underground, Espionage looks (worth WatchValue, up to WatchLooks more) go to Hand worlds at any
+    /// for the strike piles, at any distance. With Cells, Espionage looks (worth WatchValue, up to WatchLooks more) go to Hand worlds at any
     /// distance with at least HarvesterWatchShipyards shipyards seen and a facility picture older than WatchStaleDays, most shipyards first:
     /// a harvester is built where shipyards are stacked (ceil(584 / yards) x 4 days, m2-construction §Build time); a build already seen is looked
     /// at again first once its sighting is older than WatchStaleDays (QA-60), so the hunt keeps up while it runs. DEFAULT 0 = off.
@@ -566,37 +566,37 @@ public sealed record SimpleAiParams
     /// </summary>
     public int HarvesterYardMinOddsPercent { get; init; } = 1;
     /// <summary>
-    /// Underground (AI trainer 2026-10-26; Paul 2026-10-26: the Collective plays guerrilla, "always spying and sabotaging, a real pain"). Collective
-    /// only; the Hand AI ignores it. On: (1) Incite and Sabotage go to enemy worlds up to UndergroundHops lanes out even where defenders are believed,
-    /// the planner's expected value (detection and success from the core's own tables, m5-missions §3) deciding, with up to UndergroundSubversion
+    /// Cells, the Collective's agent cells behind the lines (named Underground until 2026-11-25: Paul keeps "The Underground" for a future third faction; AI trainer 2026-10-26; Paul 2026-10-26: the Collective plays guerrilla, "always spying and sabotaging, a real pain"). Collective
+    /// only; the Hand AI ignores it. On: (1) Incite and Sabotage go to enemy worlds up to CellsHops lanes out even where defenders are believed,
+    /// the planner's expected value (detection and success from the core's own tables, m5-missions §3) deciding, with up to CellsSubversion
     /// out at once; (2) Spike the Harvester (m5-missions §6, m5-harvester §5) wherever the side's picture shows the harvester, worth SpikeValue;
     /// (3) WatchLooks Espionage missions keep the pictures of enemy worlds within reach fresh (ground older than WatchStaleDays, most facilities
-    /// first), worth WatchValue; (4) special forces as mission agents (SpecialForceAgents, Collective only), UndergroundForcesWanted of
-    /// UndergroundForces. Uses only missions the rules already have. DEFAULT off (Medium and Hard turn it on).
+    /// first), worth WatchValue; (4) special forces as mission agents (SpecialForceAgents, Collective only), CellsForcesWanted of
+    /// CellsForces. Uses only missions the rules already have. DEFAULT off (Medium and Hard turn it on).
     /// </summary>
-    public bool Underground { get; init; }
+    public bool Cells { get; init; }
     /// <summary>
-    /// Reach of the Underground in Nearby steps from a held world. 4 until the sector spread (#290, 2026-11-12): spreading the outer sectors,
+    /// Reach of the Cells in Nearby steps from a held world. 4 until the sector spread (#290, 2026-11-12): spreading the outer sectors,
     /// where the Collective starts, cut the Hand worlds within 4 steps of the Collective's start (seeds 1-8) from 600 (394 links) and 584 (280
     /// links) to 436; within 5 steps there are 590. DEFAULT 5 (with GuerrillaHops; numbers there).
     /// </summary>
-    public int UndergroundHops { get; init; } = 5;
+    public int CellsHops { get; init; } = 5;
     /// <summary>
     /// Guerrilla reach (AI trainer 2026-11-12, sector spread #290): with Guerrilla on, the Collective's fleets take enemy worlds the picture shows
     /// up to this many Nearby steps out as targets (raids and landings), where FogEnemyTargetHops (both sides, 4) would stop them. Medium Hand
     /// against Medium Collective, seeds 1-192, day 3000, Hand / Collective / no winner: 394 links (main 4359b9b) 51 / 92 / 49; spread map
-    /// (main e2f19d9) 58 / 89 / 45; UndergroundHops 5 alone 59 / 88 / 45; with GuerrillaHops 5 too 40 / 104 / 48 (by day 1000: Sabotage
+    /// (main e2f19d9) 58 / 89 / 45; CellsHops 5 alone 59 / 88 / 45; with GuerrillaHops 5 too 40 / 104 / 48 (by day 1000: Sabotage
     /// 3412 / 3177 / 4196 / 4081, raids 5112 / 5682 / 5490 / 6369). DEFAULT 5 (applies only with Guerrilla on: Medium and Hard).
     /// </summary>
     public int GuerrillaHops { get; init; } = 5;
-    public int UndergroundSubversion { get; init; } = 6;
+    public int CellsSubversion { get; init; } = 6;
     public int SpikeValue { get; init; } = 3000;
     public int SpikeSeenDays { get; init; } = 10;
     public int WatchLooks { get; init; } = 2;
     public int WatchValue { get; init; } = 250;
     public int WatchStaleDays { get; init; } = 60;
-    public int UndergroundForcesWanted { get; init; } = 12;
-    public IReadOnlyList<string> UndergroundForces { get; init; } = new[] { "Wreckers", "Strikers", "Listeners" };
+    public int CellsForcesWanted { get; init; } = 12;
+    public IReadOnlyList<string> CellsForces { get; init; } = new[] { "Wreckers", "Strikers", "Listeners" };
     /// <summary>
     /// Special forces as mission agents (QA-6; B6c §7: the Classic AI's Sabotage, Recon, espionage-team and Abduction/Assassination filters admit
     /// special forces, inferred from the mask; B6b §9: it keeps at least 8 of them). On: the AI keeps SpecialForcesWanted special forces of its
@@ -612,7 +612,7 @@ public sealed record SimpleAiParams
     /// Collective: Wreckers (Sabotage, Rescue, Abduction), Strikers (Incite, Subdue). Hand: Auditors (Espionage on the HQ hunt), Notaries
     /// (Rescue, Abduction), Closers (Subdue). The Listeners are left out: the Collective plans no Espionage. DEFAULT.
     /// </summary>
-    public IReadOnlyList<string> AgentForceClasses(Side side) => side == Side.Hand ? HandAgentForces : Underground ? UndergroundForces : CollectiveAgentForces;
+    public IReadOnlyList<string> AgentForceClasses(Side side) => side == Side.Hand ? HandAgentForces : Cells ? CellsForces : CollectiveAgentForces;
     public IReadOnlyList<string> CollectiveAgentForces { get; init; } = new[] { "Wreckers", "Strikers" };
     public IReadOnlyList<string> HandAgentForces { get; init; } = new[] { "Auditors", "Notaries", "Closers" };
     /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>

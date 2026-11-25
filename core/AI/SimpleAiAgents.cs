@@ -25,15 +25,15 @@ namespace Praedra.Core.AI;
 /// the blind hunt (Espionage at the oldest looks while the picture shows no enemy system, BlindHunt),
 /// Subdue on own systems in uprising, Rescue of own prisoners, Abduction of enemy characters the side has seen, Diplomacy on own low-support
 /// systems and neutral border systems, Collective Spike the Harvester on a harvester seen under construction (HarvesterYardValue), Collective Incite and
-/// Sabotage on enemy systems where no defender is believed (Underground: farther and defended too, plus Spike the Harvester and the watch
-/// looks), and Research. With SpecialForceAgents (DEFAULT off, QA-6) or Underground
+/// Sabotage on enemy systems where no defender is believed (Cells: farther and defended too, plus Spike the Harvester and the watch
+/// looks), and Research. With SpecialForceAgents (DEFAULT off, QA-6) or Cells
 /// (Collective) its free special forces go alone on the same jobs where their class bit is in the kind's mask.</item>
 /// </list>
 /// It reads the other side only through the "what the AI may see" block of SimpleAi.cs (MissionDefendersAt, SupportSeen, OwnerSeen,
 /// EnemyCharactersSeen, the belief map and the picture), so with UseFog it reads only its side's knowledge (m5-fog-and-hq §N8). Own characters,
 /// own missions and own systems are the side's own state. Like the rest of the AI it keeps no memory between days and draws no random number.
 /// Not used (refused by the core with RuleMissing, or impossible today): decoys (the Classic AI's, B6c §7: the decoy table is Missing), Train Talent;
-/// Spike the Harvester only with Underground; not planned: Assassination (a kill of a major
+/// Spike the Harvester only with Cells; not planned: Assassination (a kill of a major
 /// becomes an injury; the AI prefers Abduction).
 /// </summary>
 public sealed partial class SimpleAi
@@ -508,10 +508,10 @@ public sealed partial class SimpleAi
         return _view.Picture(system)?.Facilities?.Value.Where(kv => def.IsDefense(kv.Key)).Sum(kv => kv.Value) ?? 0;
     }
 
-    /// <summary>Underground: the Collective's guerrilla agents (SimpleAiParams.Underground). The Hand AI never uses it.</summary>
-    private bool UndergroundOn => _p.Underground && _side == Side.Collective;
-    private bool AgentForcesOn => _p.SpecialForceAgents || UndergroundOn;
-    private int MaxSubversion => UndergroundOn ? _p.UndergroundSubversion : _p.MaxSubversion;
+    /// <summary>Cells: the Collective's guerrilla agents (SimpleAiParams.Cells). The Hand AI never uses it.</summary>
+    private bool CellsOn => _p.Cells && _side == Side.Collective;
+    private bool AgentForcesOn => _p.SpecialForceAgents || CellsOn;
+    private int MaxSubversion => CellsOn ? _p.CellsSubversion : _p.MaxSubversion;
 
     private bool KindUsable(MissionKind k) => _h.Missions.Data.TryGet(k, out var r) && !r.Hidden && r.AvailableTo(_side);
 
@@ -618,7 +618,7 @@ public sealed partial class SimpleAi
                 jobs.Add(new Job(MissionKind.Diplomacy, s, null, _p.DiplomacyValue * (stop - sup) / stop * _p.NeutralDiplomacyPercent / 100, "diplomacy " + s));
             }
         }
-        // 7. Collective subversion: Incite and Sabotage on enemy systems near the border where no defender is believed; Underground: farther,
+        // 7. Collective subversion: Incite and Sabotage on enemy systems near the border where no defender is believed; Cells: farther,
         // defended or not (the expected value weighs the detection), plus Spike the Harvester and the watch looks
         if (_side == Side.Collective)
         {
@@ -629,18 +629,18 @@ public sealed partial class SimpleAi
                     for (int k = own.Count(m => m.Kind == MissionKind.SpikeTheHarvester && m.Target == s); k < _p.HarvesterYardSaboteurs; k++)
                         jobs.Add(new Job(MissionKind.SpikeTheHarvester, s, null, _p.HarvesterYardValue, $"{HarvesterYardGroup}{s} #{k}"));
             var hops = Hops();
-            int reach = UndergroundOn ? Math.Max(_p.TargetHops, _p.UndergroundHops) : _p.TargetHops;
+            int reach = CellsOn ? Math.Max(_p.TargetHops, _p.CellsHops) : _p.TargetHops;
             foreach (var sys in _h.Data.Galaxy.Systems)
             {
                 string s = sys.Name;
                 if (hops[sys.Index] == 0 || hops[sys.Index] > reach || Destroyed(s)) continue;
                 if (!OwnerSeen(s, out var owner, out int age) || owner != Enemy || age > _p.MissionOwnerTrustDays) continue;
-                if (!UndergroundOn && MissionDefendersAt(s).Count > 0) continue;
+                if (!CellsOn && MissionDefendersAt(s).Count > 0) continue;
                 if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, _p.InciteValue, "subvert " + s));
                 int fac = FacilitiesAt(s);
                 if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, _p.SabotageValuePerFacility * fac, "subvert " + s));
             }
-            if (UndergroundOn)
+            if (CellsOn)
             {
                 // rule: m5-missions §6 Spike the Harvester (target: a system holding a completed harvester of the other side), m5-harvester §5
                 if (KindUsable(MissionKind.SpikeTheHarvester))
@@ -685,7 +685,7 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Underground watch: enemy-held systems within <paramref name="reach"/> lanes whose ground picture is missing or older than WatchStaleDays,
+    /// Cells watch: enemy-held systems within <paramref name="reach"/> lanes whose ground picture is missing or older than WatchStaleDays,
     /// most facilities seen first, then nearest, then name. Without fog the side sees everything, so there is nothing to watch.
     /// </summary>
     private List<string> WatchTargets(int[] hops, int reach)
@@ -965,7 +965,7 @@ public sealed partial class SimpleAi
     /// </summary>
     private void PlanAgentForceBuild()
     {
-        int wanted = UndergroundOn ? _p.UndergroundForcesWanted : _p.SpecialForcesWanted;
+        int wanted = CellsOn ? _p.CellsForcesWanted : _p.SpecialForcesWanted;
         if (!_p.UseCharactersAndMissions || !AgentForcesOn || wanted <= 0) return;
         var classes = _p.AgentForceClasses(_side).Where(Available).ToList();
         if (classes.Count == 0) return;

@@ -10,9 +10,9 @@ namespace Praedra.Core.Tests.AI;
 
 // The Collective's guerrilla (AI trainer 2026-10-26; Paul 2026-10-26: Easy about today's AI, Medium balanced, Hard really hard, the Collective
 // "always spying and sabotaging"). Three Collective-only switches, DEFAULT off, on in Medium and Hard (AiLevel.cs): SafeHearth (the Hearth no
-// longer moves onto a world that its arrival drop turns, m5-fog-and-hq §F6, m2-control-and-capture), Underground (Incite, Sabotage, Spike the
+// longer moves onto a world that its arrival drop turns, m5-fog-and-hq §F6, m2-control-and-capture), Cells (Incite, Sabotage, Spike the
 // Harvester, Espionage watch, special forces as agents: m5-missions) and Guerrilla (elusive fleets, civilian raids: m3-bombardment §3).
-// rule: ai tuning, SimpleAiParams.SafeHearth / Underground / Guerrilla; notes specs/engine/ai-notes/2026-10-26-guerrilla-collective.md.
+// rule: ai tuning, SimpleAiParams.SafeHearth / Cells / Guerrilla; notes specs/engine/ai-notes/2026-10-26-guerrilla-collective.md.
 public class SimpleAiGuerrillaTests
 {
     private readonly ITestOutputHelper _out;
@@ -22,17 +22,17 @@ public class SimpleAiGuerrillaTests
     private static readonly SimpleAiParams Medium = MultiSeed.WithoutPlayToWin(AiLevels.For(AiLevel.Medium));
     // BooksTalentWindow (AI trainer 2026-11-07) off too: it moves the seeds the floors below were measured on (SafeHearth on, seed 5 then
     // makes 1 move onto a world below HearthMinRegiments by day 1500)
-    private static readonly SimpleAiParams Old = Medium with { SafeHearth = false, Underground = false, Guerrilla = false, BooksTalentWindow = false };
+    private static readonly SimpleAiParams Old = Medium with { SafeHearth = false, Cells = false, Guerrilla = false, BooksTalentWindow = false };
 
     [Fact]
     public void Switches_AreOffByDefault_OnInMediumAndHard_OffInEasyButTheSafeHearth()
     {
         var d = new SimpleAiParams();
-        Assert.False(d.SafeHearth || d.Underground || d.Guerrilla);
-        foreach (var l in new[] { AiLevel.Medium, AiLevel.Hard }) { var p = AiLevels.For(l); Assert.True(p.SafeHearth && p.Underground && p.Guerrilla, l.ToString()); }
+        Assert.False(d.SafeHearth || d.Cells || d.Guerrilla);
+        foreach (var l in new[] { AiLevel.Medium, AiLevel.Hard }) { var p = AiLevels.For(l); Assert.True(p.SafeHearth && p.Cells && p.Guerrilla, l.ToString()); }
         var e = AiLevels.For(AiLevel.Easy);
         Assert.True(e.SafeHearth);
-        Assert.False(e.Underground || e.Guerrilla);
+        Assert.False(e.Cells || e.Guerrilla);
     }
 
     // One Medium-Hand-against-a-Collective game to the day limit; counts what the Collective did.
@@ -105,7 +105,7 @@ public class SimpleAiGuerrillaTests
         Assert.All(res, r => Assert.False(r.Dead != null && r.Moves == 0, $"seed {r.Seed}: the Hearth never moved and fell on day {r.Dead?.Day}"));
     }
 
-    // Underground and Guerrilla in play: seeds 1-4 to day 1000 against a Medium Hand, the Medium Collective with and without them. Measured on
+    // Cells and Guerrilla in play: seeds 1-4 to day 1000 against a Medium Hand, the Medium Collective with and without them. Measured on
     // main f00fbb8 (Sabotage, Incite, Espionage started; missions by special forces alone; raids ordered; Civilian strikes): seed 1 16, 31, 16, 6, 32, 32;
     // seed 2 82, 19, 28, 25, 77, 66; seed 3 34, 5, 21, 8, 14, 14; seed 4 16, 58, 10, 11, 42, 42. Off: no Sabotage, Espionage, special-force
     // mission, raid or Civilian strike on any seed (Incite 1-6: the old border subversion). Floors: on, at least 5 of each on every seed; off (to
@@ -119,7 +119,7 @@ public class SimpleAiGuerrillaTests
     // 5 of each on 3 of the 4 seeds and at least 1 of each on every seed (was 5 on every seed); off, none (unchanged).
     [Trait("Category", "Play")]
     [Fact]
-    public void Underground_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
+    public void Cells_AndGuerrilla_SpyAndSabotageAndRaid_OnlyWhenOn()
     {
         var medium = Medium with { BurnTheBooks = false, InvasionReadyAtRally = false };
         // Whole-batch floors 2026-11-11 (AI trainer, for the Dev lead: the per-seed floors broke on the route thinning while the switches held).
@@ -133,10 +133,10 @@ public class SimpleAiGuerrillaTests
         // 47, 46; 4, 44, 24, 7, 12, 12; 2, 12, 21, 12, 22, 22; 17, 55, 24, 5, 38, 36; 0, 50, 30, 19, 4, 4 (in all 65, 253, 210, 107, 181, 176; at
         // least 5 of each on seeds 1, 3, 4 and 7). Off: seed 4 started 6 Espionage missions on day 285 (Nuumi, Buyback, Gemina Major, ...), all
         // from the key hunt (SimpleAiParams.KeyHunt, DEFAULT on: the Collective, ahead, spies for The Chair and Ravilla), an AI rule outside
-        // Underground and Guerrilla; with KeyHunt off seed 4 has none (seeds 1-3 none either way). So the off games run with KeyHunt off too:
-        // what they check is that Underground and Guerrilla gate these orders.
+        // Cells and Guerrilla; with KeyHunt off seed 4 has none (seeds 1-3 none either way). So the off games run with KeyHunt off too:
+        // what they check is that Cells and Guerrilla gate these orders.
         var on = MultiSeed.Play(Enumerable.Range(1, 8).ToArray(), s => Play(s, medium, 1000));
-        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Underground = false, Guerrilla = false, KeyHunt = false }, 300));
+        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Cells = false, Guerrilla = false, KeyHunt = false }, 300));
         foreach (var r in on) _out.WriteLine($"seed {r.Seed}: on {r}");
         foreach (var r in off) _out.WriteLine($"seed {r.Seed}: off {r}");
         string all = string.Join("; ", on.Select(r => r.ToString()));
@@ -147,7 +147,7 @@ public class SimpleAiGuerrillaTests
         Assert.True(busy >= 4, $"on: only {busy} of 8 seeds have at least 5 of each: {all}");
         // Trainer pairs re-pin 2026-11-25 (Dev lead; Rule New 4b: Nobody starts at Talent 150, so his combat and espionage rise 60%): off, seed 1 now
         // starts 2 Sabotage missions by 300. They come from the old border subversion (SimpleAiAgents step 7: Incite and Sabotage on undefended
-        // border systems, not gated by Underground or Guerrilla, like the Incite already allowed here). So off checks Sabotage at most 3 (the
+        // border systems, not gated by Cells or Guerrilla, like the Incite already allowed here). So off checks Sabotage at most 3 (the
         // border kind) and none of the rest.
         Assert.All(off, r => Assert.True(r.Sabotage <= 3 && r.Espionage == 0 && r.AgentForces == 0 && r.Raids == 0 && r.CivilianStrikes == 0, $"seed {r.Seed}: off {r}"));
     }
