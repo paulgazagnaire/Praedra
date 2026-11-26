@@ -93,9 +93,10 @@ public sealed partial class GameSession
         _ => k.ToString(),
     };
 
-    /// <summary>What the mission does and where it may go, one line (from the rule sheet's effects and target legality). rule: m5-missions §Targets, §6.</summary>
+    /// <summary>The Hand's word for Diplomacy (Paul 2026-11-26).</summary>
     public const string HandDiplomacy = "Outreach";
 
+    /// <summary>What the mission does and where it may go, one line (from the rule sheet's effects and target legality). rule: m5-missions §Targets, §6.</summary>
     public static string KindHelp(MissionKind k, Side side) => k switch
     {
         MissionKind.Diplomacy when side == Side.Hand => "Sponsored by Alma. Raises support for you at a neutral system or one of yours (not in revolt). Keeps trying until you cancel it. Skill: diplomacy.",
