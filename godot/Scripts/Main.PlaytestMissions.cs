@@ -292,7 +292,7 @@ public partial class Main
             gs.SelectSystem(target); gs.PlayRefresh();
             // the scripted invasion can take the spied system before the result comes back; then the panel is the live view of our own system
             bool ours = s.OwnerOf(target) == s.Player;
-            Expect(ours ? gs.PanelText().Contains("(you)") : gs.PanelText().Contains("(seen day"),
+            Expect(ours ? gs.PanelText().Contains("Held by you") : gs.PanelText().Contains("(seen day"),
                 "after the success the system panel shows what was seen (or the live view if we took it meanwhile): " + gs.PanelText().Replace("\n", " / "));
         }
         RunUntil(gs, () => mm.Get(id) == null, 120);

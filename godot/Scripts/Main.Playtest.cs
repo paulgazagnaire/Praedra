@@ -354,7 +354,21 @@ public partial class Main
             var silent = greyed.Where(n => gs.InfraWhy(yardSys, n) is not { } why || gs.Enabled($"Build {n}") || !gs.TipOf($"Build {n}").Contains(why, StringComparison.OrdinalIgnoreCase)).ToList();
             Expect(silent.Count == 0, $"every shipyard card that cannot be ordered is greyed out and its hover says why ({greyed.Count} greyed){(silent.Count > 0 ? ": not " + string.Join(", ", silent) : "")}");
             var ship = cards.FirstOrDefault(r => r.Usable && r.Name != "harvester");
-            Expect(ship.Name != null, "a basic ship can be chosen at the shipyard");
+            // The Collective's sector campaigns (#397) can leave the playtest's Hand with no upkeep room by now (seen on
+            // day 192, capacity 1400 for 1481 of upkeep): the check is about ordering a ship, so the test plants mine and refinery pairs on held systems with free
+            // slots until one fits (test only, like the planted construction yard below).
+            for (int pair = 0; pair < 6 && ship.Name == null && cards.Any(r => gs.InfraWhy(yardSys, r.Name) == "no upkeep room"); pair++)
+            {
+                string spot = s.Game.State.SystemOwners.Where(kv => kv.Value == me && eco.FreeRaw(kv.Key) > 0 && eco.FreeEnergy(kv.Key) > 1).Select(kv => kv.Key)
+                    .OrderByDescending(x => eco.FreeEnergy(x)).ThenBy(x => x, StringComparer.Ordinal).FirstOrDefault();
+                if (spot == null) break;
+                GD.Print($"  no upkeep room on day {s.Game.Day} (capacity {eco.Capacity(me)}, upkeep {eco.Load(me)}): planted a mine and a refinery at {spot} (test only)");
+                eco.AddFacility(spot, FacilityKind.Mine); eco.AddFacility(spot, FacilityKind.Refinery);
+                gs.PlayRefresh();
+                cards = gs.InfraState(yardSys)?.Cards ?? new();
+                ship = cards.FirstOrDefault(r => r.Usable && r.Name != "harvester");
+            }
+            Expect(ship.Name != null, $"a basic ship can be chosen at the shipyard ({yardSys}: {string.Join("; ", cards.Select(r => r.Name + (r.Usable ? "" : " - " + gs.InfraWhy(yardSys, r.Name))))})");
             if (ship.Name != null)
             {
                 int before = s.Messages.Count;
