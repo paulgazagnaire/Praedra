@@ -417,7 +417,7 @@ public class MissionOrderTests
         Assert.Equal((true, true), (p.MissionGuardChecks, p.GuardsAnySide)); // B2d
         Assert.Equal((MstbLookupMode.Step, MstbBelowFirstRow.FirstRowValue, SuccessRule.AnyMember, true, true, 0, 0, true, true, 0),
             (p.MstbLookup, p.MstbBelowFirstRow, p.SuccessRule, p.MissionGuardChecks, p.DecoysFromSpecialForcesOnly, p.MaxTeamMembers, p.MaxDecoys, p.CountAboardUnits, p.DiplomacyNeedsCalm, p.RecruitSystemTerm));
-        Assert.Equal((InciteInputMode.LeadershipMinusControllerSupport, InciteSupportTiming.PerIteration, false, SabotageSkill.Average, SabotageTargetMode.RandomFacility, true),
+        Assert.Equal((InciteInputMode.LeadershipMinusControllerSupport, InciteSupportTiming.PerIteration, false, SabotageSkill.Average, SabotageTargetMode.DefencesFirst, true),
             (p.InciteInputMode, p.InciteSupportTiming, p.SubdueEndsUprising, p.SabotageSkill, p.SabotageTargetMode, p.ExposureHooks));
         var d = GameData.Default.Missions;
         Assert.Equal(23, d.Records.Count); // Classic's 25 less the three cut film story kinds (data/design/cut-classes.csv), plus the design row Burn the Books (m5-missions §6b)

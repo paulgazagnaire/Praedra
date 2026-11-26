@@ -95,6 +95,11 @@ public sealed class AiMemory
     public ulong Plan { get; set; }
     /// <summary>The side's campaign (SimpleAiParams.Campaign, AI trainer 2026-11-26); null = none yet (an older save picks one on its next day).</summary>
     public AiCampaign? Campaign { get; set; }
+    /// <summary>
+    /// The side's other campaigns at once (SimpleAiParams.CampaignsAtOnce above 1, AI trainer 2026-11-26); null = none (an older save, or one
+    /// campaign at a time).
+    /// </summary>
+    public List<AiCampaign>? MoreCampaigns { get; set; }
 
     // not saved: how far into the feed the notes go (a loaded game's feed starts empty), and the BattleStarted events of the current run of
     // same-day events by system (a battle starts and ends in one Step, and a save is made between Steps).
@@ -197,7 +202,7 @@ public sealed class AiMemory
     /// </summary>
     internal AiMemory ForSave(int today, Func<Side, string, int?> groundStamp) => new()
     {
-        Side = Side, Fog = Fog, Keep = Keep, Plan = Plan, Campaign = Campaign == null ? null : new AiCampaign { Sector = Campaign.Sector, Started = Campaign.Started, Strike = Campaign.Strike, Number = Campaign.Number, Previous = Campaign.Previous },
+        Side = Side, Fog = Fog, Keep = Keep, Plan = Plan, Campaign = Campaign?.Copy(), MoreCampaigns = MoreCampaigns?.Select(c => c.Copy()).ToList(),
         Notes = Notes.Where(n => (long)n.Floor >= (long)today - Keep.For(n.Kind)
             || (Fog && n.Kind == AiNoteKind.Bombardment && groundStamp(Side, n.System!) is int s && n.Floor >= s + 1)).ToList(),
     };

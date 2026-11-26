@@ -310,6 +310,14 @@ public sealed record SimpleAiParams
     public int CampaignMaxDays { get; init; } = 420;
     public int CampaignHoldPercent { get; init; } = 70;
     public int CampaignChoices { get; init; } = 3;
+    /// <summary>
+    /// Campaigns at once (AI trainer 2026-11-26; Paul 2026-11-26: the Collective starts scattered on the outer rim and can attack from several
+    /// angles at once, the number of simultaneous attacks can rise with difficulty). Each runs as the first, in its own sector at least
+    /// CampaignApartHops lanes from the others' worlds when it can be. DEFAULT 1; Hard 2 (AiLevels). rule: ai tuning.
+    /// </summary>
+    public int CampaignsAtOnce { get; init; } = 1;
+    /// <summary>CampaignsAtOnce: the fewest lanes between a new campaign's sector and any world of another running campaign's sector. DEFAULT.</summary>
+    public int CampaignApartHops { get; init; } = 2;
     public int CampaignAgentPercent { get; init; } = 500;
     public int CampaignRaidPercent { get; init; } = 300;
     public int CampaignStrikePercent { get; init; } = 800;

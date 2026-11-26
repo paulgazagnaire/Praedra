@@ -612,6 +612,9 @@ public sealed partial class MissionModule
                     else
                     {
                         var facs = E.Objects.Values.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == target).ToList(); // id order
+                        // rule: m5-missions §6 Sabotage, DefencesFirst (Paul 2026-11-26): defences and shields (DEFFACSD, FacilityFamily not 0) first
+                        if (Params.SabotageTargetMode == SabotageTargetMode.DefencesFirst && FacilityFamily != null && facs.Any(o => FacilityFamily(o.Class) != 0))
+                            facs = facs.Where(o => FacilityFamily(o.Class) != 0).ToList();
                         if (facs.Count > 0) victim = facs[ctx.Rng.NextInt(0, facs.Count - 1)];
                     }
                     if (victim != null) _eco.Destroy(ctx, t, victim, DestroyReason.Sabotage);

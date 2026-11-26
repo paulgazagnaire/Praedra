@@ -20,6 +20,8 @@ public sealed class AiCampaign
     public int Number { get; set; }
     /// <summary>The last campaign's sector, kept so the next one goes elsewhere when it can.</summary>
     public string? Previous { get; set; }
+
+    internal AiCampaign Copy() => new() { Sector = Sector, Started = Started, Strike = Strike, Number = Number, Previous = Previous };
 }
 
 public sealed partial class SimpleAi
@@ -32,13 +34,26 @@ public sealed partial class SimpleAi
 
     private bool CampaignOn => _p.Campaign && !_advisor && _side == Side.Collective; // the Collective only (SimpleAiParams.Campaign)
 
-    /// <summary>The sector of the running campaign in its preparation (null otherwise).</summary>
-    private string? PreparingSector => CampaignOn && _mem.Campaign is { Strike: 0 } c && c.Sector.Length > 0 ? c.Sector : null;
+    /// <summary>Every running campaign (the first, then the others), for logs and tests; empty with none or the switch off.</summary>
+    public IReadOnlyList<(string Sector, bool Striking, int Number)> CampaignsNow =>
+        Campaigns().Select(c => (c.Sector, c.Strike > 0, c.Number)).ToList();
 
-    /// <summary>The sector of the running campaign in its strike (null otherwise).</summary>
-    private string? StrikingSector => CampaignOn && _mem.Campaign is { Strike: > 0 } c && c.Sector.Length > 0 ? c.Sector : null;
+    /// <summary>The running campaigns with a sector: the first (AiMemory.Campaign), then the others (MoreCampaigns), in slot order.</summary>
+    private IEnumerable<AiCampaign> Campaigns()
+    {
+        if (!CampaignOn) yield break;
+        if (_mem.Campaign is { } c && c.Sector.Length > 0) yield return c;
+        if (_mem.MoreCampaigns != null) foreach (var m in _mem.MoreCampaigns) if (m.Sector.Length > 0) yield return m;
+    }
 
-    private string? CampaignSector => CampaignOn && _mem.Campaign is { } c && c.Sector.Length > 0 ? c.Sector : null;
+    /// <summary>The running campaign whose sector this is; null with none.</summary>
+    private AiCampaign? CampaignIn(string sector) => Campaigns().FirstOrDefault(c => c.Sector == sector);
+
+    private AiCampaign? CampaignAt(string system) =>
+        _h.Data.Galaxy.TryFindSystem(system, out int i) ? CampaignIn(_h.Data.Galaxy.Systems[i].Sector) : null;
+
+    /// <summary>The first running campaign's sector (null with none): the agents' sabotage weighting and its rally read every campaign through CampaignIn.</summary>
+    private string? CampaignSector => Campaigns().FirstOrDefault()?.Sector;
 
     /// <summary>
     /// The day's campaign review: end the campaign when the side holds CampaignHoldPercent of the sector's populated worlds it knows, when the
@@ -49,22 +64,30 @@ public sealed partial class SimpleAi
     private void PlanCampaign()
     {
         if (!CampaignOn) return;
-        var c = _mem.Campaign;
-        if (c != null && c.Sector.Length > 0)
+        int slots = Math.Max(1, _p.CampaignsAtOnce);
+        if (slots > 1) { _mem.MoreCampaigns ??= new(); while (_mem.MoreCampaigns.Count < slots - 1) _mem.MoreCampaigns.Add(new AiCampaign { Started = Today }); }
+        for (int k = 0; k < slots; k++)
         {
-            var (enemy, held, pop, defences, stale) = SectorCounts(c.Sector);
-            bool done = enemy == 0 || (pop > 0 && held * 100 >= pop * _p.CampaignHoldPercent) || Today - c.Started >= _p.CampaignMaxDays;
-            if (!done)
+            var c = k == 0 ? _mem.Campaign : _mem.MoreCampaigns![k - 1];
+            if (c != null && c.Sector.Length > 0)
             {
-                int age = Today - c.Started;
-                if (c.Strike == 0 && (age >= _p.CampaignPrepareDays || (age >= _p.CampaignPrepareDays / 2 && defences == 0 && stale == 0))) c.Strike = Today;
-                return;
+                var (enemy, held, pop, defences, stale) = SectorCounts(c.Sector);
+                bool done = enemy == 0 || (pop > 0 && held * 100 >= pop * _p.CampaignHoldPercent) || Today - c.Started >= _p.CampaignMaxDays;
+                if (!done)
+                {
+                    int age = Today - c.Started;
+                    if (c.Strike == 0 && (age >= _p.CampaignPrepareDays || (age >= _p.CampaignPrepareDays / 2 && defences == 0 && stale == 0))) c.Strike = Today;
+                    continue;
+                }
             }
+            int number = Math.Max(_mem.Campaign?.Number ?? 0, _mem.MoreCampaigns?.Max(x => x.Number) ?? 0); // the game's count, every slot
+            var others = Campaigns().Where(x => !ReferenceEquals(x, c)).Select(x => x.Sector).ToList();
+            string? pick = PickCampaignSector(c?.Sector, others);
+            var next = pick == null
+                ? new AiCampaign { Sector = "", Started = Today, Number = c?.Number ?? 0, Previous = c?.Sector }
+                : new AiCampaign { Sector = pick, Started = Today, Number = number + 1, Previous = c?.Sector };
+            if (k == 0) _mem.Campaign = next; else _mem.MoreCampaigns![k - 1] = next;
         }
-        string? pick = PickCampaignSector(c?.Sector);
-        _mem.Campaign = pick == null
-            ? new AiCampaign { Sector = "", Started = Today, Number = c?.Number ?? 0, Previous = c?.Sector }
-            : new AiCampaign { Sector = pick, Started = Today, Number = (c?.Number ?? 0) + 1, Previous = c?.Sector };
     }
 
     /// <summary>
@@ -96,15 +119,17 @@ public sealed partial class SimpleAi
     /// those are on), scored by the worth of those worlds (slots and facilities, this game's liking) over their distance; one of the three best,
     /// drawn from the private generator (seeded by the game plan), and not the last one when another is there. Paul 2026-11-19: not predictable.
     /// </summary>
-    private string? PickCampaignSector(string? previous)
+    private string? PickCampaignSector(string? previous, IReadOnlyList<string> others)
     {
         var g = _h.Data.Galaxy; var hops = Hops();
+        var apart = others.Count == 0 ? null : LanesFromSectors(others);
         int reach = Math.Max(_p.TargetHops, Math.Max(CellsOn ? _p.CellsHops : 0, GuerrillaOn ? _p.GuerrillaHops : 0));
         var score = new SortedDictionary<string, long>(StringComparer.Ordinal);
         foreach (var sys in g.Systems)
         {
             string s = sys.Name;
             if (sys.IsOutsideSectors || hops[sys.Index] == 0 || hops[sys.Index] > reach || Destroyed(s) || !IsEnemyHeld(s)) continue;
+            if (apart != null && (others.Contains(sys.Sector) || SectorLanes(apart, sys.Sector) < _p.CampaignApartHops)) continue; // CampaignsAtOnce: another angle
             var slots = SlotsSeen(s);
             if (!slots.Populated) continue;
             long worth = (10 + slots.Energy + 2L * slots.Raw + 2L * FacilitiesAt(s)) * PlanLike(sys) / 100;
@@ -116,40 +141,58 @@ public sealed partial class SimpleAi
         return ranked[_rng.NextInt(0, ranked.Count - 1)].Key;
     }
 
+    /// <summary>The fewest lanes from any system of the sector to the given distances' sources (LanesFromSectors).</summary>
+    private int SectorLanes(int[] dist, string sector)
+    {
+        int min = int.MaxValue;
+        foreach (var sys in _h.Data.Galaxy.Systems) if (sys.Sector == sector) min = Math.Min(min, dist[sys.Index]);
+        return min;
+    }
+
+    /// <summary>Lanes from the nearest world of the given sectors to every system (int.MaxValue = unreachable).</summary>
+    private int[] LanesFromSectors(IReadOnlyList<string> sectors)
+    {
+        var g = _h.Data.Galaxy; var dist = new int[g.Systems.Count]; Array.Fill(dist, int.MaxValue);
+        var q = new Queue<int>();
+        foreach (var sys in g.Systems) if (sectors.Contains(sys.Sector)) { dist[sys.Index] = 0; q.Enqueue(sys.Index); }
+        while (q.Count > 0)
+        {
+            int c = q.Dequeue();
+            foreach (var n in g.NearOf(c)) if (dist[n] == int.MaxValue) { dist[n] = dist[c] + 1; q.Enqueue(n); }
+        }
+        return dist;
+    }
+
     /// <summary>The campaign's anchor for the rally: the enemy world seen in its sector with the most facilities (then the name); null with none.</summary>
     private string? CampaignAnchor()
     {
-        if (CampaignSector is not { } sector) return null;
+        // several at once: the one striking longest, else the first (one rally point; the other campaigns get their agents, raids and invasions)
+        var lead = Campaigns().Where(c => c.Strike > 0).OrderBy(c => c.Strike).FirstOrDefault() ?? Campaigns().FirstOrDefault();
+        if (lead is not { Sector: var sector }) return null;
         return _h.Data.Galaxy.Systems.Where(x => x.Sector == sector && !Destroyed(x.Name) && IsEnemyHeld(x.Name)).Select(x => (s: x.Name, n: FacilitiesAt(x.Name)))
             .OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
     }
 
-    /// <summary>CampaignAgentPercent: a mission's value at a system of the campaign's sector (any phase), else unchanged.</summary>
+    /// <summary>CampaignAgentPercent: a mission's value at a system of a running campaign's sector (any phase), else unchanged.</summary>
     private int CampaignAgentValue(string system, int value)
     {
-        string? sector = CampaignSector;
-        if (sector == null || !_h.Data.Galaxy.TryFindSystem(system, out int i) || _h.Data.Galaxy.Systems[i].Sector != sector) return value;
+        if (CampaignAt(system) == null) return value;
         return (int)Math.Min(int.MaxValue, (long)value * _p.CampaignAgentPercent / 100);
     }
 
     /// <summary>
-    /// A target's value in PickTarget: raids in the preparing sector times CampaignRaidPercent; invasions in the striking sector times
+    /// A target's value in PickTarget: raids in a preparing sector times CampaignRaidPercent; invasions in a striking sector times
     /// CampaignStrikePercent. A fresh invasion elsewhere is worth CampaignOffTargetPercent during the strike and CampaignPrepareOffTargetPercent
     /// during the preparation (the fleets gather for the sector instead of grabbing soft worlds anywhere); taking back a world the side lost
     /// (<paramref name="retake"/>) is never damped, a counter-attack makes sense on its own.
     /// </summary>
     private long CampaignTargetValue(Praedra.Core.Map.StarSystem sys, long value, bool raid, bool retake = false)
     {
-        if (raid)
-        {
-            string? prep = PreparingSector;
-            return prep != null && sys.Sector == prep ? value * _p.CampaignRaidPercent / 100 : value;
-        }
-        string? sector = CampaignSector;
-        if (sector == null) return value;
-        bool striking = StrikingSector != null;
-        if (sys.Sector == sector) return striking ? value * _p.CampaignStrikePercent / 100 : value;
-        if (retake) return value;
+        var here = CampaignIn(sys.Sector);
+        if (raid) return here is { Strike: 0 } ? value * _p.CampaignRaidPercent / 100 : value;
+        if (here != null) return here.Strike > 0 ? value * _p.CampaignStrikePercent / 100 : value;
+        if (retake || CampaignSector == null) return value;
+        bool striking = Campaigns().Any(c => c.Strike > 0);
         return value * (striking ? _p.CampaignOffTargetPercent : _p.CampaignPrepareOffTargetPercent) / 100;
     }
 }

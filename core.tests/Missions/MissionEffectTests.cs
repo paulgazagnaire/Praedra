@@ -183,6 +183,25 @@ public class MissionEffectTests
         Assert.Null(w.Host.Economy.Find(ids[2]));
     }
 
+    // m5-missions §6 Sabotage, SabotageTargetMode DefencesFirst (DEFAULT, Paul 2026-11-26: "Target defense infrastructures first (cannons and
+    // shields), then yards and mines equally"): a mine, a cannon, a refinery and a shield; the one pick draw rand(0..1) = 1 takes the second
+    // defence (the shield). RandomFacility (the Classic pick) draws over all four: rand(0..3) = 1 takes the cannon, as the second by id.
+    [Theory]
+    [InlineData(SabotageTargetMode.DefencesFirst, 1, 3)]
+    [InlineData(SabotageTargetMode.RandomFacility, 3, 1)]
+    public void SabotageDefencesFirst(SabotageTargetMode mode, int hi, int victim)
+    {
+        var w = new MissionWorld(new MissionParams { SabotageTargetMode = mode });
+        w.Hold(T, Side.Hand, 0);
+        var ids = new[] { FacilityKind.Mine, FacilityKind.CovenantI, FacilityKind.Refinery, FacilityKind.EscrowI }.Select(k => w.Host.Economy.AddFacility(T, k)).ToList();
+        w.Agent(Ledger, T, esp: 50, com: 50);
+        w.Stub!.Expect(0, 99, 0).Expect(0, 2, 0).Expect(0, hi, 1); // success roll, timer, then the pick
+        w.Start(Side.Collective, MissionKind.Sabotage, new[] { Ledger }, T);
+        w.Game.Step();
+        w.RunIteration(w.LastMission);
+        Assert.Equal(ids[victim], w.Events<FacilityDestroyed>().Single().Facility);
+    }
+
     // SabotageTargetMode Chosen: the order names the facility; no pick draw
     [Fact]
     public void SabotageChosenFacility()

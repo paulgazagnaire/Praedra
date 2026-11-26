@@ -44,8 +44,12 @@ public enum InciteSupportTiming
 /// <summary>The skill fed to SBTGMSTB. rule: m5-missions §Mission records (Sabotage), Missing 11.</summary>
 public enum SabotageSkill { Average, Combat }
 
-/// <summary>Which facility a Sabotage destroys. rule: m5-missions §6 (Sabotage).</summary>
-public enum SabotageTargetMode { RandomFacility, Chosen }
+/// <summary>
+/// Which facility a Sabotage destroys. rule: m5-missions §6 (Sabotage). DefencesFirst (Paul 2026-11-26: "Target defense infrastructures first
+/// (cannons and shields), then yards and mines equally"): the pick is among the system's completed defences and shields when it has any, else
+/// among all its completed facilities, with the same single draw as RandomFacility (the Classic pick).
+/// </summary>
+public enum SabotageTargetMode { RandomFacility, Chosen, DefencesFirst }
 
 /// <summary>Where Talent sensers of a mission check stand. rule: m5-missions §3 Talent sensing (B2b §2 "Where"; the scopes per kind and phase: B2d §3).</summary>
 public enum TalentSenseScope
@@ -143,7 +147,8 @@ public sealed record MissionParams
     /// <summary>A Subdue success clears the uprising flag at once. DEFAULT false.</summary>
     public bool SubdueEndsUprising { get; init; }
     public SabotageSkill SabotageSkill { get; init; } = SabotageSkill.Average;
-    public SabotageTargetMode SabotageTargetMode { get; init; } = SabotageTargetMode.RandomFacility;
+    /// <summary>DEFAULT DefencesFirst (Paul 2026-11-26; our rule stays default, the Classic random pick is RandomFacility).</summary>
+    public SabotageTargetMode SabotageTargetMode { get; init; } = SabotageTargetMode.DefencesFirst;
     /// <summary>Call the character sheet's OnTeamExposed for a failed team (a foiled team duels instead, B2d §6). DEFAULT true (a no-op until that sheet defines a rule).</summary>
     public bool ExposureHooks { get; init; } = true;
 
