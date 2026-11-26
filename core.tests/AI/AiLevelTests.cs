@@ -27,8 +27,9 @@ public class AiLevelTests
     // Since 2026-10-27 the guerrilla also hunts a harvester seen in the yard (HarvesterYardValue, QA-58), and since 2026-11-07 the Collective
     // counts only the troops at its rally system as ready to invade (InvasionReadyAtRally, AI trainer), and sends known Talent on Burn the
     // Books only while it believes no known senser is at Charter (BooksTalentWindow). Since 2026-11-20 (the Hand's big start) the Medium
-    // Collective reviews its military every 2 days, the Hand every 3 (CollectiveMilitaryEvery).
-    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Cells), nameof(SimpleAiParams.Guerrilla), nameof(SimpleAiParams.HarvesterYardValue), nameof(SimpleAiParams.InvasionReadyAtRally), nameof(SimpleAiParams.BooksTalentWindow), nameof(SimpleAiParams.CollectiveMilitaryEvery) };
+    // Collective reviews its military every 2 days, the Hand every 3 (CollectiveMilitaryEvery). Since 2026-11-26 the Collective runs sector
+    // campaigns at Medium and Hard (Campaign), and both sides walk agents stranded in an enemy system home first (StrandedAgentsHome).
+    private static readonly string[] Guerrilla = { nameof(SimpleAiParams.SafeHearth), nameof(SimpleAiParams.Cells), nameof(SimpleAiParams.Guerrilla), nameof(SimpleAiParams.HarvesterYardValue), nameof(SimpleAiParams.InvasionReadyAtRally), nameof(SimpleAiParams.BooksTalentWindow), nameof(SimpleAiParams.CollectiveMilitaryEvery), nameof(SimpleAiParams.Campaign), nameof(SimpleAiParams.StrandedAgentsHome) };
     // AI trainer 2026-11-19: the game plan is on at every level (AiLevels.GamePlan), off in the SimpleAiParams DEFAULT.
     // AI trainer 2026-11-20: both sides found a construction yard when short of them (m2-construction §Founding), Easy only when none is left.
     private static readonly string[] Founding = { nameof(SimpleAiParams.FoundYardsBelow) };
@@ -50,6 +51,10 @@ public class AiLevelTests
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && !GamePlan.Contains(p.Name) && !Founding.Contains(p.Name) && !Navy.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
         Assert.True(m.SafeHearth && m.Cells && m.Guerrilla && m.HarvesterYardValue > 0 && m.InvasionReadyAtRally && m.BooksTalentWindow);
+        // AI trainer 2026-11-26 (Paul: plans that make sense): the Collective's sector campaigns, SimpleAiCampaignTests
+        Assert.True(m.Campaign && AiLevels.For(AiLevel.Hard).Campaign && !AiLevels.For(AiLevel.Easy).Campaign && !d.Campaign);
+        // AI trainer 2026-11-26: agents stranded in an enemy system walk home first, SimpleAiCampaignTests
+        Assert.True(m.StrandedAgentsHome && AiLevels.For(AiLevel.Hard).StrandedAgentsHome && !AiLevels.For(AiLevel.Easy).StrandedAgentsHome && !d.StrandedAgentsHome);
         Assert.True(m.CollectiveMilitaryEvery > 0 && m.CollectiveMilitaryEvery < m.MilitaryEvery && d.CollectiveMilitaryEvery == 0);
         // AI trainer 2026-11-20 (Paul: a losing side must rebuild and fight to the end, smarter only): founding yards, off in the DEFAULT
         Assert.True(m.FoundYardsBelow > 0 && d.FoundYardsBelow == 0 && AiLevels.For(AiLevel.Easy).FoundYardsBelow > 0);
@@ -99,7 +104,7 @@ public class AiLevelTests
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
         Assert.Equal(b with { SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8,
             WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
-            RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10, GarrisonsFirstHoldsNavy = true }, AiLevels.For(AiLevel.Medium, b));
+            RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10, GarrisonsFirstHoldsNavy = true, Campaign = true, StrandedAgentsHome = true }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

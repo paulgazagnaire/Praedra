@@ -743,4 +743,32 @@ public class SimpleAiAgentsTests
         }, _ => false);
         Assert.Equal(new[] { "Navalia", "Charter" }, mem.Notes.Where(n => n.Kind == AiNoteKind.HarvesterYardGone).Select(n => n.System!).ToArray());
     }
+    // rule: ai tuning, SimpleAiParams.StrandedAgentsHome (AI trainer 2026-11-26; m5-missions §Foiled: an escaped member stands free at the place
+    // of the check, and a mission is checked at its origin too). Seed 1 MedE, Medium mirror, to day 130: off, the Collective starts missions from
+    // a system the Hand holds (measured 42, among them 11 Espionage from Charter in 22 days, each sensed before it left); on, none. Over 16 Medium mirrors to
+    // day 800 (sim probe), 954 of 2993 Collective missions left from Hand worlds and 899 were sensed at the origin; on, 4 and 11.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void StrandedAgentsWalkHomeBeforeAnyMission()
+    {
+        int FromEnemy(bool on)
+        {
+            var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+            var p = AiLevels.For(AiLevel.Medium) with { StrandedAgentsHome = on };
+            var m = new AiMatch(h, p, p);
+            int n = 0;
+            while (h.Game.Day < 130)
+            {
+                int seen = h.Game.Events.Count;
+                m.Step();
+                for (int i = seen; i < h.Game.Events.Count; i++)
+                    if (h.Game.Events[i] is MissionStarted ms && ms.Side == Side.Collective && h.Fleets.OwnerOf(ms.Home) == Side.Hand) n++;
+            }
+            return n;
+        }
+        int off = FromEnemy(false), on = FromEnemy(true);
+        _out.WriteLine($"Collective missions started from Hand systems by day 130: off {off}, on {on}");
+        Assert.True(off >= 5, $"off: {off} (the case this guards no longer arises on seed 1)");
+        Assert.Equal(0, on);
+    }
 }

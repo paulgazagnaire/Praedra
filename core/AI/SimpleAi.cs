@@ -86,6 +86,7 @@ public sealed partial class SimpleAi
         _seenForces.Clear(); ClearFogScratch();
         if (_view != null && _side == Side.Hand) KnownEnemyHq = _view.KnownHq?.System; // only what the Hand's own picture shows
         PlanUpkeepCrisis();
+        PlanCampaign(); // rule: ai tuning, SimpleAiParams.Campaign (before the agents and the fleets, which read it)
         if (_view != null && _side == Side.Collective) PlanHqHide(); // fog: the HQ hides by risk (ai/07 §7), checked daily
         // characters and missions (SimpleAiAgents.cs); before the military review so an officer boards a fleet before it leaves today
         if (_p.UseCharactersAndMissions && (day + phase) % Math.Max(1, _p.AgentsEvery) == 0) PlanAgents();
@@ -486,7 +487,8 @@ public sealed partial class SimpleAi
         return _capital;
     }
 
-    /// <summary>The staging system: a held shipyard system (not the capital if another exists) nearest the enemy's core. New warships gather here.</summary>
+    /// <summary>The staging system: a held shipyard system (not the capital if another exists) nearest the enemy's core (the known HQ, else the
+    /// campaign's sector, else the enemy system with the most facilities). New warships gather here.</summary>
     private string? Rally()
     {
         if (_rallyDone) return _rally;
@@ -497,6 +499,7 @@ public sealed partial class SimpleAi
         if (cands.Count == 0) cands = yards;
         if (cands.Count == 0) return _rally = cap;
         string? anchor = KnownEnemyHq;
+        anchor ??= CampaignAnchor(); // rule: ai tuning, SimpleAiParams.Campaign: the fleets gather toward the campaign's sector (the player sees it coming)
         anchor ??= EnemySystems().Select(s => (s, n: FacilitiesAt(s)))
             .OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
         if (anchor == null) return _rally = cands[0];

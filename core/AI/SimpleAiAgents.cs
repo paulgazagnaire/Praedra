@@ -57,6 +57,7 @@ public sealed partial class SimpleAi
         var spies = ReserveSpies(mine, busy);
         PlanSystemGeneral(mine, busy, spies);
         PlanFleetOfficers(mine, busy, spies);
+        if (_p.StrandedAgentsHome) BringStrandedHome(mine, busy);
         PlanMissions(mine, busy);
         if (!booksSent) PlanBurnTheBooks(mine, busy, awareOnly: false); // last: only characters no other mission wanted today
         if (_p.HuntSpeculators > 0) PlanSpeculatorLooks();
@@ -267,6 +268,22 @@ public sealed partial class SimpleAi
         long seq = _h.Game.Submit(sq => new MoveCharacterOrder(sq, _side, c.Id, dest));
         Note(seq, "MoveCharacter", $"{_h.Characters.ClassOf(c).Name} {c.System} -> {dest}");
         return true;
+    }
+
+    /// <summary>
+    /// StrandedAgentsHome: own characters standing free, off any fleet, in a system the enemy holds (where they stand they see its owner) walk
+    /// to the nearest held system (character speed, ties by name) and take no other job today. rule: ai tuning; m5-missions §Foiled.
+    /// </summary>
+    private void BringStrandedHome(List<CharacterRecord> mine, HashSet<int> busy)
+    {
+        var held = HeldSystems().ToList();
+        foreach (var c in mine)
+        {
+            if (!Standing(c) || busy.Contains(c.Id) || c.AttachedFleet != 0 || _h.Fleets.OwnerOf(c.System!) is not { } o || o == _side) continue;
+            string? best = null; int bestT = int.MaxValue;
+            foreach (var s in held) { int t = CharTicks(c.System!, s); if (t < bestT) { bestT = t; best = s; } }
+            if (best != null && MoveCharacter(c, best)) busy.Add(c.Id);
+        }
     }
 
     /// <summary>A character of the side on the way to the system (a lone trip).</summary>
@@ -636,9 +653,12 @@ public sealed partial class SimpleAi
                 if (hops[sys.Index] == 0 || hops[sys.Index] > reach || Destroyed(s)) continue;
                 if (!OwnerSeen(s, out var owner, out int age) || owner != Enemy || age > _p.MissionOwnerTrustDays) continue;
                 if (!CellsOn && MissionDefendersAt(s).Count > 0) continue;
-                if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, _p.InciteValue, "subvert " + s));
+                // rule: ai tuning, SimpleAiParams.Campaign: worth more in the campaign's sector, its defences most of all
+                bool inCampaign = CampaignSector is { } cs && sys.Sector == cs;
+                if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, CampaignAgentValue(s, _p.InciteValue), "subvert " + s));
                 int fac = FacilitiesAt(s);
-                if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, _p.SabotageValuePerFacility * fac, "subvert " + s));
+                int sab = _p.SabotageValuePerFacility * fac + (inCampaign ? _p.CampaignDefenceValue * DefencesSeenAt(s) : 0);
+                if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, CampaignAgentValue(s, sab), "subvert " + s));
             }
             if (CellsOn)
             {
@@ -672,6 +692,21 @@ public sealed partial class SimpleAi
                         want--;
                     }
                 }
+            }
+        }
+        // 7b. Campaign preparation (SimpleAiParams.Campaign): looks at the sector's enemy worlds whose picture is old, so the sabotage and the
+        // invasion aim at what is there now
+        if (PreparingSector is { } prep && KindUsable(MissionKind.Espionage))
+        {
+            int want = _p.CampaignLooks - own.Count(m => m.Kind == MissionKind.Espionage && _h.Data.Galaxy.TryFindSystem(m.Target, out int ti) && _h.Data.Galaxy.Systems[ti].Sector == prep);
+            foreach (var sys in _h.Data.Galaxy.Systems)
+            {
+                if (want <= 0) break;
+                string s = sys.Name;
+                if (sys.Sector != prep || Destroyed(s) || !Free(MissionKind.Espionage, s) || jobs.Any(j => j.Kind == MissionKind.Espionage && j.System == s)) continue;
+                if (!OwnerSeen(s, out var owner, out int age) || owner != Enemy || age <= _p.CampaignLookDays) continue;
+                jobs.Add(new Job(MissionKind.Espionage, s, null, _p.CampaignLookValue, "campaign look " + s));
+                want--;
             }
         }
         // 8. Research: one mission per track (ships: up to ShipResearchMissions, each at its own system), at a held system with a yard of the

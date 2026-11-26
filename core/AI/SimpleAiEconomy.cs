@@ -703,7 +703,7 @@ public sealed partial class SimpleAi
             if (need <= 0 || picked.Count >= max) break;
             var f = c.Fleet;
             int ships = left.TryGetValue(f.Id, out var l) ? l : f.Ships.Count;
-            if (ships <= 1 && guarded.Contains(f.Id)) continue; // squadrons alone would not hold a prisoner's cell (HeldAboardShip)
+            if (ships <= 1 && guarded.Contains(f.Id)) continue; // kept even with squadrons: the simple, safe rule (a fleet left with squadrons would survive)
             left[f.Id] = ships - 1;
             picked.Add(c.Id);
             need -= c.Maint;

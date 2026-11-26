@@ -136,7 +136,9 @@ public class SimpleAiGuerrillaTests
         // Cells and Guerrilla; with KeyHunt off seed 4 has none (seeds 1-3 none either way). So the off games run with KeyHunt off too:
         // what they check is that Cells and Guerrilla gate these orders.
         var on = MultiSeed.Play(Enumerable.Range(1, 8).ToArray(), s => Play(s, medium, 1000));
-        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Cells = false, Guerrilla = false, KeyHunt = false }, 300));
+        // Campaigns 2026-11-26 (AI trainer, Campaign on in Medium): off, seed 2 started 1 Espionage by 300, a campaign look (CampaignLooks), an
+        // AI rule outside Cells and Guerrilla like the key hunt; so the off games run with Campaign off too.
+        var off = MultiSeed.Play(new[] { 1, 2, 3, 4 }, s => Play(s, medium with { Cells = false, Guerrilla = false, KeyHunt = false, Campaign = false }, 300));
         foreach (var r in on) _out.WriteLine($"seed {r.Seed}: on {r}");
         foreach (var r in off) _out.WriteLine($"seed {r.Seed}: off {r}");
         string all = string.Join("; ", on.Select(r => r.ToString()));

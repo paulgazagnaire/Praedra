@@ -747,6 +747,7 @@ public sealed partial class SimpleAi
                         if (lost.Contains(s)) value *= 2;
                         // rule: ai tuning, SimpleAiParams.PlanSectorSpreadPercent (this game's liking for the system; the HQ, win, search and blind values below stay as they are)
                         value = value * PlanLike(sys) / 100;
+                        value = CampaignTargetValue(sys, value, raid: false, retake: lost.Contains(s)); // rule: ai tuning, SimpleAiParams.Campaign (the strike)
                         if (s == KnownEnemyHq) value += _p.KnownHqValue;
                         if (isWin) value += _p.WinTargetValue;
                         if (isSearch) value += _p.SearchValue * belief / Math.Max(1, BeliefMax);
@@ -758,7 +759,7 @@ public sealed partial class SimpleAi
             // guerrilla raid: a world it cannot take, shelled for its civilian targets (m3-bombardment §3 Civilian)
             // HarvesterYardValue: a harvester seen under construction is raided at any distance, its value on top
             if ((hops[sys.Index] <= reach || isYard) && RaidTarget(s, canBombard))
-                score = Math.Max(score, ((long)_p.RaidValuePerFacility * FacilitiesAt(s) * PlanLike(sys) / 100 + (isYard ? _p.HarvesterYardValue : 0)) * 1000 / (ticks + 20));
+                score = Math.Max(score, (CampaignTargetValue(sys, (long)_p.RaidValuePerFacility * FacilitiesAt(s) * PlanLike(sys) / 100, raid: true) + (isYard ? _p.HarvesterYardValue : 0)) * 1000 / (ticks + 20));
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;

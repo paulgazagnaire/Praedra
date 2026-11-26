@@ -65,7 +65,7 @@ public sealed record SimpleAiParams
     public int RefitBelowPercent { get; init; }
     public int RefitShipsPerReview { get; init; } = 2;
     /// <summary>
-    /// Ship research missions out at once, at systems with a shipyard (m5-research CanResearch; several may share one); the other tracks keep one. Research
+    /// Ship research missions out at once, each at its own system with a shipyard (m5-research CanResearch); the other tracks keep one. Research
     /// points from missions are the main road up the ladder (yards add one point a tick, costs scale with the galaxy). DEFAULT 1.
     /// </summary>
     public int ShipResearchMissions { get; init; } = 1;
@@ -115,6 +115,14 @@ public sealed record SimpleAiParams
     /// on with the best navy (AiLevels.BestNavy). rule: ai tuning; m2-uprisings-and-garrison §Required garrison N.
     /// </summary>
     public bool GarrisonsFirstHoldsNavy { get; init; }
+    /// <summary>
+    /// StrandedAgentsHome (AI trainer 2026-11-26): an own character standing free, off any fleet, in a system the enemy holds (an escaped
+    /// member stands free at the place of the check, m5-missions §Foiled) walks to the nearest held system before any mission. Without it the
+    /// planner sends missions from there, every one is checked at the origin (talent sensing, detection) and foiled at once: seed 1 MedE, Medium
+    /// mirror, a Collective agent at Charter started 11 Espionage missions in 22 days, each sensed by The Chair or Ravilla before leaving.
+    /// Officers aboard fleets there are not moved. Off by default, on in Medium and Hard (AiLevels). rule: ai tuning (no sheet).
+    /// </summary>
+    public bool StrandedAgentsHome { get; init; }
     // ---- the player's advisor (Sibyl). rule: m6-advisor-sibyl (Paul 2026-11-16: "Both", "aggressively develop infrastructure"). DEFAULT values.
     /// <summary>A calm world keeps the garrison of its support minus this many points (one more regiment within 5 of a step). rule: m6-advisor-sibyl §Manage Garrisons 2.</summary>
     public int AdvisorBufferSupport { get; init; } = 5;
@@ -286,6 +294,35 @@ public sealed record SimpleAiParams
     public int PlanSystemSpreadPercent { get; init; }
     /// <summary>Days a game plan's liking lasts before it is drawn again (AI trainer 2026-11-19). DEFAULT 180.</summary>
     public int PlanDays { get; init; } = 180;
+
+    /// <summary>
+    /// Campaigns (AI trainer 2026-11-26; Paul 2026-11-26, "VERY important": the AI builds plans that make sense; the Collective weakens a
+    /// sector's defences and threats by sabotage before it invades, and the preparation hints at what is coming). The side picks one enemy
+    /// sector within reach (one of the <see cref="CampaignChoices"/> best, this game's draw, not the last one), prepares it for
+    /// <see cref="CampaignPrepareDays"/> (missions there worth <see cref="CampaignAgentPercent"/>, sabotage aimed at defences, looks, raids worth
+    /// <see cref="CampaignRaidPercent"/>), then strikes (invasions there worth <see cref="CampaignStrikePercent"/>) until it holds
+    /// <see cref="CampaignHoldPercent"/> of the sector's populated worlds or <see cref="CampaignMaxDays"/> pass. The Collective only: the same plan made
+    /// the AI Hand lose 31 of 32 Medium mirrors, so the Hand's needs its own design. Off = no campaign (DEFAULT); on at Medium and Hard.
+    /// The values below were tuned on 32 Medium mirrors (AI trainer 2026-11-26, notes specs/engine/ai-notes/2026-11-26-campaign-game-log.md).
+    /// </summary>
+    public bool Campaign { get; init; }
+    public int CampaignPrepareDays { get; init; } = 120;
+    public int CampaignMaxDays { get; init; } = 420;
+    public int CampaignHoldPercent { get; init; } = 70;
+    public int CampaignChoices { get; init; } = 3;
+    public int CampaignAgentPercent { get; init; } = 500;
+    public int CampaignRaidPercent { get; init; } = 300;
+    public int CampaignStrikePercent { get; init; } = 800;
+    /// <summary>Campaign strike: an invasion outside the campaign's sector is worth this percent (100 = unchanged).</summary>
+    public int CampaignOffTargetPercent { get; init; } = 40;
+    /// <summary>Campaign preparation: a fresh invasion outside the campaign's sector is worth this percent (100 = unchanged; a retake never changes).</summary>
+    public int CampaignPrepareOffTargetPercent { get; init; } = 40;
+    /// <summary>Campaign: a Sabotage in the campaign's sector is also worth this per defence seen there (shields and batteries guard the invasion).</summary>
+    public int CampaignDefenceValue { get; init; } = 120;
+    /// <summary>Campaign preparation: Espionage looks out at once on the sector's enemy worlds whose picture is older than CampaignLookDays, each worth CampaignLookValue.</summary>
+    public int CampaignLooks { get; init; } = 2;
+    public int CampaignLookDays { get; init; } = 60;
+    public int CampaignLookValue { get; init; } = 400;
     /// <summary>
     /// Most offensives at once: armed own fleets flying to, or standing on, a system the side does not hold. A strike pile does not pick a new
     /// target while that many are out (it still relieves held systems). ai/09 §6 row "concurrent offensive jobs" (Easy 1). DEFAULT no limit.
