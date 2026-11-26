@@ -132,8 +132,8 @@ public partial class GameScreen
         v.AddChild(line);
         v.AddChild(new ThinBar { Share = (loyal ?? 0) / 100f, Fill = Ui.You, Track = loyal == null ? Colors.Transparent : Look.Divider, CustomMinimumSize = new Vector2(0, 2) });
         string tip = mine
-            ? $"How much the people of {n} back you ({loyal}%). Below 60% they need regiments to stay calm. Diplomacy missions raise it."
-            : loyal is int y ? $"What the people of {n} thought of you when you last looked ({y}% for you, {100 - y}% for the {S.NameOf(Me == Side.Hand ? Side.Collective : Side.Hand)}). A Diplomacy mission raises it."
+            ? $"How much the people of {n} back you ({loyal}%). Below 60% they need regiments to stay calm. {DiplomacyWord} missions raise it."
+            : loyal is int y ? $"What the people of {n} thought of you when you last looked ({y}% for you, {100 - y}% for the {S.NameOf(Me == Side.Hand ? Side.Collective : Side.Hand)}). A {DiplomacyWord} mission raises it."
             : $"You have never looked at {n}: send a fleet or a spy.";
 
         // the one line under the bar: the worst thing true today

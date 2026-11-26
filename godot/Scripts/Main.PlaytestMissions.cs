@@ -33,6 +33,22 @@ public partial class Main
         gs.PressKey(Key.M); gs.PlayRefresh();
         Expect(!gs.MissionsOpen, "key M closes it");
 
+        // the Hand calls Diplomacy "Outreach", sponsored by Alma (Paul 2026-11-26); the Collective keeps "Diplomacy"
+        string dw = GameSession.KindWords(MissionKind.Diplomacy, me);
+        Expect(dw == (me == Side.Hand ? "Outreach" : "Diplomacy") && GameSession.KindHelp(MissionKind.Diplomacy, me).Contains("Alma") == (me == Side.Hand),
+            $"the Diplomacy mission is called {dw} for the {me}: " + GameSession.KindHelp(MissionKind.Diplomacy, me));
+        if (me == Side.Hand && s.MyCharacters.Where(Free).OrderBy(c => c.Id).FirstOrDefault() is { } hc)
+        {
+            string open = $"Send {s.CharName(hc.Id)} on a mission...";
+            if (!gs.Has(open)) { gs.ClickViaMenu("Leaders"); gs.PlayRefresh(); }
+            Expect(gs.Click(open) && gs.PlannerOpen, $"click '{open}'");
+            gs.PlayRefresh();
+            var kinds = gs.ButtonTexts().ToList();
+            Expect(kinds.Any(x => x.StartsWith("Outreach", StringComparison.Ordinal)) && !kinds.Any(x => x.StartsWith("Diplomacy", StringComparison.Ordinal)),
+                "the Hand's planner offers Outreach, not Diplomacy: " + string.Join(" | ", kinds.Where(x => x.StartsWith("Outreach") || x.StartsWith("Diplomacy"))));
+            gs.Click("Close without sending"); gs.View.Select(-1); gs.PlayRefresh();
+        }
+
         bool Free(CharacterRecord c) => cm.IsAvailable(c) && c.Transit == null && c.System != null;
         int Ticks(string a, string b) => fm.FindPath(a, b, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
 
@@ -200,8 +216,9 @@ public partial class Main
         Expect(gs.SetTeam(uname, true), $"tick {uname} in the team");
         gs.PlayRefresh();
         var texts = gs.ButtonTexts().ToList();
-        Expect(gs.Enabled("Espionage") && texts.Any(t => t.StartsWith("Diplomacy - ", StringComparison.Ordinal) && t.Contains(uname) && t.Contains("cannot do")),
-            $"{uname} can spy, and Diplomacy is greyed with the unit named: " + string.Join(" | ", texts.Where(t => t.StartsWith("Espionage") || t.StartsWith("Diplomacy"))));
+        string dw = GameSession.KindWords(MissionKind.Diplomacy, me);
+        Expect(gs.Enabled("Espionage") && texts.Any(t => t.StartsWith(dw + " - ", StringComparison.Ordinal) && t.Contains(uname) && t.Contains("cannot do")),
+            $"{uname} can spy, and {dw} is greyed with the unit named: " + string.Join(" | ", texts.Where(t => t.StartsWith("Espionage") || t.StartsWith(dw))));
         Expect(gs.Click("Close without sending") && !gs.PlannerOpen, "close the planner");
         gs.View.Select(-1); gs.PlayRefresh();
 
@@ -212,7 +229,7 @@ public partial class Main
         gs.PlayRefresh();
         string card = $"F:{unit.Id}";
         var menu = gs.MenuOf(card);
-        Expect(menu.Contains("Espionage...") && !menu.Contains("Diplomacy..."), $"right-click {uname}: the missions it can do, and only those: {string.Join(" | ", menu)}");
+        Expect(menu.Contains("Espionage...") && !menu.Contains(dw + "..."), $"right-click {uname}: the missions it can do, and only those: {string.Join(" | ", menu)}");
         Expect(gs.RunMenu(card, "Espionage...") && gs.PlannerOpen && gs.Banner.Contains("Espionage: click the target system"), "pick Espionage: the planner opens and the map waits for the target: " + gs.Banner);
         gs.PlayRefresh();
         var mm = s.Missions;
@@ -289,7 +306,7 @@ public partial class Main
     int SendThroughPlanner(GameScreen gs, string open, string tick, MissionKind kind, string target, bool checkRefusedKind)
     {
         var s = gs.S; var mm = s.Missions;
-        string kw = GameSession.KindWords(kind);
+        string kw = GameSession.KindWords(kind, s.Player);
         if (!gs.Has(open)) { gs.ClickViaMenu("Leaders"); gs.PlayRefresh(); }
         Expect(gs.Click(open) && gs.PlannerOpen, $"click '{open}'");
         gs.PlayRefresh();
@@ -356,7 +373,7 @@ public partial class Main
     void CancelThroughList(GameScreen gs, MissionGroup m)
     {
         var s = gs.S; var mm = s.Missions;
-        string kw = GameSession.KindWords(m.Kind), target = m.Target; int id = m.Id;
+        string kw = GameSession.KindWords(m.Kind, s.Player), target = m.Target; int id = m.Id;
         // the working mission may have just won its target over ("System captured" pop-up): close any pop-up so the list takes the clicks
         for (int i = 0; i < 5 && gs.AnyModal; i++) gs.PressKey(Key.Escape);
         gs.View.Select(-1);

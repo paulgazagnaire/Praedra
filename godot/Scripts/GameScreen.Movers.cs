@@ -30,12 +30,12 @@ public partial class GameScreen
             if (m.Phase != MissionPhase.Outbound && m.Phase != MissionPhase.Returning) continue;
             string team = S.TeamOf(m);
             string label = m.Kind == MissionKind.Move ? $"{team} to {m.Path[^1]}, day {m.ArrivalDay}"
-                : m.Phase == MissionPhase.Outbound ? $"{GameSession.KindWords(m.Kind)}: {team} to {m.Target}, day {m.ArrivalDay}"
+                : m.Phase == MissionPhase.Outbound ? $"{GameSession.KindWords(m.Kind, Me)}: {team} to {m.Target}, day {m.ArrivalDay}"
                 : $"{team} home to {m.Path[^1]}, day {m.ArrivalDay}";
             // on the map: the kind of mission going out ("Espionage"), the team otherwise; under the mouse, who and the day
-            string name = m.Kind != MissionKind.Move && m.Phase == MissionPhase.Outbound ? GameSession.KindWords(m.Kind) : team;
+            string name = m.Kind != MissionKind.Move && m.Phase == MissionPhase.Outbound ? GameSession.KindWords(m.Kind, Me) : team;
             string point = m.Kind == MissionKind.Move ? $"{team} · day {m.ArrivalDay}"
-                : m.Phase == MissionPhase.Outbound ? $"{GameSession.KindWords(m.Kind)}: {team} · day {m.ArrivalDay}"
+                : m.Phase == MissionPhase.Outbound ? $"{GameSession.KindWords(m.Kind, Me)}: {team} · day {m.ArrivalDay}"
                 : $"{team}, home · day {m.ArrivalDay}";
             yield return new Mover(m.Kind == MissionKind.Move ? MoverKind.Leader : MoverKind.Mission, label, m.Path, null, 0, m.ArrivalDay, m.TotalTicks,
                 Name: name, Point: point);

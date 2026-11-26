@@ -33,7 +33,10 @@ public partial class GameScreen
         public int? TargetChar;
     }
 
-    const string MissionAdvice = "Worth it now: Espionage (see what an enemy system holds) and Diplomacy (win a neutral system's support before you take it). Sabotage is very hard: the team is usually caught.";
+    string MissionAdvice => $"Worth it now: Espionage (see what an enemy system holds) and {DiplomacyWord} (win a neutral system's support before you take it). Sabotage is very hard: the team is usually caught.";
+
+    /// <summary>The Diplomacy mission in your side's words: "Outreach" for the Hand (Paul 2026-11-26), "Diplomacy" for the Collective.</summary>
+    string DiplomacyWord => GameSession.KindWords(MissionKind.Diplomacy, Me);
 
     /// <summary>The kinds the screens offer, in this order; story and travel records are never offered (rule: m5-missions §Mission records: hidden).</summary>
     static readonly MissionKind[] OfferedKinds =
@@ -60,7 +63,7 @@ public partial class GameScreen
         if (pending.Count == 0 && list.Count == 0) { Line("No mission under way.", Dim); Note(MissionAdvice); } // the empty list says what is worth trying
         foreach (var p in pending)
         {
-            Line($"{GameSession.KindWords(p.Kind)} on {p.Target}", Pending, 16);
+            Line($"{GameSession.KindWords(p.Kind, Me)} on {p.Target}", Pending, 16);
             Line($"Team: {S.TeamWords(p.Characters, p.SpecialForces)}", null, 13);
             OrderLine(p.Sequence, $"Leaves {p.Home} as soon as the clock moves, arrives day {p.ArrivalDay}.", 13);
         }
@@ -72,14 +75,14 @@ public partial class GameScreen
     {
         Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
         string target = m.Target;
-        Act($"{GameSession.KindWords(m.Kind)} on {target}", () => { if (G.TryFindSystem(target, out int i)) _view.Centre(i); }, "Centre the map on the target");
+        Act($"{GameSession.KindWords(m.Kind, Me)} on {target}", () => { if (G.TryFindSystem(target, out int i)) _view.Centre(i); }, "Centre the map on the target");
         Line($"Team: {S.TeamOf(m)}", null, 13);
         Line(char.ToUpperInvariant(S.PhaseWords(m)[0]) + S.PhaseWords(m)[1..] + ".", m.Phase == MissionPhase.Working ? Good : null, 13);
         if (m.Phase is MissionPhase.ReturnPending or MissionPhase.Returning) return;
         long cancelSeq = S.CancelSeqOf(m);
         if (cancelSeq >= 0) { OrderLine(cancelSeq, "Ordered: cancel this mission.", 13); return; }
         var mm = m;
-        Act($"Cancel the {GameSession.KindWords(m.Kind)} mission on {target}", () => CancelMission(mm),
+        Act($"Cancel the {GameSession.KindWords(m.Kind, Me)} mission on {target}", () => CancelMission(mm),
             m.Phase == MissionPhase.Working ? "The team stops and comes home. Starts as soon as the clock moves." : "A mission can be cancelled once the team is at the target.",
             m.Phase != MissionPhase.Working);
     }
@@ -87,7 +90,7 @@ public partial class GameScreen
     void CancelMission(MissionGroup m)
     {
         S.SubmitCancelMission(m);
-        Sent($"cancel the {GameSession.KindWords(m.Kind)} mission on {m.Target}", m.Target);
+        Sent($"cancel the {GameSession.KindWords(m.Kind, Me)} mission on {m.Target}", m.Target);
     }
 
     // ================================================================== special forces at a system (own units only)
@@ -108,15 +111,15 @@ public partial class GameScreen
 
     string SpecialForceState(EconObject o) =>
         !o.Completed ? "in training"
-        : S.MissionOfSpecialForce(o.Id) is { } m ? $"on a {GameSession.KindWords(m.Kind)} mission"
-        : S.PendingMissionOfSpecialForce(o.Id) is { } p ? $"leaves on a {GameSession.KindWords(p.Kind)} mission"
+        : S.MissionOfSpecialForce(o.Id) is { } m ? $"on a {GameSession.KindWords(m.Kind, Me)} mission"
+        : S.PendingMissionOfSpecialForce(o.Id) is { } p ? $"leaves on a {GameSession.KindWords(p.Kind, Me)} mission"
         : "ready";
 
     string SpecialForceSkills(EconObject o)
     {
         var k = S.Host.Troops.Data.SpecialForce(o.Class);
         if (k == null) return "";
-        var kinds = OfferedKinds.Where(x => Mm.Data.TryGet(x, out var r) && r.AvailableTo(Me) && (k.MissionBit & r.SpecialForceMask) != 0).Select(GameSession.KindWords).ToList();
+        var kinds = OfferedKinds.Where(x => Mm.Data.TryGet(x, out var r) && r.AvailableTo(Me) && (k.MissionBit & r.SpecialForceMask) != 0).Select(x => GameSession.KindWords(x, Me)).ToList();
         return $"Espionage {k.Espionage}, combat {k.Combat}, leadership {k.Leadership}. Missions: {(kinds.Count == 0 ? "none" : string.Join(", ", kinds))}.";
     }
 
@@ -144,7 +147,7 @@ public partial class GameScreen
         if (home == null) return;
         // worked out at the click: no planner checks on every rebuild, and never stale under a held hover card
         RightClickMenu(card, () => MissionKindsFor(home, character, unit)
-            .Select(k => ($"{GameSession.KindWords(k)}...", (Action)(() => QuickMission(home, character, unit, k)))).ToArray());
+            .Select(k => ($"{GameSession.KindWords(k, Me)}...", (Action)(() => QuickMission(home, character, unit, k)))).ToArray());
     }
 
     /// <summary>The kinds the planner would open for a team of just this one at <paramref name="home"/> (same filter and checks as the planner).</summary>
@@ -282,7 +285,7 @@ public partial class GameScreen
             var kk = k;
             string why = KindRefusal(k);
             bool chosen = p.Kind == k;
-            var b = Act($"{(chosen ? "> " : "")}{GameSession.KindWords(k)}{(why != null ? " - " + why : "")}", () => ChooseKind(kk), GameSession.KindHelp(k), why != null);
+            var b = Act($"{(chosen ? "> " : "")}{GameSession.KindWords(k, Me)}{(why != null ? " - " + why : "")}", () => ChooseKind(kk), GameSession.KindHelp(k, Me), why != null);
             if (chosen) b.AddThemeColorOverride("font_color", Pending);
         }
         if (p.Kind is MissionKind kind && KindRefusal(kind) != null) { p.Kind = null; p.Target = null; p.TargetChar = null; }
@@ -291,7 +294,7 @@ public partial class GameScreen
         if (p.Kind is not MissionKind sel) { CloseRow(); return; }
         if (sel == MissionKind.TrainTalent) { TrainingStep(p); CloseRow(); return; } // no map pick: the team trains where it stands
         Heading("3. Target");
-        Line(GameSession.KindHelp(sel), Dim, 13);
+        Line(GameSession.KindHelp(sel, Me), Dim, 13);
         if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-harvester §5
         if (sel == MissionKind.BurnTheBooks) Line("The target is Charter.", Dim, 13); // rule: m5-missions §6b Target
         if (sel == MissionKind.Rescue)
@@ -320,7 +323,7 @@ public partial class GameScreen
                      (rec.Foilable ? " Enemy units at the target may catch the team." : ""), Dim, 13);
             }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
-            Act($"Send: {GameSession.KindWords(sel)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in the Log (E).", chk.Reason != null);
+            Act($"Send: {GameSession.KindWords(sel, Me)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in the Log (E).", chk.Reason != null);
         }
         CloseRow();
     }
@@ -363,7 +366,7 @@ public partial class GameScreen
         _pickMission = true; _moveFleet = -1; _moveHq = false; _moveChar = -1;
         _view.PickMode = true;
         _mgLayer.Visible = true;   // only a fleet's move sets the windows aside (Ponytail on #348)
-        _moveBanner = $"{GameSession.KindWords(_plan.Kind.Value)}: click the target system (Esc cancels)";
+        _moveBanner = $"{GameSession.KindWords(_plan.Kind.Value, Me)}: click the target system (Esc cancels)";
         _panelDirty = true; _panelTimer = 0;
         RefreshTop();
     }
@@ -372,7 +375,7 @@ public partial class GameScreen
     {
         if (_plan?.Kind is not MissionKind k) { CancelMove(); return; }
         int h = _view.Hovered;
-        string kw = GameSession.KindWords(k);
+        string kw = GameSession.KindWords(k, Me);
         if (h < 0) { _view.PathPreview = null; _moveBanner = $"{kw}: click the target system (Esc cancels)"; RefreshTop(); return; }
         string to = G.Systems[h].Name;
         var chk = Mm.CheckStart(PlanOrder(k, to, null));
@@ -391,7 +394,7 @@ public partial class GameScreen
         if (_plan?.Kind is not MissionKind k) { CancelMove(); return; }
         string to = G.Systems[idx].Name;
         var chk = Mm.CheckStart(PlanOrder(k, to, null));
-        if (chk.Reason != null) { Toast($"{GameSession.KindWords(k)} on {to}: {GameSession.WhyMission(chk.Reason)}."); return; }
+        if (chk.Reason != null) { Toast($"{GameSession.KindWords(k, Me)} on {to}: {GameSession.WhyMission(chk.Reason)}."); return; }
         _plan.Target = to; _plan.TargetChar = null;
         CancelMove();
     }
@@ -406,6 +409,6 @@ public partial class GameScreen
         string team = S.TeamWords(p.Chars, p.Sfs);
         _plan = null;
         ShowTab(DrawerTab.Missions);
-        Sent($"{GameSession.KindWords(k)} on {chk.Target} by {team}, arrives day {chk.ArrivalDay}", chk.Target);
+        Sent($"{GameSession.KindWords(k, Me)} on {chk.Target} by {team}, arrives day {chk.ArrivalDay}", chk.Target);
     }
 }

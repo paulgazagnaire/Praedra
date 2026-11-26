@@ -143,7 +143,7 @@ public partial class GameScreen
             var acts = Ui.HBox(Ui.Block);
             if (CanMoveAlone(c)) acts.AddChild(Small(Named(Ui.Button("Move...", () => StartCharMove(id), $"Move {name} alone: then click a destination system. The route and the arrival day are shown before you confirm."), $"Move {name}...")));
             if (CanJoin(c)) acts.AddChild(Small(Named(Ui.Button("Mission...", () => OpenPlanner(c.System, id), $"Send {name} on a mission: pick the kind, more team members at the same system, and the target."), $"Send {name} on a mission...")));
-            else if (S.PendingMissionOf(id) is { } pm) OrderLine(pm.Sequence, $"Ordered: {GameSession.KindWords(pm.Kind)} on {pm.Target}", Ui.Small);
+            else if (S.PendingMissionOf(id) is { } pm) OrderLine(pm.Sequence, $"Ordered: {GameSession.KindWords(pm.Kind, Me)} on {pm.Target}", Ui.Small);
             if (acts.GetChildCount() > 0) { Add(Ui.Space(Ui.Gap)); Add(acts); }
             else acts.Free(); // never added to the tree: free it, or it leaks a node on every refresh (QA-70)
         }
