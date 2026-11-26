@@ -158,6 +158,6 @@ public partial class GameScreen
         var chk = Mm.CheckStart(PlanOrder(MissionKind.TrainTalent, p.Home, null));
         if (chk.Reason != null) Line($"{p.Home}: {GameSession.WhyMission(chk.Reason)}.", Bad);
         Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
-        Act($"Send: {GameSession.KindWords(MissionKind.TrainTalent, Me)} on {p.Home}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in the Log (E).", chk.Reason != null);
+        Act($"Send: {GameSession.KindWords(MissionKind.TrainTalent, Me)} on {p.Home}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Logs (E).", chk.Reason != null);
     }
 }

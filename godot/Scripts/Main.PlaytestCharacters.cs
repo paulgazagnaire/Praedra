@@ -82,7 +82,7 @@ public partial class Main
         Expect(gs.Click("Leaders") && gs.CharactersOpen, "open the Leaders tab again");
         gs.PlayRefresh();
         Expect(gs.PanelText().Contains($"aboard fleet {fleet.Name} at {fleet.At}"), "the list says the character is aboard the fleet");
-        Expect(gs.Click("Close window") && !gs.CharactersOpen, "the window's cross closes the Leaders list");
+        Expect(gs.WindowOpen && gs.Click("Advisor") && !gs.CharactersOpen, "the bar's Sibyl cell (× while open) closes the Leaders list");
 
         // detach again by dragging onto the planet's Leaders (leaves the later checks a fleet without riders)
         OpenFleetTab(gs, fleet, "Command");

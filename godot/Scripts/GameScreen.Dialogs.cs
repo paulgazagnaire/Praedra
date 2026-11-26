@@ -49,7 +49,7 @@ public partial class GameScreen
             ("Fleets", "F", () => ShowTab(DrawerTab.Fleets), "All your fleets: where they are and where they go"),
             ("Leaders", "C", () => ShowTab(DrawerTab.Leaders), "Your leaders, and the enemy leaders you have seen"),
             ("Missions", "M", () => ShowTab(DrawerTab.Missions), "Your agents' missions"),
-            ("Log", "E", () => ShowTab(DrawerTab.Log), "Every message, by kind"),   // the tab's own name
+            ("Logs", "E", () => ShowTab(DrawerTab.Log), "Every message, by kind"),   // the tab's own name
             ("Sector", "S", ToggleSectorView, "Every system of a sector at a glance, with its planet, buildings, fleets and forces (or click a sector on the map)"),
         })
         {
@@ -346,7 +346,7 @@ public partial class GameScreen
             "Missions: Leaders (C), then pick a team, a kind and a target.",
             "Money: mines dig Raw, refineries make Refined, which you spend. Stay under the Upkeep limit.",
         }),
-        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Log · S sector · V layer · L lanes · Home whole map · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
+        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Logs · S sector · V layer · L lanes · Home whole map · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
     };
 
     void BuildHowTo()

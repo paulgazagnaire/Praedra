@@ -76,7 +76,7 @@ public partial class Main
                 gs.PlayRefresh();
                 Expect(gs.PanelText().Contains($"Travelling out to {neutral}, arrives day {dip.ArrivalDay}"), "the Missions list shows the trip out and its arrival day: " + gs.PanelText().Replace("\n", " / "));
                 Expect(gs.Has($"Cancel the Diplomacy mission on {neutral}") && !gs.Enabled($"Cancel the Diplomacy mission on {neutral}"), "Cancel is greyed out while the team travels");
-                gs.Click("Close window");
+                if (gs.WindowOpen) gs.Click("Advisor");
             }
             Expect(OutcomeWithin(gs, "Diplomacy", neutral, dip.ArrivalDay + rec.TimerMin + rec.TimerSpread), $"an outcome message for Diplomacy on {neutral} within the expected days");
 
@@ -388,6 +388,6 @@ public partial class Main
         Expect(s.Messages.Skip(before).Any(x => x.Text.StartsWith($"{kw} on {target} cancelled", StringComparison.Ordinal)), "message: the mission was cancelled: " + string.Join(" | ", s.Messages.Skip(before).Select(x => x.Text)));
         Expect(RunUntil(gs, () => mm.Get(id) == null, 120), "the team came home");
         Expect(s.Messages.Any(x => x.Text.Contains("free for new orders")), "message: the team is back");
-        gs.Click("Close window"); gs.PlayRefresh();
+        if (gs.WindowOpen) gs.Click("Advisor"); gs.PlayRefresh();
     }
 }
