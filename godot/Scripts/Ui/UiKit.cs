@@ -100,8 +100,6 @@ public static class Ui
     /// <summary>BitPotion (Joeb Rogers, CC BY 4.0), the pixel face of the names. The file is shared with the sector tiles, so it gets no
     /// fallback of its own: a fallback's taller line would make every line that uses the face taller.</summary>
     static FontFile PixelFace => _pixel ??= LoadFont("res://fonts/BitPotion.ttf");
-    /// <summary>BitPotion as it is, with its own line: the top bar's words (Paul's "ui-update-nov-15" frame, 2026-11-15).</summary>
-    public static Font Pixel => PixelFace;
 
     static FontFile _operator, _operatorBold;
     /// <summary>Pixel Operator (Jayvee Enaguas, CC0): the face of the top bar and Sibyl's panel since Paul's frames "ui-update-nov-24" and
