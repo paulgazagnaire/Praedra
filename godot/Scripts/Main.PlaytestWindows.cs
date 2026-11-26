@@ -362,11 +362,21 @@ public partial class Main
         // the planted fleet may have left sys by now: the days above run against the real AI, which can attack sys (a Defensive fleet fights,
         // and a beaten one retreats). Its own tile's triangles then open it.
         string? fat = s.Game.State.Fleets.TryGetValue(fid, out var wt) && wt.Ships.Count > 0 && wt.Transit == null ? wt.At : null;
-        if (fat != sys) GD.Print($"  (Window Test now at {fat ?? "no system"}, not {sys}: its tile there is clicked)");
+        int tid = fid;
+        if (fat == null)
+        {
+            // sunk or on a lane: a fresh Window Test at a system you hold (a safe one first), so the check always runs
+            var held = s.MyCharacters.Select(c => cm.LocationOf(c)).Where(x => x != null && s.OwnerOf(x) == me).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+            fat = held.FirstOrDefault(Safe) ?? held.FirstOrDefault();
+            if (fat != null) { tid = fm.AddFleet(me, "Window Test", new[] { transport, transport }, fat); gs.PlayRefresh(); }
+            GD.Print($"  (Window Test gone or moving: a fresh one is planted at {fat ?? "no system"} and its tile is clicked)");
+        }
+        else if (fat != sys) GD.Print($"  (Window Test now at {fat}, not {sys}: its tile there is clicked)");
+        Expect(fat != null, "a system you hold to plant the fleet check at");
         if (fat != null)
         {
             gs.TileClick(fat, "fleets"); gs.PlayRefresh();
-            Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the fleet windows");
+            Expect(gs.MgmtKeys.Contains($"Fleet {tid}"), "a click on its triangles opens the fleet windows");
         }
         gs.TileClick(sys, "ground"); gs.PlayRefresh();
         Expect(gs.MgmtKeys.Contains($"Ground {sys}"), "a click elsewhere on the tile opens its Ground window");

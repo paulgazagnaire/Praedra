@@ -13,8 +13,8 @@ using FileAccess = Godot.FileAccess;
 namespace PraedraViewer;
 
 /// <summary>
-/// How hard the game is: the Classic head start (StartPreset, setup-victory/02) and how well the computer opponent plays (the core's AiLevel,
-/// ai/09 §6). One choice drives both.
+/// How hard the game is: how well the computer opponent plays (the core's AiLevel, ai/09 §6) and, for Easy only, the Classic head start
+/// (StartPreset, setup-victory/02). Hard keeps the Medium start (Paul 2026-11-26: smarter, never richer). One choice drives both.
 /// </summary>
 public enum Preset { Easy, Medium, Hard }
 
@@ -63,15 +63,14 @@ public static class GameBoot
 
     // ------------------------------------------------------------------ new game / load
 
-    /// <summary>The core's start preset for a side and difficulty. Easy exists for the Collective only, so Hand/Easy plays MedE.</summary>
+    /// <summary>The core's start preset for a side and difficulty. Easy exists for the Collective only, so Hand/Easy plays MedE. Hard plays the
+    /// Medium start: Hard is a smarter AI, never a richer one (Paul 2026-11-26, "Smarter only"; the hard_a/hard_e presets stay in the data).</summary>
     public static StartPreset PresetFor(Side player, Preset p) => (player, p) switch
     {
         (Side.Collective, Preset.Easy) => StartPreset.Easy,
         (Side.Hand, Preset.Easy) => StartPreset.MedE,
-        (Side.Collective, Preset.Medium) => StartPreset.MedA,
-        (Side.Hand, Preset.Medium) => StartPreset.MedE,
-        (Side.Collective, _) => StartPreset.HardA,
-        _ => StartPreset.HardE,
+        (Side.Collective, _) => StartPreset.MedA,
+        _ => StartPreset.MedE,
     };
 
     /// <summary>Display name of a space battle ruleset (start screen, top bar, How to play, battle report).</summary>
