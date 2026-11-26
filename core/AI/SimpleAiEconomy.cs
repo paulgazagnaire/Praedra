@@ -649,7 +649,8 @@ public sealed partial class SimpleAi
     /// RefitBelowPercent (AI trainer 2026-11-26; Paul: the best navy possible): when the best warship a free shipyard can build does not fit the
     /// room but the refined pool pays for it twice over, scrap idle armed warships (at a held system, not moving, no pending bombardment or
     /// assault) whose strength per upkeep is below RefitBelowPercent of that ship's, worst first, until its upkeep is freed or
-    /// RefitShipsPerReview are gone. The room is used at a later review. Transports, carriers and the harvester are never refitted.
+    /// RefitShipsPerReview are gone. The room is used at a later review. Transports, carriers and the harvester are never refitted, nor a
+    /// fleet's last ship while leaders ride it or a prisoner is held aboard.
     /// rule: ai tuning, SimpleAiParams.RefitBelowPercent; m2-maintenance (scrapping frees the upkeep).
     /// </summary>
     private void PlanRefit(string? fighter)
@@ -677,6 +678,9 @@ public sealed partial class SimpleAi
             if (use * 100 >= bestUse * _p.RefitBelowPercent) continue;
             var f = _h.Fleets.FleetOfShip(o.Id);
             if (f == null || f.Transit != null || f.At == null || !Held(f.At) || Pending(f)) continue;
+            // the fleet's last ship dissolves it (m3-fleets invariant 1): its riders would only be set down, but a prisoner held aboard would go
+            // free (characters §Riding, QA-7), so such a ship is kept
+            if (f.Ships.Count == 1 && f.Squadrons.Count == 0 && _h.Characters.InPlay.Any(c => c.AttachedFleet == f.Id || c.HeldAboard == f.Id)) continue;
             cands.Add((use, o.Id, m));
         }
         int done = 0;
