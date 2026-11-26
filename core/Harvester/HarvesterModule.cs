@@ -140,7 +140,7 @@ public sealed class HarvesterModule
     }
 
     /// <summary>
-    /// <c>HasHarvester(owner, system)</c>: true when a completed harvester of <paramref name="owner"/> is in a fleet at the system (not in hyperspace).
+    /// <c>HasHarvester(owner, system)</c>: true when a completed harvester of <paramref name="owner"/> is in a fleet at the system (not in transit).
     /// Wired to <see cref="Missions.MissionModule.HasHarvester"/>. rule: m5-harvester §5.
     /// </summary>
     public bool HasHarvester(Side owner, string system) =>

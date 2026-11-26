@@ -402,7 +402,7 @@ public partial class GameScreen
             {
                 InfraTab.Mines => "Each mine digs one raw material every cycle, about the numbers shown. The cycle is longer when support is low.",
                 InfraTab.Refineries => "Each refinery turns one raw material into one refined every cycle, about the numbers shown.",
-                _ => "Shields and batteries fight for the planet when it is attacked; a Sensor Station watches the routes around it.",
+                _ => "Shields and batteries fight for the planet when it is attacked; a Sensor Station watches the lanes around it.",
             } + $"\nClick: the {kinds} here (right-click one to scrap it), and what the construction yards can build of them.";
         }
         var cell = CellFrame(w, n, t, count, left, right, ink, share, track, tip, out var l);

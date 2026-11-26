@@ -473,7 +473,7 @@ public sealed partial class GameSession
         Praedra.Core.Harvester.HarvesterReject.HarvesterLimit => "only one harvester per system: this system already has one (build it at another shipyard)",
         "SystemDestroyed" => "that system was destroyed by the harvester",
         RejectReason.NoUpkeep => "not enough free upkeep for that many (build fewer, or add mines and refineries)",
-        RejectReason.NotOnRoute => "a Sensor Station can only stand on a system on a hyperspace route",
+        RejectReason.NotOnRoute => "a Sensor Station can only stand on a system on a lane",
         RejectReason.CannotScrap => "special forces cannot be scrapped",
         RejectReason.GameOver => "the game is over",
         RejectReason.ShipNotInFleet => "that ship is not in the fleet any more",

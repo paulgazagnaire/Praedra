@@ -273,7 +273,7 @@ public static class AnchoredDealer
         return ISqrt(dx * dx + dy * dy);
     }
 
-    /// <summary>Distance to the nearest of a set of systems, isqrt(dx*dx + dy*dy) / divisor (free hyperspace: the straight line). rule: m5-setup-and-victory §Mode Anchored</summary>
+    /// <summary>Distance to the nearest of a set of systems, isqrt(dx*dx + dy*dy) / divisor (free travel: the straight line). rule: m5-setup-and-victory §Mode Anchored</summary>
     private static int[] LaneTimes(Galaxy g, IEnumerable<int> sources, int divisor)
     {
         int n = g.Systems.Count;

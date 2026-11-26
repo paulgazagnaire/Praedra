@@ -50,7 +50,7 @@ public sealed record GameSettings
     public bool CollectiveBaseDraw { get; init; } = true;
 
     // ---- travel. rule: m1-travel §Rule (Decided Paul 2026-10-16)
-    /// <summary>Routes (DEFAULT, New: free travel plus faster hyperspace routes) or Straight (Classic yardstick: the Classic straight line, no routes).</summary>
+    /// <summary>Routes (DEFAULT, New: free travel plus faster lanes) or Straight (Classic yardstick: the Classic straight line, no routes).</summary>
     public Praedra.Core.Travel.TravelMode Travel { get; init; } = Praedra.Core.Travel.TravelMode.Routes;
 
     // ---- fleets. rule: m1-forced-stop-and-blockade §Pull-out (Decided Paul 2026-10-16: only gravity-well ships stop fleets in flight)

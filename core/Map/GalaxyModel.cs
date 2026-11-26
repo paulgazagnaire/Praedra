@@ -39,7 +39,7 @@ public sealed class Sector
 }
 
 /// <summary>
-/// An undirected route link (still called a lane in code): two systems joined by an official hyperspace route, major (tier 1)
+/// An undirected route link: two systems joined by an official lane, major (tier 1)
 /// or minor (tier 2). Since 2026-10-16 ships fly anywhere; a link only makes the stretch between its two ends faster. Identity is the pair of names (m1-galaxy-data DEFAULT: no lane id). A is the smaller name (ordinal).
 /// </summary>
 public sealed class Lane
@@ -106,7 +106,7 @@ public sealed class Galaxy
     /// </summary>
     public IReadOnlyList<int> NearOf(int system) => _near[system];
 
-    /// <summary>True when the system lies on a hyperspace route (has at least one route link). rule: m1-travel §Rule, m5-fog-and-hq N4 (Sensor Stations).</summary>
+    /// <summary>True when the system lies on a lane (has at least one route link). rule: m1-travel §Rule, m5-fog-and-hq N4 (Sensor Stations).</summary>
     public bool OnRoute(int system) => _neighbours[system].Length > 0;
 
     /// <summary>The route link between two systems, or null.</summary>

@@ -107,7 +107,7 @@ public partial class GameScreen
             string why = null;
             if (!cons.IsResearched(Me, r.Name)) why = NotResearched;
             else if (r.Category == ObjectCategory.Facility && FacilityKinds.TryParse(r.Name, out var kind) && eco.CheckPlace(system, kind) is { } place)
-                why = place == "OnePerPlanet" ? "one per planet: there is one" : place == "NotOnRoute" ? "only on a route system" : "no free slot";
+                why = place == "OnePerPlanet" ? "one per planet: there is one" : place == "NotOnRoute" ? "only on a lane" : "no free slot";
             else if (r.Name == Praedra.Core.Harvester.HarvesterModule.ShipClass && S.HasOwnHarvesterAt(system)) why = "one per system: there is one";
             else if ((long)r.Maintenance * _buildQty > cap - dealt) why = "no upkeep room";
             bool usable = why == null;
@@ -179,7 +179,7 @@ public partial class GameScreen
         if (sc.FighterCapacity > 0) parts.Add($"carries {sc.FighterCapacity} fighter squadrons");
         if (sc.TroopCapacity > 0) parts.Add($"carries {sc.TroopCapacity} regiments");
         if (sc.Bombardment > 0) parts.Add($"bombardment {sc.Bombardment}");
-        if (sc.GravityWellProjector > 0) parts.Add("interdictor: pulls enemy fleets out of hyperspace");
+        if (sc.GravityWellProjector > 0) parts.Add("interdictor: pulls enemy fleets passing its system out of the deep, on a lane or off it");
         return string.Join(", ", parts) + ".";
     }
 

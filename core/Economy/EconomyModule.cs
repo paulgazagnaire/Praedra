@@ -227,7 +227,7 @@ public sealed class EconomyModule
     /// </summary>
     public string? CheckPlace(string system, FacilityKind kind, int count = 1)
     {
-        // rule: m5-fog-and-hq §N4 (Decided, Paul 2026-10-16): a Sensor Station only on a system on a hyperspace route.
+        // rule: m5-fog-and-hq §N4 (Decided, Paul 2026-10-16): a Sensor Station only on a system on a lane.
         if (FacilityKinds.RouteOnly(kind) && !(_galaxy.TryFindSystem(system, out int at) && _galaxy.OnRoute(at))) return "NotOnRoute";
         // rule: m5-fog-and-hq §N4 (economy/15 §2): one per planet; counts finished, queued and in-delivery stations.
         if (FacilityKinds.OnePerPlanet(kind) && (count > 1 || OfKindAt(system, kind) > 0)) return "OnePerPlanet";

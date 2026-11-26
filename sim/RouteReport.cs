@@ -9,14 +9,14 @@ using Praedra.Core.Map;
 using Praedra.Core.Setup;
 using Praedra.Core.Travel;
 
-// Route report: how AI games use the hyperspace routes (galaxy-shape test, Paul 2026-10-26). Plays AI-vs-AI games and reads each fleet move
+// Route report: how AI games use the lanes (galaxy-shape test, Paul 2026-10-26). Plays AI-vs-AI games and reads each fleet move
 // the moment it is accepted (its planned path), the deliveries' paths, the battles and the holdings. Reads state and events only; draws no
 // random numbers itself.
 internal static class RouteReport
 {
     public const string Usage = """
           dotnet run --project sim -- routes [--hand-level hard] [--collective-level medium] [--seeds 1-8] [--days 3000] [--jobs 4] [--settings K=V,...] [--dump replay.json]
-        routes plays AI-vs-AI games (fog on, MedA start) and reports how fleets and deliveries use the hyperspace routes: the share of flight time
+        routes plays AI-vs-AI games (fog on, MedA start) and reports how fleets and deliveries use the lanes: the share of flight time
         and distance on great routes (tier 1), minor routes (tier 2) and open space, the time saved against flying straight, the busiest links and
         routes, where battles and captures happen, and who holds each region every 250 days. --dump writes a replay (owners and fleets every 25
         days, battles, legs flown per link) as JSON for a map viewer.

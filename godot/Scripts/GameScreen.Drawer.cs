@@ -556,7 +556,7 @@ public partial class GameScreen
         foreach (var (k, what) in new[]
         {
             ("Space", "play / pause"), ("N", "one day"), ("1 - 4", "speed"), ("Q  F  C  M  E", "Needs you, Fleets, Leaders, Missions, Log"),
-            ("S", "sector window"), ("V", "next map layer"), ("L", "routes on / off"), ("/", "search"), ("G", "goal"), ("Ctrl/Cmd + S", "quick save"),
+            ("S", "sector window"), ("V", "next map layer"), ("L", "lanes on / off"), ("/", "search"), ("G", "goal"), ("Ctrl/Cmd + S", "quick save"),
             ("Wheel, + -", "zoom"), ("Drag, arrows", "pan"), ("Home", "whole map"), ("Esc", "cancel / deselect"),
         })
             Stat(k, what);
