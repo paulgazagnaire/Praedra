@@ -33,7 +33,16 @@ public sealed partial class SimpleAi
                 ? new AiPlanNow("Strike the Hearth", $"the Hearth was seen at {hq}", "")
                 : new AiPlanNow("Hunt", "the Hearth is unknown", ""));
         if (_side == Side.Collective && OwnHearth() is { } home)
+        {
             list.Add(new AiPlanNow("Hide", $"the Hearth is at {home}", _p.SafeHearth ? "moves by risk" : ""));
+            if (ShellHolesOn > 0)
+            {
+                var held = HeldSystems().Where(s => _h.Economy.SlotsOf(s).Populated).ToList();
+                var holes = BoltHoles(home, held).ToList();
+                int walled = holes.Count(w => CompleteShieldsAt(w) >= _p.FortifyShields);
+                list.Add(new AiPlanNow("Shell game", $"bolt-holes: {string.Join(", ", holes)}", $"{walled} of {holes.Count} walled"));
+            }
+        }
         return list;
     }
 }

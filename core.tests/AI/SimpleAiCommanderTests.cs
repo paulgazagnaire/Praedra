@@ -21,6 +21,8 @@ public class SimpleAiCommanderTests
         var p = new SimpleAiParams();
         Assert.Equal(0, p.FortifyWorlds);
         Assert.False(p.FrontPlans);
+        Assert.Equal(0, p.ShellHoles);
+        Assert.Equal(0, p.RoomFloor);
     }
 
     private static (int Shields, int Batteries) DefencesAt(GameHost host, string system, Side side)
@@ -68,6 +70,34 @@ public class SimpleAiCommanderTests
         });
         foreach (var h in hit) _out.WriteLine(h);
         Assert.True(hit.Count(h => !h.EndsWith("(0, 0)")) >= 3, "the Collective fortified the Hearth's world in fewer than 3 of 4 games");
+    }
+
+    // The Shell game (the Collective's plan 2): with ShellHoles 2 the Collective walls bolt-holes besides the Hearth's world, so in most games
+    // three worlds stand with 2 complete shields (m3-assault check 4) by day 700 in most games (seeds 1-4, Medium mirror). Without it only the
+    // Hearth's worlds are walled (more than one only when the Hearth has moved).
+    [Fact]
+    public void TheCollectiveWallsBoltHoles()
+    {
+        int Walled(GameHost host)
+        {
+            var bySystem = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var o in host.Economy.Objects)
+                if (o.Completed && o.Category == ObjectCategory.Facility && host.Economy.OwnerOf(o) == Side.Collective
+                    && host.Data.Defenses.TryGetClass(o.Class, out var c) && c.Job == DefenseJob.ShieldGenerator)
+                    bySystem[o.System!] = bySystem.GetValueOrDefault(o.System!) + 1;
+            return bySystem.Values.Count(n => n >= 2);
+        }
+        var walled = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
+        {
+            var on = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var off = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            new AiMatch(on, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium) with { FortifyWorlds = 1, ShellHoles = 2 }).RunTo(700);
+            new AiMatch(off, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium) with { FortifyWorlds = 1 }).RunTo(700);
+            return (on: Walled(on), off: Walled(off));
+        });
+        foreach (var w in walled) _out.WriteLine($"walled worlds: with bolt-holes {w.on}, without {w.off}");
+        Assert.True(walled.Count(w => w.on >= 3) >= 3, "the Collective walled its Hearth's world and 2 bolt-holes in fewer than 3 of 4 games");
+        Assert.True(walled.Sum(w => w.on) > walled.Sum(w => w.off), "bolt-holes added no walled world");
     }
 
     // Paul 2026-11-26: different strategies per front. Two fronts at once with FrontPlans run different plans whenever both are up (seeds 1-8,

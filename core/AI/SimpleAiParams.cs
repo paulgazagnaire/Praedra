@@ -377,6 +377,20 @@ public sealed record SimpleAiParams
     /// MaxBombardmentsPer30Days, instead of leaving at once. Off = it leaves (DEFAULT, the AI before 2026-11-26).
     /// </summary>
     public bool SiegeShields { get; init; }
+    /// <summary>
+    /// Room floor (AI trainer 2026-11-26, QA-127): while the side's free upkeep room is under this, its construction yards build mines and
+    /// refineries before anything else and found no construction yard from the margin (YardsFromMargin). 0 = off (DEFAULT).
+    /// </summary>
+    public int RoomFloor { get; init; }
+    /// <summary>
+    /// Shell game (AI trainer 2026-11-26; the adaptive commander's Collective plan 2): with fog and SafeHearth, the Collective walls this many
+    /// bolt-holes besides the Hearth's world (FortifyShields shields and FortifyBatteries batteries each, as Fortify; quiet held worlds far from
+    /// the Hand, walled ones kept first), and a moving Hearth prefers a walled world by ShellWalledScore (m5-fog-and-hq §F6; m3-assault check 4:
+    /// two complete shields forbid an assault). 0 = off (DEFAULT).
+    /// </summary>
+    public int ShellHoles { get; init; }
+    /// <summary>Shell game: score a walled world (FortifyShields complete shields) gets as the Hearth's destination; a lane of distance from the Hand is 1000.</summary>
+    public int ShellWalledScore { get; init; } = 3000;
     /// <summary>Campaign preparation: Espionage looks out at once on the sector's enemy worlds whose picture is older than CampaignLookDays, each worth CampaignLookValue.</summary>
     public int CampaignLooks { get; init; } = 2;
     public int CampaignLookDays { get; init; } = 60;

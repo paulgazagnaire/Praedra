@@ -513,6 +513,7 @@ public sealed partial class SimpleAi
             int ticks = TicksCached(at, s, speed);
             if (ticks == int.MaxValue) continue;
             long score = Math.Min(room[i], 8) * 1000L - r * 10L - ticks - sectorShort * (long)_p.HearthSectorLossScore;
+            if (ShellHolesOn > 0 && CompleteShieldsAt(s) >= _p.FortifyShields) score += _p.ShellWalledScore; // rule: ai tuning, SimpleAiParams.ShellHoles (m3-assault check 4)
             if (safe) { if (score > bestScore) { bestScore = score; best = s; } }
             else if (score - shortBy * (long)_p.HearthSectorLossScore > refugeScore) { refugeScore = score - shortBy * (long)_p.HearthSectorLossScore; refuge = s; }
         }
