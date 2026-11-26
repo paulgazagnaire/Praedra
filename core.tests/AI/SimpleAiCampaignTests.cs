@@ -147,8 +147,7 @@ public class SimpleAiCampaignTests
             $"seed {r.Seed}: {string.Join(" + ", r.Sectors)}, {r.Lanes} lanes apart"));
     }
 
-    // m1-clock-and-orders K12 (with AI): the other campaigns ride in the save too.
-    // QA-125: a Hard save (two campaigns) played on at Medium (one slot) drops the extra campaign and goes on; the trim once left an empty
+    // m1-clock-and-orders K12 (with AI), QA-125: a Hard save (two campaigns) played on at Medium (one slot) drops the extra campaign and goes on; the trim once left an empty
     // list and PlanCampaign threw "Sequence contains no elements" the first time the slot needed a new sector (MedA seeds 7, 23, 61, 88).
     [Theory]
     [InlineData(7)]
@@ -172,6 +171,7 @@ public class SimpleAiCampaignTests
         Assert.True(newSectors >= 1, "no campaign ended after the load: the case this guards never arose");
     }
 
+    // m1-clock-and-orders K12 (with AI): the other campaigns ride in the save too.
     [Fact]
     public void BothHardCampaignsAreSavedWithTheGame()
     {
