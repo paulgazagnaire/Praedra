@@ -51,7 +51,7 @@ public static class AiLevels
             // Collective, MedE, fog, day 3000, Hand / Collective / open: 192 seeds on main 561755b before the big start 15 / 135 / 42; big start
             // (4 Mandate, 12 Gleaner) 61 / 99 / 32; 96 seeds: 4 Mandate fleet, every 3 days 24 / 54 / 18; 3 Mandate fleet, every 2 days
             // 14 / 70 / 12; 192 seeds, 3 Mandate fleet, every 2 days 34 / 132 / 26. Notes: specs/engine/ai-notes/2026-11-20-big-hand-start.md.
-            AiLevel.Medium => PlayToWin(p) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
+            AiLevel.Medium => BestNavy(PlayToWin(p)) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -65,7 +65,7 @@ public static class AiLevels
             // 192 seeds, Hand / Collective / open: before the big start 4 / 175 / 13; with it (3 Mandate fleet) 28 / 126 / 38 at reach 5,
             // 22 / 139 / 31 at reach 6 (Medium Collective 34 / 132 / 26). Its agent counts below no longer help (96 seeds: 15 / 66 / 15 with them,
             // 17 / 68 / 11 without) but are kept, as nothing better replaced them.
-            AiLevel.Hard => PlayToWin(p) with
+            AiLevel.Hard => BestNavy(PlayToWin(p)) with
             {
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Cells = true, Guerrilla = true,
                 CellsForcesWanted = 20, CellsSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
@@ -118,6 +118,25 @@ public static class AiLevels
     /// diplomats: 29 / 42 / 25; 8 diplomats all game long: 16 / 48 / 32, the Collective stronger but the wars no shorter).
     /// </summary>
     private static SimpleAiParams PlayToWin(SimpleAiParams p) => p with { WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 };
+
+    /// <summary>
+    /// The best navy (AI trainer 2026-11-26; Paul 2026-11-26: whichever side the AI plays, it researches and builds every ship it can and strives
+    /// for the best navy; better tech is no change of doctrine, the Collective keeps its hit and run). Both sides, Medium and Hard: a
+    /// construction yard per 5 worlds (up to 30, their upkeep from the margin), shipyards stacked 5 to a system and Advanced once researched
+    /// (a big ship finishes within MaxBuildDays), idle warships below half the best's strength per upkeep scrapped for it at the room cap,
+    /// three ship research teams at value 600, 15 shipyards, and a tenth of the warships Hold ships (Edict, Barricade). MedE, fog, day 3000,
+    /// 32 seeds each, on main fa533ec, before / after. Medium mirror: top-tier ships built per game (Hand Decree II, Injunction, Mandate II,
+    /// Edict; Collective Jubilee, Picket, Homeward, Barricade) Hand 0.3 / 3.1, Collective 3.2 / 18.8; Edicts 0 / 8 and Barricades 0 / 54 in
+    /// all; ship research level at the end Hand 5.5 / 8, Collective 8 / 11; at day 1000 room Hand 1525 / 2100, Collective 2325 / 3325 and
+    /// refined unspent Hand 1244 / 0, Collective 1671 / 0; Hand / Collective / open 4 / 21 / 7 and 1 / 26 / 5. Medium Hand against the Hard
+    /// Collective: top-tier per game Hand 0.1 / 0.8, Collective 1.2 / 12.7 (Barricades 0 / 35); 1 / 25 / 6 and 2 / 28 / 2.
+    /// Notes: specs/engine/ai-notes/2026-11-26-best-navy.md.
+    /// </summary>
+    private static SimpleAiParams BestNavy(SimpleAiParams p) => p with
+    {
+        WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
+        RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10,
+    };
 
     /// <summary>The level named by a word (easy, medium, normal, hard; any case), or null.</summary>
     public static AiLevel? Parse(string? word) => word?.Trim().ToLowerInvariant() switch

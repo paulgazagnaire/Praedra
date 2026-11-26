@@ -20,8 +20,7 @@ public sealed partial class SimpleAi
             var choice = ChooseFacility(y);
             if (choice == null) continue;
             var (kind, dest) = choice.Value;
-            int m = Maint(FacilityKinds.ClassName(kind));
-            if (m > 0 && Budget < m) continue;
+            if (!Affordable(kind)) continue;
             OrderFacility(y, kind, dest);
         }
     }
@@ -128,7 +127,7 @@ public sealed partial class SimpleAi
         int refined = eco.Refined(_side);
         int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
         // rule: m6-advisor-sibyl §Manage Production 1: the advisor's yards come from PlanAdvisorYards, so here only mines and refineries
-        if (!_advisor && ships == 0) order.Add(FacilityKind.OrbitalShipyard);
+        if (!_advisor && ships == 0) order.Add(ShipyardKind());
         if (!_advisor && train == 0) order.Add(FacilityKind.TrainingFacility);
         // rule: m2-construction §Build time: a yard adds 1 point per cycle, so throughput is the number of yards; refined that floats is turned into yards.
         if (!_advisor && refined >= _p.ExtraYardRefinedReserve)
@@ -137,11 +136,13 @@ public sealed partial class SimpleAi
             if (cons < _p.EarlyConstructionYards) order.Add(FacilityKind.ConstructionYard);
             var wants = new List<(FacilityKind Kind, int Have, int Want)>
             {
-                (FacilityKind.OrbitalShipyard, ships, _p.DesiredShipyards),
+                (ShipyardKind(), ships, _p.DesiredShipyards),
                 (FacilityKind.TrainingFacility, train, TrainingFacilitiesWanted()),
-                (FacilityKind.ConstructionYard, cons, _p.DesiredConstructionYards),
+                (FacilityKind.ConstructionYard, cons, ConstructionYardsWanted()),
             };
-            foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => w.Have * 100 / w.Want).ThenBy(w => (int)w.Kind)) order.Add(w.Kind);
+            // GarrisonsFirst: with garrisons short, a training facility wanted comes first
+            foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => _garrisonShort > 0 && w.Kind == FacilityKind.TrainingFacility ? 0 : 1)
+                         .ThenBy(w => w.Have * 100 / w.Want).ThenBy(w => (int)w.Kind)) order.Add(w.Kind);
         }
         int mines = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Mine" && eco.OwnerOf(o) == _side);
         int refs = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Refinery" && eco.OwnerOf(o) == _side);
@@ -151,15 +152,37 @@ public sealed partial class SimpleAi
         foreach (var kind in order)
         {
             if (!Available(FacilityKinds.ClassName(kind))) continue;
-            int m = Maint(FacilityKinds.ClassName(kind));
-            if (m > 0 && Budget < m) continue;
+            if (!Affordable(kind)) continue;
             var site = PickSite(from, kind);
             if (site != null) return (kind, site);
         }
         return null;
     }
 
-    private static bool IsYardKind(FacilityKind k) => k is FacilityKind.OrbitalShipyard or FacilityKind.TrainingFacility or FacilityKind.ConstructionYard;
+    /// <summary>
+    /// Room for a facility: its upkeep fits the budget; with YardsFromMargin (the AI, not Sibyl) a construction yard may also use the upkeep
+    /// margin, so a side at its room cap can still build what grows its room. rule: ai tuning, SimpleAiParams.YardsFromMargin (AI trainer 2026-11-26).
+    /// </summary>
+    private bool Affordable(FacilityKind kind)
+    {
+        int m = Maint(FacilityKinds.ClassName(kind));
+        if (m <= 0 || Budget >= m) return true;
+        return !_advisor && _p.YardsFromMargin && kind == FacilityKind.ConstructionYard && Budget + _p.MaintenanceMargin >= m;
+    }
+
+    /// <summary>Construction yards wanted: DesiredConstructionYards, or one per WorldsPerConstructionYard populated held worlds plus one, capped. rule: ai tuning (AI trainer 2026-11-26).</summary>
+    private int ConstructionYardsWanted()
+    {
+        if (_p.WorldsPerConstructionYard <= 0) return _p.DesiredConstructionYards;
+        int worlds = HeldSystems().Count(s => _h.Economy.SlotsOf(s).Populated);
+        return Math.Max(_p.DesiredConstructionYards, Math.Min(_p.MaxConstructionYards, 1 + worlds / _p.WorldsPerConstructionYard));
+    }
+
+    /// <summary>The shipyard the AI orders: an Advanced Shipyard once researched with AdvancedShipyards on (half the cycle, m2-construction §Families), else an Orbital Shipyard.</summary>
+    private FacilityKind ShipyardKind() =>
+        _p.AdvancedShipyards && Available(FacilityKinds.ClassName(FacilityKind.AdvancedShipyard)) ? FacilityKind.AdvancedShipyard : FacilityKind.OrbitalShipyard;
+
+    private static bool IsYardKind(FacilityKind k) => FacilityKinds.IsYard(k);
 
     private static YardFamily FamilyOfKind(FacilityKind k) => Yards.FamilyOf(k);
 
@@ -185,7 +208,8 @@ public sealed partial class SimpleAi
                 // stack on a system that already has yards of the family (they share a project), up to YardsPerSystem; keep yards off the border
                 var fam = FamilyOfKind(kind);
                 int here = YardsAt(s, fam) + _reservedYards.GetValueOrDefault((s, fam));
-                if (here >= _p.YardsPerSystem) continue;
+                int cap = fam == YardFamily.Shipyard && _p.ShipyardsPerSystem > 0 ? _p.ShipyardsPerSystem : _p.YardsPerSystem;
+                if (here >= cap) continue;
                 if (here > 0) score += 40 * here;
                 if (!_advisor) score -= BorderDanger(s) * 15; // the advisor reads only her own worlds (m6-advisor-sibyl §Manage Garrisons 9)
             }
@@ -488,25 +512,63 @@ public sealed partial class SimpleAi
     /// The warship that gives the most strength per price (refined cost plus upkeep), counting each fighter berth as one squadron of the best
     /// fighter; only classes the yards of the system finish within MaxBuildDays. Null when nothing fits.
     /// </summary>
-    private string? BestWarship(string yardSystem, string? fighter)
+    private string? BestWarship(string yardSystem, string? fighter, bool anyRoom = false)
     {
         var eco = _h.Economy;
         int yards = Math.Max(1, YardsDoneAt(yardSystem, YardFamily.Shipyard));
         double fighterStr = fighter != null ? ClassStrength(fighter) : 0;
+        if (_holdGap > 0 && Pick(true) is { } holder) return holder; // HoldShipPercent: a ship that pins a leaving enemy first
+        return Pick(false);
+
+        string? Pick(bool holdersOnly)
+        {
         string? best = null; double bs = 0;
         foreach (var n in ShipClassNames(ObjectCategory.CapitalShip))
         {
             if (n == EconomyModule.HarvesterClass) continue;
+            if (holdersOnly && !HoldsLeavingShips(n)) continue;
             var sc = _h.Fleets.ShipClasses[n]; var r = eco.Costs.Get(n);
             // rule: m2-construction §Build time: ceil(cost / yards) x 4 days per unit (standard yards)
             if ((r.Cost + yards - 1) / yards * 4 > _p.MaxBuildDays) continue;
-            if (Budget < r.Maintenance) continue;
+            if (!anyRoom && Budget < r.Maintenance) continue;
             double value = ClassStrength(n) + fighterStr * sc.FighterCapacity * _p.FighterTrustPercent / 100;
             if (value <= 0) continue;
             double score = value / (r.Cost + _p.UpkeepWeight * r.Maintenance); // upkeep is the lasting limit (m2-maintenance), so it weighs more than the one-time cost
             if (score > bs + 1e-9) { bs = score; best = n; }
         }
         return best;
+        }
+    }
+
+    /// <summary>HoldShipPercent: Hold-ship orders still wanted this review (set by PlanShips; 0 = none or off).</summary>
+    private int _holdGap;
+
+    /// <summary>
+    /// Does a ship of this class hold a leaving enemy ship in battle? Only in the New battle with HoldBeamsHoldRetreat on, and only a Hold beam of
+    /// at least HoldBeamMinPower (DEFAULT 6: the Edict, the Barricade, the harvester). rule: m4-retreat-damage-repair §6.
+    /// </summary>
+    private bool HoldsLeavingShips(string cls)
+    {
+        var b = _h.Settings.Battle ?? new Praedra.Core.Battle.BattleParams();
+        if (b.Ruleset != Praedra.Core.Battle.BattleRuleset.New || !b.New.HoldBeamsHoldRetreat) return false;
+        return _h.Fleets.ShipClasses.TryGetValue(cls, out var sc) && sc.HoldBeamPower > 0 && sc.HoldBeamPower >= b.New.HoldBeamMinPower;
+    }
+
+    /// <summary>HoldShipPercent: Hold ships wanted beyond those built or ordered, for the side's armed warships (built or ordered, the harvester and transports aside).</summary>
+    private int HoldShipGap()
+    {
+        if (_advisor || _p.HoldShipPercent <= 0) return 0;
+        var eco = _h.Economy;
+        int armed = 0, holders = 0;
+        foreach (var o in eco.Objects)
+        {
+            if (o.Category != ObjectCategory.CapitalShip || eco.OwnerOf(o) != _side || o.Class == EconomyModule.HarvesterClass || o.Class == _p.Transport(_side)) continue;
+            if (ClassStrength(o.Class) <= 0) continue;
+            armed++;
+            if (HoldsLeavingShips(o.Class)) holders++;
+        }
+        // the next warship counts too, so the first Hold ship comes once the navy has a few ships
+        return Math.Max(0, ((armed + 1) * _p.HoldShipPercent + 99) / 100 - holders);
     }
 
     private void PlanShips()
@@ -525,6 +587,11 @@ public sealed partial class SimpleAi
         bool homeWeak = home < _p.HomeDefenceStrength;
         string? fighter = BestFighter();
         bool transportOrdered = false;
+        _holdGap = HoldShipGap();
+        // GarrisonsFirst while far ahead: with garrisons short, no new warships and no refit, so the refined pool trains the regiments first
+        // (AI trainer 2026-11-26: with the best navy the far-ahead Hand ordered 41 regiments in 500 days instead of 70 to 90)
+        bool garrisonsShort = _garrisonShort > 0 && !_advisor;
+        if (!garrisonsShort) PlanRefit(fighter);
 
         foreach (var y in YardSystems(YardFamily.Shipyard))
         {
@@ -547,7 +614,7 @@ public sealed partial class SimpleAi
                 cls = fighter;
                 count = Math.Clamp(berths * _p.FighterFillPercent / 100 - fighters, 1, Math.Min(berths - fighters, _p.FightersPerOrder));
             }
-            else
+            else if (!garrisonsShort)
             {
                 cls = BestWarship(y, fighter);
                 if (cls != null)
@@ -572,8 +639,53 @@ public sealed partial class SimpleAi
             _busy.Add((y, YardFamily.Shipyard));
             _plannedLoad += count * Maint(cls);
             var cr = eco.Costs.Get(cls);
+            if (_holdGap > 0 && HoldsLeavingShips(cls)) _holdGap -= count;
             if (cr.Category == ObjectCategory.CapitalShip) { troopCap += count * _h.Fleets.ShipClasses[cls].TroopCapacity; berths += count * _h.Fleets.ShipClasses[cls].FighterCapacity; }
             else if (cr.Category == ObjectCategory.Fighter) fighters += count;
+        }
+    }
+
+    /// <summary>
+    /// RefitBelowPercent (AI trainer 2026-11-26; Paul: the best navy possible): when the best warship a free shipyard can build does not fit the
+    /// room but the refined pool pays for it twice over, scrap idle armed warships (at a held system, not moving, no pending bombardment or
+    /// assault) whose strength per upkeep is below RefitBelowPercent of that ship's, worst first, until its upkeep is freed or
+    /// RefitShipsPerReview are gone. The room is used at a later review. Transports, carriers and the harvester are never refitted.
+    /// rule: ai tuning, SimpleAiParams.RefitBelowPercent; m2-maintenance (scrapping frees the upkeep).
+    /// </summary>
+    private void PlanRefit(string? fighter)
+    {
+        if (_advisor || _p.RefitBelowPercent <= 0) return;
+        var eco = _h.Economy;
+        // the free shipyard system with the most finished shipyards: the biggest ship finishes there (m2-construction §Build time)
+        string? yard = YardSystems(YardFamily.Shipyard).Where(y => CanOrderAt(y, YardFamily.Shipyard))
+            .OrderByDescending(y => YardsDoneAt(y, YardFamily.Shipyard)).ThenBy(y => y, StringComparer.Ordinal).FirstOrDefault();
+        if (yard == null) return;
+        string? best = BestWarship(yard, fighter, anyRoom: true);
+        if (best == null) return;
+        var br = eco.Costs.Get(best);
+        int need = br.Maintenance - Math.Max(0, Budget - _garrisonReserve);
+        if (need <= 0 || eco.Refined(_side) < 2 * br.Cost || br.Maintenance <= 0) return;
+        double bestUse = ClassStrength(best) * 1000 / br.Maintenance;
+        var cands = new List<(double Use, int Id, int Maint)>();
+        foreach (var o in eco.Objects)
+        {
+            if (!o.Completed || o.Category != ObjectCategory.CapitalShip || eco.OwnerOf(o) != _side || o.Class == EconomyModule.HarvesterClass || o.Class == _p.Transport(_side)) continue;
+            int m = Maint(o.Class);
+            double str = ClassStrength(o.Class);
+            if (m <= 0 || str <= 0) continue; // unarmed ships (transports, carriers) have other jobs
+            double use = str * 1000 / m;
+            if (use * 100 >= bestUse * _p.RefitBelowPercent) continue;
+            var f = _h.Fleets.FleetOfShip(o.Id);
+            if (f == null || f.Transit != null || f.At == null || !Held(f.At) || Pending(f)) continue;
+            cands.Add((use, o.Id, m));
+        }
+        int done = 0;
+        foreach (var c in cands.OrderBy(c => c.Use).ThenBy(c => c.Id))
+        {
+            if (need <= 0 || done >= _p.RefitShipsPerReview) break;
+            long seq = _h.Game.Submit(sq => new ScrapObjectOrder(sq, _side, c.Id));
+            Note(seq, "Scrap", $"object {c.Id} (refit for {best})");
+            need -= c.Maint; done++;
         }
     }
 

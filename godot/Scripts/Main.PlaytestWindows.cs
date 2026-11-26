@@ -359,8 +359,15 @@ public partial class Main
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         PlaytestInfra(gs, sys);
         gs.TileClick(sys, "infra"); gs.PlayRefresh();
-        gs.TileClick(sys, "fleets"); gs.PlayRefresh();
-        Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the fleet windows");
+        // the planted fleet may have left sys by now: the days above run against the real AI, which can attack sys (a Defensive fleet fights,
+        // and a beaten one retreats). Its own tile's triangles then open it.
+        string? fat = s.Game.State.Fleets.TryGetValue(fid, out var wt) && wt.Ships.Count > 0 && wt.Transit == null ? wt.At : null;
+        if (fat != sys) GD.Print($"  (Window Test now at {fat ?? "no system"}, not {sys}: its tile there is clicked)");
+        if (fat != null)
+        {
+            gs.TileClick(fat, "fleets"); gs.PlayRefresh();
+            Expect(gs.MgmtKeys.Contains($"Fleet {fid}"), "a click on its triangles opens the fleet windows");
+        }
         gs.TileClick(sys, "ground"); gs.PlayRefresh();
         Expect(gs.MgmtKeys.Contains($"Ground {sys}"), "a click elsewhere on the tile opens its Ground window");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);

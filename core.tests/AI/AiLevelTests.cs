@@ -32,6 +32,14 @@ public class AiLevelTests
     // AI trainer 2026-11-19: the game plan is on at every level (AiLevels.GamePlan), off in the SimpleAiParams DEFAULT.
     // AI trainer 2026-11-20: both sides found a construction yard when short of them (m2-construction §Founding), Easy only when none is left.
     private static readonly string[] Founding = { nameof(SimpleAiParams.FoundYardsBelow) };
+    // the best navy (AI trainer 2026-11-26), SimpleAiNavyTests
+    private static readonly string[] Navy =
+    {
+        nameof(SimpleAiParams.WorldsPerConstructionYard), nameof(SimpleAiParams.MaxConstructionYards), nameof(SimpleAiParams.YardsFromMargin),
+        nameof(SimpleAiParams.ShipyardsPerSystem), nameof(SimpleAiParams.AdvancedShipyards), nameof(SimpleAiParams.RefitBelowPercent),
+        nameof(SimpleAiParams.ShipResearchMissions), nameof(SimpleAiParams.ShipResearchValue), nameof(SimpleAiParams.DesiredShipyards),
+        nameof(SimpleAiParams.HoldShipPercent),
+    };
     private static readonly string[] GamePlan = { nameof(SimpleAiParams.PlanSectorSpreadPercent), nameof(SimpleAiParams.PlanSystemSpreadPercent) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
@@ -39,7 +47,7 @@ public class AiLevelTests
     public void Medium_IsTheDefaultAiPlayingToWinPlusTheGuerrilla()
     {
         var d = new SimpleAiParams { UseFog = true }; var m = AiLevels.For(AiLevel.Medium);
-        foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && !GamePlan.Contains(p.Name) && !Founding.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
+        foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !Guerrilla.Contains(p.Name) && !PlayToWin.Contains(p.Name) && !GamePlan.Contains(p.Name) && !Founding.Contains(p.Name) && !Navy.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(double?))))
             Assert.True(Equals(prop.GetValue(d), prop.GetValue(m)), $"{prop.Name}: default {prop.GetValue(d)}, Medium {prop.GetValue(m)}");
         Assert.True(m.SafeHearth && m.Cells && m.Guerrilla && m.HarvesterYardValue > 0 && m.InvasionReadyAtRally && m.BooksTalentWindow);
         Assert.True(m.CollectiveMilitaryEvery > 0 && m.CollectiveMilitaryEvery < m.MilitaryEvery && d.CollectiveMilitaryEvery == 0);
@@ -89,7 +97,9 @@ public class AiLevelTests
     {
         var b = new SimpleAiParams { UseFog = true, UseHarvester = false };
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
-        Assert.Equal(b with { SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8 }, AiLevels.For(AiLevel.Medium, b));
+        Assert.Equal(b with { SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8,
+            WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
+            RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]
