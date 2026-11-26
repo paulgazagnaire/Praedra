@@ -346,7 +346,7 @@ public partial class GameScreen
             "Missions: Leaders (C), then pick a team, a kind and a target.",
             "Money: mines dig Raw, refineries make Refined, which you spend. Stay under the Upkeep limit.",
         }),
-        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Log · S sector · V layer · L routes · Home whole map · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
+        ("Keys", new[] { "Q Needs you · F Fleets · C Leaders · M Missions · E Log · S sector · V layer · L lanes · Home whole map · / search · G goal · Ctrl/Cmd+S save · Esc close" }),
     };
 
     void BuildHowTo()

@@ -504,9 +504,9 @@ public partial class GameScreen
         Item(Map("mover-building", Ui.You), "A building");
         Item(Map("mover-ship", Ui.You), "A ship");
         Item(Map("mover-fighter", Ui.You), "Fighters");
-        Item(new Glyph(Glyph.Kind.Bar, new Color(0.72f, 0.75f, 0.80f), 16), "Major route: 3x speed");
-        Item(new Glyph(Glyph.Kind.Bar, new Color(Ui.Text3, 0.7f), 16), "Minor route: 1.5x speed");
-        v.AddChild(Ui.Label("Off the routes, ships jump through open space at normal speed. A move preview is solid on a route and dashed off it; red rings mark a known trap. Each sector is drawn a little tighter than it is, so the sectors stand apart: the arrival day in a move preview is the real distance.", "Hint", size: Ui.Tiny));
+        Item(new Glyph(Glyph.Kind.Bar, new Color(0.72f, 0.75f, 0.80f), 16), "Major lane: 3x speed");
+        Item(new Glyph(Glyph.Kind.Bar, new Color(Ui.Text3, 0.7f), 16), "Minor lane: 1.5x speed");
+        v.AddChild(Ui.Label("Off the lanes, ships jump through the open deep at normal speed. A move preview is solid on a lane and dashed off it; red rings mark a known trap. Each sector is drawn a little tighter than it is, so the sectors stand apart: the arrival day in a move preview is the real distance.", "Hint", size: Ui.Tiny));
         v.GetChild<Label>(v.GetChildCount() - 1).CustomMinimumSize = new Vector2(250, 0);
         return card;
     }

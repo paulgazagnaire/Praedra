@@ -559,15 +559,15 @@ public partial class Main
         Expect(gs.RoutesShown, "the lanes are drawn by default");
         string major = gs.G.Systems.Where(x => s.OwnerOf(x.Name) != me && gs.G.NeighboursOf(x.Index).Any(nb => nb.Lane.Tier == 1)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
         string open = gs.G.Systems.Where(x => s.OwnerOf(x.Name) != me && !gs.G.OnRoute(x.Index)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
-        Expect(gs.HoverTextFor(major).Contains("major route"), $"hovering {major} names its major route: " + gs.HoverTextFor(major));
-        Expect(gs.HoverTextFor(open).Contains("no route here"), $"hovering {open} says it is off the routes: " + gs.HoverTextFor(open));
+        Expect(gs.HoverTextFor(major).Contains("major lane"), $"hovering {major} names its major lane: " + gs.HoverTextFor(major));
+        Expect(gs.HoverTextFor(open).Contains("no lane here"), $"hovering {open} says it is off the lanes: " + gs.HoverTextFor(open));
         var mover = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null && s.Host.Fleets.SpeedOf(f) > 0).OrderBy(f => f.Id).FirstOrDefault();
         if (mover != null)
         {
             string far = gs.G.Systems.Select(x => x.Name).Where(n => n != mover.At && s.Host.Fleets.FindPath(mover.At!, n, s.Host.Fleets.SpeedOf(mover)).Ok)
                 .OrderByDescending(n => s.Host.Fleets.FindPath(mover.At!, n, s.Host.Fleets.SpeedOf(mover)).TotalTicks).ThenBy(n => n, StringComparer.Ordinal).First();
             string b = gs.PreviewBannerFor(mover.Id, far);
-            Expect(b.Contains("arrives day") && (b.Contains("on route") || b.Contains("free jump")) && !b.Contains("[no line drawn]"),
+            Expect(b.Contains("arrives day") && ((b.Contains("on a lane") || b.Contains("on lanes")) || b.Contains("free jump")) && !b.Contains("[no line drawn]"),
                 $"the move preview to {far} draws the line and says how it travels: " + b);
         }
         gs.View.Select(-1);

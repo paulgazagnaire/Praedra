@@ -83,9 +83,9 @@ public partial class GameScreen
     string RouteShort(int sys)
     {
         var links = G.NeighboursOf(sys);
-        if (links.Count == 0) return "no route here";
+        if (links.Count == 0) return "no lane here";
         var named = RouteNames(links);
-        return named.Count == 0 ? "minor route" : $"{string.Join(", ", named)} (major route)";
+        return named.Count == 0 ? "minor lane" : $"{string.Join(", ", named)} (major lane)";
     }
 
     static List<string> RouteNames(IEnumerable<Praedra.Core.Map.Neighbour> links) =>
@@ -96,11 +96,11 @@ public partial class GameScreen
     string RouteWords(int sys)
     {
         var links = G.NeighboursOf(sys);
-        if (links.Count == 0) return "No route here: ships reach it by a free jump through open space";
+        if (links.Count == 0) return "No lane here: ships reach it by a free jump through the open deep";
         var named = RouteNames(links);
         bool minor = links.Any(nb => nb.Lane.Tier != 1);
-        if (named.Count == 0) return "Minor route (1.5x speed)";
-        return $"{string.Join(", ", named)} (major route, 3x speed){(minor ? "; also minor routes (1.5x)" : "")}";
+        if (named.Count == 0) return "Minor lane (1.5x speed)";
+        return $"{string.Join(", ", named)} (major lane, 3x speed){(minor ? "; also minor lanes (1.5x)" : "")}";
     }
 
     /// <summary>How a path travels, for the order bar: legs along a route versus free jumps through open space.</summary>
@@ -108,8 +108,8 @@ public partial class GameScreen
     {
         int onRoute = routeHop.Count(r => r);
         int free = routeHop.Count - onRoute;
-        if (onRoute == 0) return free == 1 ? " (one free jump, no route)" : $" ({free} free jumps, no route)";
-        string r = onRoute == 1 ? "1 stretch on a route" : $"{onRoute} stretches on routes";
+        if (onRoute == 0) return free == 1 ? " (one free jump, no lane)" : $" ({free} free jumps, no lane)";
+        string r = onRoute == 1 ? "1 stretch on a lane" : $"{onRoute} stretches on lanes";
         return free == 0 ? $" ({r})" : $" ({r}, {free} free {(free == 1 ? "jump" : "jumps")})";
     }
 
@@ -199,7 +199,7 @@ public partial class GameScreen
                     _view.PathTraps = traps.Select(t => G.TryFindSystem(t.System, out int i) ? i : -1).Where(i => i >= 0).ToList();
                     string where = string.Join(", ", traps.Select(t => $"{t.System} (seen day {t.SeenDay})"));
                     string who = reds.Count == 1 ? reds[0].F.Name : string.Join(", ", reds.Take(reds.Count - 1).Select(r => r.F.Name)) + " and " + reds[^1].F.Name;
-                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {who} out of the deep there.\n"
+                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can stop {who} there, on a lane or off it.\n"
                         + $"{MovingWho(f)} to {to}{through}: {trip}. " + (_lockedTo != null ? "Choose below." : "Click to choose, or Shift-click a waypoint to steer around it.");
                     // a waypoint steers the first fleet only: offered when it alone is in danger
                     if (_lockedTo != null && leadRed && redOthers.Count == 0) _around = GoAround(f, to, via, plan);
