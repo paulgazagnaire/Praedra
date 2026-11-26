@@ -179,7 +179,7 @@ public partial class GameScreen
         if (sc.FighterCapacity > 0) parts.Add($"carries {sc.FighterCapacity} fighter squadrons");
         if (sc.TroopCapacity > 0) parts.Add($"carries {sc.TroopCapacity} regiments");
         if (sc.Bombardment > 0) parts.Add($"bombardment {sc.Bombardment}");
-        if (sc.GravityWellProjector > 0) parts.Add("interdictor: pulls enemy fleets out of the lanes");
+        if (sc.GravityWellProjector > 0) parts.Add("interdictor: pulls enemy fleets out of the deep");
         return string.Join(", ", parts) + ".";
     }
 

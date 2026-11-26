@@ -18,7 +18,7 @@ public enum ForcedStopTrigger
     PaulRule = 0,
     /// <summary>Any armed enemy fleet at the system stops the passing fleet. Earlier default (planets/10 round 2).</summary>
     AnyArmedFleet = 1,
-    /// <summary>DEFAULT (Paul 2026-10-16). Only an enemy fleet with a ship that has gravity_well_projector above 0 pulls the passing fleet out of the lanes.</summary>
+    /// <summary>DEFAULT (Paul 2026-10-16). Only an enemy fleet with a ship that has gravity_well_projector above 0 pulls the passing fleet out of the deep.</summary>
     GravityWellShip = 2,
 }
 

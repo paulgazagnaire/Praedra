@@ -490,7 +490,7 @@ public partial class GalaxyView : Control
             for (int k = 1; k + 1 < PathPreview.Count; k++) // the stops on the way
                 DrawCircle(SystemScreen(PathPreview[k]), 3.2f, PathColor);
         }
-        // known traps on the way: a red ring with a cross-hair, so the player sees where the fleet can be pulled out of the lanes
+        // known traps on the way: a red ring with a cross-hair, so the player sees where the fleet can be pulled out of the deep
         if (PathTraps != null)
             foreach (int t in PathTraps)
             {
