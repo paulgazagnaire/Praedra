@@ -26,6 +26,8 @@ public sealed partial class GameSession
     readonly Dictionary<long, PendingMission> _pendingMissions = new();
     // What each of the player's missions is (kind, target, team names), kept from the day before so the messages can name a team that is gone.
     readonly Dictionary<int, (MissionKind Kind, string Target, string Team)> _missionInfo = new();
+    /// <summary>Outreach teams whose first success already said "sponsored by Alma" (the Lore Master 2026-11-26: only the first one says it).</summary>
+    readonly HashSet<int> _sponsoredSaid = new();
     (int Mission, MissionKind Kind, string Target)? _lastSuccess;
 
     /// <summary>A StartMission order given today and not yet judged.</summary>
@@ -310,7 +312,9 @@ public sealed partial class GameSession
     {
         MissionKind.Espionage => $"Espionage on {s.Target} succeeded: you now see its facilities, troops and fleets.",
         MissionKind.Reconnaissance => $"Reconnaissance of {s.Target} succeeded: you now see the system.",
-        MissionKind.Diplomacy when Player == Side.Hand => $"{HandDiplomacy} at {s.Target}, sponsored by Alma, succeeded: support for you rises. The team keeps working.",
+        MissionKind.Diplomacy when Player == Side.Hand => _sponsoredSaid.Add(s.Mission)
+            ? $"{HandDiplomacy} at {s.Target}, sponsored by Alma, succeeded: support for you rises. The team keeps working."
+            : $"{HandDiplomacy} at {s.Target} succeeded: support for you rises.",
         MissionKind.Diplomacy => $"Diplomacy on {s.Target} succeeded: support for you rises. The team keeps working.",
         MissionKind.Sabotage => $"Sabotage on {s.Target} succeeded.",
         MissionKind.InciteUprising => $"Incite uprising on {s.Target} succeeded: unrest against the holder grows.",
