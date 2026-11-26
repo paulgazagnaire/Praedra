@@ -38,7 +38,7 @@ public class AiLevelTests
         nameof(SimpleAiParams.WorldsPerConstructionYard), nameof(SimpleAiParams.MaxConstructionYards), nameof(SimpleAiParams.YardsFromMargin),
         nameof(SimpleAiParams.ShipyardsPerSystem), nameof(SimpleAiParams.AdvancedShipyards), nameof(SimpleAiParams.RefitBelowPercent),
         nameof(SimpleAiParams.ShipResearchMissions), nameof(SimpleAiParams.ShipResearchValue), nameof(SimpleAiParams.DesiredShipyards),
-        nameof(SimpleAiParams.HoldShipPercent),
+        nameof(SimpleAiParams.HoldShipPercent), nameof(SimpleAiParams.GarrisonsFirstHoldsNavy),
     };
     private static readonly string[] GamePlan = { nameof(SimpleAiParams.PlanSectorSpreadPercent), nameof(SimpleAiParams.PlanSystemSpreadPercent) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
@@ -99,7 +99,7 @@ public class AiLevelTests
         Assert.False(AiLevels.For(AiLevel.Easy, b).UseHarvester);
         Assert.Equal(b with { SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8,
             WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
-            RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10 }, AiLevels.For(AiLevel.Medium, b));
+            RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10, GarrisonsFirstHoldsNavy = true }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

@@ -136,6 +136,7 @@ public static class AiLevels
     {
         WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
         RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10,
+        GarrisonsFirstHoldsNavy = true,
     };
 
     /// <summary>The level named by a word (easy, medium, normal, hard; any case), or null.</summary>

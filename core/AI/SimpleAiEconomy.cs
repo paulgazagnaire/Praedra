@@ -141,7 +141,7 @@ public sealed partial class SimpleAi
                 (FacilityKind.ConstructionYard, cons, ConstructionYardsWanted()),
             };
             // GarrisonsFirst: with garrisons short, a training facility wanted comes first
-            foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => _garrisonShort > 0 && w.Kind == FacilityKind.TrainingFacility ? 0 : 1)
+            foreach (var w in wants.Where(w => w.Have < w.Want).OrderBy(w => _p.GarrisonsFirstHoldsNavy && _garrisonShort > 0 && w.Kind == FacilityKind.TrainingFacility ? 0 : 1)
                          .ThenBy(w => w.Have * 100 / w.Want).ThenBy(w => (int)w.Kind)) order.Add(w.Kind);
         }
         int mines = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Mine" && eco.OwnerOf(o) == _side);
@@ -590,7 +590,7 @@ public sealed partial class SimpleAi
         _holdGap = HoldShipGap();
         // GarrisonsFirst while far ahead: with garrisons short, no new warships and no refit, so the refined pool trains the regiments first
         // (AI trainer 2026-11-26: with the best navy the far-ahead Hand ordered 41 regiments in 500 days instead of 70 to 90)
-        bool garrisonsShort = _garrisonShort > 0 && !_advisor;
+        bool garrisonsShort = _p.GarrisonsFirstHoldsNavy && _garrisonShort > 0 && !_advisor; // rule: ai tuning, SimpleAiParams.GarrisonsFirstHoldsNavy
         if (!garrisonsShort) PlanRefit(fighter);
 
         foreach (var y in YardSystems(YardFamily.Shipyard))
@@ -667,7 +667,7 @@ public sealed partial class SimpleAi
         int need = br.Maintenance - Math.Max(0, Budget - _garrisonReserve);
         if (need <= 0 || eco.Refined(_side) < 2 * br.Cost || br.Maintenance <= 0) return;
         double bestUse = ClassStrength(best) * 1000 / br.Maintenance;
-        var cands = new List<(double Use, int Id, int Maint)>();
+        var cands = new List<(double Use, int Id, int Maint, Praedra.Core.Fleets.Fleet Fleet)>();
         foreach (var o in eco.Objects)
         {
             if (!o.Completed || o.Category != ObjectCategory.CapitalShip || eco.OwnerOf(o) != _side || o.Class == EconomyModule.HarvesterClass || o.Class == _p.Transport(_side)) continue;
@@ -678,19 +678,37 @@ public sealed partial class SimpleAi
             if (use * 100 >= bestUse * _p.RefitBelowPercent) continue;
             var f = _h.Fleets.FleetOfShip(o.Id);
             if (f == null || f.Transit != null || f.At == null || !Held(f.At) || Pending(f)) continue;
-            // the fleet's last ship dissolves it (m3-fleets invariant 1): its riders would only be set down, but a prisoner held aboard would go
-            // free (characters §Riding, QA-7), so such a ship is kept
-            if (f.Ships.Count == 1 && f.Squadrons.Count == 0 && _h.Characters.InPlay.Any(c => c.AttachedFleet == f.Id || c.HeldAboard == f.Id)) continue;
-            cands.Add((use, o.Id, m));
+            cands.Add((use, o.Id, m, f));
         }
-        int done = 0;
+        var guarded = cands.Select(c => c.Fleet.Id).Distinct().Where(f => _h.Characters.InPlay.Any(ch => ch.AttachedFleet == f || ch.HeldAboard == f)).ToHashSet();
+        foreach (var id in RefitScraps(cands, need, _p.RefitShipsPerReview, guarded))
+        {
+            long seq = _h.Game.Submit(sq => new ScrapObjectOrder(sq, _side, id));
+            Note(seq, "Scrap", $"object {id} (refit for {best})");
+        }
+    }
+
+    /// <summary>
+    /// The refit's scraps, worst use first (then id), until <paramref name="need"/> upkeep is freed or <paramref name="max"/> are chosen. The
+    /// fleet's last ship dissolves it (m3-fleets invariant 1): its riders would only be set down, but a prisoner held aboard would go free
+    /// (characters §Riding, QA-7), so a <paramref name="guarded"/> fleet (leaders or prisoners aboard) keeps at least one ship, counted over the
+    /// whole review, squadrons or not. rule: ai tuning, SimpleAiParams.RefitBelowPercent.
+    /// </summary>
+    internal static List<int> RefitScraps(IEnumerable<(double Use, int Id, int Maint, Praedra.Core.Fleets.Fleet Fleet)> cands, int need, int max, IReadOnlySet<int> guarded)
+    {
+        var picked = new List<int>();
+        var left = new Dictionary<int, int>(); // lookup only; the scraps go in candidate order
         foreach (var c in cands.OrderBy(c => c.Use).ThenBy(c => c.Id))
         {
-            if (need <= 0 || done >= _p.RefitShipsPerReview) break;
-            long seq = _h.Game.Submit(sq => new ScrapObjectOrder(sq, _side, c.Id));
-            Note(seq, "Scrap", $"object {c.Id} (refit for {best})");
-            need -= c.Maint; done++;
+            if (need <= 0 || picked.Count >= max) break;
+            var f = c.Fleet;
+            int ships = left.TryGetValue(f.Id, out var l) ? l : f.Ships.Count;
+            if (ships <= 1 && guarded.Contains(f.Id)) continue; // squadrons alone would not hold a prisoner's cell (HeldAboardShip)
+            left[f.Id] = ships - 1;
+            picked.Add(c.Id);
+            need -= c.Maint;
         }
+        return picked;
     }
 
     // ================================================================== upkeep crisis
