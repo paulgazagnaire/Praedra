@@ -148,6 +148,30 @@ public class SimpleAiCampaignTests
     }
 
     // m1-clock-and-orders K12 (with AI): the other campaigns ride in the save too.
+    // QA-125: a Hard save (two campaigns) played on at Medium (one slot) drops the extra campaign and goes on; the trim once left an empty
+    // list and PlanCampaign threw "Sequence contains no elements" the first time the slot needed a new sector (MedA seeds 7, 23, 61, 88).
+    [Theory]
+    [InlineData(7)]
+    [InlineData(23)]
+    public void AHardSavePlayedAtMediumDropsTheExtraCampaignAndGoesOn(int seed)
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedA });
+        new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard)).RunTo(300);
+        var loaded = GameHost.Load(host.SaveWithSettings());
+        var m = new AiMatch(loaded, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium));
+        int firstNumber = m.Collective.CampaignsNow.Count > 0 ? m.Collective.CampaignsNow[0].Number : 0;
+        int newSectors = 0; string? last = null;
+        while (loaded.Game.Day < 300 + AiLevels.For(AiLevel.Medium).CampaignMaxDays + 60)
+        {
+            m.Step();
+            var now = m.Collective.CampaignsNow;
+            Assert.True(now.Count <= 1, $"day {loaded.Game.Day}: {now.Count} campaigns at Medium");
+            if (now.Count == 1 && now[0].Sector != last) { if (last != null) newSectors++; last = now[0].Sector; }
+        }
+        _out.WriteLine($"seed {seed}: first campaign {firstNumber}, {newSectors} new sectors after the load, day {loaded.Game.Day}");
+        Assert.True(newSectors >= 1, "no campaign ended after the load: the case this guards never arose");
+    }
+
     [Fact]
     public void BothHardCampaignsAreSavedWithTheGame()
     {
