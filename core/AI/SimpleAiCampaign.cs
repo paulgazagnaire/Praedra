@@ -66,6 +66,8 @@ public sealed partial class SimpleAi
         if (!CampaignOn) return;
         int slots = Math.Max(1, _p.CampaignsAtOnce);
         if (slots > 1) { _mem.MoreCampaigns ??= new(); while (_mem.MoreCampaigns.Count < slots - 1) _mem.MoreCampaigns.Add(new AiCampaign { Started = Today }); }
+        // a save made at a level with more slots (Hard, then played at Medium): drop the extra campaigns, which this review would never end (Ponytail on #398)
+        if (_mem.MoreCampaigns is { } more && more.Count > slots - 1) more.RemoveRange(slots - 1, more.Count - (slots - 1));
         for (int k = 0; k < slots; k++)
         {
             var c = k == 0 ? _mem.Campaign : _mem.MoreCampaigns![k - 1];

@@ -2,6 +2,7 @@ using Praedra.Core.Characters;
 using Praedra.Core.Clock;
 using Praedra.Core.Economy;
 using Praedra.Core.Missions;
+using Praedra.Core.Setup;
 using Praedra.Core.Support;
 using static Praedra.Core.Tests.Missions.MissionWorld;
 
@@ -186,6 +187,20 @@ public class MissionEffectTests
     // m5-missions §6 Sabotage, SabotageTargetMode DefencesFirst (DEFAULT, Paul 2026-11-26: "Target defense infrastructures first (cannons and
     // shields), then yards and mines equally"): a mine, a cannon, a refinery and a shield; the one pick draw rand(0..1) = 1 takes the second
     // defence (the shield). RandomFacility (the Classic pick) draws over all four: rand(0..3) = 1 takes the cannon, as the second by id.
+    // m5-missions §6 Sabotage (Ponytail on #398): a save that pinned the old DEFAULT, RandomFacility, loads with defences first; the state is unchanged
+    [Fact]
+    public void ASaveThatPinnedTheRandomSabotagePickLoadsWithDefencesFirst()
+    {
+        var h = NewGame.Create(GameData.Default, new NewGameOptions { Seed = 1, Preset = StartPreset.MedA,
+            Settings = new GameSettings { DealMode = DealMode.File, Missions = new MissionParams { SabotageTargetMode = SabotageTargetMode.RandomFacility } } });
+        h.Game.Step();
+        string save = h.SaveWithSettings();
+        Assert.Contains("\"SabotageTargetMode\":\"RandomFacility\"", save);
+        var l = GameHost.Load(save);
+        Assert.Equal(SabotageTargetMode.DefencesFirst, l.Missions.Params.SabotageTargetMode);
+        Assert.Equal(h.StateHash(), l.StateHash());
+    }
+
     [Theory]
     [InlineData(SabotageTargetMode.DefencesFirst, 1, 3)]
     [InlineData(SabotageTargetMode.RandomFacility, 3, 1)]
