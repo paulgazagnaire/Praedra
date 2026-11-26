@@ -31,6 +31,7 @@ public class SimpleAiNavyTests
         Assert.Equal(1, p.ShipResearchMissions);
         Assert.Equal(0, p.ShipResearchValue);
         Assert.Equal(0, p.HoldShipPercent);
+        Assert.False(p.GarrisonsFirstHoldsNavy); // QA-124: the Easy and default AIs keep their old garrison order
     }
 
     [Theory]
@@ -40,7 +41,7 @@ public class SimpleAiNavyTests
     {
         var p = AiLevels.For(level);
         Assert.True(p.WorldsPerConstructionYard > 0 && p.YardsFromMargin && p.ShipyardsPerSystem > p.YardsPerSystem && p.AdvancedShipyards);
-        Assert.True(p.RefitBelowPercent > 0 && p.ShipResearchMissions > 1 && p.HoldShipPercent > 0);
+        Assert.True(p.RefitBelowPercent > 0 && p.ShipResearchMissions > 1 && p.HoldShipPercent > 0 && p.GarrisonsFirstHoldsNavy);
         Assert.Equal(0, AiLevels.For(AiLevel.Easy).HoldShipPercent); // Easy keeps the old navy
     }
 
@@ -149,5 +150,24 @@ public class SimpleAiNavyTests
         }
         Assert.Equal(0, Refits(0));
         Assert.True(Refits(50) > 0);
+    }
+
+    [Fact] // rule: ai tuning, SimpleAiParams.RefitBelowPercent; characters §Riding (QA-7: a prisoner aboard a dissolved fleet goes free)
+    public void ARefitKeepsOneShipOfAFleetWithAPrisonerAboard()
+    {
+        // two weak ships in one fleet (RefitShipsPerReview 2 would scrap both in one review), and a lone weak ship
+        var pair = new Praedra.Core.Fleets.Fleet { Id = 7, Ships = { 101, 102 } };
+        var lone = new Praedra.Core.Fleets.Fleet { Id = 8, Ships = { 103 } };
+        var cands = new[] { (1.0, 101, 30, pair), (2.0, 102, 30, pair), (3.0, 103, 30, lone) };
+        Assert.Equal(new[] { 101, 102 }, SimpleAi.RefitScraps(cands, 100, 2, new HashSet<int>()));
+        // a prisoner (or a leader) aboard the pair: one of its ships stays, the next candidate goes instead
+        Assert.Equal(new[] { 101, 103 }, SimpleAi.RefitScraps(cands, 100, 2, new HashSet<int> { 7 }));
+        // both fleets guarded: the lone ship stays too
+        Assert.Equal(new[] { 101 }, SimpleAi.RefitScraps(cands, 100, 2, new HashSet<int> { 7, 8 }));
+        // squadrons do not count: the prisoner is held aboard a ship
+        pair.Squadrons.Add(201);
+        Assert.Equal(new[] { 101, 103 }, SimpleAi.RefitScraps(cands, 100, 2, new HashSet<int> { 7 }));
+        // the need is met first: one scrap
+        Assert.Equal(new[] { 101 }, SimpleAi.RefitScraps(cands, 30, 2, new HashSet<int>()));
     }
 }

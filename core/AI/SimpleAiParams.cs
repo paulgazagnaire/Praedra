@@ -108,6 +108,13 @@ public sealed record SimpleAiParams
     public int GarrisonShortPerTrainingFacility { get; init; } = 20;
     /// <summary>GarrisonsFirst: most training facilities the side wants. DEFAULT.</summary>
     public int MaxTrainingFacilities { get; init; } = 12;
+    /// <summary>
+    /// GarrisonsFirstHoldsNavy (AI trainer 2026-11-26, with the best navy): with GarrisonsFirst and the garrisons short, the side orders no new
+    /// warships and no refit, and a training facility it wants comes before its other yards. With the best navy's yards and refit on, the
+    /// far-ahead Hand otherwise trained about half the regiments (GarrisonsFirst_AFarAheadSideTrainsMoreGarrisonTroops). Off by default,
+    /// on with the best navy (AiLevels.BestNavy). rule: ai tuning; m2-uprisings-and-garrison §Required garrison N.
+    /// </summary>
+    public bool GarrisonsFirstHoldsNavy { get; init; }
     // ---- the player's advisor (Sibyl). rule: m6-advisor-sibyl (Paul 2026-11-16: "Both", "aggressively develop infrastructure"). DEFAULT values.
     /// <summary>A calm world keeps the garrison of its support minus this many points (one more regiment within 5 of a step). rule: m6-advisor-sibyl §Manage Garrisons 2.</summary>
     public int AdvisorBufferSupport { get; init; } = 5;
