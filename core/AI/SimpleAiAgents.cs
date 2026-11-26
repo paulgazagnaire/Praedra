@@ -674,12 +674,22 @@ public sealed partial class SimpleAi
                 }
             }
         }
-        // 8. Research: one mission per track, at a held system with a yard of the track's family (m5-research CanResearch)
+        // 8. Research: one mission per track (ships: up to ShipResearchMissions, each at its own system), at a held system with a yard of the
+        // track's family (m5-research CanResearch). rule: ai tuning, SimpleAiParams.ShipResearchMissions (AI trainer 2026-11-26)
         foreach (var (kind, track) in new[] { (MissionKind.ShipResearch, ResearchKind.Ship), (MissionKind.TroopResearch, ResearchKind.Troop), (MissionKind.FacilityResearch, ResearchKind.Facility) })
         {
-            if (!KindUsable(kind) || own.Any(m => m.Kind == kind)) continue;
-            string? site = HeldSystems().FirstOrDefault(s => _h.Research.CanResearch(_side, track, s) == null);
-            if (site != null) jobs.Add(new Job(kind, site, null, _p.ResearchValue, "research " + kind));
+            if (!KindUsable(kind)) continue;
+            bool ships = track == ResearchKind.Ship;
+            int want = (ships ? Math.Max(1, _p.ShipResearchMissions) : 1) - own.Count(m => m.Kind == kind);
+            if (want <= 0 || _h.Research.Exhausted(_side, track)) continue;
+            int value = ships && _p.ShipResearchValue > 0 ? _p.ShipResearchValue : _p.ResearchValue;
+            // ships: several teams may work at one site (m5-missions §Targets: any held system with a shipyard), as shipyards stack on few systems
+            var sites = HeldSystems().Where(s => (ships ? KindUsable(kind) : Free(kind, s)) && _h.Research.CanResearch(_side, track, s) == null).ToList();
+            for (int k = 0; k < want && sites.Count > 0 && (ships || k < sites.Count); k++)
+            {
+                string site = sites[k % sites.Count];
+                jobs.Add(new Job(kind, site, null, value, "research " + kind + " " + site + (ships ? " #" + k : "")));
+            }
         }
         return jobs;
     }

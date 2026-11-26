@@ -38,6 +38,47 @@ public sealed record SimpleAiParams
     /// <summary>The second and later yards are only ordered when the refined pool holds at least this much. DEFAULT.</summary>
     public int ExtraYardRefinedReserve { get; init; } = 40;
 
+    // ---- the navy (AI trainer 2026-11-26; Paul: whichever side the AI plays, it researches and builds every ship it can and strives for the
+    // best navy possible, by spending and research only, never a bonus). Each DEFAULT keeps the AI as it was; AiLevels sets them at Medium and Hard.
+    /// <summary>
+    /// One construction yard more is wanted per this many populated held worlds (plus one), up to <see cref="MaxConstructionYards"/>, never fewer
+    /// than <see cref="DesiredConstructionYards"/>; 0 = <see cref="DesiredConstructionYards"/> only. Construction yards build the mines and
+    /// refineries that are the room (m2-maintenance §Capacity). DEFAULT 0.
+    /// </summary>
+    public int WorldsPerConstructionYard { get; init; }
+    public int MaxConstructionYards { get; init; } = 12;
+    /// <summary>
+    /// A construction yard may be paid from <see cref="MaintenanceMargin"/> (the room kept free after every purchase), so a side at its room cap
+    /// can still build the yards that grow its room. DEFAULT false (measured 2026-11-26: the Hand AI sat at its cap with 1 to 4 construction
+    /// yards on 100 to 140 worlds and 1,000+ refined unspent).
+    /// </summary>
+    public bool YardsFromMargin { get; init; }
+    /// <summary>Shipyards stack on one system up to this many (bigger ships finish within MaxBuildDays: ceil(cost / yards) x 4 days); 0 = <see cref="YardsPerSystem"/>. DEFAULT 0.</summary>
+    public int ShipyardsPerSystem { get; init; }
+    /// <summary>New shipyards are Advanced Shipyards (half the cycle, m2-construction §Families) once researched. DEFAULT false.</summary>
+    public bool AdvancedShipyards { get; init; }
+    /// <summary>
+    /// Refit: when the best warship a free shipyard can build does not fit the room but the refined pool pays for it, idle armed warships whose
+    /// strength per upkeep is below this percent of the best's are scrapped to make room for it (at most <see cref="RefitShipsPerReview"/> a
+    /// production review). 0 = off. DEFAULT 0.
+    /// </summary>
+    public int RefitBelowPercent { get; init; }
+    public int RefitShipsPerReview { get; init; } = 2;
+    /// <summary>
+    /// Ship research missions out at once, at systems with a shipyard (m5-research CanResearch; several may share one); the other tracks keep one. Research
+    /// points from missions are the main road up the ladder (yards add one point a tick, costs scale with the galaxy). DEFAULT 1.
+    /// </summary>
+    public int ShipResearchMissions { get; init; } = 1;
+    /// <summary>The value of a ship research job (0 = <see cref="ResearchValue"/>). DEFAULT 0.</summary>
+    public int ShipResearchValue { get; init; }
+    /// <summary>
+    /// Hold ships (AI trainer 2026-11-26; Paul: the best navy includes the ships that pin a leaving enemy, which suits hit and run too): while
+    /// fewer than this percent of the side's armed warships (built or ordered) hold a leaving ship in battle (New battle with
+    /// HoldBeamsHoldRetreat on and hold_beam_power at least HoldBeamMinPower: the Edict, the Barricade), the shipyards pick the best of those
+    /// that fits first. 0 = off. DEFAULT 0. rule: m4-retreat-damage-repair §6.
+    /// </summary>
+    public int HoldShipPercent { get; init; }
+
     // ---- production
     /// <summary>Regiments kept on the system whose loss ends the game (Charter for the Hand, the Hearth for the Collective), at least. DEFAULT.</summary>
     public int CriticalGarrison { get; init; } = 8;
