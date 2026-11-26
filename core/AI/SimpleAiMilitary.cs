@@ -565,7 +565,7 @@ public sealed partial class SimpleAi
         if (win == null || win == from || Held(win) || p.Strength < _p.WinStrikeStrength || BouncedOff(win)) return 0;
         int speed = _h.Fleets.SpeedOf(p.Leader);
         if (speed <= 0 || Ticks(from, win, speed) == int.MaxValue) return 0;
-        if (AssaultForbiddenSeen(win) || !SlotsSeen(win).Populated) return 0;
+        if ((AssaultForbiddenSeen(win) && !_p.SiegeShields) || !SlotsSeen(win).Populated) return 0; // SiegeShields: the shields are shelled down at the target
         var enemies = TargetFleetsAt(win);
         if (enemies.Count > 0 && Duel(p.Members, enemies) < TargetOdds(win)) return 0;
         int d = DefendersAt(win);
@@ -615,7 +615,18 @@ public sealed partial class SimpleAi
         int aboard = _h.Troops.RegimentsAboard(f).Count;
         int d = DefendersAt(at);
         bool canShell = _h.Bombardment.Power(f) > 0;
-        if (AssaultForbiddenSeen(at)) { Leave(f); return; } // rule: m3-planetary-defenses (assault forbidden, 2+ shield generators)
+        if (AssaultForbiddenSeen(at))
+        {
+            // rule: m3-assault check 4, m3-bombardment §Resolution (shields are Military targets): SiegeShields shells the shields down first
+            // (the adaptive commander's Siege, AI trainer 2026-11-26), bounded like any shelling; else the fleet leaves
+            if (_p.SiegeShields && canShell && aboard > 0 && RecentBombardments(at) < _p.MaxBombardmentsPer30Days)
+            {
+                long sq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
+                Note(sq, "Bombard", $"fleet {f.Id} shells the shields of {at}");
+                return;
+            }
+            Leave(f); return; // rule: m3-planetary-defenses (assault forbidden, 2+ shield generators)
+        }
         if (_view != null && !SlotsSeen(at).Populated) { Leave(f); return; } // fog: the target was picked unseen; an empty world cannot be assaulted
         // rule: m3-assault §Order and preconditions: a fleet has one order at a time, so shell one day and land the next.
         bool win = at == WinTarget();

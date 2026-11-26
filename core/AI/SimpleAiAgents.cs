@@ -655,10 +655,10 @@ public sealed partial class SimpleAi
                 if (!CellsOn && MissionDefendersAt(s).Count > 0) continue;
                 // rule: ai tuning, SimpleAiParams.Campaign: worth more in the campaign's sector, its defences most of all
                 bool inCampaign = CampaignIn(sys.Sector) != null;
-                if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, CampaignAgentValue(s, _p.InciteValue), "subvert " + s));
+                if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, CampaignAgentValue(s, _p.InciteValue, MissionKind.InciteUprising), "subvert " + s));
                 int fac = FacilitiesAt(s);
                 int sab = _p.SabotageValuePerFacility * fac + (inCampaign ? _p.CampaignDefenceValue * DefencesSeenAt(s) : 0);
-                if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, CampaignAgentValue(s, sab), "subvert " + s));
+                if (fac > 0 && Free(MissionKind.Sabotage, s)) jobs.Add(new Job(MissionKind.Sabotage, s, null, CampaignAgentValue(s, sab, MissionKind.Sabotage), "subvert " + s));
             }
             if (CellsOn)
             {

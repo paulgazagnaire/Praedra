@@ -306,6 +306,21 @@ public sealed record SimpleAiParams
     /// The values below were tuned on 32 Medium mirrors (AI trainer 2026-11-26, notes specs/engine/ai-notes/2026-11-26-campaign-game-log.md).
     /// </summary>
     public bool Campaign { get; init; }
+
+    /// <summary>
+    /// Fortify (AI trainer 2026-11-26; the adaptive commander, specs/engine/ai-notes/2026-11-26-adaptive-commander.md, plan 1 of both sides;
+    /// strategy note 2026-11-26-how-to-win.md §2.1: neither AI ever built a battery or a shield). The side's construction yards put
+    /// <see cref="FortifyShields"/> shield generators (Escrow II once researched, else Escrow I) and <see cref="FortifyBatteries"/> batteries
+    /// (Lien-150) on its first <see cref="FortifyWorlds"/> key worlds: the capital (the Hand's Charter, the Collective's Hearth world), then the
+    /// worlds with the most yards, then the most mines. Two complete shields forbid an assault (m3-assault check 4) and each battery shoots one
+    /// landing regiment (m3-assault §1). The capital comes right after the first shipyard and training facility; the other key worlds only
+    /// while the refined stock is at <see cref="ExtraYardRefinedReserve"/> or more. 0 = never (DEFAULT, the AI before 2026-11-26).
+    /// </summary>
+    public int FortifyWorlds { get; init; }
+    /// <summary>Shield generators wanted on each Fortify world (<see cref="FortifyWorlds"/>); 2 = assault-proof (m3-assault check 4).</summary>
+    public int FortifyShields { get; init; } = 2;
+    /// <summary>Batteries (Lien-150) wanted on each Fortify world (<see cref="FortifyWorlds"/>).</summary>
+    public int FortifyBatteries { get; init; } = 1;
     public int CampaignPrepareDays { get; init; } = 120;
     public int CampaignMaxDays { get; init; } = 420;
     public int CampaignHoldPercent { get; init; } = 70;
@@ -327,6 +342,41 @@ public sealed record SimpleAiParams
     public int CampaignPrepareOffTargetPercent { get; init; } = 40;
     /// <summary>Campaign: a Sabotage in the campaign's sector is also worth this per defence seen there (shields and batteries guard the invasion).</summary>
     public int CampaignDefenceValue { get; init; } = 120;
+
+    /// <summary>
+    /// Front plans (AI trainer 2026-11-26; Paul 2026-11-26: the commander uses different strategies per front on Medium and Hard). Each new
+    /// campaign (a front) picks the plan that fits its sector best, a different one from the other fronts when it can: Campaign (sabotage the
+    /// defences, then invade: the plan before 2026-11-26), Bleed (incite uprisings, so the Hand must double its garrisons) or Starve (raids and
+    /// sabotage on mines and yards). The fit reads only the side's picture of the sector. Off = every front is a Campaign (DEFAULT).
+    /// Design: specs/engine/ai-notes/2026-11-26-adaptive-commander.md §3-§4.
+    /// </summary>
+    public bool FrontPlans { get; init; }
+    /// <summary>Bleed fronts (<see cref="FrontPlans"/>): an Incite Uprising there is worth this percent more again (on top of CampaignAgentPercent).</summary>
+    public int BleedIncitePercent { get; init; } = 300;
+    /// <summary>Starve fronts (<see cref="FrontPlans"/>): a raid there is worth this percent, in the preparation and the strike alike.</summary>
+    public int StarveRaidPercent { get; init; } = 600;
+    /// <summary>Starve fronts (<see cref="FrontPlans"/>): a sabotage there is worth this percent more again (on top of CampaignAgentPercent).</summary>
+    public int StarveSabotagePercent { get; init; } = 200;
+    /// <summary>
+    /// Front memory (AI trainer 2026-11-26; Paul 2026-11-26: a plan that failed because of specific conditions may work in a different setting):
+    /// each ended front leaves a verdict with the conditions it ran in (AiVerdict), and a new front's plan fit is raised or cut only by the
+    /// verdicts of the same plan in the same conditions, fading after <see cref="FrontMemoryFadeDays"/>. Needs <see cref="FrontPlans"/>. Off = no
+    /// memory (DEFAULT).
+    /// </summary>
+    public bool FrontMemory { get; init; }
+    /// <summary>Front memory (<see cref="FrontMemory"/>): after this many days a verdict counts half as much.</summary>
+    public int FrontMemoryFadeDays { get; init; } = 180;
+    /// <summary>
+    /// Hand fronts (AI trainer 2026-11-26, experiment; Paul 2026-11-26: the Hand expands in several directions too): the Hand runs campaigns
+    /// (<see cref="Campaign"/>) as well. Off = the Collective only (DEFAULT; the Collective's campaign made the Hand lose 31 of 32 mirrors).
+    /// </summary>
+    public bool HandFronts { get; init; }
+    /// <summary>
+    /// Siege (AI trainer 2026-11-26; the adaptive commander's Siege plan): a fleet carrying troops at a world whose seen shields forbid an
+    /// assault (m3-assault check 4) shells it with the Military target (m3-bombardment: shields are Military targets, no support cost), up to
+    /// MaxBombardmentsPer30Days, instead of leaving at once. Off = it leaves (DEFAULT, the AI before 2026-11-26).
+    /// </summary>
+    public bool SiegeShields { get; init; }
     /// <summary>Campaign preparation: Espionage looks out at once on the sector's enemy worlds whose picture is older than CampaignLookDays, each worth CampaignLookValue.</summary>
     public int CampaignLooks { get; init; } = 2;
     public int CampaignLookDays { get; init; } = 60;
