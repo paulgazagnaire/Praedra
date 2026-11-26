@@ -1,3 +1,12 @@
+Pixel Operator (Regular and Bold)
+by Jayvee Enaguas (HarvettFox96), https://www.dafont.com/pixel-operator.font
+Licence: Creative Commons Zero 1.0 Universal (CC0 1.0), https://creativecommons.org/publicdomain/zero/1.0/
+Both TTFs say so in their name table ("Released by Jayvee Enaguas (HarvettFox96), licensed under a Creative Commons Zero (CC0) 1.0").
+No credit is required.
+Used for the top bar and the advisor's panel (Paul's Paper frames "ui-update-nov-24" and "ui-update-nov-26", 2026-11-26). Not changed by us.
+
+The licence text as shipped with the font follows.
+
 Creative Commons Legal Code
 
 CC0 1.0 Universal
