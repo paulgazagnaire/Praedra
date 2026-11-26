@@ -121,7 +121,7 @@ public partial class GameScreen
         _logMessages.Add(m);
         _log.AddItem($"Day {m.Day}   {m.Text}");
         int idx = _log.ItemCount - 1;
-        _log.SetItemCustomFgColor(idx, Ui.KindColor(m.Kind, Ui.WinText));   // the drawer has the window look
+        _log.SetItemCustomFgColor(idx, SibylLook.Swap(Ui.KindColor(m.Kind, Ui.WinText)));   // in Sibyl's panel's colours
         _log.SetItemTooltip(idx, m.System != null ? Ui.Wrap(m.Text + (m.Detail != null ? "\nClick for the report." : "\nClick to go there.")) : Ui.Wrap(m.Text));
         if (_log.ItemCount > MaxLogItems) { _log.RemoveItem(0); _logMessages.RemoveAt(0); }
     }

@@ -6,23 +6,27 @@ using Godot;
 namespace PraedraViewer;
 
 /// <summary>
-/// The top bar, after Paul's Paper frame "ui-update-nov-24" (2026-11-24): one black strip 40 px tall, a 1 px line under it and 1 px lines
-/// between its cells. Left, from the screen's edge: the menu, Layers, the goal, the search. Right, to the edge: Raw, Refined and Upkeep in
-/// one cell, the day, the clock with its speeds, then the advisor. Pixel words (BitPotion 24): grey labels, light values. A cell you click
-/// holds a 32 px chip 4 px in, with 4 px corners; the cells of words (the stocks, the day) keep 16 px each side.
+/// The top bar, after Paul's Paper frames "ui-update-nov-24" (Sibyl closed) and "ui-update-nov-26" (Sibyl open), as he changed them on
+/// 2026-11-26: one near-black strip 40 px tall with 1 px lines between its cells (no line under it any more). Left, from the screen's edge:
+/// the menu, Layers, the goal, the search. Right, to the edge: Raw, Refined and Upkeep in one cell, the day, the clock with its speeds, then
+/// the advisor's cell ("Sibyl", which turns into × while her panel is open). Pixel words (Pixel Operator 16): blue-grey labels, light values.
+/// A cell you click holds a 32 px chip 4 px in, with 4 px corners; the cells of words (the stocks, the day) keep 16 px each side.
 /// The bar has a layer of its own over the windows, so the search results and the layers list it opens are never hidden under a window;
 /// the windows themselves start under it (TopClear) and never cover it.
 /// </summary>
 public partial class GameScreen
 {
-    // ---- the frame's colours
-    static readonly Color BarBg = new("000000");       // the strip, and its chips at rest (black on black: the frame draws them so)
-    static readonly Color BarEdge = new("181b21");     // the line under the strip and between its cells (the windows' edge)
-    static readonly Color BarCellBg = new("000000");   // the cells inside a drop-down
-    static readonly Color BarLabel = new("84878e");    // labels: GOAL, Search, Layers, Raw, DAY, 2x
-    static readonly Color BarValue = new("dfdfdf");    // values (0/3, 9999), and a switch that is on (the speed, Layers open, the clock running)
-    static readonly Color BarMenu = new("b0b2b7");     // the menu's ≡, and a label under the mouse (the chip stays black: Paul 2026-11-24, "B")
-    static readonly Color BarIcon = new("dddddd");     // the pixel icons of Raw, Refined and Upkeep
+    // ---- the frames' colours (ui-update-nov-24 and nov-26, 2026-11-26)
+    static readonly Color BarBg = new("060709");       // the strip, and its chips at rest (the chips are drawn on the strip's own colour)
+    static readonly Color BarEdge = new("161a22");     // the lines between the cells, and round a drop-down
+    static readonly Color BarCellBg = new("060709");   // the cells inside a drop-down
+    static readonly Color BarLabel = new("54638a");    // labels: GOAL, Search, Layers, Raw, DAY, 2x
+    static readonly Color BarValue = new("b8c2e0");    // values (0/3, 9999), and a switch that is on (the speed, Layers open)
+    static readonly Color BarMenu = new("7893c5");     // a label under the mouse (the chip stays the strip's colour: Paul 2026-11-24, "B")
+    static readonly Color BarIcon = new("dddddd");     // the pixel icons of Raw, Refined and Upkeep, as the frames keep them
+    static readonly Color BarIconLight = new("b8c2e0"); // the menu's icon, Layers' and the magnifier: the menu's colour in the frames
+    static readonly Color BarClock = new("bfd0ff");    // the clock's icon while the days run (the frames' pause), and an icon under the mouse
+    static readonly Color AdvisorCellBg = new("202a3b"); // the advisor's cell, which joins the head of her panel under it
 
     // ---- the frame's sizes
     const int BarBoxH = 40;       // the strip, its 1 px line included: the windows and the drop-downs start under it
@@ -32,7 +36,8 @@ public partial class GameScreen
     const int ChipPad = 8;        // words in a chip: 8 px each side
     const int StockGap = 16;      // between Raw, Refined and Upkeep
     const int BarSide = 16;       // the map's layer key under the bar, from the screen's left edge
-    const int BarTextSize = 24;   // BitPotion 24: 1.5 px to a font pixel, 3 screen pixels on a Retina screen
+    const int BarTextSize = 16;   // Pixel Operator 16: one px to a font pixel, two screen pixels on a Retina screen
+    const int AdvisorCellW = 87;  // the advisor's cell, the frames' width (its words centred)
     const int SearchWide = 288, SearchNarrow = 150;   // the search chip: the frame's 288 (it drew 320 on nov-15; 290 once the advisor came)
     const int BarMinGap = 16;     // the least room left between the left and the right cells
     const int SearchResultsWidth = 360;
@@ -49,7 +54,7 @@ public partial class GameScreen
     Label _goalCaption, _goalValue, _rawCaption, _refinedCaption;
     readonly List<PanelContainer> _barTextCells = new();
     static Font _barFont;
-    static Font BarFont => _barFont ??= Ui.Pixel ?? ThemeDB.FallbackFont;
+    static Font BarFont => _barFont ??= Ui.Operator ?? ThemeDB.FallbackFont;
 
     const string RawTip = "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined.";
     const string RefinedTip = "Refined: the material you spend on ships, troops and buildings. Each yard takes it as it builds.";
@@ -79,9 +84,10 @@ public partial class GameScreen
         _barLayer.AddChild(_barRight);
 
         // ---- left, each cell closed by a line: the menu, Layers, the goal, the search
-        _menuButton = BarButton("≡", ToggleMenu, "Menu: fleets, leaders, missions, goal, sectors, save, load, settings (Esc closes)", Ui.MonoMedium, 22, BarMenu, 0);
+        _menuButton = BarButton("", ToggleMenu, "Menu: fleets, leaders, missions, goal, sectors, save, load, settings (Esc closes)", BarFont, BarTextSize, BarLabel, 0);
         _menuButton.SetMeta(UiTest.FullName, "Menu");
         _menuButton.CustomMinimumSize = new Vector2(BarCellH, BarCellH);
+        IconOnChip(_menuButton, MenuIcon, BarIconLight, BarClock);   // the frames' three bars, as the game's pixel icon
         _barLeft.AddChild(ChipCell(_menuButton));
         BarLine(_barLeft);
 
@@ -89,7 +95,8 @@ public partial class GameScreen
         _layersButton = BarButton("Layers", ToggleLayers, "Show or hide the map layers (V cycles them)", BarFont, BarTextSize, BarLabel, ChipPad);
         _layersButton.ToggleMode = true;
         // the stacked-sheets icon left of the word (Paul chose B 2026-11-25; the frame's icon there was a copy of Refined's): drawn with
-        // square pixels, and lit with the word: grey at rest, lighter under the mouse, light while the list is open
+        // square pixels, and lit with the word as the frame draws it: the label's grey at rest, the hover blue under the mouse, the value's
+        // light while the list is open
         _layersTex = new[] { PixelTexture(LayersIcon, BarLabel), PixelTexture(LayersIcon, BarMenu), PixelTexture(LayersIcon, BarValue) };
         _layersIcon = PixelIcon(LayersIcon, BarLabel);
         _layersIcon.AnchorTop = _layersIcon.AnchorBottom = 0.5f;
@@ -126,7 +133,7 @@ public partial class GameScreen
         sc.AddChild(sh);
         BuildSearch(sh);
         StyleSearch(_search);
-        var lens = PixelIcon(MagnifierIcon, BarLabel);
+        var lens = PixelIcon(MagnifierIcon, BarIconLight);
         lens.MouseFilter = MouseFilterEnum.Stop;
         lens.TooltipText = _search.TooltipText;
         lens.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) FocusSearch(); };
@@ -162,8 +169,9 @@ public partial class GameScreen
         clock.MouseFilter = MouseFilterEnum.Ignore;
         // one button that plays and pauses (Paul 2026-11-14, impeccable critique): it shows what a click does, and is lit while the clock
         // runs; one day at a time is the N key
-        _playButton = BarButton("▶", TogglePlay, "Play or pause (Space); N moves one day. The clock stops by itself after a battle, a capture or an invasion.", Ui.Mono, 16, BarLabel, 0);
+        _playButton = BarButton("", TogglePlay, "Play or pause (Space); N moves one day. The clock stops by itself after a battle, a capture or an invasion.", BarFont, BarTextSize, BarLabel, 0);
         _playButton.CustomMinimumSize = new Vector2(BarCellH, BarCellH);
+        _playIcon = IconOnChip(_playButton, PlayIcon, BarIconLight, BarClock);
         clock.AddChild(_playButton);
         var sg = new ButtonGroup();
         for (int i = 0; i < Speeds.Length; i++)
@@ -178,21 +186,27 @@ public partial class GameScreen
         _barRight.AddChild(ChipCell(clock));
         BarLine(_barRight);
 
-        // ---- the advisor, right of the clock (Paul 2026-11-24): Sibyl for the Hand; a click opens or closes the window on the right.
-        // The frame leaves the strip empty there: the advisor's cell ends the bar at the screen's right edge, as the menu's starts it
-        _advisorButton = BarButton("", ToggleAdvisor, "", BarFont, BarTextSize, BarLabel, 0);
+        // ---- the advisor, right of the clock (Paul 2026-11-24): Sibyl for the Hand. Her cell (the frames of 2026-11-26) fills the bar's
+        // height at the right edge in the colour of her panel's head: her name in bold while the panel is closed, × while it is open, so the
+        // cell and the head under it read as one tab. A click opens or closes the panel.
+        _advisorButton = new Button { ToggleMode = true, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand };
+        _advisorButton.Pressed += ToggleAdvisor;
         _advisorButton.SetMeta(UiTest.FullName, "Advisor");
-        _advisorButton.CustomMinimumSize = new Vector2(BarCellH, BarCellH);
-        _advisorButton.ToggleMode = true;
-        _advisorTex = new[] { PixelTexture(AdvisorIcon, BarLabel), PixelTexture(AdvisorIcon, BarMenu), PixelTexture(AdvisorIcon, BarValue) };
-        _advisorIcon = PixelIcon(AdvisorIcon, BarLabel);
-        var ac = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
-        ac.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        ac.AddChild(_advisorIcon);
-        _advisorButton.AddChild(ac);
+        var cellBox = new StyleBoxFlat { BgColor = AdvisorCellBg };
+        foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) _advisorButton.AddThemeStyleboxOverride(st, cellBox);
+        _advisorButton.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        _advisorButton.CustomMinimumSize = new Vector2(AdvisorCellW, BarBoxH);
+        foreach (var c in new[] { "font_color", "font_focus_color", "font_pressed_color" }) _advisorButton.AddThemeColorOverride(c, BarValue);
+        foreach (var c in new[] { "font_hover_color", "font_hover_pressed_color" }) _advisorButton.AddThemeColorOverride(c, BarClock);
         _advisorButton.MouseEntered += PaintAdvisor;
         _advisorButton.MouseExited += PaintAdvisor;
-        _barRight.AddChild(ChipCell(_advisorButton));
+        _barRight.AddChild(_advisorButton);
+        // while the panel is open, its head's colour runs over the bar's bottom line above it too, so the cell and the head are one shape
+        _advisorJoin = new ColorRect { Color = AdvisorCellBg, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        _advisorJoin.AnchorLeft = _advisorJoin.AnchorRight = 1;
+        _advisorJoin.OffsetLeft = -DrawerWidth; _advisorJoin.OffsetRight = 0;
+        _advisorJoin.OffsetTop = BarBoxH - 1; _advisorJoin.OffsetBottom = BarBoxH;
+        _barLayer.AddChild(_advisorJoin);
 
         // ---- what the cells open: the search results and the layers list hang under them, over the windows
         BuildSearchResults(_barLayer);
@@ -289,16 +303,15 @@ public partial class GameScreen
         return b;
     }
 
-    /// <summary>BitPotion, or for words with a letter it lacks (an accented name such as "Ciénaga") <see cref="BarFontWide"/>.</summary>
+    /// <summary>Pixel Operator, or for words with a letter it lacks (it has é and ñ, not ł or ń) <see cref="BarFontWide"/>.</summary>
     static Font BarFontFor(string text) =>
-        Ui.Pixel is FontFile px && text.All(c => char.IsWhiteSpace(c) || px.HasChar(c)) ? BarFont : BarFontWide;
+        BarFont is FontFile px && text.All(c => char.IsWhiteSpace(c) || px.HasChar(c)) ? BarFont : BarFontWide;
 
     static Font _barFontWide;
     /// <summary>
-    /// BitPotion with Space Grotesk for the letters it lacks (é, ć). Space Grotesk's line is trimmed to BitPotion's at the bar's size, so a
-    /// word with é is set on the same line as its neighbours; the accent may rise a little above it. A label in this face is still as tall as
-    /// Space Grotesk's line (32 px, a search row) with BitPotion's line centred in it: the search rows give both their words this face, so
-    /// the name and the description stand on one line whichever has the é.
+    /// Pixel Operator with Space Grotesk for the letters it lacks (ł, ń). Space Grotesk's line is trimmed to Pixel Operator's at the bar's
+    /// size, so such a word is set on the same line as its neighbours. The search rows give both their words this face, so the name and the
+    /// description stand on one line whichever has the rare letter.
     /// </summary>
     static Font BarFontWide
     {
@@ -415,13 +428,40 @@ public partial class GameScreen
     }
     /// <summary>The search's clear button, white so the field's clear-button colours tint it.</summary>
     static string[] ClearIcon => PixelIconData.Bar["clear"];
-    /// <summary>The advisor: Sibyl's forecast mark, a line rising over the ground with a dot ahead of it and the forecast square (Paul chose it
-    /// 2026-11-24 over a robot head: Praevisio machines have no head, face or eye, and Sibyl speaks only in forecasts).</summary>
-    static string[] AdvisorIcon => PixelIconData.Bar["advisor"];
+    /// <summary>The menu: three bars (Paul's frames of 2026-11-26; the game's ≡ before).</summary>
+    static string[] MenuIcon => PixelIconData.Bar["menu"];
+    /// <summary>The clock's button shows what a click does: play while it is paused, pause while the days run.</summary>
+    static string[] PlayIcon => PixelIconData.Bar["play"];
+    static string[] PauseIcon => PixelIconData.Bar["pause"];
+
+    /// <summary>A pixel icon centred on a chip with no words (the menu, the clock): <paramref name="rest"/> at rest, <paramref name="hover"/>
+    /// under the mouse. Returns the picture, so the clock can swap play for pause.</summary>
+    TextureRect IconOnChip(Button chip, string[] icon, Color rest, Color hover)
+    {
+        var pic = PixelIcon(icon, rest);
+        var c = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        c.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        c.AddChild(pic);
+        chip.AddChild(c);
+        var tex = new[] { PixelTexture(icon, rest), PixelTexture(icon, hover) };
+        chip.MouseEntered += () => { if (chip != _playButton) pic.Texture = tex[1]; else PaintPlay(); };
+        chip.MouseExited += () => { if (chip != _playButton) pic.Texture = tex[0]; else PaintPlay(); };
+        return pic;
+    }
+
+    TextureRect _playIcon;
+    ImageTexture[] _clockTex;   // play at rest, play under the mouse, pause (the days run): the frames draw the pause in #BFD0FF
+
+    /// <summary>The clock's icon: play (light, lighter under the mouse) while paused, the lit pause while the days run.</summary>
+    void PaintPlay()
+    {
+        if (_playIcon == null) return;
+        _clockTex ??= new[] { PixelTexture(PlayIcon, BarIconLight), PixelTexture(PlayIcon, BarClock), PixelTexture(PauseIcon, BarClock) };
+        _playIcon.Texture = _clockTex[_playing ? 2 : _playButton.IsHovered() ? 1 : 0];
+    }
 
     Button _advisorButton;
-    TextureRect _advisorIcon;
-    ImageTexture[] _advisorTex;   // at rest, under the mouse, open: the bar's grey, its lighter grey, its light value
+    ColorRect _advisorJoin;
 
     /// <summary>The advisor's name: Sibyl, Praevisio's assistant, for the Hand (specs/creative/02-the-hand.md); the Collective has none yet.</summary>
     string AdvisorName => Me == Praedra.Core.Clock.Side.Hand ? "Sibyl" : null;
@@ -433,13 +473,21 @@ public partial class GameScreen
         PaintAdvisor();
     }
 
-    /// <summary>Lit while the window is open, a step lighter under the mouse, the bar's grey otherwise; its hover names the advisor.</summary>
+    /// <summary>Her name in bold while her panel is closed ("Advisor" for the Collective, whose advisor has no name yet), × while it is open
+    /// (the frames ui-update-nov-24 and nov-26); the words lighten under the mouse; its hover names the advisor.</summary>
     void PaintAdvisor()
     {
         if (_advisorButton == null) return;
         bool open = _drawer.Visible;
         _advisorButton.SetPressedNoSignal(open);
-        _advisorIcon.Texture = _advisorTex[open ? 2 : _advisorButton.IsHovered() ? 1 : 0];
+        if (_advisorJoin != null) _advisorJoin.Visible = open;
+        string word = open ? "×" : AdvisorName ?? "Advisor";
+        if (_advisorButton.Text != word)
+        {
+            _advisorButton.Text = word;
+            _advisorButton.AddThemeFontOverride("font", open ? BarFont : Ui.OperatorBold ?? BarFont);
+            _advisorButton.AddThemeFontSizeOverride("font_size", open ? 40 : BarTextSize);   // the frame's × is 40 px
+        }
         string who = AdvisorName is string n ? $"{n}, your advisor" : "Your advisor";
         _advisorButton.TooltipText = Ui.Wrap($"{who}: what needs you, your fleets, leaders and missions, and the log. {(open ? "Click or Esc to close." : "Click to open.")}");
     }

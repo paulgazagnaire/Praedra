@@ -198,13 +198,15 @@ public partial class GameScreen
         // the drop-downs speak the bar's pixel words (Paul 2026-11-15, "Yes A"), and a hit reached with the arrow keys is lit
         foreach (var lb in _layerButtons.Append(_routesChip).Append(_deliveriesChip).Append(_legendButton))
             if (lb.GetThemeFont("font") != BarFont) return $"the layers list's \"{lb.Text}\" is not in the bar's pixel font";
-        // a word with é is set on BitPotion's line (the second font's line trimmed to it), so it stands level with its neighbours
+        // Pixel Operator has é and ñ, so "Ciénaga" stays in it; a word with ł is set on Pixel Operator's line (the second font's line
+        // trimmed to it), so it stands level with its neighbours
+        if (BarFontFor("Ciénaga") != BarFont) return "a name with é (Ciénaga) leaves the bar's pixel font, though Pixel Operator has é";
         var plainLine = new TextLine(); plainLine.AddString("Charter", BarFont, BarTextSize);
-        var wideLine = new TextLine(); wideLine.AddString("Ciénaga", BarFontFor("Ciénaga"), BarTextSize);
-        if (BarFontFor("Ciénaga") != BarFontWide || BarFontWide is not FontVariation { Fallbacks.Count: > 0 })
-            return "a name with a letter BitPotion lacks (Ciénaga) has no second font for it";
+        var wideLine = new TextLine(); wideLine.AddString("Wisła", BarFontFor("Wisła"), BarTextSize);
+        if (BarFontFor("Wisła") != BarFontWide || BarFontWide is not FontVariation { Fallbacks.Count: > 0 })
+            return "a name with a letter Pixel Operator lacks (ł) has no second font for it";
         if (Math.Abs(wideLine.GetLineAscent() - plainLine.GetLineAscent()) > 0.5f || Math.Abs(wideLine.GetLineDescent() - plainLine.GetLineDescent()) > 0.5f)
-            return $"a word with é sits on another line ({wideLine.GetLineAscent():0}+{wideLine.GetLineDescent():0} px) than BitPotion's ({plainLine.GetLineAscent():0}+{plainLine.GetLineDescent():0})";
+            return $"a word with ł sits on another line ({wideLine.GetLineAscent():0}+{wideLine.GetLineDescent():0} px) than Pixel Operator's ({plainLine.GetLineAscent():0}+{plainLine.GetLineDescent():0})";
         SetSearch("chart");
         var hit = _searchList.GetChildCount() > 0 ? _searchList.GetChild(0) as Button : null;
         var hitWords = hit?.FindChildren("*", "Label", true, false).OfType<Label>().ToList();

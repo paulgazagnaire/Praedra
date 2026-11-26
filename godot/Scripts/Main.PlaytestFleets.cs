@@ -259,7 +259,7 @@ public partial class Main
                 "a click on it lists them, each with its ships and behaviour: " + string.Join(" / ", lines));
             var last = pair[^1];
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
-            if (gs.WindowOpen) gs.Click("Close window");
+            if (gs.WindowOpen) gs.Click("Advisor");
             Expect(gs.PlayPickFromFleetGroup(last.Name) && gs.SelectedFleetId == last.Id, $"picking {last.Name} in the list selects it");
             // Paul 2026-11-23: "the fleet window opens", not the window on the right
             Expect(gs.MgmtKeys.Contains($"Fleet {last.Id}") && !gs.WindowOpen,
@@ -288,7 +288,7 @@ public partial class Main
             .OrderBy(f => f.Id).FirstOrDefault();
         if (lone != null && gs.G.TryFindSystem(lone.At, out int loneIdx))
         {
-            if (gs.WindowOpen) gs.Click("Close window");
+            if (gs.WindowOpen) gs.Click("Advisor");
             gs.View.Select(-1); gs.View.SelectedFleet = -1;
             gs.View.FocusOn(loneIdx, 2.4f);
             gs.PlayRefresh();

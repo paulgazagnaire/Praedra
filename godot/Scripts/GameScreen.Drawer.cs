@@ -9,12 +9,12 @@ using Side = Praedra.Core.Clock.Side;
 namespace PraedraViewer;
 
 /// <summary>
-/// The window on the right (it was a fixed drawer until Paul's mockup of 2026-10-28): closed until you ask for something longer than the
-/// floating pieces show (a system's details, Fleets, Leaders, Missions, the log, Needs you), with tabs to step between those, and closed
-/// again with its cross or Esc. A click on the map only fills the selection card; the window follows the selection while it is open.
-/// The helpers here (Line, Heading, Act, Card) are what every tab builds with, so the tabs look alike. It has the windows' look (Paul
-/// 2026-11-14, impeccable critique): their surface and edge, their tabs (words with a 3 px line under the chosen one), × pinned right,
-/// outlined cards and buttons, Space Grotesk and the four greys.
+/// Sibyl's panel on the right (it was a fixed drawer until Paul's mockup of 2026-10-28): closed until you ask for something longer than
+/// the floating pieces show (a system's details, Fleets, Leaders, Missions, the log, Needs you), with tabs to step between those, and
+/// closed again with the bar's Sibyl cell (× while it is open) or Esc. A click on the map only fills the selection card; the panel follows
+/// the selection while it is open. The helpers here (Line, Heading, Act, Card) are what every tab builds with, so the tabs look alike.
+/// Its look is Paul's frame "ui-update-nov-26" (2026-11-26): docked to the right edge under the bar, 512 px wide, the head in the colour
+/// of the bar's Sibyl cell, Pixel Operator and blue-greys (<see cref="SibylLook"/>).
 /// </summary>
 public partial class GameScreen
 {
@@ -27,7 +27,7 @@ public partial class GameScreen
     VBoxContainer _pv;          // the content of the current tab (the Log tab has its own)
     VBoxContainer _into;        // where Line/Act/Heading add: _pv, or the card being filled
     Control _logHost;
-    const int DrawerWidth = 440;
+    const int DrawerWidth = 512;   // the frame's panel
 
     Side Me => S.Player;
     FleetModule Fm => S.Host.Fleets;
@@ -39,16 +39,14 @@ public partial class GameScreen
         using var look = Ui.Window();
         var drawer = _drawer = Ui.Hud(0, 0);
         drawer.Theme = SibylTheme;
-        // Paul 2026-11-24 ("update the style according to the recent tabs that we redesigned, especially the fleet and ground tabs"): the
-        // Fleet window's look. The window on the lighter surface with its 1 px edge, the head on the darker one, the strip of tabs, the page.
-        var frame = Look.Box(Look.Band, Look.Frame, 1, 1, 1, 1);
-        frame.ContentMarginLeft = frame.ContentMarginRight = frame.ContentMarginTop = frame.ContentMarginBottom = 1;
-        drawer.AddThemeStyleboxOverride("panel", frame);
+        // Paul's frame "ui-update-nov-26": no edge of its own, docked to the screen's right edge from under the bar to the bottom; the head,
+        // the strip of tabs, then the page on the darkest blue
+        drawer.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = SibylLook.Page });
         drawer.Visible = false;
         drawer.SetAnchorsPreset(LayoutPreset.RightWide);
         drawer.GrowHorizontal = GrowDirection.Begin;
-        drawer.OffsetRight = -Edge; drawer.OffsetLeft = -Edge - DrawerWidth;
-        drawer.OffsetTop = TopClear; drawer.OffsetBottom = -Edge;
+        drawer.OffsetRight = 0; drawer.OffsetLeft = -DrawerWidth;
+        drawer.OffsetTop = BarBoxH; drawer.OffsetBottom = 0;
         var v = Ui.VBox(0);
         drawer.AddChild(v);
         v.AddChild(BuildSibylHead());
@@ -56,7 +54,7 @@ public partial class GameScreen
 
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         v.AddChild(_scroll);
-        var margin = Pad(WinPad, WinPad, WinPad, WinPad);   // the page's 16 px all round, as the Fleet window's
+        var margin = Pad(WinPad, WinPad, WinPad, WinPad);   // the page's 16 px all round
         margin.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _scroll.AddChild(margin);
         _pv = Ui.VBox(Ui.Block);
@@ -64,13 +62,14 @@ public partial class GameScreen
         margin.AddChild(_pv);
 
         _logHost = BuildLogTab();
+        SibylRepaint(_logHost);
         _logHost.Visible = false;
         v.AddChild(_logHost);
         return drawer;
     }
 
-    /// <summary>The page's width: the window less its 1 px edges, the 16 px margins, and 4 px spare for the scroll grabber.</summary>
-    const int PageWidth = DrawerWidth - 2 - 2 * WinPad - 4;
+    /// <summary>The page's width: the panel less the 16 px margins, and 4 px spare for the scroll grabber (480, the frame's cards, without it).</summary>
+    const int PageWidth = DrawerWidth - 2 * WinPad - 4;
 
     // ================================================================== the head and the strip (the Fleet window's design)
 
@@ -79,35 +78,27 @@ public partial class GameScreen
     readonly Dictionary<Praedra.Core.AI.SibylJob, CheckBox> _sibylSwitches = new();
 
     /// <summary>
-    /// The head, on the darker surface with 24 px all round as the Fleet window's: the advisor's name in BitPotion 48 (Sibyl for the Hand;
-    /// "Advisor" for the Collective, which has no name yet) with × on the right, then her two switches (Paul 2026-11-24: "we're missing the
-    /// controls. Add them KISS"): the same tick boxes as in Menu > Settings, the same state.
+    /// The head (Paul's frame "ui-update-nov-26"): on the Sibyl cell's colour, 24 px all round and between its two lines. The advisor's name
+    /// in Pixel Operator 32 capitals (SIBYL for the Hand; ADVISOR for the Collective, which has no name yet), then her two switches (Paul
+    /// 2026-11-24: "we're missing the controls. Add them KISS"): the frame's tick boxes, the same state as in Menu > Settings. The × that
+    /// closes the panel is the bar's Sibyl cell above it.
     /// </summary>
     Control BuildSibylHead()
     {
         var head = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-        head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        head.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = SibylLook.Head });
         var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
         head.AddChild(pad);
         var parts = Boxed(new VBoxContainer(), FleetHeadPad);
         pad.AddChild(parts);
 
-        var row = Boxed(new HBoxContainer(), NameGap);
         string word = (AdvisorName ?? "Advisor").ToUpperInvariant();
-        var name = Look.Words(word, Ui.NameBig, Look.Text);
-        name.AddThemeFontOverride("font", Ui.NameFont(Ui.NameBig, word));
-        name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var name = Look.Words(word, 32, SibylLook.Light);
+        name.AddThemeFontOverride("font", Ui.Operator);
+        name.CustomMinimumSize = new Vector2(0, 40);   // the frame's 40 px line
+        name.VerticalAlignment = VerticalAlignment.Center;
         _sibylName = name;
-        row.AddChild(name);
-        var close = Ui.Button("×", CloseDrawer, "Close (Esc)", "Clock");   // the Fleet window's ×: the design's grey
-        close.SetMeta(UiTest.FullName, "Close window");
-        close.AddThemeFontOverride("font", Ui.Grotesk);
-        foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color" }) close.AddThemeColorOverride(c, Look.Text);
-        close.CustomMinimumSize = new Vector2(WinButton, WinButton);
-        close.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        row.AddChild(close);
-        parts.AddChild(row);
+        parts.AddChild(name);
 
         // her two switches, ticked here or in Menu > Settings: one state (rule: m6-advisor-sibyl §Switches)
         _sibylStatusRow = Boxed(new HBoxContainer(), FleetHeadPad);
@@ -115,14 +106,19 @@ public partial class GameScreen
         {
             var j = job;
             var cb = new CheckBox { Text = words, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(SibylHint(job) + $" She only uses yards you left idle and always keeps {SibylRoom} upkeep free. Also in Menu > Settings. A tick takes effect from tomorrow.") };
-            cb.AddThemeFontSizeOverride("font_size", 12);
-            foreach (var c in new[] { "font_color", "font_pressed_color", "font_focus_color" }) cb.AddThemeColorOverride(c, Look.Text);
+            cb.AddThemeFontOverride("font", Ui.Operator);
+            cb.AddThemeFontSizeOverride("font_size", 16);
+            foreach (var c in new[] { "font_color", "font_pressed_color", "font_focus_color" }) cb.AddThemeColorOverride(c, SibylLook.Light);
             foreach (var c in new[] { "font_hover_color", "font_hover_pressed_color" }) cb.AddThemeColorOverride(c, Colors.White);
-            // no box of its own: the tick lines up with her name above it
-            foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) cb.AddThemeStyleboxOverride(st, new StyleBoxEmpty { ContentMarginTop = 4, ContentMarginBottom = 4 });
+            cb.AddThemeIconOverride("checked", SibylLook.TickOn);
+            cb.AddThemeIconOverride("unchecked", SibylLook.TickOff);
+            cb.AddThemeConstantOverride("h_separation", 8);   // the frame's 8 px between the box and its words
+            cb.CustomMinimumSize = new Vector2(0, 20);          // on the words' 20 px line
+            foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" }) cb.AddThemeStyleboxOverride(st, new StyleBoxEmpty());
+            cb.MouseEntered += () => cb.AddThemeIconOverride("unchecked", SibylLook.TickOffHover);
+            cb.MouseExited += () => cb.AddThemeIconOverride("unchecked", SibylLook.TickOff);
             cb.SetMeta(UiTest.FullName, $"Sibyl {words}");
             cb.Toggled += on => S.SetSibyl(j, on);
-            Ui.HoverTick(cb);
             _sibylSwitches[job] = cb;
             _sibylStatusRow.AddChild(cb);
         }
@@ -155,19 +151,20 @@ public partial class GameScreen
     readonly Dictionary<DrawerTab, Label> _tabCounts = new();
 
     /// <summary>
-    /// The tabs as the Fleet window's strip: cells 1 px apart on the line colour, the open one on the lighter surface so it joins the page
-    /// under it; the name, and its count in the dim grey (Needs you's count red or amber when something needs a decision).
+    /// The tabs as the frame's strip: cells 1 px apart on the strip's blue, each as wide as its words and 16 px each side (more when there is
+    /// room); the shut ones 1 px short so a line runs under them, the open one on the page's colour so it joins the page. The words light on
+    /// the open tab, grey on the others; a count 8 px after them in the grey (Needs you's red while something is urgent, yellow otherwise).
     /// </summary>
     Control BuildSibylStrip()
     {
         var strip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-        var lines = Look.Box(Look.Line);
-        lines.ContentMarginTop = 1;   // the line above the cells
-        strip.AddThemeStyleboxOverride("panel", lines);
+        strip.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = SibylLook.Strip });
         var h = Boxed(new HBoxContainer(), 1);   // the line between cells
         _tabRow = h;
         strip.AddChild(h);
         var group = new ButtonGroup();
+        // 43 px high with the words 11 px down; a shut cell's last pixel row is the strip's line
+        StyleBoxFlat Cell(Color bg, bool shut) => new() { BgColor = bg, BorderColor = SibylLook.Strip, BorderWidthBottom = shut ? 1 : 0 };
         foreach (var (tab, name, tip) in new[]
         {
             (DrawerTab.Needs, "Needs you", "Everything that needs a decision from you, worst first (Q)"),
@@ -175,29 +172,42 @@ public partial class GameScreen
             (DrawerTab.Fleets, "Fleets", "All your fleets: where they are and where they go (F)"),
             (DrawerTab.Leaders, "Leaders", "Your leaders, and the enemy leaders you have seen (C)"),
             (DrawerTab.Missions, "Missions", "Your agents' missions (M)"),
-            (DrawerTab.Log, "Log", "Every message, by kind (E)"),
+            (DrawerTab.Log, "Logs", "Every message, by kind (E)"),
         })
         {
             var t = tab;
             var b = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = tab == _tab, FocusMode = FocusModeEnum.None,
                 MouseDefaultCursorShape = CursorShape.PointingHand, TooltipText = Ui.Wrap(tip) };
-            b.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg));
-            b.AddThemeStyleboxOverride("hover", Look.Box(Look.CellHover));
-            b.AddThemeStyleboxOverride("pressed", Look.Box(Look.Band));
-            b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Band));
+            b.AddThemeStyleboxOverride("normal", Cell(SibylLook.TabShut, true));
+            b.AddThemeStyleboxOverride("hover", Cell(SibylLook.TabHover, true));
+            b.AddThemeStyleboxOverride("pressed", Cell(SibylLook.Page, false));
+            b.AddThemeStyleboxOverride("hover_pressed", Cell(SibylLook.Page, false));
             b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
             b.SetMeta(UiTest.FullName, name);
             b.SetMeta("words", name);
             var row = Boxed(new HBoxContainer(), TabCountGap);
             row.Alignment = BoxContainer.AlignmentMode.Center;
-            var words = Look.Words(name, 12, Look.Text);
+            var words = Look.Words(name, 16, SibylLook.Grey);
+            words.AddThemeFontOverride("font", SibylText);
             row.AddChild(words);
-            var count = Look.Words("", 12, Look.Quiet);   // a tab's count, as in the windows' strips (Paul 2026-11-25: the status grey)
+            var count = Look.Words("", 16, SibylLook.Grey);
+            count.AddThemeFontOverride("font", SibylText);
             count.Visible = false;
             row.AddChild(count);
             _tabCounts[tab] = count;
-            Fill(b, row, TabPadX, 8);
-            _tabPaint[tab] = CellWords(b, words);   // light on the open tab, grey on the others
+            // each cell takes the strip's width in proportion to its words and 16 px each side, so the frame's six fill 512 px exactly;
+            // when counts make them wider than the strip they share the loss, down to 8 px each side (the words stay centred)
+            Fill(b, row, TabPadMin, 11, new Vector2(0, 43));
+            void Share() => b.SizeFlagsStretchRatio = row.GetCombinedMinimumSize().X + 2 * TabPadX;
+            row.MinimumSizeChanged += Share;
+            Share();
+            bool over = false;
+            void Paint() => words.AddThemeColorOverride("font_color", b.ButtonPressed ? SibylLook.Light : over ? SibylLook.Hover : SibylLook.Grey);
+            b.Toggled += _ => Paint();
+            b.MouseEntered += () => { over = true; Paint(); };
+            b.MouseExited += () => { over = false; Paint(); };
+            Paint();
+            _tabPaint[tab] = Paint;
             b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             b.Pressed += () => ShowTab(t);
             _tabButtons[tab] = b;
@@ -207,44 +217,113 @@ public partial class GameScreen
     }
 
     readonly Dictionary<DrawerTab, Action> _tabPaint = new();
-    const int TabPadX = 8, TabCountGap = 6;
+    const int TabPadX = 16, TabPadMin = 8, TabCountGap = 8;
 
     /// <summary>
-    /// The window theme with the Fleet window's buttons (Paul's design, 2026-11-21): 12 px words, 8 px inside, a 1 px #36363C line, #676767
-    /// under the mouse, #BABABA when chosen or pressed, a #1E1E21 line and #454545 words when it can't act. A warning or danger button keeps
-    /// its colour. Words with no size of their own are 13 px, as the Ground window's.
+    /// The panel's theme: Pixel Operator 16 for every word with no font of its own, and the frame's buttons (the Needs you cards' and, where
+    /// the frame has none, the fleet draft's of 2026-11-26): 16 px words, 8 px inside, 32 px high, a 1 px line on a near-black fill, the
+    /// light blue line under the mouse, a dimmer line and words when it can't act. A watch or urgent button takes the yellow or red card's.
     /// </summary>
     static Theme SibylTheme
     {
         get
         {
             if (_sibylTheme != null) return _sibylTheme;
-            var t = (Theme)Ui.WindowTheme.Duplicate();
-            t.DefaultFontSize = Ui.Small;
-            var clear = new Color(0, 0, 0, 0);
-            // 4 px corners on buttons, rows square (W2, the new colors frames 2026-11-24)
-            void Outlined(string type, Color rest, Color ink, int radius = 4)
+            var t = (Theme)Ui.WindowTheme.Duplicate(true);
+            // every type of the windows' theme (Hint, Dim, Strong...) in the frame's font and blue-greys, as the tabs without a frame
+            foreach (var type in t.GetTypeList())
             {
-                foreach (var (state, line) in new[] { ("normal", rest), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text), ("disabled", Look.Line) })
+                bool words = type == "Label" || t.GetTypeVariationBase(type) == "Label";
+                foreach (var n in t.GetFontList(type)) t.SetFont(n, type, words ? SibylText : SibylPlain);
+                foreach (var n in t.GetFontSizeList(type)) t.SetFontSize(n, type, SibylSize(t.GetFontSize(n, type)));
+                foreach (var n in t.GetColorList(type)) t.SetColor(n, type, SibylLook.Swap(t.GetColor(n, type)));
+                foreach (var n in t.GetStyleboxList(type)) if (t.GetStylebox(n, type) is StyleBoxFlat f) t.SetStylebox(n, type, SibylBox(f));
+            }
+            t.DefaultFont = SibylPlain;
+            t.DefaultFontSize = 16;
+            t.SetFont("font", "Label", SibylText);
+            t.SetConstant("line_spacing", "Label", 0);   // the 20 px line is in the face (SibylText): lines 20 px apart, as the frame's
+            t.SetFontSize("font_size", "Label", 16);
+            // 4 px corners on buttons, rows square (W2, the new colors frames 2026-11-24); the frame's buttons are square
+            void Outlined(string type, Color fill, Color rest, Color ink, int radius = 0)
+            {
+                foreach (var (state, line) in new[] { ("normal", rest), ("hover", SibylLook.Hover), ("pressed", SibylLook.Light), ("hover_pressed", SibylLook.Light), ("disabled", SibylLook.Strip) })
                 {
-                    var b = Look.Box(clear, line, 1, 1, 1, 1, 8);
+                    var b = Look.Box(fill, line, 1, 1, 1, 1, 8);
                     b.SetCornerRadiusAll(radius);
                     b.AntiAliasing = radius > 0;
                     t.SetStylebox(state, type, b);
                 }
                 t.SetStylebox("focus", type, new StyleBoxEmpty());
-                t.SetFont("font", type, Ui.Grotesk);
-                t.SetFontSize("font_size", type, 12);
+                t.SetFont("font", type, SibylPlain);
+                t.SetFontSize("font_size", type, 16);
                 foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" }) t.SetColor(c, type, ink);
-                t.SetColor("font_disabled_color", type, Look.Dim);
+                t.SetColor("font_disabled_color", type, SibylLook.Swap(Look.Dim));
             }
-            foreach (var v in new[] { "Button", "Row", "Primary", "Chip" }) Outlined(v, Look.Outline, Look.Text, v == "Row" ? 0 : 4);
-            Outlined("WarnButton", new Color(Ui.Warn, 0.7f), Ui.Warn);
-            Outlined("DangerButton", new Color(Ui.Danger, 0.8f), Ui.Danger);
+            foreach (var v in new[] { "Button", "Primary", "Chip" }) Outlined(v, SibylLook.Button, SibylLook.ButtonLine, SibylLook.Light);
+            Outlined("Row", new Color(0, 0, 0, 0), SibylLook.ButtonLine, SibylLook.Light);
+            Outlined("WarnButton", SibylLook.WatchButton, SibylLook.WatchButtonLine, SibylLook.WatchButtonWords);
+            Outlined("DangerButton", SibylLook.UrgentButton, SibylLook.UrgentButtonLine, SibylLook.UrgentButtonWords);
             return _sibylTheme = t;
         }
     }
     static Theme _sibylTheme;
+
+    // ================================================================== the tabs Paul has not drawn yet
+
+    /// <summary>A button's words: Pixel Operator on its own 16 px line (8 + 16 + 8 = the frame's 32 px button). No second face behind it: a
+    /// fallback face makes every line as tall as its own (Godot measures a font's height over its whole chain), so the few signs it lacks
+    /// (→, ł) come from the system's fonts, as its import allows.</summary>
+    static Font SibylPlain => Ui.Operator;
+
+    static Font _sibylText;
+    /// <summary>Words that are read, on the frame's 20 px line: Pixel Operator with 2 px above and below each line, as the frame's 16/20.</summary>
+    static Font SibylText => _sibylText ??= new FontVariation { BaseFont = Ui.Operator, SpacingTop = 2, SpacingBottom = 2 };
+
+    /// <summary>The faces the panel sets itself, which the repaint leaves as they are.</summary>
+    static bool SibylOwn(Font f) => f == Ui.Operator || f == Ui.OperatorBold || f == SibylPlain || f == SibylText;
+
+    /// <summary>Pixel Operator's sizes: 16 is its own grid, so the body sizes (12, 13, 14) become 16, the section sizes 24, names 32.</summary>
+    static int SibylSize(int size) => size <= 0 ? 0 : size < 20 ? 16 : size < 28 ? 24 : 32;
+
+    /// <summary>A box of the windows' look in the panel's blue-greys.</summary>
+    static StyleBoxFlat SibylBox(StyleBoxFlat f)
+    {
+        var b = (StyleBoxFlat)f.Duplicate();
+        b.BgColor = SibylLook.Swap(f.BgColor);
+        b.BorderColor = SibylLook.Swap(f.BorderColor);
+        return b;
+    }
+
+    static readonly string[] FontColours = { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color", "font_uneditable_color", "default_color" };
+    static readonly string[] BoxNames = { "panel", "normal", "hover", "pressed", "hover_pressed", "disabled", "focus", "hovered", "selected", "selected_focus", "hovered_selected" };
+
+    /// <summary>
+    /// Selected, Fleets, Leaders, Missions and Logs have no frame of their own yet (Paul chose "Bar and Sibyl now", 2026-11-26): they keep
+    /// their layout and take the frame's font and colours. Every word set in a font of its own takes Pixel Operator at its size
+    /// (<see cref="SibylSize"/>), and every grey of the windows' look set on a word, a box, a line or a bar becomes its blue-grey
+    /// (<see cref="SibylLook.Map"/>). Run on a page once it is built: a colour already swapped is not a key, so a second run changes nothing.
+    /// </summary>
+    static void SibylRepaint(Node n)
+    {
+        if (n is Control c)
+        {
+            if (c.HasThemeFontSizeOverride("font_size")) c.AddThemeFontSizeOverride("font_size", SibylSize(c.GetThemeFontSize("font_size")));
+            // words on the frame's 20 px line at 16 px; a button's on Pixel Operator's own (8 + 16 + 8 = the frame's 32 px button); sections
+            // and names at 24 and 32 in Pixel Operator alone
+            if (c.HasThemeFontOverride("font") && !SibylOwn(c.GetThemeFont("font")))
+                c.AddThemeFontOverride("font", c.GetThemeFontSize("font_size") >= 20 ? Ui.Operator : c is Label ? SibylText : SibylPlain);
+            foreach (var k in FontColours) if (c.HasThemeColorOverride(k)) c.AddThemeColorOverride(k, SibylLook.Swap(c.GetThemeColor(k)));
+            foreach (var k in BoxNames) if (c.HasThemeStyleboxOverride(k) && c.GetThemeStylebox(k) is StyleBoxFlat f) c.AddThemeStyleboxOverride(k, SibylBox(f));
+            switch (c)
+            {
+                case ColorRect r: r.Color = SibylLook.Swap(r.Color); break;
+                case ThinBar bar: bar.Fill = SibylLook.Swap(bar.Fill); bar.Track = SibylLook.Swap(bar.Track); bar.QueueRedraw(); break;
+                case Glyph g: g.Color = SibylLook.Swap(g.Color); if (g.Fill is Color gf) g.Fill = SibylLook.Swap(gf); g.QueueRedraw(); break;
+            }
+        }
+        foreach (var ch in n.GetChildren()) SibylRepaint(ch);
+    }
 
     void CloseDrawer()
     {
@@ -274,7 +353,7 @@ public partial class GameScreen
         // the count is what wants a decision (red and yellow); chances to do better never make the tab shout
         int n = _attention.Count(a => a.Level != Level.Info);
         bool urgent = _attention.Any(a => a.Level == Level.Danger);
-        SetTabCount(DrawerTab.Needs, n == 0 ? null : n.ToString(), urgent ? Ui.Danger : Ui.Warn);
+        SetTabCount(DrawerTab.Needs, n == 0 ? null : n.ToString(), urgent ? SibylLook.Count : SibylLook.Watch);
         int f = S.Game.State.Fleets.Values.Count(x => x.Side == Me);
         SetTabCount(DrawerTab.Fleets, f.ToString());
         int m = S.MyMissions.Count + S.PendingMissions.Count();
@@ -283,13 +362,13 @@ public partial class GameScreen
         RefreshSibylStatus();
     }
 
-    /// <summary>A tab's count, in the status grey unless it has a colour of its own; none hides it. The playtest reads the tab by name and count.</summary>
+    /// <summary>A tab's count, in the strip's grey unless it has a colour of its own; none hides it. The playtest reads the tab by name and count.</summary>
     void SetTabCount(DrawerTab tab, string count, Color? ink = null)
     {
         var l = _tabCounts[tab];
         l.Text = count ?? "";
         l.Visible = count != null;
-        l.AddThemeColorOverride("font_color", ink ?? Look.Quiet);   // as the windows' tab counts (Paul 2026-11-25: #7D8699)
+        l.AddThemeColorOverride("font_color", ink ?? SibylLook.Grey);   // the frame's counts
         var b = _tabButtons[tab];
         string words = b.GetMeta("words").AsString();
         b.SetMeta(UiTest.FullName, count == null ? words : $"{words} {count}");
@@ -321,6 +400,7 @@ public partial class GameScreen
                 }
                 break;
         }
+        SibylRepaint(_pv);   // the tabs Paul has not drawn take the frame's font and colours (Needs you's cards are drawn in them already)
         RefreshTabTitles();
         RefreshSectorView(); RefreshMgmt(); // an order given in a window shows there too
         // the same thing rebuilt (a new day) keeps its scroll; a new thing starts at the top
@@ -361,7 +441,7 @@ public partial class GameScreen
         {
             if ((_into ?? _pv).GetChildCount() > 0) Add(Ui.Space(WinGap - Ui.Block * 2));
             var m = CountedHead.Match(text);
-            var hd = Add(Heading2(m.Success ? m.Groups[1].Value : text, m.Success ? m.Groups[2].Value : null));
+            var hd = Add(SibylHeading(m.Success ? m.Groups[1].Value : text, m.Success ? m.Groups[2].Value : null, SibylLook.Light));
             if (tip != null) { hd.TooltipText = Ui.Wrap(tip); hd.MouseFilter = MouseFilterEnum.Stop; hd.MouseDefaultCursorShape = CursorShape.Help; }
             return;
         }
@@ -372,6 +452,26 @@ public partial class GameScreen
         if (tip != null) { l.TooltipText = Ui.Wrap(tip); l.MouseFilter = MouseFilterEnum.Stop; l.MouseDefaultCursorShape = CursorShape.Help; }
     }
 
+    /// <summary>A part's title in Sibyl's panel (the frame's URGENT and TO WATCH): Pixel Operator 24 capitals on a 30 px line, in the part's
+    /// colour, and a count in the grey 16 px after it.</summary>
+    static Control SibylHeading(string word, string count, Color ink)
+    {
+        var h = Boxed(new HBoxContainer(), 16);
+        var t = Look.Words(word.ToUpperInvariant(), 24, ink);
+        t.AddThemeFontOverride("font", Ui.Operator);
+        t.CustomMinimumSize = new Vector2(0, 30);
+        t.VerticalAlignment = VerticalAlignment.Center;
+        h.AddChild(t);
+        if (count != null)
+        {
+            var c = Look.Words(count, 16, SibylLook.Grey);
+            c.AddThemeFontOverride("font", SibylText);
+            c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            h.AddChild(c);
+        }
+        return h;
+    }
+
     Button Act(string text, Action a, string tip = null, bool disabled = false, string variation = null)
     {
         var b = Ui.Action(text, a, tip, disabled, variation);
@@ -379,12 +479,12 @@ public partial class GameScreen
         return Add(b);
     }
 
-    /// <summary>The Fleet window's button in the window on the right: as wide as its words (12 px, 8 px inside, 32 px high); words too long
-    /// for the page keep the full width and wrap.</summary>
+    /// <summary>The frame's button in Sibyl's panel: as wide as its words (16 px, 8 px inside, 32 px high); words too long for the page keep
+    /// the full width and wrap.</summary>
     static void Hug(Button b)
     {
         b.CustomMinimumSize = new Vector2(0, 32);
-        float words = Ui.Grotesk.GetStringSize(b.Text, HorizontalAlignment.Left, -1, 12).X + 2 * 8 + 2;
+        float words = Ui.Operator.GetStringSize(b.Text, HorizontalAlignment.Left, -1, 16).X + 2 * 8 + 2;
         if (words > PageWidth - 2 * Ui.Pad) return;
         b.AutowrapMode = TextServer.AutowrapMode.Off;
         b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
@@ -555,7 +655,7 @@ public partial class GameScreen
         Heading("Keys");
         foreach (var (k, what) in new[]
         {
-            ("Space", "play / pause"), ("N", "one day"), ("1 - 4", "speed"), ("Q  F  C  M  E", "Needs you, Fleets, Leaders, Missions, Log"),
+            ("Space", "play / pause"), ("N", "one day"), ("1 - 4", "speed"), ("Q  F  C  M  E", "Needs you, Fleets, Leaders, Missions, Logs"),
             ("S", "sector window"), ("V", "next map layer"), ("L", "lanes on / off"), ("/", "search"), ("G", "goal"), ("Ctrl/Cmd + S", "quick save"),
             ("Wheel, + -", "zoom"), ("Drag, arrows", "pan"), ("Home", "whole map"), ("Esc", "cancel / deselect"),
         })

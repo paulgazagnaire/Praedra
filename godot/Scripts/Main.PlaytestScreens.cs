@@ -36,7 +36,7 @@ public partial class Main
         Expect(GameScreen.PopsUp(MsgKind.Bad) && !GameScreen.PopsUp(MsgKind.Warn) && !GameScreen.PopsUp(MsgKind.Info) && GameScreen.PopsUp(MsgKind.Good, "MissionSucceeded"),
             "only red news and real good news pop up; amber news stays in Needs you and the Log");
         Expect(gs.Click("Menu") && gs.MenuVisible, "the menu button opens the menu");
-        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Log", "Sector", "Go to your HQ", "Save game...", "Settings..." })
+        foreach (var item in new[] { "Needs you", "Fleets", "Leaders", "Missions", "Logs", "Sector", "Go to your HQ", "Save game...", "Settings..." })
             Expect(gs.Has(item), $"the menu offers {item}");
         gs.PressKey(Key.Escape);
         Expect(!gs.MenuVisible, "Esc closes the menu");
@@ -78,9 +78,9 @@ public partial class Main
         gs.PlayRefresh();
         Expect(gs.WindowOpen && gs.TabName == "Selected" && gs.PanelText().Contains(cardSys), "Details on the card opens the window on that system");
         Expect(!gs.SelectionCardOpen, "the card steps aside while the window is open");
-        foreach (var tab in new[] { "Needs you", "Selected", "Fleets", "Leaders", "Missions", "Log" })
+        foreach (var tab in new[] { "Needs you", "Selected", "Fleets", "Leaders", "Missions", "Logs" })
             Expect(gs.Has(tab), $"the window has the {tab} tab");
-        Expect(gs.Click("Close window") && !gs.WindowOpen && gs.SelectionCardOpen, "the window's cross closes it and the card comes back");
+        Expect(gs.WindowOpen && gs.Click("Advisor") && !gs.WindowOpen && gs.SelectionCardOpen, "the bar's Sibyl cell (× while open) closes it and the card comes back");
         gs.PressKey(Key.Escape); gs.PlayRefresh();
         Expect(!gs.SelectionCardOpen && gs.View.Selected < 0, "Esc clears the selection");
 
@@ -88,7 +88,9 @@ public partial class Main
         gs.OpenTab("Needs");
         var titles = gs.AttentionTitles;
         GD.Print("  needs you: " + string.Join(" | ", titles));
-        Expect(gs.TabName == "Needs" && (gs.PanelText().Contains("urgent") || gs.PanelText().Contains("to watch") || gs.PanelText().Contains("Nothing")), "the Needs you tab opens on its count line: " + gs.PanelText()[..Math.Min(80, gs.PanelText().Length)]);
+        // Paul's frame "ui-update-nov-26": no count line (the tab says how many); the page opens on its first part's title, or says nothing needs you
+        Expect(gs.TabName == "Needs" && new[] { "URGENT", "TO WATCH", "COULD DO BETTER", "Nothing" }.Any(w => gs.PanelText().TrimStart().StartsWith(w, StringComparison.Ordinal)),
+            "the Needs you tab opens on its first part's title: " + gs.PanelText()[..Math.Min(80, gs.PanelText().Length)]);
         Expect(!gs.Has("Run until something needs me"), "Run until something needs me is gone (Paul 2026-11-24)");
         // a badly damaged fleet (at most half its hull left) is a Needs you item (Paul 2026-11-24); its hulls are put back after
         var hurt = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.Ships.Count > 0).OrderBy(f => f.Id).FirstOrDefault();

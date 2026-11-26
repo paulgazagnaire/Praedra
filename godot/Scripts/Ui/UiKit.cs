@@ -103,6 +103,13 @@ public static class Ui
     /// <summary>BitPotion as it is, with its own line: the top bar's words (Paul's "ui-update-nov-15" frame, 2026-11-15).</summary>
     public static Font Pixel => PixelFace;
 
+    static FontFile _operator, _operatorBold;
+    /// <summary>Pixel Operator (Jayvee Enaguas, CC0): the face of the top bar and Sibyl's panel since Paul's frames "ui-update-nov-24" and
+    /// "ui-update-nov-26" (2026-11-26). 16 px is its own grid (1600 units to the em, 100 to a font pixel), so 16, 24, 32 and 40 stay crisp.</summary>
+    public static Font Operator => _operator ??= LoadFont("res://fonts/PixelOperator.ttf");
+    /// <summary>Pixel Operator Bold: the advisor's name in the top bar ("Sibyl").</summary>
+    public static Font OperatorBold => _operatorBold ??= LoadFont("res://fonts/PixelOperator-Bold.ttf");
+
     /// <summary>A window's name size: 48 (three screen pixels to a font pixel, so it stays crisp), 32 when the name is too long for that.</summary>
     public const int NameBig = 48, NameSmall = 32;
     static readonly Dictionary<(int, bool), Font> _names = new();

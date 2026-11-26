@@ -100,7 +100,7 @@ public partial class GameScreen
         var ordersCard = Ui.Hud(12, 5);
         ordersCard.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         ordersCard.MouseFilter = MouseFilterEnum.Stop;
-        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play, or N for one day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in the Log.");
+        ordersCard.TooltipText = Ui.Wrap("Your orders take effect as soon as the clock moves (Play, or N for one day): a fleet leaves at once and arrives on the day shown. Until then each order has a Cancel button. If the game refuses one, the reason appears in Logs (E).");
         _ordersLabel = Ui.Label("", null, Ui.Warn, Ui.Small, wrap: false);
         ordersCard.AddChild(_ordersLabel);
         ordersCard.Visible = false;
@@ -199,9 +199,8 @@ public partial class GameScreen
         int q = S.QueuedOrders;
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
         _ordersLabel.GetParent<Control>().Visible = q > 0 && !InMoveMode;
-        _playButton.Text = _playing ? "||" : "\u25b6";
-        PaintAdvisor();   // lit while the window on the right is open
-        SetBarButtonColour(_playButton, _playing ? BarValue : BarLabel);   // lit while the clock runs
+        PaintPlay();      // the pixel play mark, or the pause mark while the clock runs (ui-update-nov-26)
+        PaintAdvisor();   // the Sibyl cell reads × while her panel is open
         _playButton.SetMeta(UiTest.FullName, _playing ? "Pause" : "Play");
         RefreshGoalButton();
         RefreshHq();
@@ -331,12 +330,16 @@ public partial class GameScreen
     /// <summary>A note fades out over its last moments instead of vanishing.</summary>
     const double NoteFade = 0.6;
 
-    /// <summary>The notes keep to the bottom-right corner; with the side window open there they move to its left, so they never cover it.</summary>
+    /// <summary>The notes keep to the bottom-right corner; with Sibyl's panel open there they move to its left, so they never cover it. The
+    /// pill under the bar stays in the middle of the map the panel leaves free (at 140% text the panel takes half the screen).</summary>
     void PlaceNotes()
     {
         if (_toastBox == null) return;
-        float right = -Edge - (_drawer != null && _drawer.Visible ? DrawerWidth + Ui.Block : 0);
+        bool open = _drawer != null && _drawer.Visible;
+        float right = open ? -DrawerWidth - Edge : -Edge;   // the panel is docked flush right
         if (_toastBox.OffsetRight != right) { _toastBox.OffsetRight = right; _toastBox.OffsetLeft = right; }
+        float mid = open ? -DrawerWidth / 2f : 0;
+        if (_topCentre != null && _topCentre.OffsetLeft != mid) { _topCentre.OffsetLeft = mid; _topCentre.OffsetRight = mid; }
     }
 
     /// <summary>A short one-line note in the bottom-right corner that fades by itself (an answer to your order, red news, saved).</summary>
