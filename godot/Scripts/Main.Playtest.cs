@@ -554,9 +554,9 @@ public partial class Main
             Expect(gs.PanelText().Contains("Unexplored") && !gs.PanelText().Contains("Owner:"), "its panel shows no owner, only 'Unexplored'");
         }
 
-        // hyperspace routes (Paul 2026-10-16, planets/15): shown by default, L hides them; hovering a system not yours names the routes (on
+        // lanes (Paul 2026-10-16, planets/15): shown by default, L hides them; hovering a system not yours names the routes (on
         // yours the one-line card gives support and troops instead, map declutter 2026-11-18); the move preview says how it travels
-        Expect(gs.RoutesShown, "the hyperspace routes are drawn by default");
+        Expect(gs.RoutesShown, "the lanes are drawn by default");
         string major = gs.G.Systems.Where(x => s.OwnerOf(x.Name) != me && gs.G.NeighboursOf(x.Index).Any(nb => nb.Lane.Tier == 1)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
         string open = gs.G.Systems.Where(x => s.OwnerOf(x.Name) != me && !gs.G.OnRoute(x.Index)).Select(x => x.Name).OrderBy(n => n, StringComparer.Ordinal).First();
         Expect(gs.HoverTextFor(major).Contains("major route"), $"hovering {major} names its major route: " + gs.HoverTextFor(major));

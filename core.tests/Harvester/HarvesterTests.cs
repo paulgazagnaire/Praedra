@@ -74,7 +74,7 @@ public class HarvesterTests
         int f = w.Fleet(Side.Hand, A1, Mandate);
         Assert.Equal(HarvesterReject.NoHarvester, w.Destroy(Side.Hand, f));
         Assert.False(w.Game.State.Harvester.IsDestroyed(A1));
-        // the other legality codes: unknown fleet, not yours, in hyperspace, already destroyed
+        // the other legality codes: unknown fleet, not yours, in lane, already destroyed
         int ds = w.Harvester(Side.Hand, A1);
         Assert.Equal(RejectReason.UnknownFleet, w.Destroy(Side.Hand, 9999));
         Assert.Equal(RejectReason.NotYours, w.Destroy(Side.Collective, ds));
@@ -580,7 +580,7 @@ public class HarvesterTests
         {
             w.Game.Step();
             arrivedStep = w.Game.State.Fleets[ds].At == B1;
-            if (!arrivedStep) Assert.All(new[] { A1, B1 }, s => Assert.False(Flag(s))); // in hyperspace the harvester is in no sector
+            if (!arrivedStep) Assert.All(new[] { A1, B1 }, s => Assert.False(Flag(s))); // in lane the harvester is in no sector
         }
         Assert.True(arrivedStep);
         Assert.All(new[] { B1, B2, B3 }, s => Assert.True(Flag(s)));   // set at slot 5.6 of the arrival day

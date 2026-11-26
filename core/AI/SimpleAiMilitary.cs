@@ -264,7 +264,7 @@ public sealed partial class SimpleAi
             string n = g.Systems[path.Systems[k]].Name;
             if (BouncedOff(n)) return n;
             if (k == path.Systems.Count - 1) break;
-            // only the enemy fleets that would pull this fleet out of hyperspace there (the game's forced-stop trigger; DEFAULT GravityWellShip
+            // only the enemy fleets that would pull this fleet out of the lanes there (the game's forced-stop trigger; DEFAULT GravityWellShip
             // since 2026-10-16: an ordinary fleet does not stop a passing one, so the AI no longer refuses trips past it)
             var enemies = EnemyFleetsAt(n);
             if (_view != null && _p.FogAvoidEnemyStops && IsEnemyHeld(n) && _view.Level(n) is not (Praedra.Core.Fog.KnowledgeLevel.Held or Praedra.Core.Fog.KnowledgeLevel.Observed))

@@ -59,7 +59,7 @@ public partial class GameScreen
         }
         var shows = Ui.VBox(0);
         v.AddChild(DropCell(shows));
-        _routesChip = DropRow("Routes", CycleLanes, "Show or hide the hyperspace routes (L)");
+        _routesChip = DropRow("Routes", CycleLanes, "Show or hide the lanes (L)");
         _routesChip.ToggleMode = true; _routesChip.ButtonPressed = true;
         shows.AddChild(_routesChip);
         // Paul 2026-11-17 ("yes!"): units and buildings on their way can crowd the map in a build wave; this hides them (kept between games)

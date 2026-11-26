@@ -44,7 +44,7 @@ public partial class GameScreen
                 Add("Detection", sc.Detection);
                 // rule: m1-travel §Rule: the hyperdrive rating is the percent of normal travel time (bigger is slower; 0 = cannot fly alone)
                 s.Add(("Trip time", sc.Hyperdrive > 0 ? $"{sc.Hyperdrive}% of normal" : "needs a carrier"));
-                if (sc.GravityWellProjector > 0) extra = "Interdictor: pulls enemy fleets out of hyperspace where it stands.";
+                if (sc.GravityWellProjector > 0) extra = "Interdictor: pulls enemy fleets out of the lanes where it stands.";
                 break;
             }
             case ObjectCategory.Regiment when S.Host.Troops.Data.Regiment(r.Name) is { } rc:

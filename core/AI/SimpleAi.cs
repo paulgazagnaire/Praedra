@@ -141,7 +141,7 @@ public sealed partial class SimpleAi
     /// One enemy fleet as the AI weighs it: its capital ships as combat units. Without fog: the real fleet (FleetId set, hull and damage read).
     /// With fog: a fleet of the side's picture (class counts at full hull, FleetId null). At = the system it stands at, null on a lane.
     /// </summary>
-    /// Gravity: a ship of the fleet has a gravity-well projector (it can pull passing fleets out of hyperspace).
+    /// Gravity: a ship of the fleet has a gravity-well projector (it can pull passing fleets out of the lanes).
     private sealed record ArmedForce(int? FleetId, string? At, List<Combatant> Units, bool Gravity = false);
 
     private ArmedForce ForceOf(Fleet f) => new(f.Id, f.At, ShipUnits(f),

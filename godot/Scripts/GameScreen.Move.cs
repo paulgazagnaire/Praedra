@@ -92,7 +92,7 @@ public partial class GameScreen
         links.SelectMany(nb => nb.Lane.Routes.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Distinct().OrderBy(r => r, StringComparer.Ordinal).ToList();
 
-    /// <summary>The hyperspace routes through a system, for the system window: named major routes, else "minor route", else open space.</summary>
+    /// <summary>The lanes through a system, for the system window: named major routes, else "minor route", else open space.</summary>
     string RouteWords(int sys)
     {
         var links = G.NeighboursOf(sys);
@@ -199,7 +199,7 @@ public partial class GameScreen
                     _view.PathTraps = traps.Select(t => G.TryFindSystem(t.System, out int i) ? i : -1).Where(i => i >= 0).ToList();
                     string where = string.Join(", ", traps.Select(t => $"{t.System} (seen day {t.SeenDay})"));
                     string who = reds.Count == 1 ? reds[0].F.Name : string.Join(", ", reds.Take(reds.Count - 1).Select(r => r.F.Name)) + " and " + reds[^1].F.Name;
-                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {who} out of hyperspace there.\n"
+                    _moveBanner = $"TRAP: an enemy interdictor was seen at {where}. It can pull {who} out of the lanes there.\n"
                         + $"{MovingWho(f)} to {to}{through}: {trip}. " + (_lockedTo != null ? "Choose below." : "Click to choose, or Shift-click a waypoint to steer around it.");
                     // a waypoint steers the first fleet only: offered when it alone is in danger
                     if (_lockedTo != null && leadRed && redOthers.Count == 0) _around = GoAround(f, to, via, plan);
@@ -257,7 +257,7 @@ public partial class GameScreen
         {
             bool many = _moveAlso.Count > 0;
             var anyway = Ui.Button($"Go anyway", () => SendMove(_lockedTo, _waypoints.ToList()),
-                many ? "Send every fleet picked, the ones on a red path too: they may be pulled out of hyperspace at the trap." : "Send the fleet on the red path: it may be pulled out of hyperspace at the trap.", "DangerButton");
+                many ? "Send every fleet picked, the ones on a red path too: they may be pulled out of the lanes at the trap." : "Send the fleet on the red path: it may be pulled out of the lanes at the trap.", "DangerButton");
             _orderActions.AddChild(anyway);
             if (many && S.Game.State.Fleets.TryGetValue(_moveFleet, out var first))
             {
