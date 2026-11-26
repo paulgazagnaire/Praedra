@@ -354,8 +354,9 @@ public partial class Main
             var silent = greyed.Where(n => gs.InfraWhy(yardSys, n) is not { } why || gs.Enabled($"Build {n}") || !gs.TipOf($"Build {n}").Contains(why, StringComparison.OrdinalIgnoreCase)).ToList();
             Expect(silent.Count == 0, $"every shipyard card that cannot be ordered is greyed out and its hover says why ({greyed.Count} greyed){(silent.Count > 0 ? ": not " + string.Join(", ", silent) : "")}");
             var ship = cards.FirstOrDefault(r => r.Usable && r.Name != "harvester");
-            // By day 192 the playtest's Hand can have no upkeep room left (seen: capacity 1400 for 1481 of upkeep; the Collective's campaigns are not
-            // the cause, 16 AI-trainer games: 44 vs 37 mine and refinery kills): the check is about ordering a ship, so the test plants mine and refinery pairs on held systems with free
+            // By day 192 the playtest's Hand can have no upkeep room left (seen: capacity 1400 for 1481 of upkeep). The Collective's campaigns add only a
+            // little sabotage (16 AI-trainer games to day 200: 44 Hand mines and refineries lost with campaigns on, 37 off); the full cause is not traced yet
+            // (QA log). The check is about ordering a ship, so the test plants mine and refinery pairs on held systems with free
             // slots until one fits (test only, like the planted construction yard below).
             for (int pair = 0; pair < 6 && ship.Name == null && cards.Any(r => gs.InfraWhy(yardSys, r.Name) == "no upkeep room"); pair++)
             {
