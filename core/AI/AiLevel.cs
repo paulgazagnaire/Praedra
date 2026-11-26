@@ -70,7 +70,7 @@ public static class AiLevels
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Cells = true, Guerrilla = true, Campaign = true, StrandedAgentsHome = true,
                 CellsForcesWanted = 20, CellsSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
                 InvasionReadyAtRally = true, BooksTalentWindow = true, CellsHops = HardReach, GuerrillaHops = HardReach,
-                FoundYardsBelow = FoundBelow,
+                FoundYardsBelow = FoundBelow, CampaignsAtOnce = 2,
             },
             _ => p,
         };

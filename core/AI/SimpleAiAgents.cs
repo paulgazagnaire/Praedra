@@ -654,7 +654,7 @@ public sealed partial class SimpleAi
                 if (!OwnerSeen(s, out var owner, out int age) || owner != Enemy || age > _p.MissionOwnerTrustDays) continue;
                 if (!CellsOn && MissionDefendersAt(s).Count > 0) continue;
                 // rule: ai tuning, SimpleAiParams.Campaign: worth more in the campaign's sector, its defences most of all
-                bool inCampaign = CampaignSector is { } cs && sys.Sector == cs;
+                bool inCampaign = CampaignIn(sys.Sector) != null;
                 if (SlotsSeen(s).Populated && Free(MissionKind.InciteUprising, s)) jobs.Add(new Job(MissionKind.InciteUprising, s, null, CampaignAgentValue(s, _p.InciteValue), "subvert " + s));
                 int fac = FacilitiesAt(s);
                 int sab = _p.SabotageValuePerFacility * fac + (inCampaign ? _p.CampaignDefenceValue * DefencesSeenAt(s) : 0);
@@ -696,8 +696,9 @@ public sealed partial class SimpleAi
         }
         // 7b. Campaign preparation (SimpleAiParams.Campaign): looks at the sector's enemy worlds whose picture is old, so the sabotage and the
         // invasion aim at what is there now
-        if (PreparingSector is { } prep && KindUsable(MissionKind.Espionage))
+        foreach (var prep in Campaigns().Where(c => c.Strike == 0).Select(c => c.Sector).ToList())
         {
+            if (!KindUsable(MissionKind.Espionage)) break;
             int want = _p.CampaignLooks - own.Count(m => m.Kind == MissionKind.Espionage && _h.Data.Galaxy.TryFindSystem(m.Target, out int ti) && _h.Data.Galaxy.Systems[ti].Sector == prep);
             foreach (var sys in _h.Data.Galaxy.Systems)
             {

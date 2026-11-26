@@ -112,4 +112,60 @@ public class SimpleAiCampaignTests
             Assert.True(host.StateHash() == loaded.StateHash(), $"diverged on day {host.Game.Day}");
         }
     }
+    // SimpleAiParams.CampaignsAtOnce (AI trainer 2026-11-26; Paul 2026-11-26: the Collective, scattered on the outer rim, attacks from several
+    // angles at once, more of them with difficulty): the Hard Collective runs two campaigns by day 300, in sectors at least CampaignApartHops
+    // lanes apart, on each of seeds 1-8 (MedE, Medium Hand); Medium runs one. Measured 2026-11-26: both from day 1 on seeds 1, 4, 5 and 6, from
+    // days 19-37 on the others (on day 1 the fog shows only the sectors near Charter); 2 to 5 lanes apart. Apart 4 gave a second campaign on day
+    // 1 in none of the 8 games, apart 3 in one.
+    [Fact]
+    public void TheHardCollectiveRunsTwoCampaignsFarApart()
+    {
+        var hard = AiLevels.For(AiLevel.Hard);
+        Assert.Equal(2, hard.CampaignsAtOnce);
+        Assert.Equal(1, AiLevels.For(AiLevel.Medium).CampaignsAtOnce);
+        var res = MultiSeed.Play(MultiSeed.OneToEight, seed =>
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Medium), hard);
+            var now = m.Collective.CampaignsNow;
+            int day = 0;
+            while (host.Game.Day < 300 && now.Count < 2) { m.Step(); now = m.Collective.CampaignsNow; day = host.Game.Day; }
+            _out.WriteLine($"seed {seed}: two campaigns from day {day}");
+            var g = host.Data.Galaxy;
+            int lanes = int.MaxValue;
+            if (now.Count == 2)
+                foreach (var a in g.Systems.Where(x => x.Sector == now[0].Sector))
+                {
+                    var dist = new Dictionary<int, int> { [a.Index] = 0 }; var q = new Queue<int>(); q.Enqueue(a.Index);
+                    while (q.Count > 0) { int c = q.Dequeue(); foreach (var n in g.NearOf(c)) if (!dist.ContainsKey(n)) { dist[n] = dist[c] + 1; q.Enqueue(n); } }
+                    foreach (var b in g.Systems.Where(x => x.Sector == now[1].Sector)) if (dist.TryGetValue(b.Index, out int d)) lanes = Math.Min(lanes, d);
+                }
+            return (Seed: seed, Sectors: now.Select(c => c.Sector).ToList(), Lanes: lanes);
+        });
+        foreach (var r in res) _out.WriteLine($"seed {r.Seed}: {string.Join(" + ", r.Sectors)}, {r.Lanes} lanes apart");
+        Assert.All(res, r => Assert.True(r.Sectors.Count == 2 && r.Sectors[0] != r.Sectors[1] && r.Lanes >= hard.CampaignApartHops,
+            $"seed {r.Seed}: {string.Join(" + ", r.Sectors)}, {r.Lanes} lanes apart"));
+    }
+
+    // m1-clock-and-orders K12 (with AI): the other campaigns ride in the save too.
+    [Fact]
+    public void BothHardCampaignsAreSavedWithTheGame()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+        var m = new AiMatch(host, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Hard));
+        m.RunTo(150);
+        var before = m.Collective.CampaignsNow;
+        Assert.Equal(2, before.Count);
+        var loaded = GameHost.Load(host.SaveWithSettings());
+        var mem = loaded.AiMemoryFor(Side.Collective, true);
+        var saved = new[] { mem.Campaign! }.Concat(mem.MoreCampaigns ?? new()).Where(c => c.Sector.Length > 0).Select(c => (c.Sector, c.Strike > 0, c.Number)).ToList();
+        Assert.Equal(before, saved);
+        var b = new AiMatch(loaded, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Hard));
+        var a = new AiMatch(host, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Hard));
+        for (int i = 0; i < 30; i++)
+        {
+            a.Step(); b.Step();
+            Assert.True(host.StateHash() == loaded.StateHash(), $"diverged on day {host.Game.Day}");
+        }
+    }
 }

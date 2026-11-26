@@ -450,6 +450,13 @@ public sealed class GameHost
     private const string OldTrainerPick = "\"TrainerPick\":\"Random\"", NewTrainerPick = "\"TrainerPick\":\"Pair\"";
 
     /// <summary>
+    /// The sabotage pick a save pinned before 2026-11-26 (RandomFacility, the old DEFAULT; no setting lets a player choose it). Paul ruled
+    /// "target defence infrastructures first (cannons and shields), then yards and mines equally", so a pinned RandomFacility loads as
+    /// DefencesFirst, as the 240-day win did for old saves (QA-121). rule: m5-missions §6 Sabotage.
+    /// </summary>
+    private const string OldSabotagePick = "\"SabotageTargetMode\":\"RandomFacility\"", NewSabotagePick = "\"SabotageTargetMode\":\"DefencesFirst\"";
+
+    /// <summary>
     /// The training speed a save pinned before 2026-11-25 (chance 50, gain 25: the slower 2026-10-18 DEFAULTs; no setting ever let a player choose
     /// them). Paul chose Classic speed (card B) for the game he is playing too, so that exact pair loads as Classic 100 and 50.
     /// rule: m5-characters-and-talent §Talent (Rule (New), training speed).
@@ -466,6 +473,7 @@ public sealed class GameHost
         foreach (var (o, n) in RenamedSettings) json = json.Replace(o, n, StringComparison.Ordinal);
         json = json.Replace(OldTrainerPick, NewTrainerPick, StringComparison.Ordinal);
         json = OldDominance.Replace(json, "\"DominanceDays\":" + NewDominanceDays);
+        json = json.Replace(OldSabotagePick, NewSabotagePick, StringComparison.Ordinal);
         return json;
     }
 
