@@ -53,7 +53,7 @@ public sealed partial class GameSession
         long seq = Game.Submit(s => new StartMissionOrder(s, Player, kind, chars.ToList(), sfs.ToList(), new List<int>(), targetCharacter == null ? target : null, targetCharacter));
         _missionOrders.Add(seq);
         _pendingMissions[seq] = new PendingMission(seq, kind, chars.ToList(), sfs.ToList(), home, target, arrivalDay);
-        return Track(seq, $"{KindWords(kind)} on {target} by {TeamWords(chars, sfs)}");
+        return Track(seq, $"{KindWords(kind, Player)} on {target} by {TeamWords(chars, sfs)}");
     }
 
     /// <summary>Queue a CancelMission order. rule: m5-missions §Orders (CancelMission): only while the team works at the target.</summary>
@@ -62,7 +62,7 @@ public sealed partial class GameSession
         int id = m.Id;
         long seq = Game.Submit(s => new CancelMissionOrder(s, Player, id));
         _missionOrders.Add(seq);
-        return Track(seq, $"Cancel the {KindWords(m.Kind)} mission on {m.Target}");
+        return Track(seq, $"Cancel the {KindWords(m.Kind, Player)} mission on {m.Target}");
     }
 
     /// <summary>A cancel order is waiting for this mission.</summary>
@@ -70,12 +70,18 @@ public sealed partial class GameSession
 
     /// <summary>The queued cancel order of this mission (to take it back), or -1.</summary>
     public long CancelSeqOf(MissionGroup m) =>
-        _pending.Where(kv => kv.Value == $"Cancel the {KindWords(m.Kind)} mission on {m.Target}").Select(kv => kv.Key).DefaultIfEmpty(-1).Max();
+        _pending.Where(kv => kv.Value == $"Cancel the {KindWords(m.Kind, Player)} mission on {m.Target}").Select(kv => kv.Key).DefaultIfEmpty(-1).Max();
 
     // ------------------------------------------------------------------ words
 
-    public static string KindWords(MissionKind k) => k switch
+    /// <summary>
+    /// A mission kind in the words of the side that sends it. The Hand calls Diplomacy "Outreach", sponsored by Alma (Paul 2026-11-26, his pick on the
+    /// Lore Master's card); the Collective keeps "Diplomacy". Only the words change: MissionKind.Diplomacy and the
+    /// diplomacy skill stay as they are.
+    /// </summary>
+    public static string KindWords(MissionKind k, Side side) => k switch
     {
+        MissionKind.Diplomacy when side == Side.Hand => HandDiplomacy,
         MissionKind.InciteUprising => "Incite uprising",
         MissionKind.SubdueUprising => "Subdue uprising",
         MissionKind.SpikeTheHarvester => "harvester sabotage",
@@ -88,8 +94,11 @@ public sealed partial class GameSession
     };
 
     /// <summary>What the mission does and where it may go, one line (from the rule sheet's effects and target legality). rule: m5-missions §Targets, §6.</summary>
-    public static string KindHelp(MissionKind k) => k switch
+    public const string HandDiplomacy = "Outreach";
+
+    public static string KindHelp(MissionKind k, Side side) => k switch
     {
+        MissionKind.Diplomacy when side == Side.Hand => "Sponsored by Alma. Raises support for you at a neutral system or one of yours (not in revolt). Keeps trying until you cancel it. Skill: diplomacy.",
         MissionKind.Diplomacy => "Raises support for you at a neutral system or one of yours (not in revolt). Keeps trying until you cancel it. Skill: diplomacy.",
         MissionKind.Espionage => "Any system: on success you see its facilities, troops and fleets (and maybe more of its side's systems). Skill: espionage.",
         MissionKind.Reconnaissance => "Any system: a look at it. Succeeds by itself unless the team is caught. Skill: espionage.",
@@ -198,7 +207,7 @@ public sealed partial class GameSession
         _ => "",
     };
 
-    string MissionWhere(MissionGroup m) => $"on a {KindWords(m.Kind)} mission to {m.Target}: {PhaseWords(m)}";
+    string MissionWhere(MissionGroup m) => $"on a {KindWords(m.Kind, Player)} mission to {m.Target}: {PhaseWords(m)}";
 
     string MissionMapPlace(MissionGroup m) => m.Path.Count == 0 ? m.Target : m.Path[^1];
 
@@ -224,36 +233,36 @@ public sealed partial class GameSession
                 string team = TeamWords(s.Characters.Items, s.SpecialForces.Items);
                 _missionInfo[s.Mission] = (s.MissionKind, s.Target, team);
                 yield return new Message(d, s.TotalTicks == 0
-                    ? $"Mission started: {KindWords(s.MissionKind)} on {s.Target} by {team} (already there)."
-                    : $"Mission started: {KindWords(s.MissionKind)} on {s.Target} by {team}: {s.TotalTicks} days, arrives day {s.ArrivalDay}.", s.Target, MsgKind.Info);
+                    ? $"Mission started: {KindWords(s.MissionKind, Player)} on {s.Target} by {team} (already there)."
+                    : $"Mission started: {KindWords(s.MissionKind, Player)} on {s.Target} by {team}: {s.TotalTicks} days, arrives day {s.ArrivalDay}.", s.Target, MsgKind.Info);
                 break;
             }
             case MissionLanded l when Mine(l.Side) && _missionInfo.TryGetValue(l.Mission, out var li):
-                yield return new Message(d, $"{li.Team} reached {l.Target} ({KindWords(li.Kind)}): first result due day {l.Due}.", l.Target, MsgKind.Info);
+                yield return new Message(d, $"{li.Team} reached {l.Target} ({KindWords(li.Kind, Player)}): first result due day {l.Due}.", l.Target, MsgKind.Info);
                 break;
             case MissionSucceeded s when Mine(s.Side):
                 _lastSuccess = (s.Mission, s.MissionKind, s.Target);
                 yield return new Message(d, SuccessWords(s), s.Target, MsgKind.Good);
                 break;
             case MissionIterationDone x when Mine(x.Side) && !x.Success && _missionInfo.TryGetValue(x.Mission, out var xi):
-                yield return new Message(d, $"{KindWords(xi.Kind)} on {x.Target}: no success this time. The team keeps trying; next result due day {x.Due}.", x.Target, MsgKind.Info);
+                yield return new Message(d, $"{KindWords(xi.Kind, Player)} on {x.Target}: no success this time. The team keeps trying; next result due day {x.Due}.", x.Target, MsgKind.Info);
                 break;
             case MissionFailed f when Mine(f.Side):
-                yield return new Message(d, $"{KindWords(f.MissionKind)} on {f.Target} failed: {TeamOfId(f.Mission)} did not succeed and comes home.", f.Target, MsgKind.Bad);
+                yield return new Message(d, $"{KindWords(f.MissionKind, Player)} on {f.Target} failed: {TeamOfId(f.Mission)} did not succeed and comes home.", f.Target, MsgKind.Bad);
                 break;
             case MissionFoiled f when Mine(f.Side):
             {
-                var kind = _missionInfo.TryGetValue(f.Mission, out var fi) ? KindWords(fi.Kind) : "Mission";
+                var kind = _missionInfo.TryGetValue(f.Mission, out var fi) ? KindWords(fi.Kind, Player) : "Mission";
                 yield return new Message(d, $"{kind} on {f.System} was foiled: the enemy ({f.DefenderClass}) detected {TeamOfId(f.Mission)}. The team comes home.", f.System, MsgKind.Bad);
                 break;
             }
             case MissionEnded x when Mine(x.Side) && x.Outcome is MissionOutcome.Cancelled or MissionOutcome.TargetInvalid:
                 yield return new Message(d, x.Outcome == MissionOutcome.Cancelled
-                    ? $"{KindWords(x.MissionKind)} on {x.Target} cancelled: {TeamOfId(x.Mission)} comes home."
-                    : $"{KindWords(x.MissionKind)} on {x.Target} called off: the target is no longer valid. The team comes home.", x.Target, MsgKind.Warn);
+                    ? $"{KindWords(x.MissionKind, Player)} on {x.Target} cancelled: {TeamOfId(x.Mission)} comes home."
+                    : $"{KindWords(x.MissionKind, Player)} on {x.Target} called off: the target is no longer valid. The team comes home.", x.Target, MsgKind.Warn);
                 break;
             case MissionEnded x when Mine(x.Side) && x.Outcome == MissionOutcome.TargetDestroyed:
-                yield return new Message(d, $"{KindWords(x.MissionKind)} on {x.Target} failed: the system was destroyed by the harvester.", x.Target, MsgKind.Bad);
+                yield return new Message(d, $"{KindWords(x.MissionKind, Player)} on {x.Target} failed: the system was destroyed by the harvester.", x.Target, MsgKind.Bad);
                 break;
             case MissionEnded x when Mine(x.Side) && x.Outcome == MissionOutcome.Succeeded:
                 break; // the success line already said it
@@ -300,13 +309,14 @@ public sealed partial class GameSession
     {
         MissionKind.Espionage => $"Espionage on {s.Target} succeeded: you now see its facilities, troops and fleets.",
         MissionKind.Reconnaissance => $"Reconnaissance of {s.Target} succeeded: you now see the system.",
+        MissionKind.Diplomacy when Player == Side.Hand => $"{HandDiplomacy} at {s.Target}, sponsored by Alma, succeeded: support for you rises. The team keeps working.",
         MissionKind.Diplomacy => $"Diplomacy on {s.Target} succeeded: support for you rises. The team keeps working.",
         MissionKind.Sabotage => $"Sabotage on {s.Target} succeeded.",
         MissionKind.InciteUprising => $"Incite uprising on {s.Target} succeeded: unrest against the holder grows.",
         MissionKind.SubdueUprising => $"Subdue uprising on {s.Target} succeeded: the people calm down.",
-        MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => $"{KindWords(s.MissionKind)} at {s.Target} succeeded: research points gained.",
+        MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch => $"{KindWords(s.MissionKind, Player)} at {s.Target} succeeded: research points gained.",
         MissionKind.Rescue => $"Rescue at {s.Target} succeeded: your character is free.",
         MissionKind.BurnTheBooks => $"Burn the Books on {s.Target} succeeded.",
-        _ => $"{KindWords(s.MissionKind)} on {s.Target} succeeded.",
+        _ => $"{KindWords(s.MissionKind, Player)} on {s.Target} succeeded.",
     };
 }

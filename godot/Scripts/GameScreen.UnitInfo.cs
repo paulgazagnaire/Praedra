@@ -59,7 +59,7 @@ public partial class GameScreen
                 Add("Combat", k.Combat);
                 Add("Leadership", k.Leadership);
                 var kinds = OfferedKinds.Where(x => Mm.Data.TryGet(x, out var rec) && rec.AvailableTo(Me) && (k.MissionBit & rec.SpecialForceMask) != 0)
-                    .Select(GameSession.KindWords).ToList();
+                    .Select(x => GameSession.KindWords(x, Me)).ToList();
                 extra = kinds.Count == 0 ? "Joins no mission." : $"Missions: {string.Join(", ", kinds)}.";
                 break;
             }

@@ -76,7 +76,7 @@ public partial class GameScreen
         if (!mine)
         {
             InfraBuildingsSeen(n, tab, pic);
-            FleetSection("Build", 8).AddChild(Para("You can build only on planets you hold. To take this one, invade it from a fleet in orbit with regiments aboard, or win its people over with Diplomacy.", Look.Soft));
+            FleetSection("Build", 8).AddChild(Para($"You can build only on planets you hold. To take this one, invade it from a fleet in orbit with regiments aboard, or win its people over with {DiplomacyWord}.", Look.Soft));
             return;
         }
         InfraBuildings(n, tab);
