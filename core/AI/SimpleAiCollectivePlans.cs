@@ -39,7 +39,7 @@ public sealed partial class SimpleAi
     private long NeutraliseScore(Praedra.Core.Map.StarSystem sys, int power, int ticks)
     {
         string s = sys.Name;
-        if (!ShakeTarget(s, power)) return 0;
+        if (s == WinTarget() || !ShakeTarget(s, power)) return 0;
         int pct = CampaignIn(sys.Sector) is { Plan: AiFrontPlan.Neutralise } ? _p.NeutraliseFrontPercent : _p.NeutraliseElsewherePercent;
         if (pct <= 0) return 0;
         var slots = SlotsSeen(s);
@@ -49,12 +49,15 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
-    /// Neutralise at the target: the fleets here shell the garrison (Military) while the world fits ShakeTarget and no landing would take it
-    /// anyway; true when the order went in.
+    /// Neutralise at the target: the fleets here shell the garrison (Military) while the world fits ShakeTarget; true when the order went in
+    /// (or another fleet here already shells it today). Never the game-winning system (a neutral Charter counts for nothing). A world below 60
+    /// support that the troops aboard could take now is left to the landing (shelled bare it would only go neutral, Ponytail on #416); at 60 or
+    /// more the shelling is preferred, since the world then joins with no garrison to leave behind.
     /// </summary>
-    private bool ShakeHere(Fleet f, string at, List<Fleet> mineHere)
+    private bool ShakeHere(Fleet f, string at, List<Fleet> mineHere, int aboard, int defenders)
     {
-        if (!NeutraliseOn || _h.Bombardment.Power(f) <= 0 || !ShakeTarget(at, ShellPower(mineHere))) return false;
+        if (!NeutraliseOn || _h.Bombardment.Power(f) <= 0 || at == WinTarget() || !ShakeTarget(at, ShellPower(mineHere))) return false;
+        if (aboard >= 1 && aboard >= Need(defenders) && SupportSeen(at) is int sup && sup < Praedra.Core.Control.ControlModule.JoinSupport) return false;
         if (CampaignAt(at) is not { Plan: AiFrontPlan.Neutralise } && _p.NeutraliseElsewherePercent <= 0) return false;
         if (mineHere.Any(x => x.Id < f.Id && _h.Bombardment.Power(x) > 0 && _h.Bombardment.HasPending(x.Id))) return true; // one shelling a day per world is enough
         long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, Praedra.Core.Defenses.BombardCategory.Military);
