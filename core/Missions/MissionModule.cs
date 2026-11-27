@@ -152,8 +152,13 @@ public sealed partial class MissionModule
     public bool IsSpecialForceBusy(int obj) => S.Missions.Values.Any(m => m.SpecialForces.Contains(obj) || m.DecoySpecialForces.Contains(obj));
 
     /// <summary>The fog's hook: the side has an agent on a working mission at the system (landed, not travelling). rule: m5-fog-and-hq §F3 3.</summary>
-    public bool AgentsAt(Side side, string system) =>
-        S.Missions.Values.Any(m => m.Side == side && m.Phase == MissionPhase.Working && m.Target == system && (m.HasTeam || m.DecoyCharacters.Count + m.DecoySpecialForces.Count > 0));
+    public bool AgentsAt(Side side, string system)
+    {
+        foreach (var m in S.Missions.Values) // a plain loop: the fog asks for every system it does not see otherwise, daily
+            if (m.Side == side && m.Phase == MissionPhase.Working && m.Target == system && (m.HasTeam || m.DecoyCharacters.Count + m.DecoySpecialForces.Count > 0))
+                return true;
+        return false;
+    }
 
     // ================================================================== lookups (public for tests and the runner)
 
@@ -363,7 +368,7 @@ public sealed partial class MissionModule
     /// group (0x504cc0). The character module's escape attempt reads it. rule: m5-characters-and-talent §Escape (Traced B2e §3 step 3).
     /// </summary>
     public int SpecialForcesOnPlanet(Side side, string system) =>
-        E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0 && o.System == system
+        E.Index.At(system).Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0
             && !IsSpecialForceBusy(o.Id));
 
     /// <summary>
@@ -383,7 +388,8 @@ public sealed partial class MissionModule
     /// on the ship). The escape attempt of a prisoner a ship caught with no commander reads it. rule: m5-characters-and-talent §Escape (B2e §3, Q73).
     /// </summary>
     public int SpecialForcesOnShip(Side side, int ship) =>
-        E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == ship && !IsSpecialForceBusy(o.Id));
+        (ship != 0 ? E.Index.Aboard(ship) : E.Objects.Values.Where(o => o.AboardShip == 0))
+            .Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && !IsSpecialForceBusy(o.Id));
 
     /// <summary>
     /// The guards a planet-target mission of <paramref name="side"/> meets at <paramref name="system"/>: those of the arriving check (orbit) and of the
@@ -674,6 +680,28 @@ public sealed partial class MissionModule
         return null;
     }
 
+    /// <summary>
+    /// Is this an Abduction or Assassination order that names both the leader and the system where the side believes the leader is, with
+    /// <see cref="MissionParams.CharacterTargetWhereSeen"/> on? rule: m5-missions §Targets (Where a leader target is sought).
+    /// </summary>
+    private bool WhereSeen(StartMissionOrder o) =>
+        Params.CharacterTargetWhereSeen && o.Kind is MissionKind.Abduction or MissionKind.Assassination && o.TargetCharacter != null && o.TargetSystem != null;
+
+    /// <summary>
+    /// The order-time check of a where-seen order: only what the side knows. The leader exists and is of the other side [BadTarget], is not
+    /// already the side's own prisoner [BadTarget], and the system exists and is not destroyed [BadTarget, SystemDestroyed]. Whether the leader is
+    /// still there, free and on the ground is judged on landing and at each iteration start (TargetInvalid, TargetProtected). rule: m5-missions
+    /// §Targets (Where a leader target is sought).
+    /// </summary>
+    private string? SeenTargetReason(StartMissionOrder o)
+    {
+        if (_ch.Get(o.TargetCharacter!.Value) is not { Placed: true } tc || tc.Side != Other(o.Side)) return MissionReject.BadTarget;
+        if (tc.Status == CharacterStatus.Captured && tc.Captor == o.Side) return MissionReject.BadTarget;
+        if (!_fleets.Galaxy.TryFindSystem(o.TargetSystem!, out _)) return MissionReject.BadTarget;
+        if (_eco.IsDestroyed(_fleets.Galaxy.Get(o.TargetSystem!).Name)) return RejectReason.SystemDestroyed; // rule: m5-harvester §2 effect 5
+        return null;
+    }
+
     private string? TargetReason(MissionGroup m) => TargetReason(m.Kind, m.Side, m.Target, m.TargetCharacter, m.TargetCharacter != null ? m.Target : null);
 
     // ================================================================== orders (step 1)
@@ -727,12 +755,16 @@ public sealed partial class MissionModule
         if (o.Kind == MissionKind.Recruitment && Recruit == null) return (MissionReject.RuleMissing, null);
 
         bool charTarget = o.Kind is MissionKind.Rescue or MissionKind.Abduction or MissionKind.Assassination;
-        if (TargetReason(o.Kind, o.Side, o.TargetSystem, o.TargetCharacter, null) is { } tr) return (tr, null);
+        bool whereSeen = WhereSeen(o);
+        if (whereSeen) { if (SeenTargetReason(o) is { } sr) return (sr, null); }
+        else if (TargetReason(o.Kind, o.Side, o.TargetSystem, o.TargetCharacter, null) is { } tr) return (tr, null);
         // rule: m5-missions §6b Target (Decided by Paul 2026-11-06): one team at a time per side, checked at order time only [BooksTeamOut]
         if (o.Kind == MissionKind.BurnTheBooks && Params.BooksOneTeam && S.Missions.Values.Any(g => g.Kind == MissionKind.BurnTheBooks && g.Side == o.Side))
             return (MissionReject.BooksTeamOut, null);
-        if (KeyGate(o.Kind, o.TargetCharacter) is { } protectedReason) return (protectedReason, null); // rule: m5-missions §6a.1
-        string target = charTarget ? _ch.LocationOf(_ch.Get(o.TargetCharacter!.Value)!)! : _fleets.Galaxy.Get(o.TargetSystem!).Name;
+        // rule: m5-missions §6a.1 (checked at the order and at each iteration start); a where-seen order skips it here: it would tell the side
+        // whether the leader rides a fleet now. The iteration-start check still applies (m5-missions §Targets, Where a leader target is sought).
+        if (!whereSeen && KeyGate(o.Kind, o.TargetCharacter) is { } protectedReason) return (protectedReason, null);
+        string target = whereSeen || !charTarget ? _fleets.Galaxy.Get(o.TargetSystem!).Name : _ch.LocationOf(_ch.Get(o.TargetCharacter!.Value)!)!;
         int? facility = null;
         if (o.Kind == MissionKind.Sabotage && Params.SabotageTargetMode == SabotageTargetMode.Chosen)
         {

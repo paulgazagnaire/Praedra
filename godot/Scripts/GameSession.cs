@@ -438,7 +438,7 @@ public sealed partial class GameSession
         RejectReason.UnknownFleet => "that fleet no longer exists",
         RejectReason.NotYours => "it is not yours",
         RejectReason.InTransit => "the fleet is travelling (wait until it arrives)",
-        RejectReason.Immobile => "it cannot move (no working hyperdrive)",
+        RejectReason.Immobile => "it cannot move (no working jump drive)",
         RejectReason.AlreadyThere => "it is already there",
         RejectReason.UnknownSystem => "unknown system",
         RejectReason.Unreachable => "there is no route there",

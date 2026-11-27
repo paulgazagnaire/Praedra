@@ -197,6 +197,15 @@ public sealed class EconomyModule
     public IReadOnlyList<int> RawLine(Side s) => E.Pool(s).RawLine;
     public IReadOnlyCollection<EconObject> Objects => E.Objects.Values;
     public EconObject? Find(int id) => E.Objects.TryGetValue(id, out var o) ? o : null;
+    /// <summary>
+    /// The objects whose System is <paramref name="system"/> (on it, or bound for it: queued and in-delivery facilities too), id order: the
+    /// same as <c>Objects.Where(o =&gt; o.System == system)</c>, from an index (<see cref="ObjectIndex"/>). A copy: a loop over it may move,
+    /// add or remove objects (the index's own lists change at once; Ponytail on #418).
+    /// </summary>
+    public IReadOnlyList<EconObject> ObjectsAt(string system) => Copy(E.Index.At(system));
+    /// <summary>The objects riding on ship <paramref name="ship"/> (AboardShip), id order, from the same index. A copy, as <see cref="ObjectsAt"/>.</summary>
+    public IReadOnlyList<EconObject> ObjectsAboard(int ship) => Copy(E.Index.Aboard(ship));
+    private static IReadOnlyList<EconObject> Copy(IReadOnlyList<EconObject> l) => l.Count == 0 ? Array.Empty<EconObject>() : l.ToArray();
 
     /// <summary>Slot values now: the file's, unless an incident or setup changed them.</summary>
     public SlotState SlotsOf(string system)
@@ -210,13 +219,13 @@ public sealed class EconomyModule
     public int EffectiveRaw(string system) { var s = SlotsOf(system); return Math.Min(s.Raw, s.Energy); }
 
     /// <summary>energy_used: installed facilities plus facilities in delivery or queued for the system. rule: §Occupied slots.</summary>
-    public int EnergyUsed(string system) => E.Objects.Values.Count(o => o.Category == ObjectCategory.Facility && o.System == system);
+    public int EnergyUsed(string system) => E.Index.At(system).Count(o => o.Category == ObjectCategory.Facility);
 
     /// <summary>raw_used: installed mines plus mines in delivery or queued for the system.</summary>
-    public int RawUsed(string system) => E.Objects.Values.Count(o => IsClass(o, FacilityKind.Mine) && o.System == system);
+    public int RawUsed(string system) => E.Index.At(system).Count(o => IsClass(o, FacilityKind.Mine));
 
     /// <summary>Facilities of <paramref name="kind"/> on the system: finished, queued or in delivery.</summary>
-    public int OfKindAt(string system, FacilityKind kind) => E.Objects.Values.Count(o => IsClass(o, kind) && o.System == system);
+    public int OfKindAt(string system, FacilityKind kind) => E.Index.At(system).Count(o => IsClass(o, kind));
 
     public int FreeEnergy(string system) => SlotsOf(system).Energy - EnergyUsed(system);
     public int FreeRaw(string system) => EffectiveRaw(system) - RawUsed(system);
@@ -353,9 +362,9 @@ public sealed class EconomyModule
                 ships++;
             }
         }
-        foreach (var o in E.Objects.Values)
+        foreach (var o in ObjectsAt(system))
         {
-            if (!o.Completed || o.Side != controller || o.System != system || o.AboardShip != 0) continue;
+            if (!o.Completed || o.Side != controller || o.AboardShip != 0) continue;
             // rule: m2-mines-refineries-pools §Diversion: fighter squadrons and regiments of that side ON the system (aboard ones do not count)
             if (o.Category == ObjectCategory.Regiment) regiments++;
             else if (o.Category == ObjectCategory.Fighter) fighters++;
@@ -363,6 +372,42 @@ public sealed class EconomyModule
         int mult = controller == Side.Hand && IsHarvesterSector(system) ? Params.HarvesterRegimentMultiplier : 1;
         int v = tier - Params.ShipPresence * ships - Params.FighterPresence * fighters - Params.RegimentPresence * mult * regiments;
         return Math.Clamp(v, 0, 100);
+    }
+
+    /// <summary>
+    /// Refined the side's own refineries make per 30 days at the present pace, for the screen: each refinery that works for the side
+    /// (completed, held, not suspended) finishes one cycle every <see cref="CycleDays"/> at its system's support and its dealt share (one about
+    /// to start gets an even slice), less what smuggling diverts; when the raw stock and the mines' pace cannot feed every cycle, they make only
+    /// what the raw allows. Batches smuggled in from the other side are left out: they are not the side's refineries, and reading the other
+    /// side's facilities as they are now would tell the screen what the fog hides (Ponytail on #422). It reads the state only and changes
+    /// nothing, in the same tense as <c>ConstructionModule.RefinedUsePer30Days</c> (QA-131, 2026-11-27: a count of the last 30 days lagged lost
+    /// refineries and slower cycles, so the trend mark by Refined showed a rise while the stock fell). rule: m2-mines-refineries-pools §Cycle
+    /// length, §Asking for raw / serving a line, §Diversion (smuggling). RawShort: the raw cannot feed every refinery cycle, so the mines are
+    /// what holds the refineries back (UI review 37: the screen says so, or a player at Raw 0 builds refineries that only wait).
+    /// </summary>
+    public (int Refined, bool RawShort) RefinedPacePer30Days(Side side)
+    {
+        const int Days = 30;
+        var memo = new Dictionary<string, bool>(StringComparer.Ordinal); // lookup only, never iterated
+        int load = Load(side);
+        // per 30 days in hundredths: refinery cycles, the batches the side keeps of them, and the raw that can feed them (stock + mines kept)
+        long cycles = 0, kept = 0, raw = 100L * E.Pool(side).Raw;
+        foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
+        {
+            var working = Cyclers(kind).Where(f => f.Completed && OwnerOf(f) == side && !IsSuspended(f, memo)).ToList(); // id order
+            int even = Math.Min(Params.CapacityPerFacility, load / Math.Max(1, working.Count));
+            foreach (var f in working)
+            {
+                int support = Math.Clamp(SupportOf(f.System!, side), Params.SupportFloor, Params.SupportCeiling);
+                int d = Math.Max(1, CycleDays(Params, support, f.WorkSide == side ? f.Share : even));
+                long n = Days * 100L / d, keep = n * (100 - DiversionPercent(f.System!, side)) / 100;
+                if (kind == FacilityKind.Mine) raw += keep;
+                else { cycles += n; kept += keep; }
+            }
+        }
+        bool rawShort = cycles > raw;
+        if (rawShort) kept = kept * raw / cycles; // each cycle takes one raw: short raw, fewer cycles
+        return ((int)(kept / 100), rawShort);
     }
 
     /// <summary>
@@ -398,6 +443,7 @@ public sealed class EconomyModule
     private void Remove(EconObject o)
     {
         E.Objects.Remove(o.Id);
+        E.Index.Removed(o);
         E.Hand.RawLine.Remove(o.Id);
         E.Collective.RawLine.Remove(o.Id);
     }
@@ -424,7 +470,7 @@ public sealed class EconomyModule
     }
 
     private List<EconObject> Installed(string system) =>
-        E.Objects.Values.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == system).ToList();
+        ObjectsAt(system).Where(o => o.Category == ObjectCategory.Facility && o.Completed).ToList();
 
     /// <summary>
     /// Over-capacity destruction, to run whenever a system's energy or raw changed: energy check first, then raw check; each

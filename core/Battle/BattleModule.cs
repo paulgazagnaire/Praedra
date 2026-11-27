@@ -265,7 +265,7 @@ public sealed class BattleModule
                 u.Hits[ObjectRegistry.HyperdriveCounter] += u.Hits[BackupHyperdriveCounter];
                 u.Hits[BackupHyperdriveCounter] = 0;
                 // rule: m4-battle-classic §5 (target value): each special-forces unit aboard adds 1 (characters ride fleets, not ships: none aboard a ship)
-                u.Passengers = E.Objects.Values.Count(x => x.Category == ObjectCategory.SpecialForce && x.AboardShip == o.Id);
+                u.Passengers = E.Index.Aboard(o.Id).Count(x => x.Category == ObjectCategory.SpecialForce);
             }
         }
         else
@@ -416,7 +416,7 @@ public sealed class BattleModule
         int id = d.Unit.ObjectId, sec = d.Second; var why = d.Reason;
         if (!E.Objects.TryGetValue(id, out var obj)) return;
         if (d.Unit.IsCapital)
-            foreach (var reg in E.Objects.Values.Where(r => r.AboardShip == id && r.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
+            foreach (var reg in E.Index.Aboard(id).Where(r => r.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
             { // special forces aboard go down with the ship too (m5-missions §Spying from orbit 1, DEFAULT as regiments)
                 int rid = reg.Id;
                 ctx.Emit((i, _) => new UnitDestroyed(i, day, sys, rid, sec, UnitLossReason.ShipLost));

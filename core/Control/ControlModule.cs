@@ -162,18 +162,24 @@ public sealed class ControlModule
 
     private Dictionary<string, int> PresenceAll()
     {
+        // the map reads Category, Completed, AboardShip, System and Side only: while none changed, the last one is still right (QA senior QS-1;
+        // Settle runs after every slot). Shared, so never changed after it is made.
+        long version = E.Index.PlacementVersion;
+        if (_presenceAll != null && version == _presenceAllVersion) return _presenceAll;
         var d = new Dictionary<string, int>(StringComparer.Ordinal); // lookup only, never iterated unsorted
         foreach (var o in E.Objects.Values)
             if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.System is string s && o.Side is Side side)
                 d[s] = d.GetValueOrDefault(s) | (side == Side.Collective ? CollectiveBit : HandBit);
-        return d;
+        _presenceAllVersion = version;
+        return _presenceAll = d;
     }
+    private Dictionary<string, int>? _presenceAll; private long _presenceAllVersion; // derived, never saved
 
     private int PresenceAt(string system)
     {
         int bits = 0;
-        foreach (var o in E.Objects.Values)
-            if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.System == system && o.Side is Side side)
+        foreach (var o in E.Index.At(system))
+            if (o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0 && o.Side is Side side)
                 bits |= side == Side.Collective ? CollectiveBit : HandBit;
         return bits;
     }
@@ -296,7 +302,7 @@ public sealed class ControlModule
 
         // 2.1 Facilities (0x4f8680): a finished one takes the new side if its class can serve it, else it is destroyed (reason 3). Unfinished ones
         // that no project or delivery owns (setup leftovers) go with the queue, no refund. Mines and refineries restart (B5b: not in this batch).
-        foreach (var o in _eco.Objects.Where(x => x.System == system && x.Category == ObjectCategory.Facility).ToList()) // id order
+        foreach (var o in _eco.ObjectsAt(system).Where(x => x.Category == ObjectCategory.Facility).ToList()) // id order
         {
             int id = o.Id; string cls = o.Class;
             if (!o.Completed && _construction?.OwnsObject(id) == true) continue; // a queued unit or a delivery in flight: construction's
@@ -310,7 +316,7 @@ public sealed class ControlModule
         // derived control an old-side regiment is rarely still there. Squadrons based there get Autorouting (0x503510; where they go was not found:
         // DEFAULT, the old side's leave for its nearest held system, as the characters do; Dev lead 2026-10-18). Fleets in orbit are not touched.
         var onMission = SpecialForcesOnMission();
-        foreach (var o in _eco.Objects.Where(x => x.System == system && x.AboardShip == 0 && x.Completed && x.Side != holder
+        foreach (var o in _eco.ObjectsAt(system).Where(x => x.AboardShip == 0 && x.Completed && x.Side != holder
                      && (x.Category == ObjectCategory.Regiment || (x.Category == ObjectCategory.SpecialForce && !onMission.Contains(x.Id)))).ToList()) // id order
         {
             int id = o.Id; string cls = o.Class; var owner = o.Side;
@@ -472,7 +478,7 @@ public sealed class ControlModule
     public void DebugApplyTroops(StepContext ctx, string system, Side side, string regimentClass, int count)
     {
         int day = ctx.Day + 1;
-        foreach (var r in _eco.Objects.Where(x => x.Category == ObjectCategory.Regiment && x.System == system && x.AboardShip == 0).ToList())
+        foreach (var r in _eco.ObjectsAt(system).Where(x => x.Category == ObjectCategory.Regiment && x.AboardShip == 0).ToList())
         {
             int id = r.Id; string cls = r.Class; var rs = r.Side ?? side;
             _eco.RemoveObject(id);

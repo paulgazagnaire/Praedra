@@ -24,6 +24,8 @@ public partial class GameScreen
     IEnumerable<int> EnemyTerms => Vm.Keys.Where(k => k.Standard && k.Side == S.Enemy).Select(k => k.Character).OrderBy(x => x);
 
     bool InMyPrison(int id) => Cm.Get(id) is { Status: CharacterStatus.Captured } c && c.Captor == Me;
+    // rule: m5-missions §6a: a key leader's per-try Abduction cap, as the Mission window says it
+    string CapWords(int id) => S.AbductionCap(id) is int c ? $" (at most {c}% a try)" : "";
     bool KeyDead(int id) => Cm.Get(id) is { Status: CharacterStatus.Dead };
     bool KeyMet(int id) => InMyPrison(id) || (KeyDead(id) && Vm.Rules.KeyDeathFallback == Praedra.Core.Victory.KeyDeathFallback.WaiveCondition);
 
@@ -90,7 +92,7 @@ public partial class GameScreen
         var body = DialogBody(_goalPanel, v);   // the three cards scroll under the head when the screen is short (QA-105)
 
         // ---- the standard win: the enemy capital AND its key leaders
-        var c1 = GoalCard(body, "Win: take their capital and hold their leaders", "All of these at once. Capture a leader in a battle where they stand, or with an Abduction mission.");
+        var c1 = GoalCard(body, "Win: take their capital and hold their leaders", "All of these at once. Capture a leader in a battle where they stand, or with an Abduction mission. Find them first: a successful Espionage mission shows the leaders on that world.");
         if (hand)
         {
             var hq = S.Fog.KnownHq(Me);
@@ -113,8 +115,8 @@ public partial class GameScreen
             string name = S.CharName(id);
             string how = InMyPrison(id) ? $"In your prison{(Cm.Get(id)?.HeldAt is string at ? $" at {at}" : "")}. Keep them there."
                 : KeyDead(id) ? "Dead: no longer needed."
-                : LastSeen(id) is { } ls ? $"Free. Last seen at {ls.System}, day {ls.Day}."
-                : "Free, whereabouts unknown.";
+                : LastSeen(id) is { } ls ? $"Free. Last seen at {ls.System}, day {ls.Day}. Send an Abduction there{CapWords(id)}."
+                : "Free, whereabouts unknown. Spy on enemy worlds: a successful Espionage mission shows the leaders there.";
             Check(c1, KeyMet(id), $"Hold {name} prisoner", how, LastSeen(id)?.System);
         }
 

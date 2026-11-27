@@ -110,7 +110,7 @@ public sealed class SupportModule
     private int Weight10(EconObject o) => Ruleset == GarrisonRuleset.New ? Weights.Weight10(o.Class) : Params.ClassicWeight10;
 
     private IEnumerable<EconObject> HolderRegiments(string system, Side holder) =>
-        _eco.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.System == system && o.Side == holder);
+        _eco.ObjectsAt(system).Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == holder);
 
     // ================================================================== ChangeSupport
 
@@ -408,7 +408,7 @@ public sealed class SupportModule
                 CharacterIncident?.Invoke(ctx, t, sys, holder, code);
                 break;
             case 1: // one completed facility destroyed, uniform over facility ids (DEFAULT completed only)
-                var fac = _eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == sys).ToList();
+                var fac = _eco.ObjectsAt(sys).Where(o => o.Category == ObjectCategory.Facility && o.Completed).ToList();
                 if (fac.Count > 0) _eco.Destroy(ctx, t, fac[ctx.Rng.NextInt(0, fac.Count - 1)], DestroyReason.UprisingIncident);
                 break;
             case 2: // one regiment of the holder on the system destroyed, uniform (not weighted)

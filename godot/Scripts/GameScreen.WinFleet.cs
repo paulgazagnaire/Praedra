@@ -44,7 +44,7 @@ public partial class GameScreen
     const int LeaderCardH = CardPicH + 4 + 32;   // a leader's card: two lines of name (first name over last name), the empty post's size
     const int WideEmptyH = 80;   // the design's full-width "Drop regiments here to load them"
 
-    static readonly string[] HitNames = { "shield generator", "weapons", "hold beam", "sub-light engines", "hyperdrive", "damage control" };
+    static readonly string[] HitNames = { "shield generator", "weapons", "hold beam", "sub-light engines", "jump drive", "damage control" };
 
     List<Fleet> MyFleets() => S.Game.State.Fleets.Values.Where(f => f.Side == Me).OrderBy(f => f.Id).ToList();
 
@@ -1113,7 +1113,7 @@ public partial class GameScreen
     string ShipTip(EconObject o)
     {
         var hits = (o.Hits ?? new List<int>()).Select((h, i) => (h, i)).Where(x => x.h > 0 && x.i < HitNames.Length).Select(x => $"{HitNames[x.i]} ({x.h})").ToList();
-        string tip = $"{o.Class} #{o.Id}. " + (hits.Count == 0 ? "No damage." : $"Damaged: {string.Join(", ", hits)}." + (o.Hits is { Count: > 4 } hh && hh[4] > 0 ? " A damaged hyperdrive makes it slower." : ""));
+        string tip = $"{o.Class} #{o.Id}. " + (hits.Count == 0 ? "No damage." : $"Damaged: {string.Join(", ", hits)}." + (o.Hits is { Count: > 4 } hh && hh[4] > 0 ? " A damaged jump drive makes it slower." : ""));
         if (o.RepairMode != 0) tip += " Being repaired.";
         if (ClassTip(o.Class) is string ct) tip += "\n" + ct;
         return tip;

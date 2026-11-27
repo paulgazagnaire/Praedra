@@ -119,11 +119,14 @@ public partial class GameScreen
     internal int SpeedValue => Speeds[_speedIndex];
     internal string Banner => InMoveMode ? _moveBanner ?? "" : _banner.GetParent<Control>().Visible ? _banner.Text : "";
     internal string TopText => $"Day {_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {(_ordersLabel.IsVisibleInTree() ? _ordersLabel.Text : "")}";
-    internal bool RefinedFalling => _refinedFall.Visible;
+    /// <summary>The mark shown by Refined now, read from the picture on screen (null: none shows).</summary>
+    internal RefinedWay? RefinedWayShown => !_refinedMark.Visible ? null
+        : _refinedMark.Texture == WayPicture(RefinedWay.Falling) ? RefinedWay.Falling
+        : _refinedMark.Texture == WayPicture(RefinedWay.Rising) ? RefinedWay.Rising : RefinedWay.Steady;
     /// <summary>The Refined stock's width now, and the frame's width it must keep while the names show (none on a narrow bar).</summary>
     internal (float Now, float Room) RefinedCellWidth => (Math.Max(_refinedCell.Size.X, _refinedCell.GetCombinedMinimumSize().X), _barLevel < 1 ? RefinedW : float.PositiveInfinity);
     /// <summary>Shows the mark whatever the flow says, until the next refresh: its width is checked even on a game whose stock is not falling.</summary>
-    internal void ForceRefinedMark() => _refinedFall.Visible = true;
+    internal void ForceRefinedMark() => ShowRefinedWay(RefinedWay.Falling);
     /// <summary>Every idle shipyard and training yard of yours gets an order for <paramref name="count"/> of its cheapest unit, so the yards
     /// use refined (the red ▼ by Refined). Returns how many orders were given.</summary>
     internal int PlayBusyYards(int count)

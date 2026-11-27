@@ -52,7 +52,7 @@ public partial class GameScreen
     ColorRect _searchEnd;   // the search's closing line: hidden once the search narrows and reaches the stocks' line
     Control _rawCell, _refinedCell, _upkeepCell;   // one stock each: its icon, name and number, in the stocks' cell
     Label _goalCaption, _goalValue, _rawCaption, _refinedCaption;
-    TextureRect _refinedFall;   // the small red ▼ after Refined's number: the yards use more than the refineries make (Paul 2026-11-27)
+    TextureRect _refinedMark;   // the small mark after Refined's number: red ▼ falling, green ▲ rising, grey dash steady (Paul 2026-11-27)
     readonly List<PanelContainer> _barTextCells = new();
     static Font _barFont;
     static Font BarFont => _barFont ??= Ui.Operator ?? ThemeDB.FallbackFont;
@@ -150,8 +150,8 @@ public partial class GameScreen
         _barRight.AddChild(TextCell(stocks));
         (_rawCell, _rawCaption, _rawLabel) = StockItem(stocks, RawIcon, "Raw", RawTip);
         (_refinedCell, _refinedCaption, _refinedLabel) = StockItem(stocks, RefinedIcon, "Refined", RefinedTip);
-        _refinedFall = FallMark();
-        _refinedCell.AddChild(_refinedFall);
+        _refinedMark = WayMark();
+        _refinedCell.AddChild(_refinedMark);
         (_upkeepCell, _upkeepCaption, _upkeepLabel) = StockItem(stocks, UpkeepIcon, "Upkeep", "");
         BarLine(_barRight);
 
@@ -508,22 +508,43 @@ public partial class GameScreen
 
     /// <summary>The small red ▼ by Refined (Paul 2026-11-27): a pixel triangle 7 wide and 4 high, flat red as the upkeep's over-limit words,
     /// made in code like every bar icon (Paul 2026-11-18). Hidden until the stock falls.</summary>
-    static TextureRect FallMark()
+    /// <summary>The mark after Refined's number, 7x4 pixels drawn in code, as one of three pictures (or none while the trend is unjudged):
+    /// a red ▼ (Ui.Danger, the over-limit Upkeep red), a green ▲ (Ui.Good), a grey dash 7x2 in its middle (the bar's label grey).</summary>
+    static TextureRect WayMark() => new()
     {
-        var img = Image.CreateEmpty(7, 4, false, Image.Format.Rgba8);
-        for (int y = 0; y < 4; y++)
-            for (int x = y; x < 7 - y; x++) img.SetPixel(x, y, Ui.Danger);
-        return new TextureRect
+        TextureFilter = TextureFilterEnum.Nearest,
+        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+        CustomMinimumSize = new Vector2(7, 4),
+        SizeFlagsVertical = SizeFlags.ShrinkCenter,
+        MouseFilter = MouseFilterEnum.Ignore,   // its words are the stock's tooltip
+        Visible = false,
+    };
+
+    static ImageTexture _wayDown, _wayUp, _waySteady;
+
+    static ImageTexture WayPicture(RefinedWay way)
+    {
+        ImageTexture Draw(Func<int, int, bool> on, Color c)
         {
-            Texture = ImageTexture.CreateFromImage(img),
-            TextureFilter = TextureFilterEnum.Nearest,
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
-            CustomMinimumSize = new Vector2(7, 4),
-            SizeFlagsVertical = SizeFlags.ShrinkCenter,
-            MouseFilter = MouseFilterEnum.Ignore,   // its words are the stock's tooltip
-            Visible = false,
+            var img = Image.CreateEmpty(7, 4, false, Image.Format.Rgba8);
+            for (int y = 0; y < 4; y++)
+                for (int x = 0; x < 7; x++)
+                    if (on(x, y)) img.SetPixel(x, y, c);
+            return ImageTexture.CreateFromImage(img);
+        }
+        return way switch
+        {
+            RefinedWay.Falling => _wayDown ??= Draw((x, y) => x >= y && x < 7 - y, Ui.Danger),
+            RefinedWay.Rising => _wayUp ??= Draw((x, y) => x >= 3 - y && x < 4 + y, Ui.Good),
+            _ => _waySteady ??= Draw((x, y) => y is 1 or 2, BarLabel),
         };
+    }
+
+    void ShowRefinedWay(RefinedWay way)
+    {
+        _refinedMark.Visible = true;   // both paces are known from the first day, after a load too: the mark always shows (QA-131)
+        _refinedMark.Texture = WayPicture(way);
     }
 
     static TextureRect PixelIcon(string[] rows, Color color)

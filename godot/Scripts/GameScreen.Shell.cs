@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 
 using Side = Praedra.Core.Clock.Side;
+using YardSetUse = Praedra.Core.Construction.YardSetUse;
 
 namespace PraedraViewer;
 
@@ -191,66 +192,144 @@ public partial class GameScreen
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
-    /// <summary>Where the refined comes from and goes: made in the last 30 days, what the yards use at their present pace (Sibyl's builds
-    /// apart), and whether the stock is falling (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why").
-    /// Falling = the yards use more than the refineries make (Paul 2026-11-27: "Add a small red ▼ by Refined"), judged only once the days
-    /// on record cover a refinery's cycle at your present upkeep: before that a refinery may not have finished one (right after a load, as
-    /// events are not saved), so a short window would read as falling for no reason (Ponytail on #413). Once on, it stays on until the yards
-    /// use less than 90% of what the refineries make: near balance the two numbers cross back and forth from day to day, and the mark
-    /// blinked off for a day or two while the stock sat near 0 (QA r245 on #413, day-487 Hand save: Sibyl using about 88 against 92 made).
+    /// <summary>Where the refined comes from and goes: what the refineries make and what the yards use, both at today's pace per 30 days
+    /// (Sibyl's builds apart), and which way the stock goes (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why").
+    /// A small mark after Refined's number says it: a red ▼ when the yards use more than the refineries make (Paul 2026-11-27: "Add a small
+    /// red ▼ by Refined"), a green ▲ when the refineries make more, a grey dash when the two are within 5% of each other (Paul 2026-11-27:
+    /// "We need an upward trend indicator and a stable indicator as well"). Both sides are today's pace: a count of the last 30 days lagged
+    /// lost refineries and slower cycles, so the ▲ showed while the stock fell (QA-131), and it rose and fell by itself with the batches
+    /// (UI review 36). Near balance a mark that shows keeps showing until the use crosses back over balance itself (QA r245: no blinking).
     /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
-    internal readonly record struct RefinedTrend(int Made, int Days, int Made30, int Mine, int Hers, bool Falling);
+    internal enum RefinedWay { Steady, Falling, Rising }
 
-    RefinedTrend RefinedTrendNow()
+    /// <summary>Today: the yards' use today when the mark also counts yard sets between Sibyl's builds (QA-132), else -1; Waiting: the worlds of
+    /// those sets.</summary>
+    internal readonly record struct RefinedTrend(int Made, int Mine, int Hers, RefinedWay Way, bool RawShort = false, int Today = -1,
+        IReadOnlyList<string> Waiting = null)
     {
-        var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player);
-        var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        return TrendOf(made, days, mine, hers, RefineryCycleNow(), _refinedWasFalling);
+        public bool Falling => Way == RefinedWay.Falling;
     }
 
-    /// <summary>Whether the red ▼ by Refined showed at the last refresh: it goes off only well under balance (QA r245).</summary>
-    bool _refinedWasFalling;
-
-    /// <summary>Once on, the mark stays on while the yards use more than this share of what the refineries make (QA r245: no blinking).</summary>
-    const int RefinedStayOnPercent = 90;
-
-    /// <summary>A refinery's cycle in days at your present upkeep, at full support: the share as in <see cref="SlowdownWords"/>.
-    /// rule: m2-mines-refineries-pools §Cycle length.</summary>
-    internal int RefineryCycleNow()
+    internal RefinedTrend RefinedTrendNow()
     {
-        var p = S.Host.Economy.Params;
-        int load = S.Host.Economy.Load(S.Player), cap = S.Host.Economy.Capacity(S.Player);
-        int share = cap <= 0 ? p.CapacityPerFacility : Math.Min(p.CapacityPerFacility, load * p.CapacityPerFacility / cap);
-        return Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, share);
+        var (made, rawShort) = S.Host.Economy.RefinedPacePer30Days(S.Player);
+        var sets = Praedra.Core.Economy.RefinedFlow.UseBySet(S.Host, S.Player);
+        var yesterday = ReferenceEquals(_useSeenHost, S.Host) ? Yesterday(_useSeen, S.Game.Day) : null;   // another game loaded: none of its days
+        var (mine, hers, waiting, today) = HeldUse(sets, yesterday, SibylBuilds);
+        return TrendOf(made, mine, hers, _refinedWas) with { RawShort = rawShort, Today = waiting.Count > 0 ? today : -1, Waiting = waiting };
     }
 
-    /// <summary>The trend from the numbers alone: <paramref name="cycle"/> is a refinery's cycle in days, the least days on record to judge by;
-    /// <paramref name="wasFalling"/>, whether the mark showed before (it then stays on down to RefinedStayOnPercent of balance).</summary>
-    internal static RefinedTrend TrendOf(int made, int days, int mine, int hers, int cycle, bool wasFalling = false)
+    bool SibylBuilds => S.HasAdvisor && S.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction);
+
+    /// <summary>The yard sets seen at the last refresh of today and of yesterday while Sibyl builds, for the game <see cref="_useSeenHost"/>.
+    /// Noted at each refresh of the bar (<see cref="NoteUse"/>); the mark only reads it.</summary>
+    readonly List<(int Day, IReadOnlyList<YardSetUse> Sets)> _useSeen = new();
+    Praedra.Core.Setup.GameHost _useSeenHost;
+
+    void NoteUse()
     {
-        int made30 = days > 0 ? made * Praedra.Core.Economy.RefinedFlow.WindowDays / days : 0;   // right after a load fewer days are on record: scaled to the window
+        if (!ReferenceEquals(_useSeenHost, S.Host)) { _useSeen.Clear(); _useSeenHost = S.Host; }   // a load starts afresh, earlier or later day
+        NoteUse(_useSeen, S.Game.Day, Praedra.Core.Economy.RefinedFlow.UseBySet(S.Host, S.Player), SibylBuilds);
+    }
+
+    /// <summary>The use the mark goes by: (your part, hers, the worlds of the sets between her builds, today's whole use). Sibyl plans once a day,
+    /// before the step, and gives any idle construction yard set a new build (her production builds no ships and trains only for garrisons), so a build that ends leaves its set idle at exactly one refresh: with several
+    /// sets the use stepped 110, 88, 110 while the refineries made 95, and the mark flipped red and green every few days with the stock at 0
+    /// (QA-132, 2026-11-27, 26 changes in 80 days). Holding the whole use for some days traded that flicker against a stale mark once she really
+    /// stops (no free slot, no room), and no length escaped it (UI review 38, 300 model runs). So, while she builds, each construction yard set busy at yesterday's
+    /// refresh and idle today counts at yesterday's use, as hers (she fills it, even one your own build just left); one idle a second day is
+    /// real news and counts as idle. Your part is always today's. Without her, idle yards stay idle until you give them work, so today's use
+    /// counts. A set lost or suspended today is not in today's list, so it is not held. rule: m2-construction §Build time; m6-advisor-sibyl.</summary>
+    internal static (int Mine, int Hers, IReadOnlyList<string> Waiting, int Today) HeldUse(IReadOnlyList<YardSetUse> today,
+        IReadOnlyList<YardSetUse> yesterday, bool sibylBuilds)
+    {
+        int mine = today.Where(x => x.Busy && !x.ByAdvisor).Sum(x => x.Use), hers = today.Where(x => x.Busy && x.ByAdvisor).Sum(x => x.Use);
+        var waiting = new List<string>();
+        if (sibylBuilds && yesterday != null)
+            foreach (var x in today.Where(x => !x.Busy && x.Family == Praedra.Core.Construction.YardFamily.Construction))   // she fills only these (UI review 38 follow-up)
+            {
+                var was = yesterday.FirstOrDefault(y => y.System == x.System && y.Family == x.Family);
+                if (!was.Busy) continue;
+                hers += was.Use;
+                if (!waiting.Contains(x.System)) waiting.Add(x.System);
+            }
+        return (mine, hers, waiting, today.Where(x => x.Busy).Sum(x => x.Use));
+    }
+
+    /// <summary>Yesterday's last note, or null (none, or the game was not refreshed that day).</summary>
+    internal static IReadOnlyList<YardSetUse> Yesterday(IReadOnlyList<(int Day, IReadOnlyList<YardSetUse> Sets)> seen, int day) =>
+        seen.FirstOrDefault(x => x.Day == day - 1).Sets;
+
+    /// <summary>Notes today's sets for <see cref="HeldUse"/>: today's replaces an earlier note of the same day; only yesterday's is kept besides;
+    /// without Sibyl building nothing is kept.</summary>
+    internal static void NoteUse(List<(int Day, IReadOnlyList<YardSetUse> Sets)> seen, int day, IReadOnlyList<YardSetUse> sets, bool sibylBuilds)
+    {
+        if (!sibylBuilds) { seen.Clear(); return; }
+        seen.RemoveAll(x => x.Day >= day || x.Day < day - 1);   // a load to an earlier day drops the later ones too
+        seen.Add((day, sets));
+    }
+
+    /// <summary>The mark by Refined at the last refresh: a mark keeps showing until the use crosses balance (QA r245: no blinking).</summary>
+    RefinedWay _refinedWas;
+
+    /// <summary>Within this share of what the refineries make, either way, the stock reads as steady (the grey dash).</summary>
+    const int RefinedSteadyPercent = 5;
+
+    /// <summary>The trend from the two paces per 30 days; <paramref name="was"/> is the mark shown before. Fresh: over 105% of what is made
+    /// falls, under 95% rises, between is steady. A ▼ stays while the use is over 100%, a ▲ while it is under 100%: each comes back to the
+    /// dash only when the use crosses balance.</summary>
+    internal static RefinedTrend TrendOf(int made, int mine, int hers, RefinedWay was = RefinedWay.Steady)
+    {
         int use = mine + hers;
-        bool over = wasFalling ? use * 100 > made30 * RefinedStayOnPercent : use > made30;
-        return new RefinedTrend(made, days, made30, mine, hers, days > 0 && days >= cycle && over);
+        RefinedWay way;
+        if (made <= 0) way = use > 0 ? RefinedWay.Falling : RefinedWay.Steady;   // nothing made: any use runs it down, none keeps it
+        else
+        {
+            long u = use * 100L, hi = made * (100L + RefinedSteadyPercent), lo = made * (100L - RefinedSteadyPercent), even = made * 100L;
+            way = u > hi || (was == RefinedWay.Falling && u > even) ? RefinedWay.Falling
+                : u < lo || (was == RefinedWay.Rising && u < even) ? RefinedWay.Rising
+                : RefinedWay.Steady;
+        }
+        return new RefinedTrend(Math.Max(0, made), mine, hers, way);
     }
+
+    /// <summary>"Fusoria", "Fusoria and Charter", "Fusoria, Charter and Hearth", or "4 worlds".</summary>
+    static string Worlds(IReadOnlyList<string> names) => names.Count switch
+    {
+        1 => names[0],
+        <= 3 => string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1],
+        _ => $"{names.Count} worlds",
+    };
 
     internal string RefinedFlowWords(int refined, RefinedTrend f)
     {
         int w = Praedra.Core.Economy.RefinedFlow.WindowDays, use = f.Mine + f.Hers;
-        string inLine = f.Days <= 0 ? "" : $" Your refineries made {f.Made} in the last {(f.Days >= w ? w + " days" : Ui.Count(f.Days, "day", "days"))}.";
+        // both at today's pace per 30 days, so made, use and the gap add up (UI review 36 P2)
+        string inLine = (f.Made > 0 ? $" Your refineries now make about {f.Made} every {w} days." : " Your refineries make nothing now.")
+            + (f.RawShort ? " Your mines are what holds them back: more refineries would wait for raw." : "");   // UI review 37
+        string sibyl = AdvisorName ?? "your advisor";
         string outLine = use == 0 ? " No yard is building now."
-            : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {AdvisorName ?? "your advisor"}'s."
+            // the mark goes by a higher use of the last days (QA-132): say both, so the hover matches the mark and today (Ponytail on #427)
+            : f.Today >= 0 ? $" While {sibyl} keeps your yards busy they use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
+                + $" Today it is {f.Today} every {w} days: your construction yards at {Worlds(f.Waiting)} are between builds, and {sibyl} may give them their next one tomorrow."   // may: with no room or slot she gives none (Ponytail on #429)
+            : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
             : $" Your yards now use about {use} every {w} days.";
-        if (!f.Falling) return inLine + outLine;
+        int gap = use - f.Made;
+        switch (f.Way)
+        {
+            case RefinedWay.Rising:
+                return inLine + outLine + $" The green mark: your stock grows by about {-gap} every {w} days.";
+            case RefinedWay.Steady when f.Made <= 0 && use == 0:
+                return inLine + outLine + " The grey dash: nothing is made or used now, " + (refined <= 0 ? "so your stock stays empty." : $"so your {refined} holds steady.");
+            case RefinedWay.Steady:
+                return inLine + outLine + " The grey dash: your yards use about what your refineries make, "
+                    + (refined <= 0 ? "so your stock stays empty: the yards take each batch as it comes." : $"so your {refined} holds steady.");
+        }
         // the red mark's words: by how much, how long the stock lasts, and whether the advisor's builds are what tip it
-        int gap = use - f.Made30;
-        string fall = gap > 0 ? $" The red mark: your yards use about {gap} more than your refineries make, "
-                + (refined <= 0 ? "and your stock is empty: the yards wait for what your refineries make." : $"so at this pace your {refined} lasts about {Ui.Count(refined * w / gap, "day", "days")}.")
-            // kept on near balance (QA r245): the yards take about all that is made
-            : " The red mark: your yards use about all your refineries make, "
-                + (refined <= 0 ? "and your stock is empty: the yards wait for what your refineries make." : $"so your {refined} hardly grows.");
+        string fall = $" The red mark: your yards use about {gap} more than your refineries make, "   // over balance, so gap > 0
+            + (refined <= 0 ? "and your stock is empty: the yards wait for what your refineries make." : $"so at this pace your {refined} lasts about {Ui.Count(refined * w / Math.Max(1, gap), "day", "days")}.");
         string hers = !(S.HasAdvisor && f.Hers > 0) ? ""
-            : f.Mine <= f.Made30 ? $" Your own orders fit what your refineries make: {AdvisorName ?? "your advisor"}'s builds are what run it down. Her switches are in her panel (top right)."
+            : f.Mine <= f.Made ? $" Your own orders fit what your refineries make: {AdvisorName ?? "your advisor"}'s builds are what run it down. Her switches are in her panel (top right)."
             : $" Even without {AdvisorName ?? "your advisor"}'s builds, your own orders use more than your refineries make.";
         return inLine + outLine + fall + hers;
     }
@@ -276,7 +355,8 @@ public partial class GameScreen
         SetStockTip(_upkeepCell, _upkeepLabel, upTip);
         SetStockTip(_rawCell, _rawLabel, RawTip + (raw >= 10_000 ? $" ({raw})" : ""));
         var trend = RefinedTrendNow();
-        _refinedFall.Visible = _refinedWasFalling = trend.Falling;   // the small red ▼ by Refined (Paul 2026-11-27)
+        NoteUse();   // after the mark has read the last days: today's use joins them (QA-132)
+        ShowRefinedWay(_refinedWas = trend.Way);   // the small ▼, ▲ or dash by Refined (Paul 2026-11-27)
         SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : "") + RefinedFlowWords(refined, trend));
 
         int q = S.QueuedOrders;

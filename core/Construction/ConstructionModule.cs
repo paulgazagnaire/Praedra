@@ -174,23 +174,41 @@ public sealed class ConstructionModule
     /// </summary>
     public (int Player, int Advisor) RefinedUsePer30Days(Side side)
     {
-        const int Days = 30;
         int player = 0, advisor = 0;
-        var yards = YardObjects().Where(y => y.System != null && _eco.OwnerOf(y) == side).ToList();
-        foreach (var p in C.AllProjects().Where(p => p.Side == side && p.Units.Count > 0))
+        foreach (var set in RefinedUseBySet(side).Where(x => x.Busy)) if (set.ByAdvisor) advisor += set.Use; else player += set.Use;
+        return (player, advisor);   // the sum of the list, so the two cannot drift apart (UI review 38 P2 2)
+    }
+
+    /// <summary>
+    /// Each of the side's yard sets (the yards of one family on one world) that is not suspended, by world (ordinal) then family: the refined it
+    /// uses per 30 days while busy (one per cycle per yard), whether it is busy now, and whether its current unit is the advisor's. An idle set
+    /// shows the use it would have. Reads only; changes no rule. The screen keeps yesterday's list to tell a set between the advisor's builds
+    /// from one she has stopped (UI review 38 P2 2, QA-132). rule: m2-construction §Build time; m2-construction §Suspension.
+    /// </summary>
+    public IReadOnlyList<YardSetUse> RefinedUseBySet(Side side)
+    {
+        const int Days = 30;
+        var yards = YardObjects().Where(y => y.System != null && _eco.OwnerOf(y) == side)
+            .ToLookup(y => (System: y.System!, Family: Yards.FamilyOf(KindOf(y))));
+        var busy = C.AllProjects().Where(p => p.Side == side && p.Units.Count > 0).ToList();
+        var sets = new List<YardSetUse>();
+        foreach (var (system, family) in yards.Select(g => g.Key).Concat(busy.Select(p => (p.System, p.Family))).Distinct()
+                     .OrderBy(k => k.Item1, StringComparer.Ordinal).ThenBy(k => k.Item2))
         {
-            if (IsSuspendedAt(p.System)) continue;
+            if (IsSuspendedAt(system)) continue;
+            var p = busy.FirstOrDefault(x => x.System == system && x.Family == family);
             int std = 1, adv = 0; // a founding yard is its own one standard yard
-            if (!p.Founding)
+            if (p == null || !p.Founding)
             {
-                var here = yards.Where(y => y.System == p.System && Yards.FamilyOf(KindOf(y)) == p.Family).ToList();
+                var here = yards[(system, family)].ToList();
                 std = here.Count(y => RateOf(y) == Params.StandardCycleDays);
                 adv = here.Count - std;
             }
             int use = Days * std / Params.StandardCycleDays + Days * adv / Params.AdvancedCycleDays;
-            if (E.Objects.TryGetValue(p.Units[0], out var u) && u.ByAdvisor) advisor += use; else player += use;
+            bool hers = p != null && E.Objects.TryGetValue(p.Units[0], out var u) && u.ByAdvisor;
+            sets.Add(new YardSetUse(system, family, use, p != null, hers));
         }
-        return (player, advisor);
+        return sets;
     }
 
     public long SubmitStop(Side side, string system, YardFamily family) =>
@@ -225,7 +243,8 @@ public sealed class ConstructionModule
     private static FacilityKind KindOf(EconObject yard) => FacilityKinds.TryParse(yard.Class, out var k) ? k : throw new InvalidOperationException("Not a facility class.");
 
     private IEnumerable<EconObject> YardsOf(string system, YardFamily family) =>
-        YardObjects().Where(o => o.System == system && Yards.FamilyOf(KindOf(o)) == family);
+        E.Index.At(system).Where(o => o.Category == ObjectCategory.Facility && o.Completed && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)
+            && Yards.FamilyOf(KindOf(o)) == family);
 
     private int RateOf(EconObject yard) => Yards.IsAdvanced(KindOf(yard)) ? Params.AdvancedCycleDays : Params.StandardCycleDays;
 

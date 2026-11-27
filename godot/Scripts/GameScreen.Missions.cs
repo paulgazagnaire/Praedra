@@ -213,7 +213,7 @@ public partial class GameScreen
         }
         OpenPlanner(home, character, unit);
         ChooseKind(k);
-        if (k != MissionKind.Rescue) StartMissionPick();   // Rescue picks a prisoner in the planner, not a system
+        if (k is not (MissionKind.Rescue or MissionKind.Abduction)) StartMissionPick();   // Rescue and Abduction pick a leader in the planner, not a system
     }
 
     void ClosePlanner()
@@ -224,7 +224,7 @@ public partial class GameScreen
     }
 
     StartMissionOrder PlanOrder(MissionKind kind, string target, int? targetChar) =>
-        new(0, Me, kind, _plan.Chars.ToList(), _plan.Sfs.ToList(), new List<int>(), targetChar == null ? target : null, targetChar);
+        new(0, Me, kind, _plan.Chars.ToList(), _plan.Sfs.ToList(), new List<int>(), GameSession.SystemFor(kind, target, targetChar), targetChar);
 
     // Target-stage reasons: everything before the target passed, so the team can do this kind somewhere.
     static bool TargetStage(string reason) => reason is null or MissionReject.BadTarget or MissionReject.NoHarvester or Praedra.Core.Clock.RejectReason.Unreachable
@@ -330,6 +330,7 @@ public partial class GameScreen
                 Act($"Rescue {S.CharName(c.Id)} (held at {c.HeldAt})", () => { p.TargetChar = cc.Id; p.Target = cc.HeldAt; _panelDirty = true; _panelTimer = 0; });
             }
         }
+        else if (sel == MissionKind.Abduction) AbductionTargets(p);
         else Act(_pickMission ? "Cancel target pick" : p.Target == null ? "Pick the target system..." : $"Change the target ({p.Target})...", () => { if (_pickMission) CancelMove(); else StartMissionPick(); },
             "Then click a system on the map. The route and the arrival day show before you choose.");
 
@@ -349,10 +350,33 @@ public partial class GameScreen
                     Line(chk.Target == of.At ? $"From orbit: the team works from {S.NameOf(of)} and never lands. Each guard's chance to spot it is halved while {S.NameOf(of)} stays over {of.At}."
                         : $"The team sets out from {S.NameOf(of)} and comes back to it, or to your nearest system if {S.NameOf(of)} is gone or full.", Good, 13);
             }
+            if (chk.Reason == null && sel == MissionKind.Abduction && p.TargetChar is int tc)
+                Line($"You last saw {S.CharName(tc)} there. If they have left by the time the team lands, it comes home empty-handed.", Dim, 13);
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
             Act($"Send: {GameSession.KindWords(sel, Me)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Logs (E).", chk.Reason != null);
         }
         CloseRow();
+    }
+
+    /// <summary>
+    /// The Abduction target list: every enemy leader your side has seen, where and when it last saw them; a key leader says its per-try cap and
+    /// when it cannot be taken. rule: m5-missions §Targets (Where a leader target is sought), §6a (key targets); m5-fog-and-hq §F1 group D.
+    /// </summary>
+    void AbductionTargets(MissionPlan p)
+    {
+        var seen = S.SeenEnemyLeaders();
+        if (seen.Count == 0) { Line("You have not seen any enemy leader. A successful Espionage mission shows the leaders on that world.", Dim); return; }
+        foreach (var (id, sys, day) in seen)
+        {
+            int cid = id; string at = sys;
+            string cap = S.AbductionCap(id) is int c ? $" - at most {c}% a try" : "";
+            var b = Act($"{(p.TargetChar == id ? "> " : "")}Abduct {S.CharName(id)} (seen at {sys}, day {day}){cap}",
+                () => { p.TargetChar = cid; p.Target = at; _panelDirty = true; _panelTimer = 0; },
+                S.AbductionCap(id) is int c2
+                    ? $"A key leader: each try succeeds at most {c2}% of the time, and never while they ride a fleet, or stand at their capital while it holds as many regiments as it needs to stay calm."
+                    : "The team goes to where you last saw them.");
+            if (p.TargetChar == id) b.AddThemeColorOverride("font_color", Pending);
+        }
     }
 
     void CloseRow()
@@ -383,7 +407,7 @@ public partial class GameScreen
     void ChooseKind(MissionKind k)
     {
         if (_plan == null) return;
-        if (_plan.Kind != k) { _plan.Kind = k; _plan.TargetChar = null; if (k == MissionKind.Rescue) _plan.Target = null; if (k == MissionKind.TrainTalent) _plan.Target ??= _plan.Home; }
+        if (_plan.Kind != k) { _plan.Kind = k; _plan.TargetChar = null; if (k is MissionKind.Rescue or MissionKind.Abduction) _plan.Target = null; if (k == MissionKind.TrainTalent) _plan.Target ??= _plan.Home; }
         _panelDirty = true; _panelTimer = 0;
     }
 

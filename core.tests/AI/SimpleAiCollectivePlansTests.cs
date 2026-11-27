@@ -18,7 +18,11 @@ public class SimpleAiCollectivePlansTests
     {
         var p = new SimpleAiParams();
         Assert.False(p.Neutralise);
+        Assert.False(p.RefitAway);
         Assert.Equal(0, p.NeutraliseElsewherePercent);
+        Assert.False(p.RaidShieldsSeen);
+        Assert.False(p.WreckShields);
+        Assert.Equal(0, p.ShieldsFeltDays);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -31,6 +35,10 @@ public class SimpleAiCollectivePlansTests
         var p = AiLevels.For(level);
         Assert.Equal(on, p.Neutralise);
         Assert.Equal(on ? 100 : 0, p.NeutraliseElsewherePercent);
+        Assert.Equal(on, p.RefitAway); // keeps the navy renewing while the warships shell (Dev lead after #416)
+        Assert.Equal(on ? 120 : 0, p.ShieldsFeltDays); // Rooster 2026-11-27 evening: shields felt and seen, Wreckers aboard
+        Assert.Equal(on, p.RaidShieldsSeen);
+        Assert.Equal(on, p.WreckShields);
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
@@ -44,7 +52,7 @@ public class SimpleAiCollectivePlansTests
             int Run(bool on, out int shells)
             {
                 var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
-                var c = AiLevels.For(AiLevel.Medium) with { Neutralise = on, NeutraliseElsewherePercent = on ? 100 : 0 };
+                var c = AiLevels.For(AiLevel.Medium) with { Neutralise = on, NeutraliseElsewherePercent = on ? 100 : 0, WreckShields = false, RaidShieldsSeen = false, ShieldsFeltDays = 0 };
                 var m = new AiMatch(host, AiLevels.For(AiLevel.Medium), c);
                 shells = 0;
                 while (host.Game.Day < 800 && host.Victory.Winner == null)
@@ -60,5 +68,64 @@ public class SimpleAiCollectivePlansTests
         foreach (var x in r) _out.WriteLine($"Hand worlds lost to troops left: off {x.off}, on {x.on}; Neutralise shellings off {x.s0}, on {x.s1}");
         Assert.All(r, x => Assert.Equal(0, x.s0));
         Assert.True(r.Count(x => x.s1 > 0) >= 3, "the Collective shelled no thin garrison bare in 2 or more of 4 games");
+    }
+
+    private static SimpleAiParams WalledHand() => AiLevels.For(AiLevel.Medium) with { FortifyWorlds = 4, FortifyBatteries = 2 };
+    private static SimpleAiParams ShieldWise(bool wreck) => AiLevels.For(AiLevel.Medium) with { ShieldsFeltDays = 120, RaidShieldsSeen = true, WreckShields = wreck };
+
+    // m3-bombardment §2 (hits = max(0, P - S)) and m5-fog-and-hq §F2 (a fleet in orbit sees no facilities): with fog the Collective shelled
+    // shields it did not know of for no hits again and again. ShieldsFeltDays (it reads the shields its last shelling met) and RaidShieldsSeen
+    // (it shells only where its power beats them) cut those shellings (seed 1, walled Medium Hand, day 1200: 8 with the switches off, 1 on).
+    [Fact]
+    public void ShieldsFeltStopsShellingForNoHits()
+    {
+        int NoHits(SimpleAiParams c)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+            new AiMatch(host, WalledHand(), c).RunTo(1200);
+            return host.Game.Events.OfType<Praedra.Core.Defenses.BombardmentStarted>().Count(b => b.Side == Side.Collective && b.S > 0 && b.Hits == 0);
+        }
+        int off = NoHits(ShieldWise(false) with { ShieldsFeltDays = 0, RaidShieldsSeen = false }), on = NoHits(ShieldWise(false));
+        _out.WriteLine($"Collective shellings for no hits: off {off}, on {on}");
+        Assert.True(off > 0, "the walled Hand's shields absorbed no shelling: the test no longer checks anything");
+        Assert.True(on * 2 <= off, $"the shields felt did not halve the shellings for no hits ({off} -> {on})");
+    }
+
+    // m5-missions §Spying from orbit (#412): with WreckShields, Wreckers board armed Collective fleets and are launched from orbit on
+    // Sabotage over shielded Hand worlds (seed 1, walled Medium Hand, day 1200).
+    [Fact]
+    public void WreckersRideFleetsAndSabotageShieldsFromOrbit()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+        var m = new AiMatch(host, WalledHand(), ShieldWise(true));
+        int loads = 0, launches = 0;
+        while (host.Game.Day < 1200 && host.Victory.Winner == null)
+        {
+            m.Step();
+            loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+            launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+        }
+        var orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
+            .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
+        _out.WriteLine($"Wrecker loads {loads}, orbit sabotage orders {launches}, started {orbit}");
+        Assert.True(loads > 0, "no Wrecker boarded a fleet");
+        Assert.True(launches > 0 && orbit > 0, "no Sabotage was launched from orbit");
+    }
+
+    // m1-clock-and-orders K12 with the shields felt: the notes ride in the AI memory of the save, so a loaded game decides as the uninterrupted one.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ShieldsFeltGameContinuesTheSameAfterSaveAndLoad()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+        new AiMatch(host, WalledHand(), ShieldWise(true)).RunTo(700);
+        var loaded = GameHost.Load(host.SaveWithSettings());
+        var a = new AiMatch(host, WalledHand(), ShieldWise(true));
+        var b = new AiMatch(loaded, WalledHand(), ShieldWise(true));
+        for (int i = 0; i < 60; i++)
+        {
+            a.Step(); b.Step();
+            Assert.True(host.StateHash() == loaded.StateHash(), $"diverged on day {host.Game.Day}");
+        }
     }
 }

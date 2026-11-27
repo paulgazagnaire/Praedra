@@ -60,7 +60,7 @@ internal static class SimCli
     {
         try
         {
-            if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage + Tourney.Usage + Hunt.Usage + RouteReport.Usage); return args.Length == 0 ? 1 : 0; }
+            if (args.Length == 0 || args[0] is "-h" or "--help" or "help") { Console.WriteLine(Usage + Tourney.Usage + Hunt.Usage + RouteReport.Usage + Bench.Usage); return args.Length == 0 ? 1 : 0; }
             if (args[0] == "battle") return Battle(args.Skip(1).ToArray());
             if (args[0] == "mission") return MissionCmd(args.Skip(1).ToArray());
             if (args[0] == "campaign") return Campaign(args.Skip(1).ToArray());
@@ -68,6 +68,7 @@ internal static class SimCli
             if (args[0] == "tourney") return Tourney.Run(args.Skip(1).ToArray());
             if (args[0] == "hunt") return Hunt.Run(args.Skip(1).ToArray());
             if (args[0] == "routes") return RouteReport.Run(args.Skip(1).ToArray());
+            if (args[0] == "bench") return Bench.Run(args.Skip(1).ToArray());
             if (args[0] == "newgame") return NewGameCmd(args.Skip(1).ToArray());
             throw new ArgumentException($"Unknown command '{args[0]}'.");
         }
@@ -75,7 +76,7 @@ internal static class SimCli
         {
             Console.Error.WriteLine($"Error: {e.Message}");
             Console.Error.WriteLine();
-            Console.Error.WriteLine(Usage + Tourney.Usage + Hunt.Usage + RouteReport.Usage);
+            Console.Error.WriteLine(Usage + Tourney.Usage + Hunt.Usage + RouteReport.Usage + Bench.Usage);
             return 2;
         }
     }
