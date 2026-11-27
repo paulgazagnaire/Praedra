@@ -13,6 +13,7 @@ public sealed partial class SimpleAi
     private void PlanEconomy()
     {
         var eco = _h.Economy;
+        _fortifyOrdered.Clear();
         TryFoundYard();
         foreach (var y in YardSystems(YardFamily.Construction))
         {
@@ -126,9 +127,16 @@ public sealed partial class SimpleAi
         var order = new List<FacilityKind>();
         int refined = eco.Refined(_side);
         int ships = CountYards(YardFamily.Shipyard), train = CountYards(YardFamily.Training), cons = CountYards(YardFamily.Construction);
+        // rule: ai tuning, SimpleAiParams.RoomFloor (AI trainer 2026-11-26, QA-127): short of upkeep room, mines and refineries come first
+        if (LowRoom && PairChoice(from) is { } pair) return pair;
         // rule: m6-advisor-sibyl §Manage Production 1: the advisor's yards come from PlanAdvisorYards, so here only mines and refineries
         if (!_advisor && ships == 0) order.Add(ShipyardKind());
         if (!_advisor && train == 0) order.Add(FacilityKind.TrainingFacility);
+        // rule: ai tuning, SimpleAiParams.FortifyWorlds (AI trainer 2026-11-26): the key worlds' shields and batteries come right after the first yards
+        foreach (var kind in order)
+            if (Available(FacilityKinds.ClassName(kind)) && Affordable(kind) && PickSite(from, kind) is { } first) return (kind, first);
+        order.Clear();
+        if (FortifyChoice(from) is { } fort) return fort;
         // rule: m2-construction §Build time: a yard adds 1 point per cycle, so throughput is the number of yards; refined that floats is turned into yards.
         if (!_advisor && refined >= _p.ExtraYardRefinedReserve)
         {
@@ -160,6 +168,103 @@ public sealed partial class SimpleAi
     }
 
     /// <summary>
+    /// Fortify (SimpleAiParams.FortifyWorlds, AI trainer 2026-11-26): the first shield or battery one of the side's key worlds still lacks, for the
+    /// yard at <paramref name="from"/>; null when every key world has its share (finished, building, or ordered today). The capital first; the other
+    /// key worlds only from refined that floats (ExtraYardRefinedReserve). rule: m3-assault check 4 (two shields forbid an assault), §1 (batteries).
+    /// </summary>
+    private (FacilityKind, string)? FortifyChoice(string from)
+    {
+        int worlds = _p.FortifyWorlds + ShellHolesOn; // ShellHoles: the bolt-holes come after the Hearth's world (FortifyTargets)
+        if (_advisor || worlds <= 0) return null;
+        var eco = _h.Economy;
+        int n = 0;
+        foreach (var w in FortifyTargets())
+        {
+            if (n++ >= worlds) break;
+            if (n > 1 && eco.Refined(_side) < _p.ExtraYardRefinedReserve) break;
+            if (_h.Support.IsUprising(w) || eco.FreeEnergy(w) - _reservedEnergy.GetValueOrDefault(w) < 1) continue;
+            if (Ticks(from, w, UnratedSpeed) == int.MaxValue) continue;
+            var (shields, batteries) = OwnDefencesAt(w);
+            FacilityKind? kind = shields < _p.FortifyShields ? ShieldKind() : batteries < _p.FortifyBatteries ? FacilityKind.Lien150 : null;
+            if (kind is not { } k || !Available(FacilityKinds.ClassName(k)) || !Affordable(k)) continue;
+            _fortifyOrdered[(w, k == FacilityKind.Lien150)] = _fortifyOrdered.GetValueOrDefault((w, k == FacilityKind.Lien150)) + 1;
+            return (k, w);
+        }
+        return null;
+    }
+
+    /// <summary>Fortify orders given today, by (system, battery): so two yards do not both fill the same gap. Lookup only.</summary>
+    private readonly Dictionary<(string, bool), int> _fortifyOrdered = new();
+
+    /// <summary>ShellHoles while it applies: the Collective with fog and SafeHearth, not the advisor; else 0.</summary>
+    private int ShellHolesOn => _side == Side.Collective && _view != null && _p.SafeHearth && !_advisor ? Math.Max(0, _p.ShellHoles) : 0;
+
+    /// <summary>Shell game: the side's complete shield generators at the system (m3-assault check 4 counts complete ones).</summary>
+    private int CompleteShieldsAt(string system)
+    {
+        var def = _h.Data.Defenses;
+        return _h.Economy.Objects.Count(o => o.System == system && o.Completed && o.Category == ObjectCategory.Facility && _h.Economy.OwnerOf(o) == _side
+            && def.TryGetClass(o.Class, out var c) && c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator);
+    }
+
+    /// <summary>
+    /// Shell game: the ShellHoles bolt-holes for a Hearth at hearth: held populated worlds with HqMinLanes lanes or more (as PlanHqHide), the
+    /// most complete shields first (walls already built are kept), then the most lanes from the Hand (capped at 8), the least risk, ordinal name.
+    /// </summary>
+    private IEnumerable<string> BoltHoles(string hearth, List<string> held)
+    {
+        if (_boltHolesDay == Today && _boltHoles != null) return _boltHoles;
+        _boltHolesDay = Today;
+        return _boltHoles = BoltHolesNow(hearth, held);
+    }
+    private List<string>? _boltHoles; private int _boltHolesDay = -1; // the day's bolt-holes (lookup only; the same inputs all day)
+
+    private List<string> BoltHolesNow(string hearth, List<string> held)
+    {
+        var g = _h.Data.Galaxy; var room = HopsFromEnemy(); var risk = Risk();
+        return held.Where(s => s != hearth && g.TryFindSystem(s, out var i) && g.NearOf(i).Count >= _p.HqMinLanes)
+            .Select(s => (s, sh: Math.Min(CompleteShieldsAt(s), _p.FortifyShields), hops: g.TryFindSystem(s, out var i) ? Math.Min(room[i], 8) : 0, r: risk.GetValueOrDefault(s)))
+            .OrderByDescending(t => t.sh).ThenByDescending(t => t.hops).ThenBy(t => t.r).ThenBy(t => t.s, StringComparer.Ordinal)
+            .Take(ShellHolesOn).Select(t => t.s).ToList();
+    }
+
+    /// <summary>The better shield generator the side can build: Escrow II once researched, else Escrow I.</summary>
+    private FacilityKind ShieldKind() => Available(FacilityKinds.ClassName(FacilityKind.EscrowII)) ? FacilityKind.EscrowII : FacilityKind.EscrowI;
+
+    /// <summary>The side's shield generators and batteries at the system: finished, building (unfinished objects there), and ordered today.</summary>
+    private (int Shields, int Batteries) OwnDefencesAt(string system)
+    {
+        var def = _h.Data.Defenses;
+        int sh = _fortifyOrdered.GetValueOrDefault((system, false)), bat = _fortifyOrdered.GetValueOrDefault((system, true));
+        foreach (var o in _h.Economy.Objects)
+        {
+            if (o.System != system || o.Category != ObjectCategory.Facility || !def.TryGetClass(o.Class, out var c)) continue;
+            if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator) sh++; else bat++;
+        }
+        return (sh, bat);
+    }
+
+    /// <summary>
+    /// The side's key worlds in Fortify order: the capital (the Hand's Charter or its biggest world; the Collective's Hearth world with fog, else
+    /// its biggest world), then the held worlds with the most yards, then the most mines (ties: ordinal name). Populated held worlds only.
+    /// </summary>
+    private List<string> FortifyTargets()
+    {
+        var eco = _h.Economy;
+        var held = HeldSystems().Where(s => eco.SlotsOf(s).Populated).ToList();
+        var list = new List<string>();
+        string? cap = _side == Side.Collective && _view?.KnownHq?.System is { } hq && held.Contains(hq) ? hq : Capital();
+        if (cap != null && held.Contains(cap)) list.Add(cap);
+        if (ShellHolesOn > 0 && cap != null) list.AddRange(BoltHoles(cap, held));
+        int Count(string s, Func<EconObject, bool> f) => eco.Objects.Count(o => o.System == s && o.Category == ObjectCategory.Facility && f(o));
+        list.AddRange(held.Where(s => !list.Contains(s))
+            .Select(s => (s, yards: Count(s, o => FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)), mines: Count(s, o => o.Class == "Mine")))
+            .Where(t => t.yards + t.mines > 0)
+            .OrderByDescending(t => t.yards).ThenByDescending(t => t.mines).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s));
+        return list;
+    }
+
+    /// <summary>
     /// Room for a facility: its upkeep fits the budget; with YardsFromMargin (the AI, not Sibyl) a construction yard may also use the upkeep
     /// margin, so a side at its room cap can still build what grows its room. rule: ai tuning, SimpleAiParams.YardsFromMargin (AI trainer 2026-11-26).
     /// </summary>
@@ -167,7 +272,26 @@ public sealed partial class SimpleAi
     {
         int m = Maint(FacilityKinds.ClassName(kind));
         if (m <= 0 || Budget >= m) return true;
-        return !_advisor && _p.YardsFromMargin && kind == FacilityKind.ConstructionYard && Budget + _p.MaintenanceMargin >= m;
+        return !_advisor && _p.YardsFromMargin && !LowRoom && kind == FacilityKind.ConstructionYard && Budget + _p.MaintenanceMargin >= m;
+    }
+
+    /// <summary>
+    /// RoomFloor (AI trainer 2026-11-26, QA-127: the Medium Hand ran out of upkeep room by day 100-200 with refined unspent and free mine sites,
+    /// its mine and refinery pairs bombarded down and never rebuilt): the side's free upkeep room, less what it ordered today, is under the floor.
+    /// Not the advisor (Sibyl has her own rule, m6-advisor-sibyl §Manage Production 0).
+    /// </summary>
+    private bool LowRoom => !_advisor && _p.RoomFloor > 0 && _h.Economy.Free(_side) - _plannedLoad < _p.RoomFloor;
+
+    /// <summary>RoomFloor: a mine or a refinery, the one the side has fewer of first (capacity = 50 x min(mines, refineries), m2-maintenance §Capacity).</summary>
+    private (FacilityKind, string)? PairChoice(string from)
+    {
+        var eco = _h.Economy;
+        int mines = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Mine" && eco.OwnerOf(o) == _side);
+        int refs = eco.Objects.Count(o => o.Category == ObjectCategory.Facility && o.Class == "Refinery" && eco.OwnerOf(o) == _side);
+        var order = mines <= refs ? new[] { FacilityKind.Mine, FacilityKind.Refinery } : new[] { FacilityKind.Refinery, FacilityKind.Mine };
+        foreach (var kind in order)
+            if (Available(FacilityKinds.ClassName(kind)) && Affordable(kind) && PickSite(from, kind) is { } site) return (kind, site);
+        return null;
     }
 
     /// <summary>Construction yards wanted: DesiredConstructionYards, or one per WorldsPerConstructionYard populated held worlds plus one, capped. rule: ai tuning (AI trainer 2026-11-26).</summary>

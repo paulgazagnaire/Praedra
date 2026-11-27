@@ -768,7 +768,8 @@ public class SimpleAiAgentsTests
         }
         int off = FromEnemy(false), on = FromEnemy(true);
         _out.WriteLine($"Collective missions started from Hand systems by day 130: off {off}, on {on}");
-        Assert.True(off >= 5, $"off: {off} (the case this guards no longer arises on seed 1)");
+        // 2026-11-27: 3 off with the commander's plans at Medium (the walled Charter changes the early game); the case still arises
+        Assert.True(off >= 1, $"off: {off} (the case this guards no longer arises on seed 1)");
         Assert.Equal(0, on);
     }
 }

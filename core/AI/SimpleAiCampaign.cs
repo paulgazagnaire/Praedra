@@ -20,8 +20,42 @@ public sealed class AiCampaign
     public int Number { get; set; }
     /// <summary>The last campaign's sector, kept so the next one goes elsewhere when it can.</summary>
     public string? Previous { get; set; }
+    /// <summary>The front's plan (SimpleAiParams.FrontPlans); Campaign for a save made before 2026-11-26 or with the switch off.</summary>
+    public AiFrontPlan Plan { get; set; }
+    /// <summary>The conditions the front started in (AiVerdict.Conditions; SimpleAiParams.FrontMemory).</summary>
+    public int Conditions { get; set; }
+    /// <summary>Enemy worlds the side saw in the sector when the front started (SimpleAiParams.FrontMemory).</summary>
+    public int EnemyAtStart { get; set; }
 
-    internal AiCampaign Copy() => new() { Sector = Sector, Started = Started, Strike = Strike, Number = Number, Previous = Previous };
+    internal AiCampaign Copy() => new() { Sector = Sector, Started = Started, Strike = Strike, Number = Number, Previous = Previous, Plan = Plan, Conditions = Conditions, EnemyAtStart = EnemyAtStart };
+}
+
+/// <summary>
+/// How an ended front went (SimpleAiParams.FrontMemory): its plan, the conditions it started in (bits: 1 = defences seen, 2 = two or more lightly
+/// held worlds half on the Collective's side, 4 = an enemy fleet seen), the day it ended, and whether it worked (the enemy lost a quarter of its
+/// worlds there or more). rule: ai tuning (AI trainer 2026-11-26, specs/engine/ai-notes/2026-11-26-adaptive-commander.md §4 Adapting).
+/// </summary>
+public sealed record AiVerdict
+{
+    public AiFrontPlan Plan { get; init; }
+    public int Conditions { get; init; }
+    public int Day { get; init; }
+    public bool Worked { get; init; }
+}
+
+/// <summary>
+/// What a front (a campaign's sector) works at: the commander's front plans (AI trainer 2026-11-26, specs/engine/ai-notes/2026-11-26-adaptive-commander.md
+/// §3, the Collective's plans 9, 10 and 14). Every plan ends in the same strike; they differ in what the preparation hits. rule: ai tuning,
+/// SimpleAiParams.FrontPlans.
+/// </summary>
+public enum AiFrontPlan
+{
+    /// <summary>Sabotage the defences, look, raid, then invade (the campaign before 2026-11-26).</summary>
+    Campaign,
+    /// <summary>Incite uprisings on the Hand's worlds there, so it must double its garrisons (m2-uprisings-and-garrison), then invade.</summary>
+    Bleed,
+    /// <summary>Raid and sabotage the mines and yards there (m3-bombardment, m5-missions §6), then invade.</summary>
+    Starve,
 }
 
 public sealed partial class SimpleAi
@@ -32,11 +66,15 @@ public sealed partial class SimpleAi
     public (string Sector, bool Striking, int Number)? CampaignNow =>
         CampaignOn && _mem.Campaign is { } c && c.Sector.Length > 0 ? (c.Sector, c.Strike > 0, c.Number) : null;
 
-    private bool CampaignOn => _p.Campaign && !_advisor && _side == Side.Collective; // the Collective only (SimpleAiParams.Campaign)
+    private bool CampaignOn => _p.Campaign && !_advisor && (_side == Side.Collective || _p.HandFronts); // the Collective, the Hand with HandFronts
 
     /// <summary>Every running campaign (the first, then the others), for logs and tests; empty with none or the switch off.</summary>
     public IReadOnlyList<(string Sector, bool Striking, int Number)> CampaignsNow =>
         Campaigns().Select(c => (c.Sector, c.Strike > 0, c.Number)).ToList();
+
+    /// <summary>Every running front with its plan (SimpleAiParams.FrontPlans), for logs and tests.</summary>
+    public IReadOnlyList<(string Sector, AiFrontPlan Plan, bool Striking, int Number)> FrontsNow =>
+        Campaigns().Select(c => (c.Sector, c.Plan, c.Strike > 0, c.Number)).ToList();
 
     /// <summary>The running campaigns with a sector: the first (AiMemory.Campaign), then the others (MoreCampaigns), in slot order.</summary>
     private IEnumerable<AiCampaign> Campaigns()
@@ -83,12 +121,15 @@ public sealed partial class SimpleAi
                     continue;
                 }
             }
+            if (_p.FrontMemory && c is { Sector.Length: > 0 }) RecordVerdict(c);
             int number = Math.Max(_mem.Campaign?.Number ?? 0, (_mem.MoreCampaigns is { Count: > 0 } mc ? mc.Max(x => x.Number) : 0)); // the game's count, every slot
             var others = Campaigns().Where(x => !ReferenceEquals(x, c)).Select(x => x.Sector).ToList();
             string? pick = PickCampaignSector(c?.Sector, others);
             var next = pick == null
                 ? new AiCampaign { Sector = "", Started = Today, Number = c?.Number ?? 0, Previous = c?.Sector }
-                : new AiCampaign { Sector = pick, Started = Today, Number = number + 1, Previous = c?.Sector };
+                : new AiCampaign { Sector = pick, Started = Today, Number = number + 1, Previous = c?.Sector,
+                    Plan = _p.FrontPlans ? PickFrontPlan(pick, Campaigns().Where(x => !ReferenceEquals(x, c)).Select(x => x.Plan).ToList()) : AiFrontPlan.Campaign };
+            if (pick != null && _p.FrontMemory) { var (cond, _, en) = FrontConditions(pick); next.Conditions = cond; next.EnemyAtStart = en; }
             if (k == 0) _mem.Campaign = next; else _mem.MoreCampaigns![k - 1] = next;
         }
     }
@@ -176,11 +217,88 @@ public sealed partial class SimpleAi
             .OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
     }
 
-    /// <summary>CampaignAgentPercent: a mission's value at a system of a running campaign's sector (any phase), else unchanged.</summary>
-    private int CampaignAgentValue(string system, int value)
+    /// <summary>
+    /// CampaignAgentPercent: a mission's value at a system of a running campaign's sector (any phase), else unchanged; a Bleed front's incitement
+    /// and a Starve front's sabotage are worth BleedIncitePercent and StarveSabotagePercent more again (SimpleAiParams.FrontPlans).
+    /// </summary>
+    private int CampaignAgentValue(string system, int value, Praedra.Core.Missions.MissionKind kind)
     {
-        if (CampaignAt(system) == null) return value;
-        return (int)Math.Min(int.MaxValue, (long)value * _p.CampaignAgentPercent / 100);
+        if (CampaignAt(system) is not { } c) return value;
+        long v = (long)value * _p.CampaignAgentPercent / 100;
+        if (c.Plan == AiFrontPlan.Bleed && kind == Praedra.Core.Missions.MissionKind.InciteUprising) v = v * _p.BleedIncitePercent / 100;
+        if (c.Plan == AiFrontPlan.Starve && kind == Praedra.Core.Missions.MissionKind.Sabotage) v = v * _p.StarveSabotagePercent / 100;
+        return (int)Math.Min(int.MaxValue, v);
+    }
+
+    /// <summary>
+    /// The plan for a new front in <paramref name="sector"/> (SimpleAiParams.FrontPlans), from the side's picture of the enemy worlds there:
+    /// Campaign fits worlds with defences to strip (and is the fallback), Bleed fits lightly held worlds whose people half side with the
+    /// Collective, Starve fits many facilities with no enemy fleet seen. A plan another front runs is taken only when nothing else fits
+    /// (Paul 2026-11-26: different strategies per front). A small draw from the game plan breaks near-ties, so two games differ.
+    /// </summary>
+    private AiFrontPlan PickFrontPlan(string sector, IReadOnlyList<AiFrontPlan> taken)
+    {
+        var (cond, f, _) = FrontConditions(sector);
+        var fit = new SortedDictionary<AiFrontPlan, long>
+        {
+            [AiFrontPlan.Campaign] = 100 + 40 * f.Defences,
+            [AiFrontPlan.Bleed] = 60 * f.Soft,
+            [AiFrontPlan.Starve] = f.Fleets > 0 ? 0 : 12 * f.Facilities,
+        };
+        foreach (var k in fit.Keys.ToList())
+        {
+            fit[k] = fit[k] * (100 + _rng.NextInt(0, 20)) / 100; // the game plan's small tilt (Paul 2026-11-19)
+            if (_p.FrontMemory) fit[k] = fit[k] * MemoryPercent(k, cond) / 100;
+        }
+        return fit.OrderBy(kv => taken.Contains(kv.Key) ? 1 : 0).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key).First().Key;
+    }
+
+    /// <summary>
+    /// A sector's conditions for a front, from the side's picture of the enemy worlds there: the condition bits (AiVerdict.Conditions), the
+    /// counts the plans' fit reads, and the enemy worlds seen.
+    /// </summary>
+    private (int Bits, (long Defences, long Soft, long Facilities, long Fleets) Counts, int Enemy) FrontConditions(string sector)
+    {
+        long defences = 0, soft = 0, facilities = 0, fleets = 0; int enemy = 0;
+        foreach (var sys in _h.Data.Galaxy.Systems)
+        {
+            if (sys.Sector != sector || Destroyed(sys.Name) || !IsEnemyHeld(sys.Name)) continue;
+            string s = sys.Name;
+            if (!SlotsSeen(s).Populated) continue;
+            enemy++;
+            int d = DefencesSeenAt(s);
+            defences += d;
+            facilities += Math.Max(0, FacilitiesAt(s) - d);
+            fleets += TargetFleetsAt(s).Count;
+            if (DefendersAt(s) <= 2 && SupportSeen(s) is int sup && sup >= 30) soft++;
+        }
+        int bits = (defences > 0 ? 1 : 0) | (soft >= 2 ? 2 : 0) | (fleets > 0 ? 4 : 0);
+        return (bits, (defences, soft, facilities, fleets), enemy);
+    }
+
+    /// <summary>
+    /// FrontMemory: a plan's fit in these conditions, as a percent, from the side's verdicts on fronts that ran the same plan in the same
+    /// conditions: each success x 5/4, each failure x 3/5 (a verdict older than FrontMemoryFadeDays about half as much: x 1.12 and x 0.77) (the enemy's position
+    /// changes, so an old failure never bans a plan). Other conditions do not count (Paul 2026-11-26).
+    /// </summary>
+    private long MemoryPercent(AiFrontPlan plan, int conditions)
+    {
+        long f = 100; // integer only: the same game on any machine picks the same plan
+        foreach (var v in _mem.Verdicts ?? new())
+        {
+            if (v.Plan != plan || v.Conditions != conditions) continue;
+            bool old = Today - v.Day > _p.FrontMemoryFadeDays;
+            f = f * (v.Worked ? (old ? 112 : 125) : (old ? 77 : 60)) / 100; // 112 and 77 are about the square roots of 125 and 60: half weight
+        }
+        return Math.Clamp(f, 10, 400);
+    }
+
+    /// <summary>FrontMemory: the verdict on an ending front: it worked when the enemy lost a quarter or more of the worlds it held there at the start.</summary>
+    private void RecordVerdict(AiCampaign c)
+    {
+        var (_, _, enemyNow) = FrontConditions(c.Sector);
+        bool worked = c.EnemyAtStart > 0 && (c.EnemyAtStart - enemyNow) * 4 >= c.EnemyAtStart;
+        (_mem.Verdicts ??= new()).Add(new AiVerdict { Plan = c.Plan, Conditions = c.Conditions, Day = Today, Worked = worked });
     }
 
     /// <summary>
@@ -192,6 +310,7 @@ public sealed partial class SimpleAi
     private long CampaignTargetValue(Praedra.Core.Map.StarSystem sys, long value, bool raid, bool retake = false)
     {
         var here = CampaignIn(sys.Sector);
+        if (raid && here is { Plan: AiFrontPlan.Starve }) return value * _p.StarveRaidPercent / 100; // FrontPlans: a Starve front raids all along
         if (raid) return here is { Strike: 0 } ? value * _p.CampaignRaidPercent / 100 : value;
         if (here != null) return here.Strike > 0 ? value * _p.CampaignStrikePercent / 100 : value;
         if (retake || CampaignSector == null) return value;
