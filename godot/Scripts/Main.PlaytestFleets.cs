@@ -415,6 +415,12 @@ public partial class Main
         string fall = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 63, 0, 5));
         Expect(fall.Contains("The red mark: your yards use about 27 more than your refineries make, so at this pace your 246 lasts about 273 days."), "the tooltip says by how much and how long the stock lasts: " + fall);
         Expect(gs.RefinedFlowWords(0, GameScreen.TrendOf(36, 30, 63, 0, 5)).Contains("your stock is empty"), "an empty stock is said as empty, not as lasting 0 days");
+        // near balance it doesn't blink (QA r245: 88 used against 92 made dropped it for a day or two): once on, it stays on above 90%
+        Expect(!GameScreen.TrendOf(66, 30, 63, 0, 5).Falling && GameScreen.TrendOf(66, 30, 63, 0, 5, wasFalling: true).Falling
+            && !GameScreen.TrendOf(72, 30, 63, 0, 5, wasFalling: true).Falling && !GameScreen.TrendOf(66, 4, 63, 0, 5, wasFalling: true).Falling,
+            "once on, the mark stays on while the yards use over 90% of what is made (63 of 66), goes off under it (63 of 72), and waits after a load");
+        string even = gs.RefinedFlowWords(12, GameScreen.TrendOf(66, 30, 63, 0, 5, wasFalling: true));
+        Expect(even.Contains("The red mark: your yards use about all your refineries make, so your 12 hardly grows."), "kept on near balance, the words say the yards take about all that is made: " + even);
         Expect(!gs.RefinedFlowWords(246, GameScreen.TrendOf(70, 30, 63, 0, 5)).Contains("red mark"), "no red mark words while the refineries keep up");
         if (s.HasAdvisor)
         {
@@ -424,11 +430,11 @@ public partial class Main
         }
 
         // on the game: the mark follows the flow; 9999 and the mark keep the stock's width, so the bar does not shift
-        bool Expected()
+        bool Expected()   // shown: still over 90% of balance (it stays on there, QA r245); hidden: not over balance
         {
             var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me);
             var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
-            return GameScreen.TrendOf(made, days, mine, hers, gs.RefineryCycleNow()).Falling;
+            return GameScreen.TrendOf(made, days, mine, hers, gs.RefineryCycleNow(), wasFalling: gs.RefinedFalling).Falling;
         }
         int cycle = gs.RefineryCycleNow();
         Expect(cycle >= 5 && cycle <= 10, $"the mark waits a refinery's cycle at the present upkeep: {cycle} days (5 at none, 10 at the limit)");
