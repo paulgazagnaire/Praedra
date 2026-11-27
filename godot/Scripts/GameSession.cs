@@ -300,6 +300,7 @@ public sealed partial class GameSession
         var advised = HasAdvisor ? Advisor.PlanDay() : Array.Empty<SubmittedOrder>(); // after the player's orders, before the opponent's
         foreach (var x in advised) _pending[x.Sequence] = "Sibyl's order (" + SibylWords(x.Detail).Text + ")";
         if (!OpponentIdle) Opponent.PlanDay();
+        int firstEvent = Game.Events.Count; // this Step's events start here (the list only grows)
         Game.Step();
         var outcome = new StepOutcome();
         foreach (var t in switched)
@@ -307,7 +308,9 @@ public sealed partial class GameSession
             var m = new Message(day, t, null, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
             Messages.Add(m); outcome.New.Add(m);
         }
-        var accepted = Game.Events.OfType<OrderAccepted>().Select(e => e.Sequence).ToHashSet();
+        // only this Step's events: the whole history was rescanned every day, a cost that grew with the game (QA senior QS-2)
+        var accepted = new HashSet<long>();
+        for (int i = firstEvent; i < Game.Events.Count; i++) if (Game.Events[i] is OrderAccepted a) accepted.Add(a.Sequence);
         foreach (var x in advised.Where(x => accepted.Contains(x.Sequence))) // a refused one shows as "Order refused" only (ReadEvents)
         {
             var (text, place) = SibylWords(x.Detail);
