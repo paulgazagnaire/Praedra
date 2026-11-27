@@ -452,6 +452,12 @@ public partial class Main
         Expect(steady.Contains("The grey dash: your yards use about what your refineries make, so your 12 holds steady.") && dry.Contains("so your stock stays empty"),
             "steady, the tooltip says the stock holds, or stays empty: " + steady + " | " + dry);
         Expect(wait.Contains("shows a few days after a load, once each refinery has finished a cycle."), "with too few days on record it says when the mark shows: " + wait);
+        // the numbers add up (UI review 36 P2): judged, made reads as a pace per 30 days beside the use: 109 made in 28 days = about 116, and a ▼ held at 120 says 4 more
+        string paced = gs.RefinedFlowWords(246, GameScreen.TrendOf(109, 28, 120, 0, 7, GameScreen.RefinedWay.Falling)), early = gs.RefinedFlowWords(12, GameScreen.TrendOf(3, 4, 63, 0, 7));
+        Expect(paced.Contains("Your refineries make about 116 every 30 days.") && paced.Contains("use about 120 every 30 days") && paced.Contains("about 4 more")
+                && !paced.Contains("in the last"),
+            "judged, what was made is a pace per 30 days, so made, use and the gap add up: " + paced);
+        Expect(early.Contains("Your refineries made 3 in the last 4 days."), "before the mark shows, the few days on record are said as they are: " + early);
         if (s.HasAdvisor)
         {
             string hers = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 20, 43, 5)), both = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 50, 13, 5));

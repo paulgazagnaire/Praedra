@@ -191,7 +191,7 @@ public partial class GameScreen
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
-    /// <summary>Where the refined comes from and goes: made in the last 30 days, what the yards use at their present pace (Sibyl's builds
+    /// <summary>Where the refined comes from and goes: what the refineries make per 30 days, what the yards use at their present pace (Sibyl's builds
     /// apart), and which way the stock goes (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why"). A small mark
     /// after Refined's number says it: a red ▼ when the yards use more than the refineries make (Paul 2026-11-27: "Add a small red ▼ by
     /// Refined"), a green ▲ when the refineries make more, a grey dash when the two are within 5% of each other (Paul 2026-11-27: "We need
@@ -264,7 +264,11 @@ public partial class GameScreen
     internal string RefinedFlowWords(int refined, RefinedTrend f)
     {
         int w = Praedra.Core.Economy.RefinedFlow.WindowDays, use = f.Mine + f.Hers;
-        string inLine = f.Days <= 0 ? "" : $" Your refineries made {f.Made} in the last {(f.Days >= w ? w + " days" : Ui.Count(f.Days, "day", "days"))}.";
+        // judged, what was made reads as a pace per 30 days, like the use, so the numbers add up (UI review 36 P2: "made 109 in the last 28
+        // days" beside "use about 120 every 30 days" and "about 4 more" did not); before that, the plain count of the few days on record
+        string inLine = f.Days <= 0 ? ""
+            : f.Way != RefinedWay.Unjudged ? $" Your refineries make about {f.Made30} every {w} days."
+            : $" Your refineries made {f.Made} in the last {Ui.Count(f.Days, "day", "days")}.";
         string outLine = use == 0 ? " No yard is building now."
             : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {AdvisorName ?? "your advisor"}'s."
             : $" Your yards now use about {use} every {w} days.";
