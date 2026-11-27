@@ -353,6 +353,27 @@ public partial class Main
             gs.PlayCloseDrawer(); gs.PlayRefresh();
             Expect(gs.MgRect(key).Value.Position == before, "it goes back when the panel closes");
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+            // review 32: with no free column left of the panel, a window steps aside a head lower than the one it covers, with an edge
+            var mine = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).OrderBy(f => f.Id).Take(3).ToList();   // three: two fill the columns left of the panel, the third finds none
+            if (mine.Count >= 3)
+            {
+                foreach (var m in mine) gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: m.Id);
+                gs.PlayRefresh();
+                gs.ShotOpenSection("Needs"); gs.PlayRefresh();
+                var rects = mine.Select(m => (key: $"Fleet {m.Id}", r: gs.MgRect($"Fleet {m.Id}").Value)).ToList();
+                Expect(rects.All(x => x.r.End.X <= gs.DrawerLeft + 4), "no window stays over Sibyl's open panel: " + string.Join(", ", rects.Select(x => $"{x.key} {x.r.Position.X:0}-{x.r.End.X:0}")));
+                for (int a = 0; a < rects.Count; a++)
+                    for (int b = a + 1; b < rects.Count; b++)
+                    {
+                        if (!rects[a].r.Intersects(rects[b].r)) continue;
+                        float dy = Math.Abs(rects[a].r.Position.Y - rects[b].r.Position.Y);
+                        Expect(dy >= 63, $"{rects[a].key} and {rects[b].key} overlap, one starts a head lower ({dy:0} px apart)");
+                        Expect(gs.EdgeShows(rects[a].key) || gs.EdgeShows(rects[b].key), $"of {rects[a].key} and {rects[b].key}, the one on top shows its edge");
+                    }
+                gs.PlayCloseDrawer(); gs.PlayRefresh();
+                while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+            }
         }
 
         // item 11: an empty General post says who can take it
@@ -360,9 +381,17 @@ public partial class Main
                 .FirstOrDefault(n => s.Host.Characters.SystemGeneralOf(n) == null) is string open)
         {
             gs.OpenMgmt(GameScreen.MgKind.Ground, open, tab: "Command"); gs.PlayRefresh();
-            string who = gs.MgNote($"Ground {open} who can be General");
-            Expect(!string.IsNullOrEmpty(who) && (who.StartsWith("None", StringComparison.Ordinal) || gs.Has("General candidate")),
-                $"the empty General post of {open} says who can take it ({who ?? "no words"})");
+            string fold = $"Ground {open} who can be General";
+            string none = gs.MgNote(fold);
+            if (none != null) Expect(none.StartsWith("None", StringComparison.Ordinal), $"the empty General post of {open} says none can take it ({none})");
+            else
+            {
+                // folded to one line (review 32), which opens the list of who can
+                Expect(gs.Has(fold) && !gs.Has("General candidate"), $"the empty General post of {open} shows one folded line of who can take it");
+                gs.Click(fold); gs.PlayRebuildMg();
+                Expect(gs.Has("General candidate"), $"unfolded, it lists who can take the General post of {open}");
+                gs.Click(fold); gs.PlayRebuildMg();
+            }
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
 

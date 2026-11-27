@@ -324,12 +324,16 @@ public partial class GameScreen
             return;
         }
         var last = others.Count > 0 ? others[^1].Position : new Vector2(16, TopClear);
-        w.Panel.Position = ClampWin(last + new Vector2(28, 36), new Vector2(WidthOf(w), 200));
+        var to = ClampWin(last + new Vector2(28, 36), new Vector2(WidthOf(w), 200));
+        if (DrawerOpen) to.X = Math.Max(8, Math.Min(to.X, _mgLayer.Size.X - DrawerWidth - WidthOf(w) - 8));   // never over Sibyl's open panel (review 32)
+        w.Panel.Position = to;
     }
 
     // ================================================================== Sibyl's panel and the windows
 
     bool DrawerOpen => _drawer?.Visible == true;
+    /// <summary>How far below the window it covers a stacked window starts: past that window's name and its ⋮⋮ – × row (review 32).</summary>
+    const float HeadDrop = 64;
     readonly Dictionary<MgWin, (Vector2 From, Vector2 To)> _asideForDrawer = new();
 
     /// <summary>
@@ -341,7 +345,8 @@ public partial class GameScreen
     {
         if (_mgLayer == null) return;
         float edge = _mgLayer.Size.X - DrawerWidth;
-        int stacked = 0;   // no free column left: the windows step aside one over the other, each title still showing
+        int stacked = 0;   // no free column left: the windows step aside one over the other, a head lower, so the one under keeps its
+                           // name and its buttons (review 32)
         foreach (var w in _mgWins.ToList())
         {
             var at = w.Panel.Position;
@@ -349,10 +354,29 @@ public partial class GameScreen
             var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(WidthOf(x), Math.Max(120, x.Panel.Size.Y)))).ToList();
             var free = Slots(leftFirst: false, width: WidthOf(w), besideDrawer: true)
                 .Where(p => !others.Any(o => o.Intersects(new Rect2(p + new Vector2(4, 4), new Vector2(WidthOf(w) - 8, 112))))).ToList();
-            var to = free.Count > 0 ? free[0] : ClampWin(new Vector2(edge - WidthOf(w) - 8 - 28 * stacked, at.Y + 36 * stacked++), new Vector2(WidthOf(w), 200));
+            var to = free.Count > 0 ? free[0] : ClampWin(new Vector2(edge - WidthOf(w) - 8 - 28 * stacked, at.Y + HeadDrop + 36 * stacked++), new Vector2(WidthOf(w), 200));
             w.Panel.Position = to;
             _asideForDrawer[w] = (_asideForDrawer.TryGetValue(w, out var was) ? was.From : at, to);
             Fit(w, w.Scroll.ScrollVertical);
+        }
+    }
+
+    /// <summary>
+    /// A window over another shows its edge in the card outline's grey: the usual #181B21 edge vanishes on the page under it, and two
+    /// windows read as one broken one (review 32). Checked every frame: a few windows, and only a changed edge touches its style; a
+    /// rebuilt window brings a new style, which keeps its own edge colour to go back to.
+    /// </summary>
+    void MarkOverlaps()
+    {
+        if (_mgWins.Count == 0) return;
+        var wins = _mgWins.Where(x => IsInstanceValid(x.Panel) && x.Panel.Visible).OrderBy(x => x.Panel.GetIndex()).ToList();
+        for (int i = 0; i < wins.Count; i++)
+        {
+            if (wins[i].Panel.GetThemeStylebox("panel") is not StyleBoxFlat box) continue;
+            if (!box.HasMeta("edge")) box.SetMeta("edge", box.BorderColor);
+            var r = wins[i].Panel.GetRect();
+            var want = wins.Take(i).Any(b => b.Panel.GetRect().Intersects(r)) ? Look.Outline : box.GetMeta("edge").AsColor();
+            if (box.BorderColor != want) box.BorderColor = want;
         }
     }
 

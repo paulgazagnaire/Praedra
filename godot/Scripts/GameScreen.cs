@@ -194,6 +194,7 @@ public partial class GameScreen : Control
     public override void _Process(double delta)
     {
         if (_view == null) return;
+        MarkOverlaps();
 
         if (_playing)
         {

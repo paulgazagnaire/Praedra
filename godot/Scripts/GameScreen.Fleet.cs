@@ -82,7 +82,9 @@ public partial class GameScreen
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
         // at a world it can strike, say where the two orders it came for are (QA playthrough 2026-11-27, item 8): they stay in the Fleet
         // window, the one place for each order (2026-11-22, F2)
-        else if (MergesAwayWhy(f) == null && CanAttackHere(f)) Note($"To invade or bombard {at}: Invasion and Bombardment are in its fleet window (F).");
+        else if (MergesAwayWhy(f) == null && CanAttackHere(f))
+            Note(S.Host.Troops.RegimentsAboard(f).Count > 0 ? $"To invade or bombard {at}: Invasion and Bombardment are in its fleet window (F)."
+                : $"To bombard {at}: Bombardment is in its fleet window (F). To invade, load regiments first.");   // no regiments: Invasion is greyed (review 32)
         var open = Act("Open fleet window", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
             "Its orders (attack, merge, split, scrap), its ships one by one, loading fighters and troops, its leaders, and whether it fights or pulls back. F opens it too.");
         open.Alignment = HorizontalAlignment.Center;

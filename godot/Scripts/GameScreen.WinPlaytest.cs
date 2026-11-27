@@ -102,6 +102,14 @@ public partial class GameScreen
     /// <summary>The left edge of Sibyl's panel, on the screen.</summary>
     internal float DrawerLeft => _mgLayer.Size.X - DrawerWidth;
     internal void PlayCloseDrawer() => CloseDrawer();
+    /// <summary>Every window rebuilt now, as the next frames would after a press in one.</summary>
+    internal void PlayRebuildMg() { foreach (var w in _mgWins.ToList()) RebuildMg(w); }
+    /// <summary>Whether a window shows the edge of a window over another (review 32), after a frame's check.</summary>
+    internal bool EdgeShows(string key)
+    {
+        MarkOverlaps();
+        return _mgWins.FirstOrDefault(w => w.Key == key) is { } w && w.Panel.GetThemeStylebox("panel") is StyleBoxFlat b && b.BorderColor == Look.Outline;
+    }
     /// <summary>A pause that came with a report, as RunDay makes it: the pill's words while the report is open, then once it is closed.</summary>
     internal (string Open, string Closed) PlayReportPause(string note)
     {
