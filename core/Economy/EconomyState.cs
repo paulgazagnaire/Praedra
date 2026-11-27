@@ -152,7 +152,7 @@ public sealed class EconomyState
     internal void CopyFrom(EconomyState o)
     {
         NextObjectId = o.NextObjectId;
-        foreach (var kv in o.Objects) Objects[kv.Key] = kv.Value;
+        foreach (var kv in o.Objects) Objects[kv.Key] = kv.Value; // shares the objects: only Load calls this, on a state it then drops
         Index.Invalidate();
         foreach (var kv in o.Slots) Slots[kv.Key] = kv.Value;
         foreach (var kv in o.CollectiveSupport) CollectiveSupport[kv.Key] = kv.Value;

@@ -199,11 +199,13 @@ public sealed class EconomyModule
     public EconObject? Find(int id) => E.Objects.TryGetValue(id, out var o) ? o : null;
     /// <summary>
     /// The objects whose System is <paramref name="system"/> (on it, or bound for it: queued and in-delivery facilities too), id order: the
-    /// same as <c>Objects.Where(o =&gt; o.System == system)</c>, from an index (<see cref="ObjectIndex"/>). Read it before changing the state.
+    /// same as <c>Objects.Where(o =&gt; o.System == system)</c>, from an index (<see cref="ObjectIndex"/>). A copy: a loop over it may move,
+    /// add or remove objects (the index's own lists change at once; Ponytail on #418).
     /// </summary>
-    public IReadOnlyList<EconObject> ObjectsAt(string system) => E.Index.At(system);
-    /// <summary>The objects riding on ship <paramref name="ship"/> (AboardShip), id order, from the same index. Read it before changing the state.</summary>
-    public IReadOnlyList<EconObject> ObjectsAboard(int ship) => E.Index.Aboard(ship);
+    public IReadOnlyList<EconObject> ObjectsAt(string system) => Copy(E.Index.At(system));
+    /// <summary>The objects riding on ship <paramref name="ship"/> (AboardShip), id order, from the same index. A copy, as <see cref="ObjectsAt"/>.</summary>
+    public IReadOnlyList<EconObject> ObjectsAboard(int ship) => Copy(E.Index.Aboard(ship));
+    private static IReadOnlyList<EconObject> Copy(IReadOnlyList<EconObject> l) => l.Count == 0 ? Array.Empty<EconObject>() : l.ToArray();
 
     /// <summary>Slot values now: the file's, unless an incident or setup changed them.</summary>
     public SlotState SlotsOf(string system)
@@ -217,13 +219,13 @@ public sealed class EconomyModule
     public int EffectiveRaw(string system) { var s = SlotsOf(system); return Math.Min(s.Raw, s.Energy); }
 
     /// <summary>energy_used: installed facilities plus facilities in delivery or queued for the system. rule: §Occupied slots.</summary>
-    public int EnergyUsed(string system) => ObjectsAt(system).Count(o => o.Category == ObjectCategory.Facility);
+    public int EnergyUsed(string system) => E.Index.At(system).Count(o => o.Category == ObjectCategory.Facility);
 
     /// <summary>raw_used: installed mines plus mines in delivery or queued for the system.</summary>
-    public int RawUsed(string system) => ObjectsAt(system).Count(o => IsClass(o, FacilityKind.Mine));
+    public int RawUsed(string system) => E.Index.At(system).Count(o => IsClass(o, FacilityKind.Mine));
 
     /// <summary>Facilities of <paramref name="kind"/> on the system: finished, queued or in delivery.</summary>
-    public int OfKindAt(string system, FacilityKind kind) => ObjectsAt(system).Count(o => IsClass(o, kind));
+    public int OfKindAt(string system, FacilityKind kind) => E.Index.At(system).Count(o => IsClass(o, kind));
 
     public int FreeEnergy(string system) => SlotsOf(system).Energy - EnergyUsed(system);
     public int FreeRaw(string system) => EffectiveRaw(system) - RawUsed(system);

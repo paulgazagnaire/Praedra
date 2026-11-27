@@ -124,4 +124,19 @@ public class ObjectIndexTests
         int c = ObjectRegistry.Add(e, new EconObject { Category = ObjectCategory.Facility, Class = "Mine", System = "Beta" }, null);
         Assert.Equal(new[] { b, c }, e.Index.At("Beta").Select(o => o.Id));
     }
+
+    // The public reads hand out copies (Ponytail on #418): a loop that moves every unit it reads, legal before the index, still works.
+    [Fact]
+    public void ALoopMayMoveWhatItReads()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 3, Preset = StartPreset.MedA });
+        string from = host.Economy.Objects.First(o => o.Category == ObjectCategory.Regiment && o.System != null && o.AboardShip == 0).System!;
+        int n = host.Economy.ObjectsAt(from).Count(o => o.Category == ObjectCategory.Regiment && o.AboardShip == 0);
+        foreach (var o in host.Economy.ObjectsAt(from)) if (o.Category == ObjectCategory.Regiment && o.AboardShip == 0) o.System = "Charter";
+        Assert.Empty(host.Economy.ObjectsAt(from).Where(o => o.Category == ObjectCategory.Regiment && o.AboardShip == 0));
+        Assert.True(n > 0);
+        int ship = host.Economy.Objects.First(o => o.Category == ObjectCategory.CapitalShip && host.Economy.ObjectsAboard(o.Id).Count > 0).Id;
+        foreach (var o in host.Economy.ObjectsAboard(ship)) o.AboardShip = 0;
+        Assert.Empty(host.Economy.ObjectsAboard(ship));
+    }
 }

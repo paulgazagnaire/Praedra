@@ -344,9 +344,9 @@ public sealed partial class FleetModule
     // ---- carrying (m3-fleets §Carrying rules). The troop side (LoadRegiments, UnloadRegiments, RegimentsLoaded...) is the
     // troops sheet's package (m3-troops-and-special-forces); it uses these queries and sets EconObject.AboardShip / System itself.
 
-    /// <summary>Units of a category aboard one ship (squadrons: Fighter; regiments: Regiment), by object id.</summary>
+    /// <summary>Units of a category aboard one ship (squadrons: Fighter; regiments: Regiment), by object id. A list, so a caller may move them while looping.</summary>
     public IEnumerable<EconObject> UnitsAboard(int shipId, ObjectCategory category) =>
-        (shipId != 0 ? E.Index.Aboard(shipId) : E.Objects.Values.Where(u => u.AboardShip == 0)).Where(u => u.Category == category);
+        (shipId != 0 ? E.Index.Aboard(shipId) : E.Objects.Values.Where(u => u.AboardShip == 0)).Where(u => u.Category == category).ToList();
 
     /// <summary>Free berths per ship id of a fleet (fighter_capacity less squadrons aboard). rule: m3-fleets §Carrying rules.</summary>
     public SortedDictionary<int, int> FreeBerthsByShip(Fleet f) => FreeByShip(f, ObjectCategory.Fighter, c => c.FighterCapacity);
@@ -432,7 +432,7 @@ public sealed partial class FleetModule
 
     /// <summary>Completed squadrons of a side based at a system (on it, not aboard, not flying), by id. rule: m3-fleets §Fighters based at a system.</summary>
     public IEnumerable<EconObject> BasedSquadrons(string system, Side side) =>
-        E.Index.At(system).Where(o => o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side && o.AboardShip == 0);
+        E.Index.At(system).Where(o => o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side && o.AboardShip == 0).ToList(); // a list: callers send them away while looping (Ponytail on #418)
 
     // ------------------------------------------------------------------ common order checks
 
