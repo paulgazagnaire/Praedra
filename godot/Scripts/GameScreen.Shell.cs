@@ -175,6 +175,20 @@ public partial class GameScreen
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
+    /// <summary>Where the refined comes from and goes, for its tooltip: made in the last 30 days, and what your yards use at their present pace,
+    /// Sibyl's builds apart (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why"). rule: m2-construction §Build time.</summary>
+    string RefinedFlowWords()
+    {
+        var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player);
+        var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
+        int w = Praedra.Core.Economy.RefinedFlow.WindowDays;
+        string inLine = days <= 0 ? "" : $" Your refineries made {made} in the last {(days >= w ? w + " days" : Ui.Count(days, "day", "days"))}.";
+        string outLine = mine + hers == 0 ? " No yard is building now."
+            : S.HasAdvisor && hers > 0 ? $" Your yards now use about {mine + hers} every {w} days: {mine} for your orders, {hers} for Sibyl's."
+            : $" Your yards now use about {mine + hers} every {w} days.";
+        return inLine + outLine;
+    }
+
     void RefreshTop()
     {
         if (_dayLabel == null) return;
@@ -194,7 +208,7 @@ public partial class GameScreen
             + (over ? "You are OVER the limit: units get scrapped until you are back under it. Build mines and refineries, or scrap ships." : near ? "You are close to the limit: a build order that would pass it is refused." : "");
         SetStockTip(_upkeepCell, _upkeepLabel, upTip);
         SetStockTip(_rawCell, _rawLabel, RawTip + (raw >= 10_000 ? $" ({raw})" : ""));
-        SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : ""));
+        SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : "") + RefinedFlowWords());
 
         int q = S.QueuedOrders;
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";

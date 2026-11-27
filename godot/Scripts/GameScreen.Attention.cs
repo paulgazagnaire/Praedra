@@ -252,8 +252,11 @@ public partial class GameScreen
         }
         // enemy fleets your capital's own fleets outgun many times over are no threat, so no red and no pause (QA's UI game, 2026-11-27, item 10:
         // the pause fired for a lone Mule 8 days out while 7 ships sat at Charter). Guns = the classes' overall attack strength, ships and
-        // fighters, as the picture shows them; all the near fleets count together, so several small ones closing in still warn.
-        int guard = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == cap)
+        // fighters, as the picture shows them; all the near fleets count together, so several small ones closing in still warn. Only Defensive
+        // fleets with no move order guard: an Elusive one leaves at first contact (Ponytail on #407). The picture holds no regiments, so a weak
+        // escort with troops aboard is weighed by its guns only; the guard fleets still stop an invasion while they hold the orbit.
+        var moving = S.Game.Queue.OfType<Praedra.Core.Clock.MoveFleetOrder>().Where(o => o.Side == Me).Select(o => o.FleetId).ToHashSet();
+        int guard = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == cap && f.OnContact == Praedra.Core.Battle.OnContactMode.Fight && !moving.Contains(f.Id))
             .Sum(f => f.Ships.Concat(f.Squadrons).Sum(id => S.Host.Economy.Find(id) is { } o && Fm.ShipClasses.TryGetValue(o.Class, out var c) ? c.OverallAttackStrength : 0));
         int foe = near.Sum(n => n.Fleet.Ships.Concat(n.Fleet.Squadrons).Sum(kv => (Fm.ShipClasses.TryGetValue(kv.Key, out var c) ? c.OverallAttackStrength : 0) * kv.Value));
         if (foe > 0 && guard >= CapitalGuardFactor * foe) near.Clear();
