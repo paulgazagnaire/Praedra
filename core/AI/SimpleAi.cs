@@ -267,6 +267,9 @@ public sealed partial class SimpleAi
     /// <summary>
     /// The shields' absorption at the system as the side sees it (no fog: the truth, DefenseModule.ShieldStrength; fog: the completed shield
     /// generators of its picture). rule: m3-bombardment §2 Shields (hits = max(0, P - S)).
+    /// With ShieldsFeltDays (fog, the Collective) an own shelling newer than the picture overrides it: after hits, the true S; after none, the
+    /// power of the fleets that did nothing there, so the value then means "a power that failed here" (the batteries' return fire is in it,
+    /// not only the shields): read it only as the power a pile must beat, never as the shield generators' strength (Ponytail #430).
     /// </summary>
     private int ShieldStrengthSeen(string system)
     {
