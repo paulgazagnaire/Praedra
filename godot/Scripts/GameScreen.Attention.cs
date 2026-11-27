@@ -122,16 +122,29 @@ public partial class GameScreen
         var infos = new List<Item>();
         // idle yards: one item for all of them, a row per system (a long list of the same card buries what matters)
         var idleRows = new List<(string, Action)>();
+        var idleShipRows = new List<(string, Action)>();
         foreach (var n in mine)
         {
             var idle = IdleYardFamilies(n);
             if (idle.Count == 0 || S.Host.Support.IsUprising(n)) continue;
             string sys = n;
+            // idle shipyards get their own amber item: nobody else fills them, Sibyl never builds warships (Paul 2026-11-27, "No, say so": "the goal
+            // isn't for the player to watch the ai play the game on their behalf"; QA's UI game had 6 idle shipyards and 9 ships on day 211)
+            if (idle.Contains(YardFamily.Shipyard))
+            {
+                idleShipRows.Add((n, () => { GoTo(sys, true); OpenInfraOn(sys, InfraTab.Shipyard, YardFamily.Shipyard); }));
+                idle = idle.Where(f => f != YardFamily.Shipyard).ToList();
+                if (idle.Count == 0) continue;
+            }
             var fam = idle[0];
             var tab = fam switch { YardFamily.Shipyard => InfraTab.Shipyard, YardFamily.Training => InfraTab.Training, _ => InfraTab.Construction };
             // the system, and its Infrastructure window on the first idle yard: where its work is chosen (Paul 2026-11-24, Selected sums up)
             idleRows.Add(($"{n}: {string.Join(", ", idle.Select(FamilyName))}", () => { GoTo(sys, true); OpenInfraOn(sys, tab, fam); }));
         }
+        if (idleShipRows.Count > 0)
+            list.Add(new Item("idle-shipyards", Level.Warn, $"Idle shipyards at {Ui.Count(idleShipRows.Count, "system", "systems")}: no warships on the way",
+                (S.HasAdvisor ? "Nobody builds warships but you: Sibyl never does. " : "Nobody builds warships but you. ") + "Click a system to order ships there. Shipyards on one world share a ship, so two there build it twice as fast.", null,
+                new() { ("Show the Yards layer", () => SetLayer(MapLayer.Yards), null) }) { Rows = idleShipRows });
         if (idleRows.Count > 0)
             infos.Add(new Item("idle-yards", Level.Info, $"Idle yards at {Ui.Count(idleRows.Count, "system", "systems")}", "An idle yard builds nothing. Click a system to give it work, or keep the refined for something else.", null,
                 new() { ("Show the Yards layer", () => SetLayer(MapLayer.Yards), null) }) { Rows = idleRows });
@@ -218,6 +231,9 @@ public partial class GameScreen
             lost.Count == 1 ? new() { ("Go there", () => GoTo(first, true), null) } : new()) { Rows = lost.Count == 1 ? null : rows });
     }
 
+    /// <summary>Your fleets at the capital need this many times the guns of all near enemy fleets for them not to count as a threat. DEFAULT (Dev lead 2026-11-27, screen only).</summary>
+    const int CapitalGuardFactor = 4;
+
     /// <summary>The enemy fleets the player sees within <see cref="CapitalThreatDays"/> days of the capital and the newest Sensor Station warning
     /// of a fleet still on its way there; null when you do not hold your capital.</summary>
     (List<(string Sys, int Days, Praedra.Core.Fog.FleetPicture Fleet)> Near, Praedra.Core.Fog.Sighting Warned)? CapitalThreatScan()
@@ -234,6 +250,13 @@ public partial class GameScreen
             var path = Fm.FindPath(sys, cap, speed);
             if (path.Ok && path.TotalTicks <= CapitalThreatDays) near.Add((sys, path.TotalTicks, pic));
         }
+        // enemy fleets your capital's own fleets outgun many times over are no threat, so no red and no pause (QA's UI game, 2026-11-27, item 10:
+        // the pause fired for a lone Mule 8 days out while 7 ships sat at Charter). Guns = the classes' overall attack strength, ships and
+        // fighters, as the picture shows them; all the near fleets count together, so several small ones closing in still warn.
+        int guard = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == cap)
+            .Sum(f => f.Ships.Concat(f.Squadrons).Sum(id => S.Host.Economy.Find(id) is { } o && Fm.ShipClasses.TryGetValue(o.Class, out var c) ? c.OverallAttackStrength : 0));
+        int foe = near.Sum(n => n.Fleet.Ships.Concat(n.Fleet.Squadrons).Sum(kv => (Fm.ShipClasses.TryGetValue(kv.Key, out var c) ? c.OverallAttackStrength : 0) * kv.Value));
+        if (foe > 0 && guard >= CapitalGuardFactor * foe) near.Clear();
         var warned = S.Fog.Sightings(Me, Math.Max(0, S.Game.Day - 30))
             .Where(x => x.Kind == Praedra.Core.Fog.SightingKind.SensorArrival && x.System == cap && x.ReachDay is int rd && rd >= S.Game.Day)
             .OrderByDescending(x => x.Day).FirstOrDefault();

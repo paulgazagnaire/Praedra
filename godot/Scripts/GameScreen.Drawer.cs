@@ -135,7 +135,7 @@ public partial class GameScreen
     /// <summary>What a switch makes her do, as the advisor plans it (rule: m6-advisor-sibyl §Manage Garrisons, §Manage Production; Ponytail on #372).</summary>
     static string SibylHint(Praedra.Core.AI.SibylJob job) => job == Praedra.Core.AI.SibylJob.ManageGarrisons
         ? "Trains regiments for every world short of its garrison, worlds in uprising first, and builds training facilities when none is free."
-        : "Builds mines, refineries and more construction yards at your idle construction yards, founds one if you have none left, and never scraps.";
+        : "Builds mines, refineries and more construction yards at your idle construction yards, founds one if you have none left, and never scraps. She never builds warships: your shipyards wait for your orders.";
 
     /// <summary>Her switches as they will be tomorrow (a tick in Menu > Settings shows here at once).</summary>
     void RefreshSibylStatus()

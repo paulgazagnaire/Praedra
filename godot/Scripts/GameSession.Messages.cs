@@ -356,7 +356,9 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Construction at {p.System} was cancelled ({(p.Reason == "SystemDestroyed" ? "the system was destroyed" : p.Reason)}).", p.System, MsgKind.Warn);
                 break;
             case UnitCompleted u when u.Side == Player:
-                yield return new Message(d, $"{u.Class} completed at {u.Yard}.", u.Yard, MsgKind.Good);
+                // where it goes when it was ordered for another world: Sibyl's garrison orders are built at the nearest training facility, so Tranches
+                // "completed at Charter" left for other worlds with no word of it (QA's UI game, 2026-11-27, item 4)
+                yield return new Message(d, u.Destination != null && u.Destination != u.Yard ? $"{u.Class} completed at {u.Yard}, on its way to {u.Destination}." : $"{u.Class} completed at {u.Yard}.", u.Yard, MsgKind.Good);
                 break;
             case DeliveryArrived u when ObjectIsMine(u.Object):
                 yield return new Message(d, $"{u.Class} delivered to {u.System}.", u.System, MsgKind.Good);
@@ -380,10 +382,15 @@ public sealed partial class GameSession
                 break;
             case BombardmentResolved b:
             {
-                string text = b.Hits == 0
-                    ? $"Bombardment of {b.System}: the shields held, no damage."
-                    : $"Bombardment of {b.System}: {b.Hits} hit(s); {b.Regiments} regiment(s) and {b.Facilities} facilit(ies) destroyed" +
-                      (b.Energy + b.Raw > 0 ? $", {b.Energy} energy and {b.Raw} raw slot(s) lost." : ".");
+                // only what was lost, short enough for one Log row ("and 0 facilit..." was cut off: QA's UI game, 2026-11-27, item 9)
+                var lost = new List<string>();
+                if (b.Regiments > 0) lost.Add(Ui.Count(b.Regiments, "regiment", "regiments"));
+                if (b.Facilities > 0) lost.Add(Ui.Count(b.Facilities, "building", "buildings"));
+                if (b.Energy > 0) lost.Add(Ui.Count(b.Energy, "energy slot", "energy slots"));
+                if (b.Raw > 0) lost.Add(Ui.Count(b.Raw, "raw slot", "raw slots"));
+                string text = b.Hits == 0 ? $"Bombardment of {b.System}: the shields held, no damage."
+                    : lost.Count == 0 ? $"Bombardment of {b.System}: {Ui.Count(b.Hits, "hit", "hits")}, nothing destroyed."
+                    : $"Bombardment of {b.System}: {string.Join(", ", lost)} destroyed.";
                 yield return new Message(d, text, b.System, OwnerOf(b.System) == Player ? MsgKind.Bad : MsgKind.Info);
                 break;
             }
