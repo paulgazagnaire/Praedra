@@ -337,6 +337,20 @@ public class BattleModuleTests
         Assert.Contains(w.Events<UnitDestroyed>(), d => d.Unit == reg && d.Reason == UnitLossReason.ShipLost);
     }
 
+    // m5-missions §Spying from orbit 1 (DEFAULT, as regiments): special forces aboard a destroyed ship go down with it
+    [Fact]
+    public void DestroyedShipTakesSpecialForcesAboard()
+    {
+        var w = new BattleWorld(new BattleParams { Ruleset = BattleRuleset.Classic, SubsystemRolls = false, RetreatMode = RetreatMode.NoRetreat });
+        int collective = w.Fleet(Side.Collective, "B", Corvette, 2);
+        int sf = w.Eco.AddObject(Side.Collective, "Listeners", null);
+        w.Obj(sf).AboardShip = w.F(collective).Ships[0];
+        w.Fleets.AddFleet(Side.Hand, "imp", new[] { Mandate }, "B", new[] { "Gleaner" });
+        w.Run();
+        Assert.False(w.Game.State.Economy.Objects.ContainsKey(sf));
+        Assert.Contains(w.Events<UnitDestroyed>(), d => d.Unit == sf && d.Reason == UnitLossReason.ShipLost);
+    }
+
     // m4-battle-classic §1.2: the blockade flag is recomputed after the battle
     [Fact]
     public void BlockadeFlagRecomputedAfterTheBattle()

@@ -56,12 +56,26 @@ public sealed class MissionGroup
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? RecruitedCharacterKey { get; set; }
 
+    /// <summary>
+    /// The fleet the group was launched from, when every member was a special force aboard that one fleet (0 = none): it works from orbit over the
+    /// fleet's system (halved spotting) and flies back to the fleet. rule: m5-missions §Spying from orbit 2, 3.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int FromFleet { get; set; }
+    /// <summary>Special forces that were aboard a ship when the group was formed: they count as aboard ("orbit") at the origin. rule: m5-missions §3, §Spying from orbit 2.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? AboardAtLaunch { get; set; }
+    /// <summary>The day a group launched from a fleet began waiting for that fleet to stop (0 = not waiting). rule: m5-missions §Spying from orbit 5.</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int WaitingSince { get; set; }
+
     internal MissionGroup Clone() => new()
     {
         Id = Id, Kind = Kind, Side = Side, Characters = new(Characters), SpecialForces = new(SpecialForces), DecoyCharacters = new(DecoyCharacters),
         DecoySpecialForces = new(DecoySpecialForces), Home = Home, Target = Target, TargetCharacter = TargetCharacter, Facility = Facility, Phase = Phase,
         Departed = Departed, Path = new(Path), TotalTicks = TotalTicks, ArrivalDay = ArrivalDay, Due = Due, Iterations = Iterations, Outcome = Outcome,
         Captives = Captives == null ? null : new(Captives), RecruitedCharacterKey = RecruitedCharacterKey,
+        FromFleet = FromFleet, AboardAtLaunch = AboardAtLaunch == null ? null : new(AboardAtLaunch), WaitingSince = WaitingSince,
     };
 
     /// <summary>Every unit in the group: team and decoys.</summary>

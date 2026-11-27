@@ -136,6 +136,23 @@ public sealed record MissionParams
     public int MaxDecoys { get; init; }
     /// <summary>Regiments aboard guarding ships are guards (Traced B2d §3: flag +0x2c of the orbit scope). DEFAULT true; false = ships only.</summary>
     public bool CountAboardUnits { get; init; } = true;
+    /// <summary>
+    /// Special forces ride fleets and work from orbit (Paul 2026-11-27: "carry special forces in a fleet to ensure low cost/risk espionage missions
+    /// from orbit"). DEFAULT true; false = Classic: special forces never board (m3-troops-and-special-forces). rule: m5-missions §Spying from orbit.
+    /// </summary>
+    public bool OrbitMissions { get; init; } = true;
+    /// <summary>Most special forces aboard one fleet, in its leader section, not in troop slots. Paul 2026-11-27 ("9 max per fleet"). rule: m5-missions §Spying from orbit 1.</summary>
+    public int FleetSpecialForcesMax { get; init; } = 9;
+    /// <summary>
+    /// A team launched from a fleet and working over that fleet's own system: each guard's detection chance times this percent (rounded down).
+    /// Paul 2026-11-27, decision card "Half chance": 50. rule: m5-missions §Spying from orbit 3.
+    /// </summary>
+    public int OrbitSpotPercent { get; init; } = 50;
+    /// <summary>
+    /// Most days a team launched from a fleet waits for that fleet to stop before it gives up on it and goes home (or to the nearest held system).
+    /// DEFAULT 30 (Dev lead 2026-11-27, Ponytail on #412). rule: m5-missions §Spying from orbit 5.
+    /// </summary>
+    public int OrbitWaitDays { get; init; } = 30;
     /// <summary>Diplomacy needs the uprising flag off. DEFAULT true ("calm" is Missing).</summary>
     public bool DiplomacyNeedsCalm { get; init; } = true;
     /// <summary>The target-system term of the Recruitment success input, not read yet. rule: m5-missions §Defaults (RecruitSystemTerm), Missing rules 10.</summary>
@@ -256,5 +273,6 @@ public sealed record MissionParams
         if (StoryMissions) throw new RuleMissingException("StoryMissions", sheet);
         if (NewMissions) throw new RuleMissingException("NewMissions", sheet);
         if (MaxTeamMembers < 0 || MaxDecoys < 0) throw new ArgumentException("MaxTeamMembers and MaxDecoys must be 0 (no cap) or more.");
+        if (FleetSpecialForcesMax < 0 || OrbitSpotPercent is < 0 or > 100) throw new ArgumentException("FleetSpecialForcesMax must be 0 or more, OrbitSpotPercent 0 to 100.");
     }
 }
