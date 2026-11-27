@@ -619,7 +619,9 @@ public sealed partial class SimpleAi
         {
             // rule: m3-assault check 4, m3-bombardment §Resolution (shields are Military targets): SiegeShields shells the shields down first
             // (the adaptive commander's Siege, AI trainer 2026-11-26), bounded like any shelling; else the fleet leaves
-            if (_p.SiegeShields && canShell && aboard > 0 && RecentBombardments(at) < _p.MaxBombardmentsPer30Days)
+            // m3-bombardment §2: the shields absorb their strength from the fleets' combined power, so a pile that cannot beat it does not try
+            if (_p.SiegeShields && canShell && aboard > 0 && RecentBombardments(at) < _p.MaxBombardmentsPer30Days
+                && mineHere.Sum(x => _h.Bombardment.Power(x)) > ShieldStrengthSeen(at))
             {
                 long sq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
                 Note(sq, "Bombard", $"fleet {f.Id} shells the shields of {at}");

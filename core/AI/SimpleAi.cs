@@ -255,6 +255,21 @@ public sealed partial class SimpleAi
         return fac != null && _h.Defenses.AssaultForbiddenBy(fac.Value);
     }
 
+    /// <summary>
+    /// The shields' absorption at the system as the side sees it (no fog: the truth, DefenseModule.ShieldStrength; fog: the completed shield
+    /// generators of its picture). rule: m3-bombardment §2 Shields (hits = max(0, P - S)).
+    /// </summary>
+    private int ShieldStrengthSeen(string system)
+    {
+        if (_view == null) return _h.Defenses.ShieldStrength(system);
+        var fac = _view.Picture(system)?.Facilities;
+        if (fac == null) return 0;
+        int s = 0;
+        foreach (var (cls, count) in fac.Value)
+            if (_h.Data.Defenses.TryGetClass(cls, out var c) && c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator) s += c.Shield * count;
+        return s;
+    }
+
     /// <summary>The events the AI reads (its own losses, captures, bombardments). No fog: all. Fog: the side's filtered feed (§N8).</summary>
     private IReadOnlyList<GameEvent> Events => _view == null ? _h.Game.Events : _view.Events;
 
