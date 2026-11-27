@@ -288,8 +288,8 @@ public sealed partial class SimpleAi
         public double Strength; public int Aboard, FreeSlots, Berths; public double HullPct = 100;
     }
 
-    /// <summary>Guerrilla: the Collective's elusive fleets and raids (SimpleAiParams.Guerrilla). The Hand AI never uses it.</summary>
-    private bool GuerrillaOn => _p.Guerrilla && _side == Side.Collective;
+    /// <summary>Guerrilla: the Collective's elusive fleets and raids (SimpleAiParams.Guerrilla). The Hand AI uses it only with HandRaids.</summary>
+    private bool GuerrillaOn => _p.Guerrilla && (_side == Side.Collective || _p.HandRaids); // rule: ai tuning, SimpleAiParams.HandRaids
     private int AttackOdds => GuerrillaOn ? _p.GuerrillaAttackOddsPercent : _p.AttackOddsPercent;
     private int RetreatOdds => GuerrillaOn ? _p.GuerrillaRetreatOddsPercent : _p.RetreatOddsPercent;
 

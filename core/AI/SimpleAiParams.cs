@@ -372,6 +372,12 @@ public sealed record SimpleAiParams
     /// </summary>
     public bool HandFronts { get; init; }
     /// <summary>
+    /// Hand raids (AI trainer 2026-11-27, sparring bots): the Hand uses the Guerrilla odds, reach and raids (<see cref="Guerrilla"/>) as the
+    /// Collective does, so a Hand sparring bot can play the raider a human plays: shell the Collective's mines, refineries and yards rather than
+    /// take worlds. Off = Guerrilla is the Collective's only (DEFAULT).
+    /// </summary>
+    public bool HandRaids { get; init; }
+    /// <summary>
     /// Siege (AI trainer 2026-11-26; the adaptive commander's Siege plan): a fleet carrying troops at a world whose seen shields forbid an
     /// assault (m3-assault check 4) shells it with the Military target (m3-bombardment: shields are Military targets, no support cost), up to
     /// MaxBombardmentsPer30Days, instead of leaving at once. Off = it leaves (DEFAULT, the AI before 2026-11-26).
