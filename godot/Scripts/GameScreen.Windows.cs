@@ -279,9 +279,8 @@ public partial class GameScreen
     /// <summary>A window is at most the full free height of its column.</summary>
     float SlotHeight => Math.Max(240, _mgLayer.Size.Y - TopClear - BottomClear);
 
-    /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen). A wide window
-    /// starts on any column it fits from.</summary>
-    /// <summary>The window columns, from the left (or from the right). Beside Sibyl's panel: only the columns left of it while it is open.</summary>
+    /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen), from the left or
+    /// from the right. A wide window starts on any column it fits from. Beside Sibyl's panel: only the columns left of it while it is open.</summary>
     List<Vector2> Slots(bool leftFirst = true, float width = MgWidth, bool besideDrawer = false)
     {
         var vp = _mgLayer.Size;

@@ -43,6 +43,9 @@ public partial class GameScreen : Control
     bool _panelDirty = true, _fleetListDirty = true, _attentionDirty = true;
     double _panelTimer;
     string _pauseNote;
+    /// <summary>The pause words that came with a report: closing that report clears them, the report was the news (QA playthrough 2026-11-27,
+    /// item 13: "Paused: an invasion..." stayed after the report closed).</summary>
+    string _reportNote;
 
     // Screenshot options (set by Main from the command line).
     public string ShotPath;
@@ -169,12 +172,12 @@ public partial class GameScreen : Control
         {
             "battle" => "Paused: a battle was fought",
             "captured" => "Paused: a system changed hands",
-            "invaded" or "invasion" => "Paused: an invasion is taking place",
+            "invaded" or "invasion" => "Paused: an invasion was fought",
             "destroyed" => "Paused: the harvester destroyed a system",
             null => null,
             _ => "Paused",
         };
-        if (why != null && oc.Popup != null) ShowReport(oc.Popup);
+        if (why != null && oc.Popup != null) { ShowReport(oc.Popup); _reportNote = note; }
         note ??= ChosenPause(oc.New);
         if (note == null && capital != null) { note = capital; ShowTab(DrawerTab.Needs); }
         if (note != null) { Pause(note); return false; }

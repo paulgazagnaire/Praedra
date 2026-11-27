@@ -256,7 +256,7 @@ public partial class GameScreen
     {
         const int Shown = 3;
         var able = S.MyCharacters.Where(c => Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) != n && CanTravel(c, n) == null)
-            .Select(c => (c, days: TravelDays(c, n))).OrderBy(x => x.days).ThenBy(x => S.CharName(x.c.Id), StringComparer.Ordinal).ToList();
+            .Select(c => (c, days: TravelDays(c, n))).OrderBy(x => S.SystemPostOf(x.c) != null).ThenBy(x => x.days).ThenBy(x => S.CharName(x.c.Id), StringComparer.Ordinal).ToList();
         string lead = able.Count == 0 ? "None of your leaders free to travel can be a General."
             : here.Count > 0 && !here.Any(c => Cm.ClassOf(c).CanGeneral) ? "No leader here can be a General. These can:"
             : "These leaders can be General:";
@@ -271,12 +271,13 @@ public partial class GameScreen
         {
             string name = S.CharName(c.Id);
             var f = c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var af) ? af : null;
-            string where = f != null ? $"on {S.NameOf(f)}" : Cm.LocationOf(c) ?? "";
-            string post = S.SystemPostOf(c) is string gs ? $", General of {gs}" : "";
+            string at = Cm.LocationOf(c) ?? "";
+            string post = S.SystemPostOf(c) is string gs ? $"General of {gs}" : null;   // free leaders come first; a posted one says so on the button
+            string where = f != null ? $"on {S.NameOf(f)}" : post ?? at;
             string when = days == 0 ? "here" : Ui.Count(days, "day", "days");
             var b = FleetAction($"{name} · {where} · {when}", $"General candidate {name}",
                 () => { if (f != null) OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Command"); else OpenMgmt(MgKind.Ground, Cm.LocationOf(c), tab: "Command"); },
-                $"{name}{post} stands {(f != null ? $"on {S.NameOf(f)} at {f.At}" : $"at {where}")}. Open that window and drag {name} onto this General post"
+                $"{name}{(post != null ? ", " + post + "," : "")} stands {(f != null ? $"on {S.NameOf(f)} at {f.At}" : $"at {at}")}. Open that window and drag {name} onto this General post"
                 + (days == 0 ? "." : $": they fly here first, {Ui.Count(days, "day", "days")}."));
             b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
             rows.AddChild(b);

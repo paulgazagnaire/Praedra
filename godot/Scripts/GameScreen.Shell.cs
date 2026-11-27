@@ -184,8 +184,8 @@ public partial class GameScreen
         int share = cap <= 0 ? p.CapacityPerFacility : Math.Min(p.CapacityPerFacility, load * p.CapacityPerFacility / cap);
         int free = Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, 0), now = Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, share);
         int half = Praedra.Core.Economy.EconomyModule.CycleDays(p, 50, share);
-        return $"The fuller your upkeep, the slower your mines and refineries work: at this upkeep one cycle takes {Ui.Count(now, "day", "days")}, "
-            + $"against {free} with none. Low support slows them too: at 50% support it takes {Ui.Count(half, "day", "days")}.";
+        return $"The fuller your upkeep, the slower your mines and refineries work: at this upkeep a cycle takes about {Ui.Count(now, "day", "days")}, "
+            + $"against {free} with none. Low support slows them too: at 50% support it takes about {Ui.Count(half, "day", "days")}.";
     }
 
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>

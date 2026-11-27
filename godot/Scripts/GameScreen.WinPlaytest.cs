@@ -102,6 +102,15 @@ public partial class GameScreen
     /// <summary>The left edge of Sibyl's panel, on the screen.</summary>
     internal float DrawerLeft => _mgLayer.Size.X - DrawerWidth;
     internal void PlayCloseDrawer() => CloseDrawer();
+    /// <summary>A pause that came with a report, as RunDay makes it: the pill's words while the report is open, then once it is closed.</summary>
+    internal (string Open, string Closed) PlayReportPause(string note)
+    {
+        ShowReport(new Message(S.Game.Day, "A test invasion", null, MsgKind.Info, "A test invasion", "One line."));
+        _reportNote = note; Pause(note);
+        string open = _banner.Text;
+        HideModal(_reportPanel);
+        return (open, _banner.Text);
+    }
     /// <summary>The words of a shown label of the windows, by its full name (null when none shows).</summary>
     internal string MgNote(string fullName)
     {

@@ -253,6 +253,12 @@ public partial class GameScreen
         p.Visible = false;
         _modalStack.Remove(p);
         _modalLayer.Visible = _modalStack.Count > 0;
+        if (p == _reportPanel && _reportNote != null)
+        {
+            if (_pauseNote == _reportNote) _pauseNote = null;
+            _reportNote = null;
+            RefreshPill();
+        }
     }
 
     bool OverlayOpen => _modalStack.Count > 0;

@@ -365,5 +365,10 @@ public partial class Main
                 $"the empty General post of {open} says who can take it ({who ?? "no words"})");
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
+
+        // item 13: the pause words that came with a report go when the report closes
+        const string fought = "Paused: an invasion was fought";
+        var (shown, after) = gs.PlayReportPause(fought);
+        Expect(shown == fought && after != fought, $"the report's pause words go with the report (open: '{shown}', closed: '{after}')");
     }
 }

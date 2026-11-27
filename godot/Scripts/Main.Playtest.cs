@@ -123,7 +123,7 @@ public partial class Main
         gs.Click("Got it");
         Expect(gs.SpeedValue == 5, "default speed is 5x");
         Expect(gs.TopTips.All(t => !string.IsNullOrEmpty(t)), "top bar numbers have tooltips");
-        Expect(gs.TopTips[2].Replace("\n", " ").Contains("the slower your mines and refineries work: at this upkeep one cycle takes"), "Upkeep's tooltip says a full upkeep slows the mines and refineries (QA playthrough 2026-11-27, item 2): " + gs.TopTips[2]);
+        Expect(gs.TopTips[2].Replace("\n", " ").Contains("the slower your mines and refineries work: at this upkeep a cycle takes about"), "Upkeep's tooltip says a full upkeep slows the mines and refineries (QA playthrough 2026-11-27, item 2): " + gs.TopTips[2]);
         Expect(gs.Banner.Contains("Play"), "banner tells a new player to press Play");
         Expect(gs.Click("Play"), "press Play");
         for (int i = 0; i < 8; i++) gs.Frame(1.0);
