@@ -27,7 +27,10 @@ public partial class GameScreen : Control
     const int MaxStepsPerFrame = 30;
     const float PanPixelsPerSecond = 700f;
     const int AutosaveEvery = 30;                          // days
-    const int MaxLogItems = 400;
+    const int MaxLogItems = 400;                           // rows in the Log list at once (the filter's newest)
+    // messages kept for the Log's filters: each filter shows its own newest MaxLogItems. With one 400 cap for all, Sibyl's order lines pushed a
+    // Reconnaissance result out of Logs > Leaders within weeks (QA's UI game, 2026-11-27, item 6)
+    const int MaxLogKept = 4000;
 
     public GameSession S { get; private set; }
     public Galaxy G => S.Data.Galaxy;
