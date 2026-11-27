@@ -188,7 +188,6 @@ public partial class GameScreen
         return cv;
     }
 
-    /// <summary>One condition: a tick (done) or an empty ring, the condition, how it stands, and a link to the place.</summary>
     /// <summary>How the Hand finds the Hearth while it is unknown: the spy odds, and the sectors its spies already named (QA's UI game, 2026-11-27,
     /// "no path to the win"; Paul's pick: better spy odds). rule: m5-fog-and-hq §N6a.</summary>
     string HearthSearchWords()
@@ -200,6 +199,7 @@ public partial class GameScreen
             : $"Your spies place it in {(sectors.Count == 1 ? "the sector " + sectors[0] : "one of the sectors " + string.Join(", ", sectors))} (it can move). Spy on worlds there. " + odds;
     }
 
+    /// <summary>One condition: a tick (done) or an empty ring, the condition, how it stands, and a link to the place.</summary>
     void Check(VBoxContainer into, bool done, string what, string how, string system, bool danger = false)
     {
         var h = Ui.HBox(10);
