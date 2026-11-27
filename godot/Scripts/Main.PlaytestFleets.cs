@@ -448,6 +448,7 @@ public partial class Main
             for (int d = 0; d < uses.Length; d++)
             {
                 var (mi, he) = GameScreen.HeldUse(seen, 500 + d, 0, uses[d], sibyl, 4);
+                GameScreen.NoteUse(seen, 500 + d, 0, uses[d], sibyl, 4);
                 var w = W(95, mi, he, was);
                 if (d > 0 && w != was) n++;
                 was = w;
@@ -457,10 +458,19 @@ public partial class Main
         Expect(Flips(true) == 0 && Flips(false) >= 6,
             $"while Sibyl builds, the day or two of idle yards between her builds leaves the ▼ alone ({Flips(true)} changes in {uses.Length} days; {Flips(false)} on today's use alone)");
         var seen2 = new List<(int Day, int Mine, int Hers)>();
-        GameScreen.HeldUse(seen2, 600, 30, 80, true, 4);
-        Expect(GameScreen.HeldUse(seen2, 601, 30, 58, true, 4) == (30, 80) && GameScreen.HeldUse(seen2, 605, 30, 58, true, 4) == (30, 58)
-                && GameScreen.HeldUse(seen2, 606, 0, 0, false, 4) == (0, 0) && GameScreen.HeldUse(seen2, 607, 30, 58, true, 4) == (30, 58),
-            "the highest use of the last 4 days counts while she builds, an older one drops out, and without her today's use counts");
+        GameScreen.NoteUse(seen2, 600, 30, 80, true, 4);
+        bool holds = GameScreen.HeldUse(seen2, 601, 30, 58, true, 4) == (30, 80) && GameScreen.HeldUse(seen2, 604, 30, 58, true, 4) == (30, 58)
+            && GameScreen.HeldUse(seen2, 601, 30, 58, false, 4) == (30, 58);
+        GameScreen.NoteUse(seen2, 601, 30, 58, false, 4);
+        Expect(holds && seen2.Count == 0 && GameScreen.HeldUse(seen2, 602, 30, 58, true, 4) == (30, 58),
+            "the highest use of the last 4 days counts while she builds, an older one drops out, and without her today's use counts and none is kept");
+        if (s.HasAdvisor)
+        {
+            string between = gs.RefinedFlowWords(0, GameScreen.TrendOf(95, 0, 110, GameScreen.RefinedWay.Falling) with { Today = 88 });
+            Expect(between.Contains("While Sibyl keeps your yards busy they use about 110 every 30 days: 0 for your orders, 110 for hers. Today it is 88: a yard that finished a build waits for her next one.")
+                    && !between.Contains("now use"),
+                "on a day between her builds the hover says both the use the mark goes by and today's (Ponytail on #427): " + between);
+        }
 
         // on the game: the mark follows today's two paces, from the first refresh; 9999 and the mark keep the stock's width, so the bar does not shift
         GameScreen.RefinedWay Expected(GameScreen.RefinedWay was)   // what the paces give from the mark shown before (a mark keeps showing until balance, QA r245)
