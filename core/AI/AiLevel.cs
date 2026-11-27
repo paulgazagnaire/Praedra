@@ -162,7 +162,19 @@ public static class AiLevels
     /// RefitAway with it. Collective refit scraps per 32 games, MedE, main 0a5c3b4: Medium mirror 38 without Neutralise, 17 with it, 32 with
     /// RefitAway too (Hand / Collective / open 4 / 18 / 10, 3 / 24 / 5, 2 / 21 / 9); Medium Hand against the Hard Collective 16, 9, 21
     /// (1 / 24 / 7, 0 / 28 / 4, 1 / 26 / 5). Wins move within noise (about 3 of 32).</remarks>
-    private static SimpleAiParams Neutralised(SimpleAiParams p) => p with { Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true };
+    /// <remarks>Rooster 2026-11-27 evening (with fog a fleet in orbit sees no facilities, so the Collective shelled shields it did not know of for
+    /// no hits; Paul on #412: special forces aboard fleets, used hard): ShieldsFeltDays, RaidShieldsSeen and WreckShields with it. 96 seeds, MedE,
+    /// main 94bf76b, Hand / Collective / open: Medium mirror 5 / 72 / 19 off, 7 / 80 / 9 shields felt and seen, 4 / 78 / 14 with the Wreckers
+    /// too; walled Medium Hand (FortifyWorlds 4, FortifyBatteries 2) 3 / 76 / 17, 2 / 83 / 11, 4 / 87 / 5. Orbit sabotage vs the walled Hand:
+    /// about 10 launched a game, about 4 in 10 started succeed. Notes: specs/engine/ai-notes/rooster-log.md.</remarks>
+    private static SimpleAiParams Neutralised(SimpleAiParams p) => p with
+    {
+        Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,
+        ShieldsFeltDays = ShieldsFeltWindow, RaidShieldsSeen = true, WreckShields = true,
+    };
+
+    /// <summary>ShieldsFeltDays at Medium and Hard: a shelling's lesson about the shields holds four months unless a look is newer.</summary>
+    private const int ShieldsFeltWindow = 120;
 
     /// <summary>NeutraliseElsewherePercent at Medium and Hard: a world it can shell bare is worth a plain invasion target anywhere.</summary>
     private const int NeutraliseAnywhere = 100;
