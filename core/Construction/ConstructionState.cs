@@ -137,3 +137,9 @@ public sealed class ConstructionState
         Collective.CopyFrom(o.Collective);
     }
 }
+
+/// <summary>
+/// One yard set of a side for the screen (<see cref="ConstructionModule.RefinedUseBySet"/>): the yards of one family on one world, the refined they
+/// use per 30 days while busy, whether they are busy now, and whether the current unit is the advisor's. Reads only. rule: m2-construction §Build time.
+/// </summary>
+public readonly record struct YardSetUse(string System, YardFamily Family, int Use, bool Busy, bool ByAdvisor);

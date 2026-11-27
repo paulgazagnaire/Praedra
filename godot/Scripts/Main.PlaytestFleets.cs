@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
+using YardSetUse = Praedra.Core.Construction.YardSetUse;
 
 namespace PraedraViewer;
 
@@ -438,16 +439,22 @@ public partial class Main
             Expect(both.Contains("Even without Sibyl's builds, your own orders use more"), "and when your own orders are short anyway, it says that: " + both);
         }
 
-        // QA-132: while Sibyl builds, a day or two of idle yards between her builds does not flip the mark. QA's days: the refineries make 95,
-        // her yards use 110, and a build that ends leaves 88 for a day (or two, back to back) until she gives the yards the next one
+        // QA-132: while Sibyl builds, a yard set between her builds does not flip the mark. QA's days: the refineries make 95, five sets of hers
+        // use 22 each, and a build that ends leaves its set idle at one refresh, until her next plan fills it; two such days back to back are
+        // two sets, not one waiting twice (UI review 38)
         var uses = new[] { 110, 88, 110, 110, 110, 88, 88, 110, 110, 110, 110, 88, 110, 110, 88, 88, 110, 110 };
+        YardSetUse U(string world, int use, bool busy, bool hers = false, Praedra.Core.Construction.YardFamily family = Praedra.Core.Construction.YardFamily.Construction)
+            => new(world, family, use, busy, hers);
         int Flips(bool sibyl)
         {
-            var seen = new List<(int Day, int Mine, int Hers)>();
-            var was = flat; int n = 0;
+            var seen = new List<(int Day, IReadOnlyList<YardSetUse> Sets)>();
+            var was = flat; int n = 0, ended = 0;
             for (int d = 0; d < uses.Length; d++)
             {
-                var (mi, he) = GameScreen.HeldUse(seen, 500 + d, 0, uses[d], sibyl, 4);
+                int idle = uses[d] == 88 ? ended++ % 5 : -1;
+                var today = Enumerable.Range(0, 5).Select(i => U($"W{i}", 22, i != idle, i != idle)).ToList();
+                var (mi, he, _, _) = GameScreen.HeldUse(today, GameScreen.Yesterday(seen, 500 + d), sibyl);
+                GameScreen.NoteUse(seen, 500 + d, today, sibyl);
                 var w = W(95, mi, he, was);
                 if (d > 0 && w != was) n++;
                 was = w;
@@ -455,21 +462,42 @@ public partial class Main
             return n;
         }
         Expect(Flips(true) == 0 && Flips(false) >= 6,
-            $"while Sibyl builds, the day or two of idle yards between her builds leaves the ▼ alone ({Flips(true)} changes in {uses.Length} days; {Flips(false)} on today's use alone)");
-        var seen2 = new List<(int Day, int Mine, int Hers)>();
-        GameScreen.HeldUse(seen2, 600, 30, 80, true, 4);
-        Expect(GameScreen.HeldUse(seen2, 601, 30, 58, true, 4) == (30, 80) && GameScreen.HeldUse(seen2, 605, 30, 58, true, 4) == (30, 58)
-                && GameScreen.HeldUse(seen2, 606, 0, 0, false, 4) == (0, 0) && GameScreen.HeldUse(seen2, 607, 30, 58, true, 4) == (30, 58),
-            "the highest use of the last 4 days counts while she builds, an older one drops out, and without her today's use counts");
+            $"while Sibyl builds, a yard set between her builds leaves the ▼ alone ({Flips(true)} changes in {uses.Length} days; {Flips(false)} on today's use alone)");
+        // your build at A ends and hers at C, D is lost: the next day A and C count at yesterday's use as hers (she fills them), your part is
+        // today's (UI review 38 P2 1), D is not held; a second idle day is real news; a day not seen holds nothing; without her nothing is held
+        // E is a shipyard: her production builds no ships, so your ship that ends there is not held (UI review 38 follow-up)
+        var day1 = new List<YardSetUse> { U("A", 30, true), U("B", 22, true, true), U("C", 22, true, true), U("D", 7, true, true), U("E", 15, true, family: Praedra.Core.Construction.YardFamily.Shipyard) };
+        var day2 = new List<YardSetUse> { U("A", 30, false), U("B", 22, true, true), U("C", 22, false), U("E", 15, false, family: Praedra.Core.Construction.YardFamily.Shipyard) };
+        var seen2 = new List<(int Day, IReadOnlyList<YardSetUse> Sets)>();
+        GameScreen.NoteUse(seen2, 600, day1, true);
+        var next = GameScreen.HeldUse(day2, GameScreen.Yesterday(seen2, 601), true);
+        GameScreen.NoteUse(seen2, 601, day2, true);
+        var second = GameScreen.HeldUse(day2, GameScreen.Yesterday(seen2, 602), true);
+        var unseen = GameScreen.HeldUse(day2, GameScreen.Yesterday(seen2, 603), true);
+        var off = GameScreen.HeldUse(day2, day1, false);
+        GameScreen.NoteUse(seen2, 602, day2, false);
+        Expect((next.Mine, next.Hers, string.Join(",", next.Waiting), next.Today) == (0, 74, "A,C", 22)
+                && (second.Mine, second.Hers, second.Waiting.Count) == (0, 22, 0) && (unseen.Hers, unseen.Waiting.Count) == (22, 0)
+                && (off.Mine, off.Hers, off.Waiting.Count) == (0, 22, 0) && seen2.Count == 0,
+            $"a set busy yesterday and idle today counts as hers for one day, your part is today's, a shipyard, a lost one and a second idle day are not held, nor without her ({next.Mine}+{next.Hers} at {string.Join(",", next.Waiting)}; {second.Mine}+{second.Hers}; {off.Mine}+{off.Hers})");
+        if (s.HasAdvisor)
+        {
+            var f = GameScreen.TrendOf(95, 0, 110, GameScreen.RefinedWay.Falling) with { Today = 88, Waiting = new[] { "Fusoria" } };
+            string between = gs.RefinedFlowWords(0, f), two = gs.RefinedFlowWords(0, f with { Waiting = new[] { "Fusoria", "Charter" } }),
+                four = gs.RefinedFlowWords(0, f with { Waiting = new[] { "A", "B", "C", "D" } });
+            Expect(between.Contains("While Sibyl keeps your yards busy they use about 110 every 30 days: 0 for your orders, 110 for Sibyl's. Today it is 88 every 30 days: your construction yards at Fusoria are between builds, and Sibyl may give them their next one tomorrow.")
+                    && two.Contains("your construction yards at Fusoria and Charter are between builds") && four.Contains("your construction yards at 4 worlds are between builds") && !between.Contains("now use"),
+                "on a day between her builds the hover says the use the mark goes by, today's, and where (Ponytail on #427, UI review 38): " + between);
+        }
 
         // on the game: the mark follows today's two paces, from the first refresh; 9999 and the mark keep the stock's width, so the bar does not shift
         GameScreen.RefinedWay Expected(GameScreen.RefinedWay was)   // what the paces give from the mark shown before (a mark keeps showing until balance, QA r245)
         {
             var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
-            var held = gs.RefinedTrendNow();   // the use the mark goes by: today's, or while Sibyl builds the highest of the last days (QA-132)
+            var held = gs.RefinedTrendNow();   // the use the mark goes by: today's, and while Sibyl builds her sets between builds too (QA-132)
             bool sibyl = s.HasAdvisor && s.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction);
-            Expect(sibyl ? held.Mine + held.Hers >= mine + hers : (held.Mine, held.Hers) == (mine, hers),
-                $"the mark goes by today's use ({mine}+{hers}), or while Sibyl builds by the highest of the last days ({held.Mine}+{held.Hers})");
+            Expect(held.Mine == mine && (sibyl ? held.Hers >= hers : held.Hers == hers),
+                $"the mark goes by today's use ({mine}+{hers}), and while Sibyl builds her sets between builds too ({held.Mine}+{held.Hers})");
             return GameScreen.TrendOf(Praedra.Core.Economy.RefinedFlow.MadePace(s.Host, me), held.Mine, held.Hers, was).Way;
         }
         gs.PlayRefresh();

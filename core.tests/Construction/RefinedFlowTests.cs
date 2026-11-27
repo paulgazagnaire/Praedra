@@ -44,6 +44,31 @@ public class RefinedFlowTests
         Assert.Equal(before.Advisor + 30 * n / 4, after.Advisor);
     }
 
+    // m2-construction §Build time RF8 (UI review 38 P2 2): each yard set is listed, idle ones with the use they would have; the busy ones
+    // sum to Use, the list is in world order, and a world in uprising leaves it.
+    [Fact]
+    public void RF8_EachYardSetIsListedBusyOrIdle()
+    {
+        var (h, yard, n) = HandShipyard();
+        var idle = h.Construction.RefinedUseBySet(Side.Hand).Single(x => x.System == yard && x.Family == YardFamily.Shipyard);
+        Assert.False(idle.Busy);
+        Assert.Equal(30 * n / 4, idle.Use);
+        h.Construction.SubmitBuild(Side.Hand, yard, YardFamily.Shipyard, "Mandate", 1, byAdvisor: true);
+        h.Game.Step();
+        var sets = RefinedFlow.UseBySet(h, Side.Hand);
+        var busy = sets.Single(x => x.System == yard && x.Family == YardFamily.Shipyard);
+        Assert.True(busy.Busy && busy.ByAdvisor);
+        Assert.Equal(idle.Use, busy.Use);
+        var use = RefinedFlow.Use(h, Side.Hand);
+        Assert.Equal(use.Player, sets.Where(x => x.Busy && !x.ByAdvisor).Sum(x => x.Use));
+        Assert.Equal(use.Advisor, sets.Where(x => x.Busy && x.ByAdvisor).Sum(x => x.Use));
+        Assert.Equal(sets.OrderBy(x => x.System, StringComparer.Ordinal).ThenBy(x => x.Family).ToList(), sets);
+        var was = h.Construction.IsInUprising;
+        h.Construction.IsInUprising = sys => sys == yard || was(sys);
+        Assert.DoesNotContain(RefinedFlow.UseBySet(h, Side.Hand), x => x.System == yard);
+        h.Construction.IsInUprising = was;
+    }
+
     // m2-mines-refineries-pools §Cycle length RF4: the pace is what the refineries really make. Over 60 quiet days the count of batches is
     // within a tenth of the pace read at the start (QA-131: the trend mark compares it with the yards' pace, both in the present tense).
     [Fact]
