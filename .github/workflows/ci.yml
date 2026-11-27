@@ -5,7 +5,14 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    - cron: '0 3 * * *' # nightly: the AI play tests on main
+    - cron: '0 3 * * 1-6' # nightly: the AI play tests on main
+    - cron: '0 3 * * 0' # Sunday night: the same, plus the crash hunt
+  workflow_dispatch: # run by hand, e.g. the crash hunt on a branch
+    inputs:
+      hunt:
+        description: 'sim hunt arguments (empty = the weekly set)'
+        required: false
+        default: ''
 
 jobs:
   test:
@@ -76,3 +83,35 @@ jobs:
         run: |
           timeout 1200 "$GODOT" --headless --path . -- --playtest 2>&1 | tee "$RUNNER_TEMP/playtest.log" | grep -E "PLAYTEST|^===" || true
           grep -q "PLAYTEST PASSED" "$RUNNER_TEMP/playtest.log" || { grep -E "FAIL" "$RUNNER_TEMP/playtest.log"; exit 1; }
+
+  # The crash and softlock hunt (Paul 2026-11-27: "Hundreds of long games across seeds and difficulties, plus old saves, with every crash
+  # fixed. I'm not sure we're tracking this. But we must!"). Nightly and by hand only, never on a pull request. Plays long AI games across
+  # seeds, AI levels, start presets, a passive Hand run by Sibyl, switch variants and the old saves (core.tests/Setup/saves), with a save and
+  # load on the way, and fails on any crash, hung day, stuck fleet, delivery or mission, or dangling id (sim hunt, sim/Hunt.cs). The report
+  # is uploaded as the run's "hunt-report" artifact; the Dev lead copies findings to the shared crash log (praedra/qa/crash-log.md).
+  # Weekly, not nightly: about 70 games on the runner's 2 cores take about 45 minutes of Actions time. The seeds move on every week (week
+  # number x 12), so the weekly runs keep covering new games; a full sweep (hundreds of games) runs by hand in a cloud session.
+  hunt:
+    if: (github.event_name == 'schedule' && github.event.schedule == '0 3 * * 0') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet build sim -c Release
+      - name: hunt
+        env:
+          HUNT: ${{ github.event.inputs.hunt }}
+        run: |
+          w=$((10#$(date -u +%V))); a=$((w * 12 + 1)); b=$((w * 12 + 12)); i=$((w * 2 + 1)); j=$((w * 2 + 2))
+          args=${HUNT:-"--seeds $a-$b --levels mm,hh,mh,hm --idle-seeds $i-$j --variant-seeds $i-$j --jobs 2 --hang-seconds 180"}
+          echo "hunt $args"
+          dotnet sim/bin/Release/net8.0/Praedra.Sim.dll hunt $args --saves core.tests/Setup/saves,core.tests/Setup/saves/old --report "$RUNNER_TEMP/hunt.md"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hunt-report
+          path: ${{ runner.temp }}/hunt.md
+          if-no-files-found: ignore

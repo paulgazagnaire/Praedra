@@ -25,4 +25,11 @@ public class PlayerSaveHeaderTests
     [Fact]
     public void WriteThenRead() =>
         Assert.Equal((Side.Collective, AiLevel.Hard), PlayerSaveHeader.Read(PlayerSaveHeader.Write(Side.Collective, AiLevel.Hard)));
+
+    [Fact] // the core save inside a screen save (sim hunt, OldSavesPlayOnTests); a file with no header is already a core save
+    public void CoreSaveDropsOnlyTheHeaderLine()
+    {
+        Assert.Equal("PRAEDRA-CORE 1\nSETTINGS {}", PlayerSaveHeader.CoreSave("PRAEDRA-SAVE 1 Hand Medium\nPRAEDRA-CORE 1\nSETTINGS {}"));
+        Assert.Equal("PRAEDRA-CORE 1\nSETTINGS {}", PlayerSaveHeader.CoreSave("PRAEDRA-CORE 1\nSETTINGS {}"));
+    }
 }
