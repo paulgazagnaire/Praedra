@@ -41,7 +41,7 @@ async function open() {
 async function bake(dir, only) {
   fs.mkdirSync(dir, { recursive: true });
   const { browser, page } = await open();
-  // the names from systems.json itself: the page has no charset line, so a file:// load reads accents wrongly (Ciénaga)
+  // the names from systems.json itself: the page has no charset line, so a file:// load reads any accented letter wrongly
   const names = JSON.parse(fs.readFileSync(path.join(__dirname, 'systems.json'), 'utf8')).map((s) => s.n);
   // a name that is not a system (a two-word name split by the shell, a typo) would bake nothing and keep the old picture: stop instead
   const unknown = [...only].filter((n) => !names.includes(n));
