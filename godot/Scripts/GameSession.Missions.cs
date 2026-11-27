@@ -52,11 +52,18 @@ public sealed partial class GameSession
     /// <summary>Queue a StartMission order (the core judges it as soon as the clock moves; a refusal comes back in plain words).</summary>
     public long SubmitMission(MissionKind kind, IReadOnlyList<int> chars, IReadOnlyList<int> sfs, string target, int? targetCharacter, string home, int arrivalDay)
     {
-        long seq = Game.Submit(s => new StartMissionOrder(s, Player, kind, chars.ToList(), sfs.ToList(), new List<int>(), targetCharacter == null ? target : null, targetCharacter));
+        long seq = Game.Submit(s => new StartMissionOrder(s, Player, kind, chars.ToList(), sfs.ToList(), new List<int>(), SystemFor(kind, target, targetCharacter), targetCharacter));
         _missionOrders.Add(seq);
         _pendingMissions[seq] = new PendingMission(seq, kind, chars.ToList(), sfs.ToList(), home, target, arrivalDay);
         return Track(seq, $"{KindWords(kind, Player)} on {target} by {TeamWords(chars, sfs)}");
     }
+
+    /// <summary>
+    /// The order's system: none for a Rescue (the core knows where your prisoner is held), the system where you last saw the leader for an
+    /// Abduction or Assassination (rule: m5-missions §Targets, Where a leader target is sought), the target for the rest.
+    /// </summary>
+    public static string SystemFor(MissionKind kind, string target, int? targetCharacter) =>
+        targetCharacter == null || kind is MissionKind.Abduction or MissionKind.Assassination ? target : null;
 
     /// <summary>Queue a CancelMission order. rule: m5-missions §Orders (CancelMission): only while the team works at the target.</summary>
     public long SubmitCancelMission(MissionGroup m)
@@ -116,7 +123,7 @@ public sealed partial class GameSession
         MissionKind.ShipResearch or MissionKind.FacilityResearch or MissionKind.TroopResearch =>
             "One of your systems with the matching yard (shipyard, construction yard or training facility): research points; repeats until you cancel it.",
         MissionKind.Rescue => "Frees one of your captured characters where the enemy holds him or her. Skill: combat.",
-        MissionKind.Abduction => "Captures an enemy leader. Skill: combat.",
+        MissionKind.Abduction => "Captures an enemy leader you have seen. The team goes where you last saw them; if they have left, it comes home empty-handed. Skill: combat.",
         MissionKind.Assassination => "Kills an enemy leader. Skill: combat.",
         MissionKind.Recruitment => "Brings a new leader to your side at one of your systems.",
         MissionKind.SpikeTheHarvester => "Destroys an enemy harvester.",
@@ -133,7 +140,9 @@ public sealed partial class GameSession
     {
         MissionKind.Recruitment when Missions.Recruit == null => "not available yet: the rule book does not say which leader gets recruited",
         MissionKind.SpikeTheHarvester when Missions.HasHarvester == null => "not available yet: there is no harvester in this game",
-        MissionKind.Abduction or MissionKind.Assassination => "not available here: your side cannot see where enemy leaders are",
+        // rule: m5-missions §Targets (Where a leader target is sought): a leader target is one your side has seen (m5-fog-and-hq §F1 group D)
+        MissionKind.Abduction when SeenEnemyLeaders().Count == 0 => "first find an enemy leader: a successful Espionage mission shows the leaders on that world",
+        MissionKind.Assassination => "not switched on: only Abduction goes after leaders you have seen",
         // rule: m5-missions §6b Target: Charter only, while the Hand holds it
         MissionKind.BurnTheBooks when OwnerOf(Praedra.Core.Control.ControlModule.CapitalSystem) != Side.Hand => "only while the Hand holds Charter",
         // rule: m5-missions §6b Target (BooksOneTeam, Paul 2026-11-06): one team at a time; QA round 137
@@ -141,6 +150,22 @@ public sealed partial class GameSession
             => "a team is already out to burn the books",
         _ => null,
     };
+
+    /// <summary>
+    /// The enemy leaders an Abduction can go after: each one's newest sighting in the player's pictures (group D), free or injured there, not the
+    /// player's own prisoner; by name. Only what the pictures show (rule: m5-fog-and-hq §F1 group D, §N8; m5-missions §Targets, Where a leader
+    /// target is sought).
+    /// </summary>
+    public IReadOnlyList<(int Id, string System, int Day)> SeenEnemyLeaders() =>
+        Fog.CharactersSeen(Player).Where(x => x.Character.Side != Player)
+            .GroupBy(x => x.Character.Id)
+            .Select(g => g.OrderByDescending(x => x.Stamp).ThenBy(x => x.System, StringComparer.Ordinal).First())
+            .Where(x => x.Character.Status != CharacterStatus.Captured && !(Chars.Get(x.Character.Id) is { Status: CharacterStatus.Captured } c && c.Captor == Player))
+            .Select(x => (x.Character.Id, x.System, x.Stamp))
+            .OrderBy(x => CharName(x.Id), StringComparer.Ordinal).ThenBy(x => x.Id).ToList();
+
+    /// <summary>The per-try cap of a key leader of the Abduction rules, or null (rule: m5-missions §6a, KeyTargetRules).</summary>
+    public int? AbductionCap(int id) => Missions.IsKeyTarget(MissionKind.Abduction, id, out int cap) ? cap : null;
 
     /// <summary>Is Burn the Books still a mission the player can be offered? Off, or the books already burned: the planner hides it. rule: m5-missions §6b Target.</summary>
     public bool BooksOffered => Missions.Params.BurnTheBooks && !Game.State.Missions.BooksBurned;
