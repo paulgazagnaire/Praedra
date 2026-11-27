@@ -201,16 +201,16 @@ public partial class GameScreen
     /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
     internal enum RefinedWay { Steady, Falling, Rising }
 
-    internal readonly record struct RefinedTrend(int Made, int Mine, int Hers, RefinedWay Way)
+    internal readonly record struct RefinedTrend(int Made, int Mine, int Hers, RefinedWay Way, bool RawShort = false)
     {
         public bool Falling => Way == RefinedWay.Falling;
     }
 
     internal RefinedTrend RefinedTrendNow()
     {
-        int made = Praedra.Core.Economy.RefinedFlow.MadePace(S.Host, S.Player);
+        var (made, rawShort) = S.Host.Economy.RefinedPacePer30Days(S.Player);
         var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        return TrendOf(made, mine, hers, _refinedWas);
+        return TrendOf(made, mine, hers, _refinedWas) with { RawShort = rawShort };
     }
 
     /// <summary>The mark by Refined at the last refresh: a mark keeps showing until the use crosses balance (QA r245: no blinking).</summary>
@@ -241,7 +241,8 @@ public partial class GameScreen
     {
         int w = Praedra.Core.Economy.RefinedFlow.WindowDays, use = f.Mine + f.Hers;
         // both at today's pace per 30 days, so made, use and the gap add up (UI review 36 P2)
-        string inLine = f.Made > 0 ? $" Your refineries now make about {f.Made} every {w} days." : " Your refineries make nothing now.";
+        string inLine = (f.Made > 0 ? $" Your refineries now make about {f.Made} every {w} days." : " Your refineries make nothing now.")
+            + (f.RawShort ? " Your mines are what holds them back: more refineries would wait for raw." : "");   // UI review 37
         string outLine = use == 0 ? " No yard is building now."
             : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {AdvisorName ?? "your advisor"}'s."
             : $" Your yards now use about {use} every {w} days.";
@@ -250,6 +251,8 @@ public partial class GameScreen
         {
             case RefinedWay.Rising:
                 return inLine + outLine + $" The green mark: your stock grows by about {-gap} every {w} days.";
+            case RefinedWay.Steady when f.Made <= 0 && use == 0:
+                return inLine + outLine + " The grey dash: nothing is made or used now, " + (refined <= 0 ? "so your stock stays empty." : $"so your {refined} holds steady.");
             case RefinedWay.Steady:
                 return inLine + outLine + " The grey dash: your yards use about what your refineries make, "
                     + (refined <= 0 ? "so your stock stays empty: the yards take each batch as it comes." : $"so your {refined} holds steady.");

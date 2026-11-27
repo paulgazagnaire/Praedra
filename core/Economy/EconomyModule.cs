@@ -375,46 +375,39 @@ public sealed class EconomyModule
     }
 
     /// <summary>
-    /// Refined the side's pool gets per 30 days at the present pace, for the screen: each refinery that works for the side (completed, held,
-    /// not suspended) finishes one cycle every <see cref="CycleDays"/> at its system's support and its dealt share (one about to start gets an
-    /// even slice), less what smuggling diverts, plus what the other side's refineries lose to it; when the raw stock and the mines' pace
-    /// cannot feed every cycle, the side's own refineries make only what the raw allows. It reads the state only and changes nothing, in the
-    /// same tense as <c>ConstructionModule.RefinedUsePer30Days</c> (QA-131, 2026-11-27: a count of the last 30 days lags lost refineries and
-    /// slower cycles, so the trend mark by Refined showed a rise while the stock fell). rule: m2-mines-refineries-pools §Cycle length,
-    /// §Asking for raw / serving a line, §Diversion (smuggling).
+    /// Refined the side's own refineries make per 30 days at the present pace, for the screen: each refinery that works for the side
+    /// (completed, held, not suspended) finishes one cycle every <see cref="CycleDays"/> at its system's support and its dealt share (one about
+    /// to start gets an even slice), less what smuggling diverts; when the raw stock and the mines' pace cannot feed every cycle, they make only
+    /// what the raw allows. Batches smuggled in from the other side are left out: they are not the side's refineries, and reading the other
+    /// side's facilities as they are now would tell the screen what the fog hides (Ponytail on #422). It reads the state only and changes
+    /// nothing, in the same tense as <c>ConstructionModule.RefinedUsePer30Days</c> (QA-131, 2026-11-27: a count of the last 30 days lagged lost
+    /// refineries and slower cycles, so the trend mark by Refined showed a rise while the stock fell). rule: m2-mines-refineries-pools §Cycle
+    /// length, §Asking for raw / serving a line, §Diversion (smuggling). RawShort: the raw cannot feed every refinery cycle, so the mines are
+    /// what holds the refineries back (UI review 37: the screen says so, or a player at Raw 0 builds refineries that only wait).
     /// </summary>
-    public int RefinedPacePer30Days(Side side)
+    public (int Refined, bool RawShort) RefinedPacePer30Days(Side side)
     {
         const int Days = 30;
         var memo = new Dictionary<string, bool>(StringComparer.Ordinal); // lookup only, never iterated
         int load = Load(side);
-        // per 30 days in hundredths: gross refinery cycles of the side, what it keeps of them, what comes in from the other side, and raw for them
-        long gross = 0, kept = 0, incoming = 0, raw = 100L * E.Pool(side).Raw;
+        // per 30 days in hundredths: refinery cycles, the batches the side keeps of them, and the raw that can feed them (stock + mines kept)
+        long cycles = 0, kept = 0, raw = 100L * E.Pool(side).Raw;
         foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
         {
-            bool mine = kind == FacilityKind.Mine;
-            foreach (var who in new[] { side, Other(side) })
+            var working = Cyclers(kind).Where(f => f.Completed && OwnerOf(f) == side && !IsSuspended(f, memo)).ToList(); // id order
+            int even = Math.Min(Params.CapacityPerFacility, load / Math.Max(1, working.Count));
+            foreach (var f in working)
             {
-                var working = Cyclers(kind).Where(f => f.Completed && OwnerOf(f) == who && !IsSuspended(f, memo)).ToList(); // id order
-                int even = Math.Min(Params.CapacityPerFacility, (who == side ? load : Load(who)) / Math.Max(1, working.Count));
-                foreach (var f in working)
-                {
-                    int support = Math.Clamp(SupportOf(f.System!, who), Params.SupportFloor, Params.SupportCeiling);
-                    int d = Math.Max(1, CycleDays(Params, support, f.WorkSide == who ? f.Share : even));
-                    int v = DiversionPercent(f.System!, who);
-                    long cycles = Days * 100L / d;
-                    if (who == side)
-                    {
-                        if (mine) raw += cycles * (100 - v) / 100;
-                        else { gross += cycles; kept += cycles * (100 - v) / 100; }
-                    }
-                    else if (mine) raw += cycles * v / 100;
-                    else incoming += cycles * v / 100;
-                }
+                int support = Math.Clamp(SupportOf(f.System!, side), Params.SupportFloor, Params.SupportCeiling);
+                int d = Math.Max(1, CycleDays(Params, support, f.WorkSide == side ? f.Share : even));
+                long n = Days * 100L / d, keep = n * (100 - DiversionPercent(f.System!, side)) / 100;
+                if (kind == FacilityKind.Mine) raw += keep;
+                else { cycles += n; kept += keep; }
             }
         }
-        if (gross > raw && gross > 0) kept = kept * raw / gross; // each cycle takes one raw: short raw, fewer cycles
-        return (int)((kept + incoming) / 100);
+        bool rawShort = cycles > raw;
+        if (rawShort) kept = kept * raw / cycles; // each cycle takes one raw: short raw, fewer cycles
+        return ((int)(kept / 100), rawShort);
     }
 
     /// <summary>

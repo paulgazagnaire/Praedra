@@ -425,7 +425,12 @@ public partial class Main
         Expect(rise.Contains("The green mark: your stock grows by about 7 every 30 days.") && !rise.Contains("red mark"), "rising, the tooltip says by how much: " + rise);
         Expect(steady.Contains("The grey dash: your yards use about what your refineries make, so your 12 holds steady.") && dry.Contains("so your stock stays empty"),
             "steady, the tooltip says the stock holds, or stays empty: " + steady + " | " + dry);
-        Expect(none.Contains("Your refineries make nothing now. No yard is building now."), "with no refinery working it says so: " + none);
+        Expect(none.Contains("Your refineries make nothing now. No yard is building now. The grey dash: nothing is made or used now, so your stock stays empty.")
+                && gs.RefinedFlowWords(300, GameScreen.TrendOf(0, 0, 0)).Contains("nothing is made or used now, so your 300 holds steady."),
+            "with no refinery working and no yard building it says so: " + none);
+        string held = gs.RefinedFlowWords(0, GameScreen.TrendOf(40, 63, 0) with { RawShort = true });
+        Expect(held.Contains("Your refineries now make about 40 every 30 days. Your mines are what holds them back: more refineries would wait for raw."),
+            "when the raw holds the refineries back, the tooltip says so (UI review 37): " + held);
         if (s.HasAdvisor)
         {
             string hers = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 20, 43)), both = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 50, 13));
