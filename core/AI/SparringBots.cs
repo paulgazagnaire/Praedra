@@ -13,8 +13,9 @@ public static class SparringBots
     /// <summary>
     /// The bot's parameters on top of <paramref name="level"/>, or null for an unknown name.
     /// Wall: a Hand that is hard to kill. It walls Charter and its three biggest yard and mine worlds (2 shields and 2 batteries each), shields
-    /// every mine world the Collective shells (3 shields, up to 6 worlds), reinforces shelled worlds to 4 regiments, and retreats and repairs
-    /// early to keep its navy.
+    /// every mine world the Collective shells (2 shields, up to 6 worlds), and retreats and repairs early to keep its navy. Measured 2026-11-27
+    /// against the Medium Collective (main f5482cc, seeds 1-64 start MedE and 1-32 start MedA): Collective wins 56 -> 45 of 96, open games 26 -> 43,
+    /// Hand wins 14 -> 8. With 3 shields and shelled worlds reinforced to 4 regiments it was no harder to kill (Collective 60 of 96).
     /// </summary>
     public static SimpleAiParams? For(string name, AiLevel level = AiLevel.Medium)
     {
@@ -24,8 +25,7 @@ public static class SparringBots
             "Wall" => p with
             {
                 FortifyWorlds = 4, FortifyBatteries = 2,
-                GuardRaidedDays = 360, GuardRaidedShields = 3,
-                ShelledGarrison = 4,
+                GuardRaidedDays = 360, GuardRaidedShields = 2,
                 RetreatOddsPercent = 110, RepairBelowPercent = 90,
             },
             _ => null,
