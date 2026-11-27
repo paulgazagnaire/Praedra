@@ -191,39 +191,27 @@ public partial class GameScreen
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
-    /// <summary>Where the refined comes from and goes: what the refineries make per 30 days, what the yards use at their present pace (Sibyl's builds
-    /// apart), and which way the stock goes (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why"). A small mark
-    /// after Refined's number says it: a red ▼ when the yards use more than the refineries make (Paul 2026-11-27: "Add a small red ▼ by
-    /// Refined"), a green ▲ when the refineries make more, a grey dash when the two are within 5% of each other (Paul 2026-11-27: "We need
-    /// an upward trend indicator and a stable indicator as well"). Judged only once the days on record cover a refinery's cycle at your
-    /// present upkeep: before that a refinery may not have finished one (right after a load, as events are not saved), so a short window
-    /// would read as falling for no reason (Ponytail on #413). Near balance the two numbers cross back and forth from day to day, and the
-    /// mark blinked (QA r245 on #413), so a mark that shows keeps showing until the use crosses back over balance itself, and what was made
-    /// is counted over whole refinery cycles, so it does not rise and fall by itself (UI review 36 on #419).
+    /// <summary>Where the refined comes from and goes: what the refineries make and what the yards use, both at today's pace per 30 days
+    /// (Sibyl's builds apart), and which way the stock goes (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why").
+    /// A small mark after Refined's number says it: a red ▼ when the yards use more than the refineries make (Paul 2026-11-27: "Add a small
+    /// red ▼ by Refined"), a green ▲ when the refineries make more, a grey dash when the two are within 5% of each other (Paul 2026-11-27:
+    /// "We need an upward trend indicator and a stable indicator as well"). Both sides are today's pace: a count of the last 30 days lagged
+    /// lost refineries and slower cycles, so the ▲ showed while the stock fell (QA-131), and it rose and fell by itself with the batches
+    /// (UI review 36). Near balance a mark that shows keeps showing until the use crosses back over balance itself (QA r245: no blinking).
     /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
-    internal enum RefinedWay { Unjudged, Falling, Steady, Rising }
+    internal enum RefinedWay { Steady, Falling, Rising }
 
-    internal readonly record struct RefinedTrend(int Made, int Days, int Made30, int Mine, int Hers, RefinedWay Way)
+    internal readonly record struct RefinedTrend(int Made, int Mine, int Hers, RefinedWay Way, bool RawShort = false)
     {
         public bool Falling => Way == RefinedWay.Falling;
     }
 
     internal RefinedTrend RefinedTrendNow()
     {
-        int cycle = RefineryCycleNow();
-        var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player);
-        int whole = WholeCycleDays(days, cycle);
-        if (whole != days) (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player, whole);
+        var (made, rawShort) = S.Host.Economy.RefinedPacePer30Days(S.Player);
         var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        return TrendOf(made, days, mine, hers, cycle, _refinedWas);
+        return TrendOf(made, mine, hers, _refinedWas) with { RawShort = rawShort };
     }
-
-    /// <summary>The days "made" is counted over: the most whole refinery cycles that fit in the days on record (28 days at a 7-day cycle, 24
-    /// at 8). Each refinery then puts the same number of batches in the window whatever the day; over a plain 30 days a 7-day refinery puts
-    /// 4 or 5, so the count rose and fell each week with no change in orders and the mark flickered near balance (UI review 36 on #419).
-    /// Fewer days than a cycle stay as they are: the mark waits for them. rule: m2-mines-refineries-pools §Cycle length.</summary>
-    internal static int WholeCycleDays(int daysOnRecord, int cycle) =>
-        cycle <= 0 || daysOnRecord < cycle ? daysOnRecord : daysOnRecord / cycle * cycle;
 
     /// <summary>The mark by Refined at the last refresh: a mark keeps showing until the use crosses balance (QA r245: no blinking).</summary>
     RefinedWay _refinedWas;
@@ -231,54 +219,40 @@ public partial class GameScreen
     /// <summary>Within this share of what the refineries make, either way, the stock reads as steady (the grey dash).</summary>
     const int RefinedSteadyPercent = 5;
 
-    /// <summary>A refinery's cycle in days at your present upkeep, at full support: the share as in <see cref="SlowdownWords"/>.
-    /// rule: m2-mines-refineries-pools §Cycle length.</summary>
-    internal int RefineryCycleNow()
+    /// <summary>The trend from the two paces per 30 days; <paramref name="was"/> is the mark shown before. Fresh: over 105% of what is made
+    /// falls, under 95% rises, between is steady. A ▼ stays while the use is over 100%, a ▲ while it is under 100%: each comes back to the
+    /// dash only when the use crosses balance.</summary>
+    internal static RefinedTrend TrendOf(int made, int mine, int hers, RefinedWay was = RefinedWay.Steady)
     {
-        var p = S.Host.Economy.Params;
-        int load = S.Host.Economy.Load(S.Player), cap = S.Host.Economy.Capacity(S.Player);
-        int share = cap <= 0 ? p.CapacityPerFacility : Math.Min(p.CapacityPerFacility, load * p.CapacityPerFacility / cap);
-        return Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, share);
-    }
-
-    /// <summary>The trend from the numbers alone: <paramref name="cycle"/> is a refinery's cycle in days, the least days on record to judge by;
-    /// <paramref name="was"/>, the mark shown before. Fresh: over 105% of what is made falls, under 95% rises, between is steady. A ▼ stays
-    /// while the use is over 100%, a ▲ while it is under 100%: each comes back to the dash only when the use crosses balance.</summary>
-    internal static RefinedTrend TrendOf(int made, int days, int mine, int hers, int cycle, RefinedWay was = RefinedWay.Unjudged)
-    {
-        int made30 = days > 0 ? made * Praedra.Core.Economy.RefinedFlow.WindowDays / days : 0;   // right after a load fewer days are on record: scaled to the window
         int use = mine + hers;
         RefinedWay way;
-        if (days <= 0 || days < cycle) way = RefinedWay.Unjudged;
-        else if (made30 == 0) way = use > 0 ? RefinedWay.Falling : RefinedWay.Steady;   // nothing made: any use runs it down, none keeps it
+        if (made <= 0) way = use > 0 ? RefinedWay.Falling : RefinedWay.Steady;   // nothing made: any use runs it down, none keeps it
         else
         {
-            long u = use * 100L, hi = made30 * (100L + RefinedSteadyPercent), lo = made30 * (100L - RefinedSteadyPercent), even = made30 * 100L;
+            long u = use * 100L, hi = made * (100L + RefinedSteadyPercent), lo = made * (100L - RefinedSteadyPercent), even = made * 100L;
             way = u > hi || (was == RefinedWay.Falling && u > even) ? RefinedWay.Falling
                 : u < lo || (was == RefinedWay.Rising && u < even) ? RefinedWay.Rising
                 : RefinedWay.Steady;
         }
-        return new RefinedTrend(made, days, made30, mine, hers, way);
+        return new RefinedTrend(Math.Max(0, made), mine, hers, way);
     }
 
     internal string RefinedFlowWords(int refined, RefinedTrend f)
     {
         int w = Praedra.Core.Economy.RefinedFlow.WindowDays, use = f.Mine + f.Hers;
-        // judged, what was made reads as a pace per 30 days, like the use, so the numbers add up (UI review 36 P2: "made 109 in the last 28
-        // days" beside "use about 120 every 30 days" and "about 4 more" did not); before that, the plain count of the few days on record
-        string inLine = f.Days <= 0 ? ""
-            : f.Way != RefinedWay.Unjudged ? $" Your refineries make about {f.Made30} every {w} days."
-            : $" Your refineries made {f.Made} in the last {Ui.Count(f.Days, "day", "days")}.";
+        // both at today's pace per 30 days, so made, use and the gap add up (UI review 36 P2)
+        string inLine = (f.Made > 0 ? $" Your refineries now make about {f.Made} every {w} days." : " Your refineries make nothing now.")
+            + (f.RawShort ? " Your mines are what holds them back: more refineries would wait for raw." : "");   // UI review 37
         string outLine = use == 0 ? " No yard is building now."
             : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {AdvisorName ?? "your advisor"}'s."
             : $" Your yards now use about {use} every {w} days.";
-        int gap = use - f.Made30;
+        int gap = use - f.Made;
         switch (f.Way)
         {
-            case RefinedWay.Unjudged:
-                return inLine + outLine + " The mark by the number shows a few days after a load, once each refinery has finished a cycle.";
             case RefinedWay.Rising:
                 return inLine + outLine + $" The green mark: your stock grows by about {-gap} every {w} days.";
+            case RefinedWay.Steady when f.Made <= 0 && use == 0:
+                return inLine + outLine + " The grey dash: nothing is made or used now, " + (refined <= 0 ? "so your stock stays empty." : $"so your {refined} holds steady.");
             case RefinedWay.Steady:
                 return inLine + outLine + " The grey dash: your yards use about what your refineries make, "
                     + (refined <= 0 ? "so your stock stays empty: the yards take each batch as it comes." : $"so your {refined} holds steady.");
@@ -287,7 +261,7 @@ public partial class GameScreen
         string fall = $" The red mark: your yards use about {gap} more than your refineries make, "   // over balance, so gap > 0
             + (refined <= 0 ? "and your stock is empty: the yards wait for what your refineries make." : $"so at this pace your {refined} lasts about {Ui.Count(refined * w / Math.Max(1, gap), "day", "days")}.");
         string hers = !(S.HasAdvisor && f.Hers > 0) ? ""
-            : f.Mine <= f.Made30 ? $" Your own orders fit what your refineries make: {AdvisorName ?? "your advisor"}'s builds are what run it down. Her switches are in her panel (top right)."
+            : f.Mine <= f.Made ? $" Your own orders fit what your refineries make: {AdvisorName ?? "your advisor"}'s builds are what run it down. Her switches are in her panel (top right)."
             : $" Even without {AdvisorName ?? "your advisor"}'s builds, your own orders use more than your refineries make.";
         return inLine + outLine + fall + hers;
     }

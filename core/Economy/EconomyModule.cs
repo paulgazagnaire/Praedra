@@ -375,6 +375,42 @@ public sealed class EconomyModule
     }
 
     /// <summary>
+    /// Refined the side's own refineries make per 30 days at the present pace, for the screen: each refinery that works for the side
+    /// (completed, held, not suspended) finishes one cycle every <see cref="CycleDays"/> at its system's support and its dealt share (one about
+    /// to start gets an even slice), less what smuggling diverts; when the raw stock and the mines' pace cannot feed every cycle, they make only
+    /// what the raw allows. Batches smuggled in from the other side are left out: they are not the side's refineries, and reading the other
+    /// side's facilities as they are now would tell the screen what the fog hides (Ponytail on #422). It reads the state only and changes
+    /// nothing, in the same tense as <c>ConstructionModule.RefinedUsePer30Days</c> (QA-131, 2026-11-27: a count of the last 30 days lagged lost
+    /// refineries and slower cycles, so the trend mark by Refined showed a rise while the stock fell). rule: m2-mines-refineries-pools §Cycle
+    /// length, §Asking for raw / serving a line, §Diversion (smuggling). RawShort: the raw cannot feed every refinery cycle, so the mines are
+    /// what holds the refineries back (UI review 37: the screen says so, or a player at Raw 0 builds refineries that only wait).
+    /// </summary>
+    public (int Refined, bool RawShort) RefinedPacePer30Days(Side side)
+    {
+        const int Days = 30;
+        var memo = new Dictionary<string, bool>(StringComparer.Ordinal); // lookup only, never iterated
+        int load = Load(side);
+        // per 30 days in hundredths: refinery cycles, the batches the side keeps of them, and the raw that can feed them (stock + mines kept)
+        long cycles = 0, kept = 0, raw = 100L * E.Pool(side).Raw;
+        foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
+        {
+            var working = Cyclers(kind).Where(f => f.Completed && OwnerOf(f) == side && !IsSuspended(f, memo)).ToList(); // id order
+            int even = Math.Min(Params.CapacityPerFacility, load / Math.Max(1, working.Count));
+            foreach (var f in working)
+            {
+                int support = Math.Clamp(SupportOf(f.System!, side), Params.SupportFloor, Params.SupportCeiling);
+                int d = Math.Max(1, CycleDays(Params, support, f.WorkSide == side ? f.Share : even));
+                long n = Days * 100L / d, keep = n * (100 - DiversionPercent(f.System!, side)) / 100;
+                if (kind == FacilityKind.Mine) raw += keep;
+                else { cycles += n; kept += keep; }
+            }
+        }
+        bool rawShort = cycles > raw;
+        if (rawShort) kept = kept * raw / cycles; // each cycle takes one raw: short raw, fewer cycles
+        return ((int)(kept / 100), rawShort);
+    }
+
+    /// <summary>
     /// Is a mine or refinery suspended: its system under the blockade that stops it, or in uprising (with <see cref="UprisingStopsMining"/>)?
     /// rule: m2-mines-refineries-pools §Blockade and uprising (B5b §3, [EXE-own] 0x50bbb0).
     /// </summary>
