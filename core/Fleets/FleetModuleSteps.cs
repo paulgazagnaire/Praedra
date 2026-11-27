@@ -85,6 +85,7 @@ public sealed partial class FleetModule
         int day = ctx.Day;
         string system = fleet.At!;
         foreach (var s in ships) fleet.Ships.Remove(s.Id);
+        KeepSpecialForces(ships.ToDictionary(s => s.Id, _ => fleet.Id));
         var f = NewFleet(o.Side, system, ships.Select(s => s.Id));
         f.OnContact = fleet.OnContact; // rule: m3-fleets §What a fleet is (a split copies its parent's battle answer, Paul 2026-11-21)
         var members = new ValueList<int>(f.Ships.ToList());

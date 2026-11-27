@@ -513,17 +513,32 @@ public sealed partial class FleetModule
         ctx.Emit((i, _) => new FleetDissolved(i, day, id, cause));
     }
 
+    /// <summary>
+    /// Special forces ride the fleet, not the ship (its leader section, like the leaders): those aboard a ship that left a fleet (ship -> fleet it
+    /// left) move to that fleet's lowest-id ship, if it still has one. rule: m5-missions §Spying from orbit 1 (DEFAULT, Ponytail on #412).
+    /// </summary>
+    internal void KeepSpecialForces(IReadOnlyDictionary<int, int> leftFleet)
+    {
+        foreach (var o in E.Objects.Values) // id order
+            if (o.Category == ObjectCategory.SpecialForce && o.AboardShip != 0 && leftFleet.TryGetValue(o.AboardShip, out var fid)
+                && State.Fleets.TryGetValue(fid, out var stay) && stay.Ships.Count > 0)
+                o.AboardShip = stay.Ships.Min();
+    }
+
     /// <summary>Take ships out of whatever fleets hold them; fleets left empty are removed (cause Empty). Returns the fleet ids they left, ascending.</summary>
     private List<int> TakeOut(StepContext? ctx, int day, IEnumerable<EconObject> ships, int? into = null)
     {
         var left = new SortedSet<int>();
+        var source = new Dictionary<int, int>(); // ship -> fleet it left; lookup only, never iterated
         foreach (var s in ships)
         {
             var f = FleetOfShip(s.Id);
             if (f == null) continue;
             f.Ships.Remove(s.Id);
             left.Add(f.Id);
+            source[s.Id] = f.Id;
         }
+        KeepSpecialForces(source);
         foreach (var fid in left)
             if (State.Fleets.TryGetValue(fid, out var f) && f.Ships.Count == 0 && f.Squadrons.Count == 0) RemoveFleet(ctx, day, f, DissolveCause.Empty, into);
         return left.ToList();

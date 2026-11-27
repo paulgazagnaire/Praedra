@@ -902,6 +902,7 @@ public sealed partial class MissionModule
             else if (m.Phase == MissionPhase.ReturnPending)
             {
                 if (Empty(m)) { RemoveGroup(ctx, m, m.Target); continue; }
+                if (LaunchFleetMoving(m)) continue; // rule: §Spying from orbit 2 (DEFAULT): it waits where it is until its fleet stops
                 int speed = GroupSpeed(m.AllCharacters, m.AllSpecialForces.Count());
                 var trip = ReturnTrip(m, speed);
                 if (trip == null) // the side holds no reachable system: the group stays where it is, free (DEFAULT)
@@ -942,6 +943,28 @@ public sealed partial class MissionModule
         return bestName == null ? null : best;
     }
 
+    // A group launched from a fleet that lands back where its fleet no longer stands (moved or lost), or where it has no room for all, does not
+    // stay on a world its side does not hold: it starts home again from there next Step (to the fleet's new place, else home or the nearest held
+    // system, ReturnTrip). Its fleet gone, it is an ordinary group from then on. rule: §5; §Spying from orbit 2 (DEFAULT, Ponytail on #412).
+    private bool Reroute(MissionGroup m, string at)
+    {
+        if (m.FromFleet == 0) return false;
+        if (LaunchFleetMoving(m)) { m.Target = at; m.Phase = MissionPhase.ReturnPending; m.Departed = false; return true; }
+        var lf = LaunchFleet(m);
+        if (lf != null && lf.At == at && SpecialForcesAboard(lf).Count + m.AllSpecialForces.Count() <= Params.FleetSpecialForcesMax) return false;
+        if (lf == null) m.FromFleet = 0;
+        if (lf == null && _fleets.OwnerOf(at) == m.Side) return false; // fleet gone, on its own ground: it stops here
+        if (lf != null && lf.At == at) m.FromFleet = 0; // its fleet is full: the group goes on to held ground
+        if (m.FromFleet == 0 && _fleets.OwnerOf(at) == m.Side) return false;
+        m.Target = at; m.Phase = MissionPhase.ReturnPending; m.Departed = false;
+        return true;
+    }
+
+    // The fleet a group was launched from still exists but is flying: the group waits for it to stop.
+    private bool LaunchFleetMoving(MissionGroup m) =>
+        Params.OrbitMissions && m.FromFleet != 0 && _game.State.Fleets.TryGetValue(m.FromFleet, out var f) && f.Side == m.Side && f.Ships.Count > 0
+            && (f.Transit != null || f.At == null);
+
     // The fleet a group was launched from, while it exists, is the group's side's and stands still at a system. rule: §Spying from orbit 2.
     private Fleet? LaunchFleet(MissionGroup m) =>
         Params.OrbitMissions && m.FromFleet != 0 && _game.State.Fleets.TryGetValue(m.FromFleet, out var f) && f.Side == m.Side && f.Transit == null
@@ -975,6 +998,7 @@ public sealed partial class MissionModule
             if (m.Phase == MissionPhase.Returning)
             {
                 if (Empty(m)) { RemoveGroup(ctx, m, m.Path[^1]); continue; }
+                if (Reroute(m, m.Path[^1])) continue;
                 Release(ctx, m, m.Path[^1], t);
             }
             else if (m.Phase == MissionPhase.Outbound) Land(ctx, m, t);

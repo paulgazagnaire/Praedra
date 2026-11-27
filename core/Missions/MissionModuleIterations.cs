@@ -199,10 +199,11 @@ public sealed partial class MissionModule
     /// fleet or a special force aboard a ship is "orbit", the others "planet"; at the target every member is "orbit". rule: §3 (B2d §3, Work 3).
     /// </summary>
     /// <summary>
-    /// A team launched from a fleet working over that fleet's own system: every guard still checks it, each at OrbitSpotPercent of his chance.
+    /// A team launched from a fleet working over that fleet's own system, while the fleet is still there: every guard still checks it, each at
+    /// OrbitSpotPercent of his chance.
     /// rule: m5-missions §Spying from orbit 3.
     /// </summary>
-    private bool FromOrbit(MissionGroup m, string place) => Params.OrbitMissions && m.FromFleet != 0 && m.Home == m.Target && place == m.Target;
+    private bool FromOrbit(MissionGroup m, string place) => m.Home == m.Target && place == m.Target && LaunchFleet(m)?.At == place;
 
     private bool Counts(MissionGroup m, Agent a, bool atOrigin, Scope sc)
     {

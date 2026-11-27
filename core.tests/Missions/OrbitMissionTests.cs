@@ -5,7 +5,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §Spying from orbit (Paul 2026-11-27: special forces ride fleets, at most 9, and a team launched from a fleet over its own system is
-// checked by every guard at half his chance). Tests OM1 to OM7.
+// checked by every guard at half his chance). Tests OM1 to OM9.
 public class OrbitMissionTests
 {
     private static MissionWorld World(MissionParams? p = null)
@@ -103,7 +103,6 @@ public class OrbitMissionTests
         var rolls = w.Events<MissionDetectionRoll>();
         Assert.Equal(4, rolls.Count); // from the planet it also meets both Speculators as it sets out (the leaving planet check); from orbit it does not
         Assert.All(rolls, r => Assert.Equal(w.M.FoilChance(r.X), r.Chance));
-        Assert.True(rolls[0].Chance > rolls[0].Chance * 50 / 100); // the halving would show
     }
 
     // OM5: a probe sent from a fleet to another system travels, is checked at full chance there, and comes back aboard its fleet
@@ -159,5 +158,45 @@ public class OrbitMissionTests
         Assert.Equal(before, w.Host.StateHash());
         Assert.Equal(fleet, w.M.Get(id)!.FromFleet);
         Assert.NotEqual(0, w.Host.Economy.Find(b)!.AboardShip);
+    }
+
+    // OM8: the carrying fleet leaves while its team works over T: from then on the guards check at full chance, and the team ends at T (the
+    // Hand's world) and flies on to its fleet at X, where it boards again instead of staying on enemy ground (Ponytail on #412)
+    [Fact]
+    public void OM8_FleetGoneFullChanceAndTheTeamFollowsIt()
+    {
+        var w = World();
+        w.Unit(Side.Hand, Probe, T);
+        int fleet = Fleet(w, Side.Collective, T, "Barricade");
+        int a = w.Unit(Side.Collective, Listeners, T);
+        Assert.Null(Load(w, Side.Collective, fleet, a));
+        w.Stub!.Expect(0, 99, Enumerable.Repeat(99, 20).ToArray());
+        w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, sfs: new[] { a });
+        w.Host.Fleets.SubmitMove(Side.Collective, fleet, X);
+        w.Game.Step();
+        int id = w.LastMission;
+        for (int i = 0; i < 120 && w.M.Get(id) != null; i++) w.Game.Step();
+        Assert.Null(w.M.Get(id));
+        var rolls = w.Events<MissionDetectionRoll>();
+        Assert.NotEmpty(rolls);
+        Assert.All(rolls, r => Assert.Equal(w.M.FoilChance(r.X), r.Chance));
+        Assert.Equal(X, w.Game.State.Fleets[fleet].At);
+        Assert.Contains(w.Game.State.Fleets[fleet].Ships, s => s == w.Host.Economy.Find(a)!.AboardShip);
+    }
+
+    // OM9: special forces ride the fleet, not the ship: splitting off the ship they sit on leaves them on the fleet's remaining ship
+    [Fact]
+    public void OM9_SplitLeavesThemWithTheFleet()
+    {
+        var w = World();
+        int fleet = Fleet(w, Side.Collective, X, "Barricade", "Barricade");
+        int a = w.Unit(Side.Collective, Listeners, X);
+        Assert.Null(Load(w, Side.Collective, fleet, a));
+        var ships = w.Game.State.Fleets[fleet].Ships.ToList();
+        Assert.Equal(ships.Min(), w.Host.Economy.Find(a)!.AboardShip);
+        w.Host.Fleets.SubmitSplitFleet(Side.Collective, fleet, new[] { ships.Min() });
+        w.Game.Step();
+        Assert.Equal(ships.Max(), w.Host.Economy.Find(a)!.AboardShip);
+        Assert.Equal(new[] { ships.Max() }, w.Game.State.Fleets[fleet].Ships);
     }
 }
