@@ -196,12 +196,12 @@ public partial class GameScreen
         var based = FightersBasedAt(name);
         if (based.Count == 0) return;
         Tip(Line($"Fighters based here: {Tally(based.Select(o => o.Class))}", Look.Text, 13),
-            "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a hyperdrive can also fly on their own.");
+            "Squadrons on the planet, not aboard a ship. A fleet with hangar room can load them; those with a jump drive can also fly on their own.");
         // the same rating the core flies them at: a damaged hyperdrive can be 0 (rule: m3-ships-and-fighters §Hyperdrive and speed)
         var mobile = based.Where(o => Fm.ClassOf(o) != null && Fm.SpeedOfShip(o) > 0).Select(o => o.Id).ToList();
         if (mobile.Count > 0)
             Act($"Fly {Ui.Count(mobile.Count, "squadron", "squadrons")} to...", () => StartFighterMove(name, mobile),
-                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working hyperdrive: a carrier must take them." : ""));
+                "They fly as one group at the speed of the slowest, then land and stay based where they arrive." + (mobile.Count < based.Count ? " The others have no working jump drive: a carrier must take them." : ""));
     }
 
     /// <summary>"Pacifiers 13 · Tranches 1": each name, then how many, as the part titles say it (review 21: "13 x Pacifiers, Tranches."

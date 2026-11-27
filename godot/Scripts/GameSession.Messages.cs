@@ -484,7 +484,7 @@ public sealed partial class GameSession
     static string RefusalWords(RetreatRefusal r) => r switch
     {
         RetreatRefusal.GravityWell => "an enemy interdictor ship blocks the jump",
-        RetreatRefusal.NoHyperdrive => "no ship there has a working hyperdrive",
+        RetreatRefusal.NoHyperdrive => "no ship there has a working jump drive",
         RetreatRefusal.NoDestination => "there is no friendly system to jump to",
         _ => r.ToString(),
     };
