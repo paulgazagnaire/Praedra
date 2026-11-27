@@ -198,6 +198,7 @@ public sealed class GameHost
         // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-talent §Where it runs in the day Step.
         Characters = Praedra.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
         Bombardment.AdmiralLeadership = Characters.AdmiralLeadership;
+        Battles.AdmiralLeadership = Characters.AdmiralLeadership; // rule: m4-battle-new §8 step 4 (Admiral boosts fighters)
         // rule: B7-bombardment §4.3: the holder's General standing on the system multiplies the batteries' return fire (the system General post is
         // cleared on a holder change, so its holder is the system's)
         Bombardment.BatteryGeneralLeadership = Characters.SystemGeneralLeadership;
@@ -298,6 +299,8 @@ public sealed class GameHost
         host._aiMemory.AddRange(memories);
         // rule: m5-characters-and-talent §Rule (New) 4b: a save pinned to Random was upgraded to Pair (UpgradeSettingsJson): set up its trainer pairs
         if (upgradedTrainers && host.Characters.Params.TrainerPick == Praedra.Core.Characters.TrainerPick.Pair) host.Characters.SetUpTrainers();
+        // rule: m5-characters-and-talent §Posts (Commander merged into Admiral, Paul 2026-11-27): an older save's Commanders become passengers
+        host.Characters.RetireCommanders();
         return host;
     }
 

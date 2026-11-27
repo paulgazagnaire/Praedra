@@ -65,8 +65,7 @@ public partial class GameScreen
     /// <summary>The Posts line's posts, in the order the sheet lists them.</summary>
     List<string> PostsOf(CharacterRecord c)
     {
-        var cls = Cm.ClassOf(c);
-        return new[] { cls.CanAdmiral ? "Admiral" : null, cls.CanCommander ? "Commander" : null, cls.CanGeneral ? "General" : null }.Where(x => x != null).ToList();
+        return S.FleetPosts.Where(p => Cm.CanHold(c, p)).Select(GameSession.PostWords).ToList();
     }
 
     /// <summary>

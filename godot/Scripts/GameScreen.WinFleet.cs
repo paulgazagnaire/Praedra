@@ -581,7 +581,7 @@ public partial class GameScreen
 
         var cmd = FleetSection("Fleet command", 16);
         var posts = Boxed(new HBoxContainer(), CardGapX);
-        foreach (var post in new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander })
+        foreach (var post in S.FleetPosts)
         {
             var p = post;
             var col = Boxed(new VBoxContainer(), 8);
@@ -590,7 +590,7 @@ public partial class GameScreen
             cap.MouseFilter = MouseFilterEnum.Pass;
             cap.TooltipText = post switch
             {
-                CharacterPost.Admiral => "The Admiral leads the fleet in space battles and bombardments.",
+                CharacterPost.Admiral => "The Admiral multiplies the fleet's bombardment and makes its fighters hit harder in battle.",
                 CharacterPost.General => "The General leads the troops when the fleet invades.",
                 _ => "The Commander has no effect yet.",
             };

@@ -230,6 +230,47 @@ public class NewBattleTests
         Assert.InRange(evenWins, 10, 30);
     }
 
+    // m4-battle-new N18 (Admiral boosts fighters, Paul 2026-11-27): N13's carrier with its fleet Admiral at leadership 100 (+25%, 100 / AdmiralFighterStep 4
+    // set on each squadron by the battle module) wins sooner (neither side may retreat) and keeps more hull, over 20 seeds; the carrier's own guns are not boosted
+    [Fact]
+    public void N18_AnAdmiralMakesTheFleetsFightersHitHarder()
+    {
+        int secondsNone = 0, secondsAdmiral = 0; double hullNone = 0, hullAdmiral = 0;
+        for (ulong seed = 1; seed <= 20; seed++)
+        {
+            var (r0, u0) = Fight(NewNoRolls, new[] { (Mandate, 1), (Bomber, 6) }, new[] { (Mandate, 1) }, seed, aCan: false, eCan: false, carry: true);
+            var (r1, u1) = Fight(NewNoRolls, new[] { (Mandate, 1), (Bomber, 6) }, new[] { (Mandate, 1) }, seed, aCan: false, eCan: false, carry: true,
+                prepare: u => { foreach (var x in u.Where(x => x.Side == Side.Collective && !x.IsCapital)) x.FighterBoostPercent = 100 / new NewBattleParams().AdmiralFighterStep; });
+            Assert.Equal(25, u1.First(x => !x.IsCapital).FighterBoostPercent);
+            secondsNone += r0.Seconds; secondsAdmiral += r1.Seconds;
+            hullNone += First(u0, Side.Collective, Mandate).Hull; hullAdmiral += First(u1, Side.Collective, Mandate).Hull;
+        }
+        _out.WriteLine($"20 seeds: battle seconds {secondsNone} without an Admiral, {secondsAdmiral} with; carrier hull {hullNone:F0} vs {hullAdmiral:F0}");
+        Assert.True(secondsAdmiral < secondsNone, $"{secondsAdmiral} < {secondsNone}");
+        Assert.True(hullAdmiral > hullNone, $"{hullAdmiral} > {hullNone}");
+    }
+
+    // m4-battle-new N19 (Admiral boosts fighters; Ponytail on #414): the boost scales damage dealt, not who can be hurt. A Plough's ion shot (2.25 x 1.5 =
+    // 3.375) cannot pass a Mandate II's shield deflection 4.0: it holds fire unboosted and still at +25% (4.22), because target choice and the hold-fire
+    // test both read the unboosted shot (a change that lets the boost lift a shot over deflection breaks this test). Control: against an Indenture
+    // (deflection 1.5) the same Plough fires its ions, boosted or not. The Plough rides an Ark (a squadron with no berth is lost at once).
+    [Fact]
+    public void N19_TheBoostNeverChangesWhoASquadronCanHurt()
+    {
+        int IonShots(int boost, string target)
+        {
+            var (nb, units) = QuickBattle.PrepareNew(NewNoRolls with { New = new NewBattleParams { TickCap = 60 } }, Ships, new[] { (Ark, 1), ("Plough", 1) }, new[] { (target, 1) }, 1,
+                collectiveCanLand: false, handCanLand: false, carry: true, prepare: u => First(u, Side.Collective, "Plough").FighterBoostPercent = boost, logEvents: true);
+            nb.Run();
+            int sq = First(units, Side.Collective, "Plough").ObjectId;
+            return nb.Log!.Count(e => e.Unit == sq && (e.Kind == "hit" || e.Kind == "miss") && e.Detail == nameof(WeaponKind.IonCannon));
+        }
+        Assert.Equal(0, IonShots(0, "Mandate II"));
+        Assert.Equal(0, IonShots(25, "Mandate II"));
+        Assert.True(IonShots(0, "Indenture") > 0);
+        Assert.True(IonShots(25, "Indenture") > 0);
+    }
+
     // m4-battle-new N14: a squadron whose carrier dies at t = 3 (before the launch at 5) is lost and never fires
     [Fact]
     public void N14_ASquadronWhoseCarrierDiesBeforeLaunchIsLostAndNeverFires()

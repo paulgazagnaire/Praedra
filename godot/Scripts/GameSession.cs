@@ -629,13 +629,17 @@ public sealed partial class GameSession
     /// <summary>Which posts the character's record allows. rule: m5-characters-and-talent §Posts (Capability).</summary>
     public string CapabilityOf(CharacterRecord c)
     {
-        var cls = Chars.ClassOf(c);
-        var can = new List<string>();
-        if (cls.CanAdmiral) can.Add("Admiral");
-        if (cls.CanCommander) can.Add("Commander");
-        if (cls.CanGeneral) can.Add("General");
+        var can = FleetPosts.Where(p => Chars.CanHold(c, p)).Select(PostWords).ToList();
         return can.Count == 0 ? "Cannot hold a post (may ride a fleet as a passenger)." : "Can be " + string.Join(", ", can) + ".";
     }
+
+    /// <summary>
+    /// The fleet posts in the order the Fleet window shows them: Admiral, General, and Commander only with the Classic switch (Paul 2026-11-27, "Merge
+    /// into Admiral"). rule: m5-characters-and-talent §Posts (Commander merged into Admiral).
+    /// </summary>
+    public CharacterPost[] FleetPosts => Chars.Params.CommanderIntoAdmiral
+        ? new[] { CharacterPost.Admiral, CharacterPost.General }
+        : new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander };
 
     public static string PostWords(CharacterPost p) => p switch
     {

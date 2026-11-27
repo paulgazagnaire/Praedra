@@ -107,6 +107,15 @@ public sealed partial class SimpleAi
         return c.Id == cp.Nobody || c.Id == _p.MaeAbaraId || c.Id == cp.Chair || c.Id == cp.Ravilla;
     }
 
+    /// <summary>The fleet carries fighters: a squadron member or one aboard its ships (only when the New battle's Admiral boost is on).</summary>
+    private bool HasFighters(Fleet f)
+    {
+        if (_h.Battles.Params.Ruleset != Praedra.Core.Battle.BattleRuleset.New || _h.Battles.Params.New.AdmiralFighterStep <= 0) return false;
+        if (f.Squadrons.Count > 0) return true;
+        var ships = f.Ships.ToHashSet();
+        return _h.Economy.Objects.Any(o => o.Category == ObjectCategory.Fighter && o.AboardShip != 0 && ships.Contains(o.AboardShip));
+    }
+
     /// <summary>B6c §7 story characters (0x4025f0): the four leaders plus Ledger and Midwife. With LeaderMarks the AI never makes them fleet or army commanders.</summary>
     private bool NeverCommands(CharacterRecord c) =>
         _p.LeaderMarks && (IsLeader(c) || c.Id == _h.Characters.Params.Ledger || c.Id == _h.Missions.Data.Numbers.MidwifeCharacterId);
@@ -339,12 +348,13 @@ public sealed partial class SimpleAi
         var open = new List<(Fleet Fleet, CharacterPost Post)>();
         foreach (var f in fleets)
         {
-            if (_h.Characters.HolderOf(f.Id, CharacterPost.Admiral) == null && _h.Bombardment.Power(f) > 0) open.Add((f, CharacterPost.Admiral));
+            // an Admiral multiplies bombardment and (New battle) boosts the fleet's fighters. rule: m4-battle-new §8 step 4
+            if (_h.Characters.HolderOf(f.Id, CharacterPost.Admiral) == null && (_h.Bombardment.Power(f) > 0 || HasFighters(f))) open.Add((f, CharacterPost.Admiral));
             if (_h.Characters.HolderOf(f.Id, CharacterPost.General) == null && _h.Fleets.FreeTroopSlots(f) + _h.Troops.RegimentsAboard(f).Count > 0)
                 open.Add((f, CharacterPost.General));
         }
         if (open.Count == 0) return;
-        bool Fits(CharacterRecord c, CharacterPost p) => _h.Characters.ClassOf(c).Can(p) && !NeverCommands(c);
+        bool Fits(CharacterRecord c, CharacterPost p) => _h.Characters.CanHold(c, p) && !NeverCommands(c);
         int demand = open.Count;
         if (rally != null) demand -= mine.Count(c => c.Transit is { } t && t.Path[^1] == rally && c.Status == CharacterStatus.Free
                                                      && open.Any(o => Fits(c, o.Post)) && Skill(c, Characters.Skill.Leadership) >= _p.OfficerMinLeadership);
