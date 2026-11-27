@@ -17,9 +17,17 @@ public static class RefinedFlow
     /// Refined the side's refineries made over the last <see cref="WindowDays"/> days, and the days that covers: events are not saved, so right
     /// after a load the window is only the days played since (Days 0 = nothing to go on yet).
     /// </summary>
-    public static (int Made, int Days) Made(GameHost host, Side side)
+    public static (int Made, int Days) Made(GameHost host, Side side) => Made(host, side, WindowDays);
+
+    /// <summary>
+    /// The same over the last <paramref name="windowDays"/> days (at most <see cref="WindowDays"/>): the screen counts a whole number of
+    /// refinery cycles, so each refinery puts the same number of batches in the window whatever the day (UI review 36 on #419: with a 7-day
+    /// cycle a 30-day window holds 4 or 5 batches of each refinery, and the trend mark by Refined flickered near balance). Reads only.
+    /// </summary>
+    public static (int Made, int Days) Made(GameHost host, Side side, int windowDays)
     {
-        int today = host.Game.Day, from = today - WindowDays, made = 0, first = today;
+        windowDays = Math.Clamp(windowDays, 0, WindowDays);
+        int today = host.Game.Day, from = today - windowDays, made = 0, first = today;
         var events = host.Game.Events;
         for (int i = events.Count - 1; i >= 0; i--)
         {

@@ -198,7 +198,8 @@ public partial class GameScreen
     /// an upward trend indicator and a stable indicator as well"). Judged only once the days on record cover a refinery's cycle at your
     /// present upkeep: before that a refinery may not have finished one (right after a load, as events are not saved), so a short window
     /// would read as falling for no reason (Ponytail on #413). Near balance the two numbers cross back and forth from day to day, and the
-    /// mark blinked (QA r245 on #413), so a mark that shows keeps showing until the use crosses back over balance itself.
+    /// mark blinked (QA r245 on #413), so a mark that shows keeps showing until the use crosses back over balance itself, and what was made
+    /// is counted over whole refinery cycles, so it does not rise and fall by itself (UI review 36 on #419).
     /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
     internal enum RefinedWay { Unjudged, Falling, Steady, Rising }
 
@@ -207,12 +208,22 @@ public partial class GameScreen
         public bool Falling => Way == RefinedWay.Falling;
     }
 
-    RefinedTrend RefinedTrendNow()
+    internal RefinedTrend RefinedTrendNow()
     {
+        int cycle = RefineryCycleNow();
         var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player);
+        int whole = WholeCycleDays(days, cycle);
+        if (whole != days) (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player, whole);
         var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        return TrendOf(made, days, mine, hers, RefineryCycleNow(), _refinedWas);
+        return TrendOf(made, days, mine, hers, cycle, _refinedWas);
     }
+
+    /// <summary>The days "made" is counted over: the most whole refinery cycles that fit in the days on record (28 days at a 7-day cycle, 24
+    /// at 8). Each refinery then puts the same number of batches in the window whatever the day; over a plain 30 days a 7-day refinery puts
+    /// 4 or 5, so the count rose and fell each week with no change in orders and the mark flickered near balance (UI review 36 on #419).
+    /// Fewer days than a cycle stay as they are: the mark waits for them. rule: m2-mines-refineries-pools §Cycle length.</summary>
+    internal static int WholeCycleDays(int daysOnRecord, int cycle) =>
+        cycle <= 0 || daysOnRecord < cycle ? daysOnRecord : daysOnRecord / cycle * cycle;
 
     /// <summary>The mark by Refined at the last refresh: a mark keeps showing until the use crosses balance (QA r245: no blinking).</summary>
     RefinedWay _refinedWas;
@@ -261,9 +272,9 @@ public partial class GameScreen
         switch (f.Way)
         {
             case RefinedWay.Unjudged:
-                return inLine + outLine + " The mark by the number shows once a refinery has finished a cycle in the days on record.";
+                return inLine + outLine + " The mark by the number shows a few days after a load, once each refinery has finished a cycle.";
             case RefinedWay.Rising:
-                return inLine + outLine + $" The green mark: your refineries make about {-gap} more than your yards use, so your stock grows.";
+                return inLine + outLine + $" The green mark: your stock grows by about {-gap} every {w} days.";
             case RefinedWay.Steady:
                 return inLine + outLine + " The grey dash: your yards use about what your refineries make, "
                     + (refined <= 0 ? "so your stock stays empty: the yards take each batch as it comes." : $"so your {refined} holds steady.");

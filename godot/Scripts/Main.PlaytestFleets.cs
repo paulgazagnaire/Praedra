@@ -417,16 +417,41 @@ public partial class Main
         // no blinking near balance (QA r245: 88 used against 92 made dropped the ▼ for a day or two): a mark keeps showing until balance
         Expect(W(62, 30, 63, 0, down) == down && W(64, 30, 63, 0, down) == flat && W(64, 30, 63, 0, up) == up && W(62, 30, 63, 0, up) == flat && W(62, 30, 63, 0, flat) == flat,
             "a ▼ stays while the yards use more than is made (63 of 62), a ▲ while they use less (63 of 64); each goes back to the dash at balance, and the dash stays within 5%");
+        // no ripple (UI review 36 on #419): refineries on one cycle, staggered, from a load on day 0, the use held at what they make (and 3%
+        // either side). Counted over whole cycles the mark never changes in 90 days; a plain 30-day count rose and fell each week and flickered
+        Expect(GameScreen.WholeCycleDays(30, 7) == 28 && GameScreen.WholeCycleDays(30, 8) == 24 && GameScreen.WholeCycleDays(30, 6) == 30
+                && GameScreen.WholeCycleDays(10, 7) == 7 && GameScreen.WholeCycleDays(4, 7) == 4,
+            "made is counted over whole refinery cycles: 28 of 30 days at a 7-day cycle, 24 at 8, all 30 at 6, 7 of 10, and 4 days stay 4 (the mark waits)");
+        int Changes(int n, int c, int use, bool whole)
+        {
+            var next = Enumerable.Range(0, n).Select(i => 1 + i * c / n).ToArray();
+            var batches = new List<int>();
+            var was = none; int changes = 0;
+            for (int d = 1; d <= 90; d++)
+            {
+                for (int i = 0; i < n; i++) if (next[i] == d) { batches.Add(d); next[i] += c; }
+                int rec = Math.Min(d, 30), win = whole ? GameScreen.WholeCycleDays(rec, c) : rec;
+                var way = GameScreen.TrendOf(batches.Count(b => b > d - win), win, use, 0, c, was).Way;
+                if (was != none && way != was) changes++;
+                was = way;
+            }
+            return changes;
+        }
+        var cases = new[] { (3, 7), (7, 7), (7, 8), (15, 8), (7, 9), (7, 6) };
+        var flicker = cases.SelectMany(k => new[] { 97, 100, 103 }.Select(r => (k.Item1, k.Item2, r, ch: Changes(k.Item1, k.Item2, k.Item1 * 30 * r / (k.Item2 * 100), true)))).Where(x => x.ch > 0).ToList();
+        int plain = cases.Sum(k => Changes(k.Item1, k.Item2, k.Item1 * 30 / k.Item2, false));
+        Expect(flicker.Count == 0 && plain > 0,
+            $"near balance with orders unchanged the mark holds for 90 days ({string.Join(", ", flicker.Select(x => $"{x.Item1} refineries on {x.Item2} days at {x.r}%: {x.ch} changes"))}); a plain 30-day count changed it {plain} times");
         // the words: by how much, how long the stock lasts, and the advisor's part
         string fall = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 63, 0, 5));
         Expect(fall.Contains("The red mark: your yards use about 27 more than your refineries make, so at this pace your 246 lasts about 273 days."), "the tooltip says by how much and how long the stock lasts: " + fall);
         Expect(gs.RefinedFlowWords(0, GameScreen.TrendOf(36, 30, 63, 0, 5)).Contains("your stock is empty"), "an empty stock is said as empty, not as lasting 0 days");
         string rise = gs.RefinedFlowWords(246, GameScreen.TrendOf(70, 30, 63, 0, 5)), steady = gs.RefinedFlowWords(12, GameScreen.TrendOf(64, 30, 63, 0, 5)),
             dry = gs.RefinedFlowWords(0, GameScreen.TrendOf(64, 30, 63, 0, 5)), wait = gs.RefinedFlowWords(12, GameScreen.TrendOf(0, 4, 63, 0, 5));
-        Expect(rise.Contains("The green mark: your refineries make about 7 more than your yards use, so your stock grows.") && !rise.Contains("red mark"), "rising, the tooltip says by how much: " + rise);
+        Expect(rise.Contains("The green mark: your stock grows by about 7 every 30 days.") && !rise.Contains("red mark"), "rising, the tooltip says by how much: " + rise);
         Expect(steady.Contains("The grey dash: your yards use about what your refineries make, so your 12 holds steady.") && dry.Contains("so your stock stays empty"),
             "steady, the tooltip says the stock holds, or stays empty: " + steady + " | " + dry);
-        Expect(wait.Contains("shows once a refinery has finished a cycle"), "with too few days on record it says when the mark shows: " + wait);
+        Expect(wait.Contains("shows a few days after a load, once each refinery has finished a cycle."), "with too few days on record it says when the mark shows: " + wait);
         if (s.HasAdvisor)
         {
             string hers = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 20, 43, 5)), both = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 50, 13, 5));
@@ -437,11 +462,16 @@ public partial class Main
         // on the game: the mark follows the flow; 9999 and the mark keep the stock's width, so the bar does not shift
         GameScreen.RefinedWay Expected()   // what the numbers give from the mark shown (a mark keeps showing until balance, QA r245)
         {
-            var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me);
+            int c = gs.RefineryCycleNow();
+            var (_, rec) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me);
+            int win = rec < c ? rec : rec - rec % c;   // whole refinery cycles (UI review 36)
+            var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me, win);
             var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
-            return GameScreen.TrendOf(made, days, mine, hers, gs.RefineryCycleNow(), gs.RefinedWayShown).Way;
+            return GameScreen.TrendOf(made, days, mine, hers, c, gs.RefinedWayShown).Way;
         }
         int cycle = gs.RefineryCycleNow();
+        var shownTrend = gs.RefinedTrendNow();
+        Expect(shownTrend.Days < cycle || shownTrend.Days % cycle == 0, $"the bar counts what was made over whole {cycle}-day cycles: {shownTrend.Made} in {shownTrend.Days} days");
         Expect(cycle >= 5 && cycle <= 10, $"the mark waits a refinery's cycle at the present upkeep: {cycle} days (5 at none, 10 at the limit)");
         gs.PlayRefresh();
         var before = gs.RefinedWayShown;
