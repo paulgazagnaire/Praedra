@@ -171,7 +171,14 @@ public partial class GameScreen
             if (at != n) return CanTravel(c, n);   // another system: they set off
             if (fleet == 0 && S.SystemPostOf(c) == null) return "";
         }
-        else if (kind == 'F') return at == n ? "" : SfCanTravel(d, n);
+        else if (kind == 'F')
+        {
+            if (fleet == 0) return at == n ? "" : SfCanTravel(d, n);
+            // aboard a fleet (New: m5-missions §Spying from orbit 1): it lands where the fleet stands, held or not
+            if (at == null || (S.Game.State.Fleets.TryGetValue(fleet, out var sff) && !Still(sff))) return "Its fleet is travelling.";
+            if (at != n) return $"Land it at {at} first, or move its fleet.";
+            return Words(Mm.CheckUnloadSpecialForces(new UnloadSpecialForcesOrder(0, Me, fleet, One(d.Id))));
+        }
         else if (at != n)
         {
             if (kind == 'R') return RegimentCanGo(d, n);
@@ -216,6 +223,15 @@ public partial class GameScreen
         var (at, fleet) = WhereNow(d);
         if (d.Kind == 'L' && at != n) { SendLeader(Cm.Get(d.Id), n, null, CharacterPost.None, $"Ground {n} Leaders"); return; }
         if (d.Kind == 'L') { LeaveCurrentPost(Cm.Get(d.Id)); _moved[d.Key] = ($"lands at {n}", $"Ground {n} Leaders"); return; }
+        if (d.Kind == 'F' && fleet != 0)   // it lands from its fleet. rule: m5-missions §Spying from orbit 1 (UnloadSpecialForces)
+        {
+            int id = d.Id;
+            var from = S.Game.State.Fleets[fleet];
+            S.TrackFleet(from.Id, S.Game.Submit(seq => new UnloadSpecialForcesOrder(seq, Me, from.Id, One(id))), $"Land {S.SpecialForceName(id)} from {S.NameOf(from)}");
+            Sent($"land {S.SpecialForceName(id)} from {S.NameOf(from)} at {n}", n);
+            _moved[d.Key] = ($"lands at {n}", $"Ground {n} SpecialForces");
+            return;
+        }
         if (d.Kind == 'F')
         {
             int id = d.Id;
@@ -249,6 +265,46 @@ public partial class GameScreen
         if (d.Kind == 'R') UnloadTroops(f, new List<int> { d.Id });
         else UnloadFighters(f, new List<int> { d.Id });
         _moved[d.Key] = ($"lands at {n}", d.Kind == 'R' ? $"Ground {n} Regiments" : $"Ground {n} Fighters");
+    }
+
+    /// <summary>Special forces dropped onto <paramref name="f"/> today: they take seats before the clock moves.</summary>
+    int SfBoarding(Fleet f) => _moved.Values.Count(m => m.Zone == $"Fleet {f.Id} SpecialForces");
+
+    /// <summary>
+    /// Onto a fleet: a special force boards it where it stands, from the planet or from another fleet here by landing first; at most
+    /// FleetSpecialForcesMax aboard (New: m5-missions §Spying from orbit 1, Paul 2026-11-27, "9 max per fleet"). The core's own check
+    /// (MissionModule.CheckLoadSpecialForces) judges; the seats taken by today's other drops are added here.
+    /// </summary>
+    string RefuseSfOnto(Drag d, Fleet f)
+    {
+        if (d.Kind != 'F') return "";
+        var (at, fleet) = WhereNow(d);
+        if (fleet == f.Id) return "";
+        if (!Still(f)) return $"{S.NameOf(f)} is travelling.";
+        if (MergesAwayWhy(f) is string gone) return gone;
+        if (S.Host.Economy.Find(d.Id) is not { } o) return "";
+        string name = S.SpecialForceName(o.Id);
+        if (!SfReady(o)) return $"{name} is busy.";
+        if (at == null) return $"{name}'s fleet is travelling.";
+        if (at != f.At) return $"{name} is at {at}: special forces board a fleet where it stands. Move it to {f.At} first.";
+        string why = fleet != 0 ? Mm.CheckUnloadSpecialForces(new UnloadSpecialForcesOrder(0, Me, fleet, One(d.Id)))
+            : Mm.CheckLoadSpecialForces(new LoadSpecialForcesOrder(0, Me, f.Id, One(d.Id)));
+        if (why != null && why != RejectReason.NoCapacity) return Words(why);
+        int max = Mm.Params.FleetSpecialForcesMax;
+        if (Mm.SpecialForcesAboard(f).Count + SfBoarding(f) >= max) return $"{S.NameOf(f)} already carries {max} special forces, its most.";
+        return null;
+    }
+
+    void DropSfOnto(Drag d, Fleet f)
+    {
+        var (_, fleet) = WhereNow(d);
+        int id = d.Id;
+        string name = S.SpecialForceName(id);
+        if (fleet != 0 && S.Game.State.Fleets.TryGetValue(fleet, out var from))   // from another fleet here: it lands first (orders run in the order given)
+            S.TrackFleet(from.Id, S.Game.Submit(seq => new UnloadSpecialForcesOrder(seq, Me, from.Id, One(id))), $"Land {name} from {S.NameOf(from)}");
+        S.TrackFleet(f.Id, S.Game.Submit(seq => new LoadSpecialForcesOrder(seq, Me, f.Id, One(id))), $"Take {name} aboard {S.NameOf(f)}");
+        Sent($"take {name} aboard {S.NameOf(f)}", f.At);
+        _moved[d.Key] = ($"boards {S.NameOf(f)}", $"Fleet {f.Id} SpecialForces");
     }
 
     /// <summary>Onto a fleet: a regiment or squadron boards it (from the planet, or from another fleet here by landing first).</summary>

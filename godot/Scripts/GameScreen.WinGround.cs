@@ -364,8 +364,11 @@ public partial class GameScreen
         if (regs.Count == 0) rz.Flow.AddChild(EmptyCard("Drop regiments here to land them", FleetBodyW, WideEmptyH));
         rs.AddChild(rz.Box);
 
-        // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's window they go there (a Move mission)
-        var ss = FleetSection("Special forces", 16, null, "Agents never ride fleets. Right-click one to send it on a mission; drag it onto another system's Troops tab to move it there.");
+        // special forces: dragged to another system's window they go there (a Move mission); in New they also ride fleets, at most 9 a fleet
+        // (m5-missions §Spying from orbit 1); in Classic never (m3-troops-and-special-forces)
+        var ss = FleetSection("Special forces", 16, null, Mm.Params.OrbitMissions
+            ? $"Right-click one to send it on a mission. Drag it onto a fleet's window here to take it aboard ({Mm.Params.FleetSpecialForcesMax} at most a fleet), or onto another system's Troops tab to move it there."
+            : "Agents never ride fleets. Right-click one to send it on a mission; drag it onto another system's Troops tab to move it there.");
         ss.AddChild(SpecialForcesZone(n, sf));
 
         // enemy ground units on your own planet, live (an invasion under way, or agents caught)
@@ -387,7 +390,7 @@ public partial class GameScreen
     }
 
     /// <summary>Your special forces at a system, each a card (drag to move it, right-click for a mission), in their drop place.</summary>
-    Control SpecialForcesZone(string n, List<EconObject> sf)
+    Control SpecialForcesZone(string n, List<EconObject> sf, string empty = "Drop special forces here to send them")
     {
         var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
         CardFlow(sz.Flow);
@@ -403,7 +406,7 @@ public partial class GameScreen
             sz.Flow.AddChild(card);
             shown++;
         }
-        if (shown == 0) sz.Flow.AddChild(EmptyCard("Drop special forces here to send them", FleetBodyW, WideEmptyH));
+        if (shown == 0) sz.Flow.AddChild(EmptyCard(empty, FleetBodyW, WideEmptyH));
         return sz.Box;
     }
 
@@ -479,10 +482,13 @@ public partial class GameScreen
             foreach (var u in agents) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, day));
             ss.AddChild(flow);
         }
-        if (sf.Count > 0)
+        // your agents here, and the place to land those aboard your fleets in orbit (m5-missions §Spying from orbit 1: any system the fleet stands at)
+        bool carried = Mm.Params.OrbitMissions && S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n && f.Transit == null && Mm.SpecialForcesAboard(f).Count > 0);
+        if (sf.Count > 0 || carried)
         {
-            var ys = FleetSection("Your special forces", 16, sf.Count.ToString(), "Your agents standing here. Right-click one to send it on a mission.");
-            ys.AddChild(SpecialForcesZone(n, sf));
+            var ys = FleetSection("Your special forces", 16, sf.Count == 0 ? null : sf.Count.ToString(),
+                "Your agents standing here. Right-click one to send it on a mission." + (carried ? " Drag one here from your fleet's window to land it." : ""));
+            ys.AddChild(SpecialForcesZone(n, sf, carried && sf.Count == 0 ? "Drop special forces here to land them" : "Drop special forces here to send them"));
         }
     }
 

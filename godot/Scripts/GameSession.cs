@@ -95,6 +95,8 @@ public sealed partial class GameSession
     readonly Dictionary<int, string> _classOf = new();
     readonly Dictionary<int, (string Name, Side Side)> _fleetOf = new();
     readonly Dictionary<int, int> _fleetOfUnit = new();
+    readonly Dictionary<int, Side> _sideOfUnit = new();   // whose each unit was: a unit aboard is not in a battle's lists
+    readonly Dictionary<int, int> _sfAboard = new();      // your special forces aboard a fleet: id -> fleet (m5-missions §Spying from orbit 1)
     // Battles being collected while the events of one day are read.
     readonly Dictionary<string, BattleDraft> _battles = new(StringComparer.Ordinal);
     string _lastContact;
@@ -367,10 +369,13 @@ public sealed partial class GameSession
 
     void Snapshot()
     {
-        _classOf.Clear(); _fleetOf.Clear(); _fleetOfUnit.Clear();
+        _classOf.Clear(); _fleetOf.Clear(); _fleetOfUnit.Clear(); _sideOfUnit.Clear(); _sfAboard.Clear();
         foreach (var o in Host.Economy.Objects)
             if (o.Category is ObjectCategory.CapitalShip or ObjectCategory.Fighter or ObjectCategory.Regiment or ObjectCategory.SpecialForce or ObjectCategory.Facility)
+            {
                 _classOf[o.Id] = o.Class;
+                if (o.Side is Side us) _sideOfUnit[o.Id] = us;
+            }
         SnapshotMissions();
         foreach (var f in Game.State.Fleets.Values)
         {
@@ -378,6 +383,9 @@ public sealed partial class GameSession
             foreach (int id in f.Ships) _fleetOfUnit[id] = f.Id;
             foreach (int id in f.Squadrons) _fleetOfUnit[id] = f.Id;
         }
+        foreach (var o in Host.Economy.Objects)
+            if (o.Category == ObjectCategory.SpecialForce && o.Side == Player && o.AboardShip != 0 && _fleetOfUnit.TryGetValue(o.AboardShip, out int sff))
+                _sfAboard[o.Id] = sff;
     }
 
     /// <summary>A fleet in a message: yours by its name; the enemy's as "a Collective fleet", since "Fleet 1 (Collective)" reads as your own

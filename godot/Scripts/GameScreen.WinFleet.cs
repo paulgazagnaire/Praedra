@@ -612,6 +612,8 @@ public partial class GameScreen
         DragOnly(pz.Box, f, "to take them aboard");
         pas.AddChild(pz.Box);
 
+        if (Mm.Params.OrbitMissions) FleetSpecialForces(f);
+
         // leaders and fleets sent to join it from other systems (m5 §Moving a character alone, m3 §Joining a fleet on arrival)
         var ls = Cm.All.Where(c => c.Side == Me && c.JoinFleet == f.Id && c.JoinByOrder && c.Transit != null).OrderBy(c => c.Id).ToList();
         var fs = S.Game.State.Fleets.Values.Where(x => x.Side == Me && x.JoinFleet == f.Id && x.Transit != null).OrderBy(x => x.Id).ToList();
@@ -630,6 +632,47 @@ public partial class GameScreen
         }
         // where the leaders to drag stand, and where they land (UI review 4), as the design's Ground button of the other tabs
         if (GroundButton(f, "Command") is { } ground) Add(ground);
+    }
+
+    /// <summary>
+    /// The special forces riding the fleet, in its leader section (New: m5-missions §Spying from orbit 1, Paul 2026-11-27): at most
+    /// FleetSpecialForcesMax, the count beside the title. A drag from the planet's Troops tab takes one aboard where the fleet stands; a drag
+    /// back onto any planet's Troops tab here lands it, held or not. A team of them sent on a mission from here works from orbit: over the
+    /// fleet's own system each guard's chance to spot it is halved (§Spying from orbit 3).
+    /// </summary>
+    void FleetSpecialForces(Fleet f)
+    {
+        var aboard = Mm.SpecialForcesAboard(f).OrderBy(o => o.Id).ToList();
+        int max = Mm.Params.FleetSpecialForcesMax;
+        bool still = Still(f) && !S.IsDestroyed(f.At);
+        var sec = FleetSection("Special forces", 16, $"{aboard.Count}/{max}",
+            $"Agents riding the fleet, {max} at most. Right-click one to send it on a mission: a team made only of special forces aboard this fleet "
+            + $"works from orbit, where each guard's chance to spot it is halved while the fleet stays.");
+        var sz = DropZone($"Fleet {f.Id} SpecialForces", "take aboard", d => RefuseSfOnto(d, f), d => DropSfOnto(d, f));
+        CardFlow(sz.Flow);
+        int shown = 0;
+        foreach (var o in aboard)
+        {
+            Drag? d = SfReady(o) && still ? new Drag('F', o.Id) : null;
+            if (d is { } dd && _moved.ContainsKey(dd.Key)) continue;
+            string name = S.SpecialForceName(o.Id);
+            var card = FleetCard(UnitPic(UnitIcon.Kind.Agent, Me == Side.Hand, 1, SfReady(o) ? Ui.You : Look.Soft, o.Class), name, SpecialForceState(o));
+            card.TooltipText = Ui.Wrap(name + (ClassTip(o.Class) is string ct ? "\n" + ct : "")
+                + (d != null ? $"\nRight-click to send it on a mission from orbit. Drag it onto the Troops tab of {f.At} to land it." : ""));
+            if (d is { } drag) { card.SetMeta(UiTest.FullName, drag.Key); MakeDraggable(card, new List<Drag> { drag }, name); MissionMenu(card, f.At, null, o.Id); }
+            sz.Flow.AddChild(card);
+            shown++;
+        }
+        if (shown == 0) sz.Flow.AddChild(EmptyCard("Drop special forces here", FleetBodyW, WideEmptyH));
+        sz.Box.TooltipText = Ui.Wrap(still ? $"Drag special forces here from the Troops tab of {f.At} to take them aboard." : $"{S.NameOf(f)} is travelling: special forces board where it stands.");
+        sec.AddChild(sz.Box);
+        if (still && aboard.Any(SfReady))
+        {
+            var bar = ButtonRow();   // as the planet's Troops tab: the button hugs its words
+            bar.AddChild(FleetAction("Send a mission...", $"Mission from {S.NameOf(f)}", () => { CloseSectorView(); OpenPlanner(f.At); },
+                $"Pick a team from the special forces aboard (and anyone standing at {f.At}), the kind of mission and the target."));
+            Add(bar);
+        }
     }
 
     /// <summary>

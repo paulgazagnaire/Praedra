@@ -41,6 +41,15 @@ public partial class GameScreen
         return null;
     }
 
+    /// <summary>Whether a chip may be dropped on a zone, without dropping it: null when it may, else why not ("" where it already is).</summary>
+    internal string MgJudge(string chipKey, string zoneKey)
+    {
+        var z = _zones.FirstOrDefault(x => x.Key == zoneKey && IsInstanceValid(x.Box));
+        if (z == null) return "no such zone: " + zoneKey;
+        var all = Drag.ParseAll(chipKey);
+        return all.Count == 0 ? "bad chip: " + chipKey : Judge(z, all[0]);
+    }
+
     /// <summary>The words of the right-click menu on the button named <paramref name="fullName"/>, or none.</summary>
     internal IReadOnlyList<string> MenuOf(string fullName) =>
         MenuCard(fullName) is { } b && _menus.TryGetValue(b, out var items) ? items().Select(i => i.Text).ToList() : new List<string>();

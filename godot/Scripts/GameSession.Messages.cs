@@ -191,7 +191,21 @@ public sealed partial class GameSession
                 o.PauseReason ??= "battle";
                 break;
             case UnitDestroyed u when _battles.TryGetValue(u.System, out var bd):
-                bd.Lost.Add((u.Unit, bd.Collective.Contains(u.Unit) ? Side.Collective : Side.Hand));
+                // a unit aboard a ship (a regiment, a special force) is in neither list: whose it was comes from before the day ran
+                bd.Lost.Add((u.Unit, bd.Collective.Contains(u.Unit) ? Side.Collective : bd.Hand.Contains(u.Unit) ? Side.Hand
+                    : _sideOfUnit.TryGetValue(u.Unit, out var lostSide) ? lostSide : Side.Hand));
+                break;
+            // a special force of yours lost with its ship outside a battle (return fire on a bombardment): the battle report can't tell it
+            // (Dev lead 2026-11-27; m5-missions §Spying from orbit 1, lost as regiments aboard)
+            case UnitDestroyed u when u.Reason == UnitLossReason.ShipLost && _sfAboard.TryGetValue(u.Unit, out int sfFleet):
+                yield return new Message(d, $"Your {SpecialForceName(u.Unit)} aboard {FleetName(sfFleet)} was lost with its ship at {u.System}.", u.System, MsgKind.Bad);
+                break;
+            // your special forces boarding and landing (m5-missions §Spying from orbit 1): yours only, a line for each order
+            case Praedra.Core.Missions.SpecialForcesLoaded x when x.Side == Player:
+                yield return new Message(d, $"{SpecialForcesWords(x.SpecialForces.Items)} boarded {FleetName(x.Fleet)} at {x.System}.", x.System, MsgKind.Info);
+                break;
+            case Praedra.Core.Missions.SpecialForcesUnloaded x when x.Side == Player:
+                yield return new Message(d, $"{SpecialForcesWords(x.SpecialForces.Items)} landed from {FleetName(x.Fleet)} at {x.System}.", x.System, MsgKind.Info);
                 break;
             case BattleEnded be:
                 // QA round 204: the player's held ships are one news line per battle, not one per ship
