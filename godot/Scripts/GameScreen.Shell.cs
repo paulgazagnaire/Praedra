@@ -191,18 +191,54 @@ public partial class GameScreen
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
-    /// <summary>Where the refined comes from and goes, for its tooltip: made in the last 30 days, and what your yards use at their present pace,
-    /// Sibyl's builds apart (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why"). rule: m2-construction §Build time.</summary>
-    string RefinedFlowWords()
+    /// <summary>Where the refined comes from and goes: made in the last 30 days, what the yards use at their present pace (Sibyl's builds
+    /// apart), and whether the stock is falling (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why").
+    /// Falling = the yards use more than the refineries make (Paul 2026-11-27: "Add a small red ▼ by Refined"), judged only once the days
+    /// on record cover a refinery's cycle at your present upkeep: before that a refinery may not have finished one (right after a load, as
+    /// events are not saved), so a short window would read as falling for no reason (Ponytail on #413).
+    /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
+    internal readonly record struct RefinedTrend(int Made, int Days, int Made30, int Mine, int Hers, bool Falling);
+
+    RefinedTrend RefinedTrendNow()
     {
         var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player);
         var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        int w = Praedra.Core.Economy.RefinedFlow.WindowDays;
-        string inLine = days <= 0 ? "" : $" Your refineries made {made} in the last {(days >= w ? w + " days" : Ui.Count(days, "day", "days"))}.";
-        string outLine = mine + hers == 0 ? " No yard is building now."
-            : S.HasAdvisor && hers > 0 ? $" Your yards now use about {mine + hers} every {w} days: {mine} for your orders, {hers} for Sibyl's."
-            : $" Your yards now use about {mine + hers} every {w} days.";
-        return inLine + outLine;
+        return TrendOf(made, days, mine, hers, RefineryCycleNow());
+    }
+
+    /// <summary>A refinery's cycle in days at your present upkeep, at full support: the share as in <see cref="SlowdownWords"/>.
+    /// rule: m2-mines-refineries-pools §Cycle length.</summary>
+    internal int RefineryCycleNow()
+    {
+        var p = S.Host.Economy.Params;
+        int load = S.Host.Economy.Load(S.Player), cap = S.Host.Economy.Capacity(S.Player);
+        int share = cap <= 0 ? p.CapacityPerFacility : Math.Min(p.CapacityPerFacility, load * p.CapacityPerFacility / cap);
+        return Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, share);
+    }
+
+    /// <summary>The trend from the numbers alone: <paramref name="cycle"/> is a refinery's cycle in days, the least days on record to judge by.</summary>
+    internal static RefinedTrend TrendOf(int made, int days, int mine, int hers, int cycle)
+    {
+        int made30 = days > 0 ? made * Praedra.Core.Economy.RefinedFlow.WindowDays / days : 0;   // right after a load fewer days are on record: scaled to the window
+        return new RefinedTrend(made, days, made30, mine, hers, days > 0 && days >= cycle && mine + hers > made30);
+    }
+
+    internal string RefinedFlowWords(int refined, RefinedTrend f)
+    {
+        int w = Praedra.Core.Economy.RefinedFlow.WindowDays, use = f.Mine + f.Hers;
+        string inLine = f.Days <= 0 ? "" : $" Your refineries made {f.Made} in the last {(f.Days >= w ? w + " days" : Ui.Count(f.Days, "day", "days"))}.";
+        string outLine = use == 0 ? " No yard is building now."
+            : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {AdvisorName ?? "your advisor"}'s."
+            : $" Your yards now use about {use} every {w} days.";
+        if (!f.Falling) return inLine + outLine;
+        // the red mark's words: by how much, how long the stock lasts, and whether the advisor's builds are what tip it
+        int gap = use - f.Made30;
+        string fall = $" The red mark: your yards use about {gap} more than your refineries make, "
+            + (refined <= 0 ? "and your stock is empty: the yards wait for what your refineries make." : $"so at this pace your {refined} lasts about {Ui.Count(refined * w / gap, "day", "days")}.");
+        string hers = !(S.HasAdvisor && f.Hers > 0) ? ""
+            : f.Mine <= f.Made30 ? $" Your own orders fit what your refineries make: {AdvisorName ?? "your advisor"}'s builds are what run it down. Her switches are in her panel (top right)."
+            : $" Even without {AdvisorName ?? "your advisor"}'s builds, your own orders use more than your refineries make.";
+        return inLine + outLine + fall + hers;
     }
 
     void RefreshTop()
@@ -225,7 +261,9 @@ public partial class GameScreen
             + SlowdownWords(load, cap);
         SetStockTip(_upkeepCell, _upkeepLabel, upTip);
         SetStockTip(_rawCell, _rawLabel, RawTip + (raw >= 10_000 ? $" ({raw})" : ""));
-        SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : "") + RefinedFlowWords());
+        var trend = RefinedTrendNow();
+        _refinedFall.Visible = trend.Falling;   // the small red ▼ by Refined (Paul 2026-11-27)
+        SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : "") + RefinedFlowWords(refined, trend));
 
         int q = S.QueuedOrders;
         _ordersLabel.Text = q > 0 ? $"{q} {(q == 1 ? "order" : "orders")} given, cancel until Play" : "";
@@ -519,7 +557,7 @@ public partial class GameScreen
         Control Sphere(Color c, int across) => new TextureRect { Texture = SystemSphere.Of(c, across), MouseFilter = MouseFilterEnum.Ignore, StretchMode = TextureRect.StretchModeEnum.KeepCentered };
         Item(Sphere(Ui.You, 12), "Your system");
         Item(Sphere(Ui.Enemy, 12), "Enemy system (as last seen)");
-        Item(Sphere(Ui.Neutral, 9), "Nobody's system");
+        Item(Sphere(Ui.Neutral, 9), "Neutral system");
         Item(Sphere(GalaxyView.UnknownColor, 7), "Never explored");
         Item(new Glyph(Glyph.Kind.Cross, Ui.Danger, 11), "Destroyed by a harvester");
         Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the sphere");   // as the map draws it

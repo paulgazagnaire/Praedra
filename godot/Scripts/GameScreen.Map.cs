@@ -24,7 +24,7 @@ public partial class GameScreen
 
     static readonly (MapLayer Layer, string Name, string Tip)[] Layers =
     {
-        (MapLayer.Owners, "Owners", "Who holds each system: blue you, orange the enemy, grey nobody."),
+        (MapLayer.Owners, "Owners", "Who holds each system: blue you, orange the enemy, grey neutral."),
         (MapLayer.Support, "Support", "How much the people of each system support you: blue high, grey even, orange low. Systems you don't see show the support you saw last."),
         (MapLayer.Trouble, "Trouble", "Your systems with a problem: red for an uprising or an enemy fleet there, yellow for too few troops or a blockade."),
         (MapLayer.Yards, "Yards", "Your yards: yellow where a yard stands idle, blue where one is building."),

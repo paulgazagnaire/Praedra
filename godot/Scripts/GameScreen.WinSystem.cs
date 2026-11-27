@@ -81,7 +81,7 @@ public partial class GameScreen
         }
         else planets.QueueFree();
         var what = FleetSection("Harvested", 8);
-        what.AddChild(Para("The planet and everything on it are gone for good: no people, buildings or troops. Nobody holds it, and nobody can build, invade or send missions here."));
+        what.AddChild(Para("The planet and everything on it are gone for good: no people, buildings or troops. No side holds it, and no one can build, invade or send missions here."));
         what.AddChild(Para("It stays on the map as a field of debris. Fleets can still pass through it and stop here.", Look.Soft));
         var own = S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == n).OrderBy(f => f.Id).ToList();
         if (own.Count > 0)

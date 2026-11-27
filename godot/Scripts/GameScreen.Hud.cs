@@ -105,7 +105,7 @@ public partial class GameScreen
         else if (S.Sees(name)) Tag("SEEN NOW", Ui.Text2);
         else Tag(S.LastSeenDay(name) is int d ? $"LAST SEEN D{d}" : "SEEN LONG AGO", Ui.Warn);
 
-        string owner = row.Owner is Side o ? (o == Me ? $"{S.NameOf(o)} (you)" : S.NameOf(o)) : S.Picture(name) == null ? "?" : row.Known ? "nobody" : "?";
+        string owner = row.Owner is Side o ? (o == Me ? $"{S.NameOf(o)} (you)" : S.NameOf(o)) : S.Picture(name) == null ? "?" : row.Known ? "neutral" : "?";
         Fact("OWNER", owner, row.Owner is Side so ? Ui.OwnerColor(so, Me) : Ui.Text2);
         Fact("SUPPORT", row.Support, row.SupportColor);
         Fact(mine ? "TROOPS" : "GARRISON", row.Troops, row.TroopsColor);
