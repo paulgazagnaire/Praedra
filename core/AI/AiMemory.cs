@@ -36,7 +36,7 @@ public enum AiNoteKind
     BooksFailed,
     /// <summary>
     /// ShieldsFelt (SimpleAiParams.ShieldsFeltDays): an own shelling at System met shields of Value (BombardmentStarted S when hits got
-    /// through, else its power P: the shields were at least that, m3-bombardment §2),
+    /// through; with no hits the shelling fleets' power when noted, at least the strike's P: fleets that strong do nothing there),
     /// or Value -1: an own Sabotage there succeeded (MissionSucceeded), so a shield may have fallen since. Noted only while kept (off: none).
     /// Not saved before 2026-11-27: an older save loads with none.
     /// </summary>
@@ -128,8 +128,9 @@ public sealed class AiMemory
     private int _runDay = int.MinValue;
     private readonly Dictionary<string, BattleStarted> _runStarts = new(StringComparer.Ordinal); // lookup only
 
-    /// <summary>Copy the feed's new events into notes. <paramref name="armedCapital"/>: is this unit an armed capital ship now.</summary>
-    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital)
+    /// <summary>Copy the feed's new events into notes. <paramref name="armedCapital"/>: is this unit an armed capital ship now.
+    /// <paramref name="shellPower"/>: the bombardment power of these own fleets now (ShieldsFelt; null = the strike's own P).</summary>
+    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital, Func<IReadOnlyList<int>, int>? shellPower = null)
     {
         if (_feedSeen >= feed.Count) return;
         Side enemy = Side == Side.Hand ? Side.Collective : Side.Hand;
@@ -151,8 +152,10 @@ public sealed class AiMemory
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },
                 MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.BurnTheBooks && me.Outcome is MissionOutcome.Failed or MissionOutcome.Foiled
                     => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target, Value = me.Outcome == MissionOutcome.Foiled ? 1 : 0 }, // 1: foiled (betrayed or sensed), 0: the roll failed
-                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0 // what the shelling side can read: S when hits got through, else at least P (Ponytail #426)
-                    => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.Hits > 0 ? bs.S : bs.P },
+                // what the shelling side can read (Ponytail #426): S when hits got through; with none, only that fleets of this power do nothing
+                // there (the batteries ground ships before the power is counted, m3-bombardment §Resolution 4 and 5.1, so P alone reads too low)
+                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0
+                    => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.Hits > 0 ? bs.S : Math.Max(bs.P, shellPower?.Invoke(bs.Fleets.Items) ?? 0) },
                 MissionSucceeded ms when ms.Side == Side && ms.MissionKind == MissionKind.Sabotage && Keep.ShieldsFelt > 0
                     => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = ms.Target, Value = -1 },
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },

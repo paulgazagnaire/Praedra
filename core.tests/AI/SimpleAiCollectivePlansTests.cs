@@ -128,4 +128,26 @@ public class SimpleAiCollectivePlansTests
             Assert.True(host.StateHash() == loaded.StateHash(), $"diverged on day {host.Game.Day}");
         }
     }
+
+    // AiMemory.Ingest, ShieldsFelt (m3-bombardment §2 and §Resolution 4, 5.1; Ponytail on #426): a shelling with hits notes the shields S; one
+    // with none notes what the shelling side knows, that fleets of their power do nothing there: their power now, at least the strike's P (the
+    // batteries ground ships before P is counted). Nothing is noted while the note is not kept (ShieldsFeltDays 0), nor for the enemy's shellings.
+    [Fact]
+    public void AiMemory_NotesTheShieldsAShellingFelt()
+    {
+        var fleets = new ValueList<int>(new[] { 7 });
+        GameEvent[] feed =
+        {
+            new Praedra.Core.Defenses.BombardmentStarted(0, 5, "Navalia", 7, Side.Collective, Praedra.Core.Defenses.BombardCategory.Civilian, 50, 40, 10, fleets),
+            new Praedra.Core.Defenses.BombardmentStarted(1, 6, "Midway", 7, Side.Collective, Praedra.Core.Defenses.BombardCategory.Civilian, 30, 80, 0, fleets),
+            new Praedra.Core.Defenses.BombardmentStarted(2, 6, "Charter", 9, Side.Hand, Praedra.Core.Defenses.BombardCategory.Civilian, 30, 80, 0, fleets),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, _ => 55);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.ShieldsFelt);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, shieldsFelt: 120);
+        on.Ingest(feed, _ => false, _ => 55);
+        Assert.Equal(new[] { ("Navalia", 40), ("Midway", 55) }, on.Notes.Where(n => n.Kind == AiNoteKind.ShieldsFelt).Select(n => (n.System!, n.Value)).ToArray());
+    }
 }

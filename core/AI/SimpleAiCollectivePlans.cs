@@ -198,10 +198,14 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// ShieldsFeltDays (fog): the shields the side's own last shelling of <paramref name="system"/> met as its player would read them
-    /// (m3-bombardment §2, hits = max(0, P - S): with hits the shields were P - hits = S; with none they were at least P, so P is noted), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
+    /// (m3-bombardment §2, hits = max(0, P - S): with hits the shields were P - hits = S; with none, fleets of the shelling fleets' power do
+    /// nothing there, so that power is noted and only a stronger pile tries again), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
     /// m5-fog-and-hq §F2: a fleet in orbit sees no facilities) and within ShieldsFeltDays; 0 after an own Sabotage there succeeded since (a shield
     /// may have fallen: the next shelling tells). Null = the picture stands.
     /// </summary>
+    /// <summary>ShieldsFelt: the bombardment power of these own fleets now (gone fleets count 0), read when a strike with no hits is noted.</summary>
+    private int FleetsShellPower(IReadOnlyList<int> fleets) => fleets.Sum(id => S.Fleets.TryGetValue(id, out var f) && f.Side == _side ? _h.Bombardment.Power(f) : 0);
+
     private bool ShieldsFeltOn => _p.ShieldsFeltDays > 0 && _view != null && _side == Side.Collective;
 
     private int? ShieldsFelt(string system, int? pictureStamp)
