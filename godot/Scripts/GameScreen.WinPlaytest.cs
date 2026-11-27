@@ -102,6 +102,13 @@ public partial class GameScreen
     /// <summary>The left edge of Sibyl's panel, on the screen.</summary>
     internal float DrawerLeft => _mgLayer.Size.X - DrawerWidth;
     internal void PlayCloseDrawer() => CloseDrawer();
+    /// <summary>Each open window whose content wants more than its column width (W4: 344, or 698 for a wide one), with that width.</summary>
+    internal List<string> MgTooWide()
+    {
+        PlayRebuildMg();
+        return _mgWins.Select(w => (w.Key, want: Math.Max(w.Panel.GetCombinedMinimumSize().X, w.Panel.Size.X), width: WidthOf(w)))
+            .Where(x => x.want > x.width + 0.5f).Select(x => $"{x.Key} {x.want:0} > {x.width:0}").ToList();
+    }
     /// <summary>Every window rebuilt now, as the next frames would after a press in one.</summary>
     internal void PlayRebuildMg() { foreach (var w in _mgWins.ToList()) RebuildMg(w); }
     /// <summary>Whether a window shows the edge of a window over another (review 32), after a frame's check.</summary>

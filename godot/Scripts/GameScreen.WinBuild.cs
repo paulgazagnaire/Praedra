@@ -133,7 +133,7 @@ public partial class GameScreen
                 var (known, owner) = S.KnownOwnerOf(n);
                 int? last = pic?.Facilities?.Stamp ?? S.LastSeenDay(n);
                 string who = !known ? "Unexplored: you don't know what is built here." : owner == null ? "Neutral: neither side holds it." : $"Held by the {S.NameOf(owner.Value)}.";
-                string when = pic?.Facilities == null ? (known ? " Its buildings have never been seen: a fleet in orbit doesn't see them, a Reconnaissance or Espionage mission does." : "")
+                string when = pic?.Facilities == null ? (known ? " Buildings never seen." : "")
                     : last is int d ? (d >= S.Game.Day ? $" Buildings seen today (day {d})." : $" Buildings seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): they may have changed.") : "";
                 warns.Add((who + when, known && owner != null ? Ui.Enemy : Look.Soft));
             }
@@ -435,7 +435,7 @@ public partial class GameScreen
         var name = Look.Words(CellName(t), 16, Look.Text, true);
         name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         top.AddChild(name);
-        top.AddChild(Look.Words(count.ToString(), 16, count == 0 ? Look.Soft : Look.Dim));
+        if (count >= 0) top.AddChild(Look.Words(count.ToString(), 16, count == 0 ? Look.Soft : Look.Dim));   // -1: never seen, no made-up 0 (review 33)
         v.AddChild(top);
 
         cell.TooltipText = Ui.Wrap(tip);
@@ -468,7 +468,7 @@ public partial class GameScreen
         string left = fac == null ? "Unknown" : count == 0 ? "None seen" : $"Seen day {fac.Stamp}";
         string tip = fac == null ? $"The buildings of {n} have never been seen."
             : $"{CellName(t)}: {count} seen here on day {fac.Stamp}. It may have changed since.\nClick: what was seen.";
-        return CellFrame(w, n, t, count, left, "-", count > 0 ? Look.Text : Look.Dim, 0, false, tip, out _);
+        return CellFrame(w, n, t, fac == null ? -1 : count, left, "-", fac == null ? Look.Soft : count > 0 ? Look.Text : Look.Dim, 0, false, tip, out _);
     }
 
     // ================================================================== under the strip: the buildings and what to build
@@ -501,8 +501,14 @@ public partial class GameScreen
         var seen = fac?.Value.Where(kv => InTab(kv.Key, tab)).OrderBy(kv => Array.IndexOf(FacilityPriority, kv.Key) is int i && i >= 0 ? i : 50)
             .ThenBy(kv => kv.Key, StringComparer.Ordinal).SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value)).ToList() ?? new List<string>();
         var sec = Boxed(new VBoxContainer(), 16);
-        sec.AddChild(Heading2("Buildings", seen.Count.ToString()));
-        if (fac == null) sec.AddChild(Look.Words($"The buildings of {n} have never been seen: a fleet in orbit doesn't see them, a Reconnaissance or Espionage mission does.", 12, Look.Soft));
+        sec.AddChild(Heading2("Buildings", fac == null ? null : seen.Count.ToString()));   // never seen: no made-up 0 (review 33)
+        if (fac == null)
+        {
+            // the one place that says how to see them; it wraps, or its width would set the window's (review 33, W4)
+            var never = Look.Words($"The buildings of {n} have never been seen: a fleet in orbit doesn't see them, {BuildingsMissions} does.", 12, Look.Soft);
+            never.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            sec.AddChild(never);
+        }
         else if (seen.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} seen here (day {fac.Stamp}).", 12, Look.Soft));
         else
         {

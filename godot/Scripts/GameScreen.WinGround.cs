@@ -149,11 +149,14 @@ public partial class GameScreen
         else
         {
             var (known, owner) = S.KnownOwnerOf(n);
-            string who = !known ? "Unexplored: you don't know who holds it." : owner == null ? "Neutral: neither side holds it." : $"Held by the {S.NameOf(owner.Value)}.";
-            int? last = S.LastSeenDay(n);
             // a fleet (or an agent) here sees who holds it, its support and the fleets in orbit, never the ground: Paul kept the rule
-            // (2026-11-27, QA playthrough item 5: "You see it now" over a blind Troops tab read as a bug). rule: m5-fog-and-hq §F3
-            string when = S.Sees(n) ? " You see its orbit now, not its ground: an Espionage mission shows its troops." : last is int d ? (d >= S.Game.Day ? $" Seen today (day {d})." : $" Seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): it may have changed.") : "";
+            // (2026-11-27, QA playthrough item 5: "You see it now" over a blind Troops tab read as a bug). rule: m5-fog-and-hq §F3. One fact
+            // here; the Troops tab says how to see more (review 33). Seen live, a neutral world has no defenders (m3-assault §0).
+            bool live = S.Sees(n), orbit = S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n);
+            string who = !known ? "Unexplored: you don't know who holds it." : owner == null ? (live ? "Neutral: no troops defend it." : "Neutral: neither side holds it.")
+                : $"Held by the {S.NameOf(owner.Value)}.";
+            int? last = S.LastSeenDay(n);
+            string when = live ? (owner == null && known ? "" : orbit ? " Your fleet sees its orbit, not its ground." : " You see it now, but not its ground.") : last is int d ? (d >= S.Game.Day ? $" Seen today (day {d})." : $" Seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): it may have changed.") : "";
             words = who + when;
             ink = known && owner != null ? Ui.Enemy : Look.Soft;
         }
@@ -435,28 +438,41 @@ public partial class GameScreen
     {
         var regs = seen.Units.Where(u => !u.Agent).ToList();
         var agents = seen.Units.Where(u => u.Agent).ToList();
-        var rs = FleetSection("Regiments", 16, regs.Count.ToString(), $"The regiments your side last saw on {n}. You can land troops only on a planet you hold: to take it, invade from a fleet in orbit.");
-        // a fleet in orbit never sees the ground (rule: m5-fog-and-hq §F3, group D); only an Espionage success (or an invasion) does
+        // a fleet in orbit never sees the ground (rule: m5-fog-and-hq §F3, group D); an Espionage success or an invasion does. Seen live, a
+        // neutral world has no defenders at all: regiments would make their side its holder, and an assault meets only the holder's
+        // (m2-control-and-capture, Derived; m3-assault §0), so there what can stop a landing is its defences (§1, check 4), buildings (review 33)
         bool orbit = S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n);
-        if (seen.Day is not int day)
+        bool neutralNow = S.Sees(n) && S.KnownOwnerOf(n) is (true, null);
+        var rs = FleetSection("Regiments", 16, neutralNow ? "0" : seen.Day == null ? null : regs.Count.ToString(),   // never seen: no made-up 0
+            $"The regiments your side last saw on {n}. You can land troops only on a planet you hold: to take it, invade from a fleet in orbit.");
+        if (neutralNow)
         {
-            var never = Para(pic == null ? $"Unexplored: you don't know who is on the ground at {n}. Only an Espionage mission shows its troops."
+            var free = Para($"No troops defend a neutral world: an invasion with regiments aboard takes it, unless its defences stop the landing. "
+                + (pic?.Facilities is { } fac ? $"Its defences, seen day {fac.Stamp}, are in its Infrastructure window." : $"Its defences are unseen from orbit: {BuildingsMissions} shows them."));
+            free.SetMeta(UiTest.FullName, $"Ground troops unseen {n}");
+            rs.AddChild(free);
+        }
+        else if (seen.Day is not int never)
+        {
+            var blind = Para(pic == null ? $"Unexplored: you don't know who is on the ground at {n}. A fleet there shows who holds it; an Espionage mission shows its troops."
                 : orbit ? $"The ground of {n} has never been seen. Your fleet here sees ships, not troops: an Espionage mission shows them."
                 : $"The ground of {n} has never been seen. An Espionage mission shows its troops.");
-            never.SetMeta(UiTest.FullName, $"Ground troops unseen {n}");
-            rs.AddChild(never);
-            return;
+            blind.SetMeta(UiTest.FullName, $"Ground troops unseen {n}");
+            rs.AddChild(blind);
         }
-        rs.AddChild(SeenLine(day));
-        if (orbit && day < S.Game.Day) rs.AddChild(Para("Your fleet here sees ships, not troops: an Espionage mission looks again."));
-        if (regs.Count > 0)
+        else
         {
-            var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
-            foreach (var u in regs) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, day));
-            rs.AddChild(flow);
+            rs.AddChild(SeenLine(never));
+            if (orbit && never < S.Game.Day) rs.AddChild(Para("Your fleet here sees ships, not troops: an Espionage mission looks again."));
+            if (regs.Count > 0)
+            {
+                var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
+                foreach (var u in regs) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, never));
+                rs.AddChild(flow);
+            }
+            else rs.AddChild(Para("No regiments were seen."));
         }
-        else rs.AddChild(Para("No regiments were seen."));
-        if (agents.Count > 0)
+        if (agents.Count > 0 && seen.Day is int day)
         {
             var ss = FleetSection("Special forces", 16, agents.Count.ToString(), $"The enemy agents your side last saw on {n}.");
             var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });

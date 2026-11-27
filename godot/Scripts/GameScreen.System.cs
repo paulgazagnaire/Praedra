@@ -56,7 +56,8 @@ public partial class GameScreen
             using (Card(Look.Bg, Look.Outline, 8))
             {
                 Line("Unexplored. You know nothing about this system yet: who holds it, what is built there or who is there.", Look.Text, 13);
-                Note("A fleet there shows who holds it and the fleets in orbit; a Reconnaissance mission shows its buildings too, an Espionage mission its troops as well. Systems you hold are seen in full; the rest show what you saw last.");
+                Note("A fleet there shows who holds it and the fleets in orbit; " + (S.Fog.Params.ReconRevealsFacilities ? "a Reconnaissance mission shows its buildings too, an Espionage mission its troops as well." : "an Espionage mission shows its buildings and troops too.")
+                    + " Systems you hold are seen in full; the rest show what you saw last.");
             }
             CharactersAtSystem(name, false);
             FleetsHere(name, sees, null);
@@ -259,7 +260,7 @@ public partial class GameScreen
         Heading("Buildings");
         if (pic.Facilities is { } fac)
             Line((fac.Value.Count == 0 ? "none" : string.Join(", ", fac.Value.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))) + $"   (seen day {fac.Stamp})", Ui.Text2);
-        else Line("never seen (a Reconnaissance or Espionage mission shows them)", Dim);
+        else Line($"never seen ({BuildingsMissions} shows them)", Dim);
         if (pic.HarvesterQueued is { Value: true } hq) Line($"A harvester was being built here (seen day {hq.Stamp}).", Bad);
 
         RegimentsHere(name, false, pic);

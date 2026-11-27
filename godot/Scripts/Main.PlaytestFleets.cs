@@ -404,8 +404,20 @@ public partial class Main
             s.Host.Fleets.AddFleet(me, "Orbit Look", new[] { s.Host.Economy.Find(looker.Ships[0])!.Class }, blind);
             gs.OpenMgmt(GameScreen.MgKind.Ground, blind, tab: "Troops"); gs.PlayRefresh();
             string head = gs.MgNote($"Ground note {blind}") ?? "", troops = gs.MgNote($"Ground troops unseen {blind}") ?? "";
-            Expect(head.Contains("not its ground") && head.Contains("Espionage"), $"the head of {blind}'s Ground window says the fleet sees its orbit, not its ground ({head})");
-            Expect(troops.Contains("sees ships, not troops") && troops.Contains("Espionage"), $"its Troops tab says why no troops show and what shows them ({troops})");
+            if (s.KnownOwnerOf(blind) is (true, null))
+            {
+                // neutral, seen live: no troops can defend it (m3-assault §0), so the unknown is its defences (review 33)
+                Expect(head.StartsWith("Neutral: no troops defend it", StringComparison.Ordinal), $"the head of neutral {blind} says no troops defend it ({head})");
+                Expect(troops.Contains("No troops defend a neutral world") && troops.Contains("defences"), $"its Troops tab says an invasion meets only its defences ({troops})");
+            }
+            else
+            {
+                Expect(head.Contains("not its ground"), $"the head of {blind}'s Ground window says the fleet sees its orbit, not its ground ({head})");
+                Expect(troops.Contains("sees ships, not troops") && troops.Contains("Espionage"), $"its Troops tab says why no troops show and what shows them ({troops})");
+            }
+            gs.OpenMgmt(GameScreen.MgKind.Infra, blind);
+            var wide = gs.MgTooWide();
+            Expect(wide.Count == 0, "no window grows past its columns (W4): " + string.Join(", ", wide));
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
 
