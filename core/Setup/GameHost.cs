@@ -96,7 +96,7 @@ public sealed class GameHost
     /// picture (never the truth). The MoveFleet order with the same waypoints flies exactly this path. rule: m1-travel §Path rule (3), (5);
     /// m5-fog-and-hq §N8 (what a side may read). A trap = a system passed on the way whose picture shows an enemy fleet with a gravity-well
     /// ship, however old the look (the age is given; DEFAULT, the sheet names no cut-off). Strength blockades are not traps: only gravity-well
-    /// ships pull fleets out of hyperspace (m1-forced-stop-and-blockade, Paul 2026-10-16).
+    /// ships pull fleets out of the deep (m1-forced-stop-and-blockade, Paul 2026-10-16).
     /// </summary>
     public MovePlan PlanMove(Praedra.Core.Clock.Side side, int fleetId, string destination, IReadOnlyList<string>? waypoints = null)
     {

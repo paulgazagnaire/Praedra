@@ -188,7 +188,7 @@ public static class GalaxyLoader
             neighbours[i] = nb[i].OrderBy(n => n.System).ToArray();
 
         // check 7 (second half): outsiders have no route links. Other systems may have none: since 2026-10-16 travel is free and
-        // links are only the fast hyperspace routes (Paul; planets/15), so the old "every system has a lane" and "one connected
+        // links are only the fast lanes (Paul; planets/15), so the old "every system has a lane" and "one connected
         // lane graph" checks are gone. rule: m1-galaxy-data §Validation checks (7), m1-travel §Rule.
         foreach (var s in systems)
         {

@@ -252,7 +252,7 @@ public partial class GameScreen
         var lines = new List<string>();
         if (warned != null) lines.Add($"Your Sensor Station saw a {(warned.Size?.ToString() ?? "").ToLowerInvariant()} {S.NameOf(warned.Side)} fleet coming, expected day {warned.ReachDay}.");
         foreach (var n in near.OrderBy(n => n.Days).ThenBy(n => n.Sys, StringComparer.Ordinal).Take(MaxRows))
-            lines.Add($"At {n.Sys}, about {Ui.InDays(n.Days)} away: {n.Fleet}.");
+            lines.Add($"At {n.Sys}, {(n.Days <= 0 ? "less than a day" : n.Days == 1 ? "about 1 day" : $"about {n.Days} days")} away: {n.Fleet}.");   // not "about in 5 days away" (review 31)
         if (near.Count > MaxRows) lines.Add($"And {near.Count - MaxRows} more enemy fleets close by.");
         lines.Add("Bring fleets and troops home before it falls.");
         list.Add(new Item("capital-threat", Level.Danger, $"Your capital {cap} is threatened", string.Join(" ", lines), cap,
@@ -296,14 +296,16 @@ public partial class GameScreen
 
     // ================================================================== the tab
 
+    /// <summary>
+    /// Needs you as Paul's frame "ui-update-nov-26" draws it: no line above the parts (the tab's count says how many), URGENT then TO WATCH
+    /// then COULD DO BETTER in their colours, each thing a card. With nothing to do, one line says so.
+    /// </summary>
     void NeedsPanel()
     {
         var items = _attention;
-        int urgent = items.Count(i => i.Level == Level.Danger), watch = items.Count(i => i.Level == Level.Warn);
-        Lead(items.Count == 0 ? "Nothing needs a decision right now."
-            : urgent + watch == 0 ? "Nothing urgent." : string.Join(", ", new[] { urgent > 0 ? $"{urgent} urgent" : null, watch > 0 ? $"{watch} to watch" : null }.Where(x => x != null)) + ".");
         if (items.Count == 0)
         {
+            Lead("Nothing needs a decision right now.");
             Note("All quiet: your systems have their troops, no enemy fleet is at them, and your yards are busy.");
             return;
         }
@@ -313,59 +315,99 @@ public partial class GameScreen
             if (it.Level != shown)
             {
                 shown = it.Level;
-                Heading(it.Level switch { Level.Danger => "Urgent", Level.Warn => "To watch", _ => "Could do better" });
+                if (_pv.GetChildCount() > 0) Add(Ui.Space(WinGap - Ui.Block * 2));   // the frame's 24 px between parts
+                Add(SibylHeading(it.Level switch { Level.Danger => "Urgent", Level.Warn => "To watch", _ => "Could do better" }, null, CardInks(it.Level).Title));
             }
             ItemCard(it);
         }
     }
 
+    /// <summary>A Needs you card's colours (the frame's red and yellow cards; a chance to do better takes the page's own blue-greys).</summary>
+    static (Color Title, Color Line, Color Body, Color Button, Color ButtonLine, Color ButtonWords, string Icon) CardInks(Level level) => level switch
+    {
+        Level.Danger => (SibylLook.Urgent, SibylLook.UrgentLine, SibylLook.UrgentBody, SibylLook.UrgentButton, SibylLook.UrgentButtonLine, SibylLook.UrgentButtonWords, "urgent"),
+        Level.Warn => (SibylLook.Watch, SibylLook.WatchLine, SibylLook.WatchBody, SibylLook.WatchButton, SibylLook.WatchButtonLine, SibylLook.WatchButtonWords, "watch"),
+        _ => (SibylLook.Light, SibylLook.ChanceLine, SibylLook.ChanceBody, SibylLook.Button, SibylLook.ButtonLine, SibylLook.Light, null),
+    };
+
+    /// <summary>
+    /// One thing as the frame's card: a 1 px line in the card's colour, 16 px inside; the pixel icon (!! urgent, the warning sign to watch)
+    /// 8 px before the title in the card's colour, the reason 8 px under it in the card's softer colour, then 16 px lower the places it
+    /// names and its buttons, 32 px high, as wide as their words, in the card's button colours.
+    /// </summary>
     void ItemCard(Item it)
     {
-        var (bg, line, glyph) = it.Level switch
+        var ink = CardInks(it.Level);
+        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        card.AddThemeStyleboxOverride("panel", Look.Box(new Color(0, 0, 0, 0), ink.Line, 1, 1, 1, 1, 16));
+        var v = Boxed(new VBoxContainer(), 16);
+        card.AddChild(v);
+        var words = Boxed(new VBoxContainer(), 8);
+        v.AddChild(words);
+        var h = Boxed(new HBoxContainer(), 8);
+        if (ink.Icon != null)
         {
-            Level.Danger => (Ui.DangerDeep, Ui.Danger, Glyph.Kind.Warn),
-            Level.Warn => (Ui.WarnDeep, Ui.Warn, Glyph.Kind.Warn),
-            _ => (Ui.Panel, Ui.Line, Glyph.Kind.Dot),
-        };
-        using (Card(bg, new Color(line, it.Level == Level.Info ? 1f : 0.55f), Ui.Block))
+            var icon = PixelIcon(PixelIconData.Bar[ink.Icon], ink.Title);
+            icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            h.AddChild(icon);
+        }
+        var t = Look.Words(it.Title, 16, ink.Title);
+        t.AddThemeFontOverride("font", SibylText);
+        t.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        h.AddChild(t);
+        words.AddChild(h);
+        // a problem says what is wrong; for a chance the title and the buttons say enough, and the explanation is on hover
+        if (!string.IsNullOrEmpty(it.Why))
         {
-            var h = Ui.HBox(Ui.Block);
-            h.AddChild(new Glyph(glyph, it.Level == Level.Info ? Ui.You : line, 13));
-            var t = Ui.Label(it.Title, "Strong", it.Level == Level.Danger ? new Color("ffc9c9") : it.Level == Level.Warn ? new Color("ffe7a8") : Ui.Text);
-            h.AddChild(t);
-            Add(h);
-            // a problem says what is wrong; for a chance the title and the buttons say enough, and the explanation is on hover
-            if (!string.IsNullOrEmpty(it.Why))
+            if (it.Level == Level.Info) { h.TooltipText = Ui.Wrap(it.Why); h.MouseFilter = MouseFilterEnum.Stop; }
+            else
             {
-                if (it.Level == Level.Info) { h.TooltipText = Ui.Wrap(it.Why); h.MouseFilter = MouseFilterEnum.Stop; }
-                else Add(Ui.Label(it.Why, null, Ui.Text2, Ui.Small));
-            }
-            if (it.Rows != null)
-            {
-                var list = Ui.VBox(Ui.Gap + 2);
-                foreach (var (text, act) in it.Rows.Take(MaxRows))
-                {
-                    var r = Ui.Button(text, act, "Show it on the map", "Row");
-                    r.Alignment = HorizontalAlignment.Left;
-                    r.ClipText = true;
-                    if (!InDrawer) r.AddThemeFontSizeOverride("font_size", Ui.Small);   // in the window: the Fleet window's 12 px button words
-                    list.AddChild(r);
-                }
-                Add(list);
-                if (it.Rows.Count > MaxRows) Add(Ui.Label($"and {it.Rows.Count - MaxRows} more", "Hint"));
-            }
-            if (it.Actions.Count > 0)
-            {
-                var row = Ui.HBox(Ui.Block);
-                foreach (var (label, act, variation) in it.Actions)
-                {
-                    var b = Ui.Button(label, act, null, variation);
-                    b.CustomMinimumSize = new Vector2(0, 32);
-                    row.AddChild(b);
-                }
-                Add(row);
+                var why = Look.Words(it.Why, 16, ink.Body);
+                why.AddThemeFontOverride("font", SibylText);
+                why.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                words.AddChild(why);
             }
         }
+        Button CardButton(string text, Action act, string tip, string variation)
+        {
+            var b = Ui.Button(text, act, tip, variation);
+            b.CustomMinimumSize = new Vector2(0, 32);
+            foreach (var (state, line) in new[] { ("normal", ink.ButtonLine), ("hover", ink.Title), ("pressed", ink.Title), ("hover_pressed", ink.Title), ("disabled", ink.Line) })
+                b.AddThemeStyleboxOverride(state, Look.Box(variation == "Row" ? new Color(0, 0, 0, 0) : ink.Button, line, 1, 1, 1, 1, 8));
+            b.AddThemeFontOverride("font", SibylPlain);
+            b.AddThemeFontSizeOverride("font_size", 16);
+            foreach (var c in new[] { "font_color", "font_focus_color" }) b.AddThemeColorOverride(c, ink.ButtonWords);
+            foreach (var c in new[] { "font_hover_color", "font_pressed_color", "font_hover_pressed_color" }) b.AddThemeColorOverride(c, ink.Title);
+            return b;
+        }
+        if (it.Rows != null)
+        {
+            var list = Ui.VBox(Ui.Gap + 2);
+            foreach (var (text, act) in it.Rows.Take(MaxRows))
+            {
+                var r = CardButton(text, act, "Show it on the map", "Row");
+                r.Alignment = HorizontalAlignment.Left;
+                r.ClipText = true;
+                list.AddChild(r);
+            }
+            v.AddChild(list);
+            if (it.Rows.Count > MaxRows)
+            {
+                var more = Look.Words($"and {it.Rows.Count - MaxRows} more", 16, ink.Body);
+                more.AddThemeFontOverride("font", SibylText);
+                v.AddChild(more);
+            }
+        }
+        if (it.Actions.Count > 0)
+        {
+            var row = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+            row.AddThemeConstantOverride("h_separation", 8); row.AddThemeConstantOverride("v_separation", 8);
+            // every button takes the card's colours, as the frame draws them; which one does the fix is in its words
+            foreach (var (label, act, _) in it.Actions) row.AddChild(CardButton(label, act, null, null));
+            v.AddChild(row);
+        }
+        Add(card);
     }
 
     // ================================================================== events the player chose to stop on (G3)

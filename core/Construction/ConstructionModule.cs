@@ -259,7 +259,7 @@ public sealed class ConstructionModule
                     energyFree++;
                     if (u.Class == FacilityKinds.ClassName(FacilityKind.Mine)) rawFree++;
                 }
-            // rule: m5-fog-and-hq §N4 (Decided, Paul 2026-10-16): a Sensor Station only on a system on a hyperspace route.
+            // rule: m5-fog-and-hq §N4 (Decided, Paul 2026-10-16): a Sensor Station only on a system on a lane.
             if (FacilityKinds.TryParse(o.Class, out var routeKind) && FacilityKinds.RouteOnly(routeKind)
                 && !(_galaxy.TryFindSystem(dest, out int destAt) && _galaxy.OnRoute(destAt)))
                 return OrderResult.Reject(RejectReason.NotOnRoute);

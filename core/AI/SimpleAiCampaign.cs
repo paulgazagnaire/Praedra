@@ -106,6 +106,7 @@ public sealed partial class SimpleAi
         if (slots > 1) { _mem.MoreCampaigns ??= new(); while (_mem.MoreCampaigns.Count < slots - 1) _mem.MoreCampaigns.Add(new AiCampaign { Started = Today }); }
         // a save made at a level with more slots (Hard, then played at Medium): drop the extra campaigns, which this review would never end (Ponytail on #398)
         if (_mem.MoreCampaigns is { } more && more.Count > slots - 1) more.RemoveRange(slots - 1, more.Count - (slots - 1));
+        if (_mem.MoreCampaigns is { Count: 0 }) _mem.MoreCampaigns = null; // one slot: none, as a game begun at Medium (QA-125: an empty list broke the Max below)
         for (int k = 0; k < slots; k++)
         {
             var c = k == 0 ? _mem.Campaign : _mem.MoreCampaigns![k - 1];
@@ -121,7 +122,7 @@ public sealed partial class SimpleAi
                 }
             }
             if (_p.FrontMemory && c is { Sector.Length: > 0 }) RecordVerdict(c);
-            int number = Math.Max(_mem.Campaign?.Number ?? 0, _mem.MoreCampaigns?.Max(x => x.Number) ?? 0); // the game's count, every slot
+            int number = Math.Max(_mem.Campaign?.Number ?? 0, (_mem.MoreCampaigns is { Count: > 0 } mc ? mc.Max(x => x.Number) : 0)); // the game's count, every slot
             var others = Campaigns().Where(x => !ReferenceEquals(x, c)).Select(x => x.Sector).ToList();
             string? pick = PickCampaignSector(c?.Sector, others);
             var next = pick == null

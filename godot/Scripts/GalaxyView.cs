@@ -79,7 +79,7 @@ public partial class GalaxyView : Control
     /// <summary>While true a click on a system raises <see cref="SystemPicked"/> instead of selecting it (used to choose a destination).</summary>
     public bool PickMode { get; set; }
     public event Action<int> SystemPicked;
-    /// <summary>A route to draw on top of the hyperspace routes (system indices), e.g. the preview of a move order.
+    /// <summary>A route to draw on top of the lanes (system indices), e.g. the preview of a move order.
     /// Each leg is a straight segment: solid where it rides a route link, dashed where it is a free jump through open space.</summary>
     public IReadOnlyList<int> PathPreview { get; set; }
     public Color PathColor { get; set; } = Colors.White;
@@ -90,7 +90,7 @@ public partial class GalaxyView : Control
     /// <summary>Waypoints the player added with shift-click, in order (numbered on the map).</summary>
     public IReadOnlyList<int> Waypoints { get; set; }
 
-    /// <summary>Whether the map draws the hyperspace routes (Paul 2026-10-16: every route link is visible; L toggles).</summary>
+    /// <summary>Whether the map draws the lanes (Paul 2026-10-16: every route link is visible; L toggles).</summary>
     bool _showRoutes = true;
     public bool ShowRoutes { get => _showRoutes; set { _showRoutes = value; QueueRedraw(); } }
 
@@ -462,7 +462,7 @@ public partial class GalaxyView : Control
             DrawPolyline(Closed(sectorShape), new Color(SectorColor, lit ? (areaHover ? 0.75f : 0.5f) : 0.3f), SectorEdgeWidth);
         }
 
-        // hyperspace routes (planets/15, Paul 2026-10-16): ships fly anywhere, the drawn links are the fast stretches.
+        // lanes (planets/15, Paul 2026-10-16): ships fly anywhere, the drawn links are the fast stretches.
         // Major routes (3x) are brighter and thicker than minor routes (1.5x); nothing else is drawn between systems.
         for (int k = 0; _showRoutes && k < _drawOrder.Length; k++)
         {
@@ -490,7 +490,7 @@ public partial class GalaxyView : Control
             for (int k = 1; k + 1 < PathPreview.Count; k++) // the stops on the way
                 DrawCircle(SystemScreen(PathPreview[k]), 3.2f, PathColor);
         }
-        // known traps on the way: a red ring with a cross-hair, so the player sees where the fleet can be pulled out of hyperspace
+        // known traps on the way: a red ring with a cross-hair, so the player sees where the fleet can be pulled out of the deep
         if (PathTraps != null)
             foreach (int t in PathTraps)
             {
