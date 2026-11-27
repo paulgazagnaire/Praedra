@@ -1,4 +1,5 @@
 using Praedra.Core.Clock;
+using Praedra.Core.Economy;
 using Praedra.Core.Fleets;
 
 namespace Praedra.Core.AI;
@@ -19,14 +20,14 @@ public sealed partial class SimpleAi
     /// §2: hits = P - S), and fewer than NeutraliseShellsPer30Days shellings of it lately. rule: m2-control-and-capture §Control (no regiments:
     /// support decides, 60 joins, 41 to 59 neutral).
     /// </summary>
-    private bool ShakeTarget(string system, int power)
+    private bool ShakeTarget(string system, int power, bool wreck = false)
     {
         if (!NeutraliseOn || power <= 0 || !IsEnemyHeld(system)) return false;
         if (SupportSeen(system) is not int sup || sup < _p.NeutraliseMinSupport) return false;
         int d = DefendersAt(system);
         if (d < 1 || d > _p.NeutraliseMaxDefenders) return false;
         if (TargetFleetsAt(system).Count > 0) return false;
-        return power > ShieldStrengthSeen(system) && RecentBombardments(system) < _p.NeutraliseShellsPer30Days;
+        return ShieldsBeaten(system, power, wreck) && RecentBombardments(system) < _p.NeutraliseShellsPer30Days;
     }
 
     /// <summary>The fleets' combined bombardment power (m3-bombardment §1: the fleets of one side at a system shell together).</summary>
@@ -36,10 +37,10 @@ public sealed partial class SimpleAi
     /// Neutralise in PickTarget: a world it can shell bare, worth a plain invasion target there times NeutraliseFrontPercent inside a Neutralise
     /// front, NeutraliseElsewherePercent elsewhere (0 = not a target). Needs no troops aboard: no landing follows.
     /// </summary>
-    private long NeutraliseScore(Praedra.Core.Map.StarSystem sys, int power, int ticks)
+    private long NeutraliseScore(Praedra.Core.Map.StarSystem sys, int power, int ticks, bool wreck = false)
     {
         string s = sys.Name;
-        if (s == WinTarget() || !ShakeTarget(s, power)) return 0;
+        if (s == WinTarget() || !ShakeTarget(s, power, wreck)) return 0;
         int pct = CampaignIn(sys.Sector) is { Plan: AiFrontPlan.Neutralise } ? _p.NeutraliseFrontPercent : _p.NeutraliseElsewherePercent;
         if (pct <= 0) return 0;
         var slots = SlotsSeen(s);
@@ -90,4 +91,120 @@ public sealed partial class SimpleAi
     /// rule: ai tuning, SimpleAiParams.RefitAway.</summary>
     private bool RefitAwayOk(Fleet f, int ship) => _p.RefitAway && _h.Economy.ObjectsAboard(ship).Count == 0 && !_h.Assault.HasPending(f.Id)
         && EnemyFleetsAt(f.At!).Count == 0 && _h.Troops.RegimentsAboard(f).Count == 0;
+
+    // ================================================================== Wreck the shields (special forces aboard fleets, #412)
+
+    private bool WreckShieldsOn => _p.WreckShields && _side == Side.Collective && _p.UseCharactersAndMissions && _h.Missions.Params.OrbitMissions;
+    private bool RaidShieldsOn => _p.RaidShieldsSeen && _side == Side.Collective;
+
+    /// <summary>
+    /// The pile's shelling gets through the shields seen (m3-bombardment §2: hits = max(0, P - S)), or the shields are no bar because the pile
+    /// carries Wreckers to sabotage them from orbit first (<paramref name="wreck"/>, WreckShields).
+    /// </summary>
+    private bool ShieldsBeaten(string system, int power, bool wreck) { int sh = ShieldStrengthSeen(system); return power > sh || (wreck && sh > 0); }
+
+    /// <summary>
+    /// RaidShieldsSeen: a raid (Civilian shelling) is worth it only where the pile's power gets through the shields seen, or the pile carries
+    /// Wreckers (WreckShields). Off = raids ignore the shields (DEFAULT, the AI before 2026-11-27: a pile under the shields shelled for no hits).
+    /// </summary>
+    private bool RaidShieldsOk(string system, int power, bool wreck) => !RaidShieldsOn || ShieldsBeaten(system, power, wreck);
+
+    /// <summary>A free special force of a class that can sabotage (its mission bit in Sabotage's special-force mask, m5-missions §Special forces).</summary>
+    private bool IsWrecker(EconObject o) => _h.Troops.Data.SpecialForce(o.Class) is { } k && (k.MissionBit & _h.Missions.Data.Get(Praedra.Core.Missions.MissionKind.Sabotage).SpecialForceMask) != 0;
+
+    /// <summary>The Wreckers aboard the fleets, out on a mission or not (m5-missions §Spying from orbit 1: a team out keeps its seat).</summary>
+    private List<EconObject> WreckersAboard(IEnumerable<Fleet> fleets) =>
+        fleets.SelectMany(x => _h.Missions.SpecialForcesAboard(x)).Where(IsWrecker).OrderBy(o => o.Id).ToList();
+
+    /// <summary>WreckShields: the pile carries a Wrecker not out on a mission (it can be launched at the target).</summary>
+    private bool PileWrecks(IEnumerable<Fleet> fleets) => WreckShieldsOn && WreckersAboard(fleets).Any(o => !_h.Missions.IsSpecialForceBusy(o.Id));
+
+    /// <summary>
+    /// WreckShields at the target, before any shelling or landing: the shields seen there stop what the fleets here came for (their power does
+    /// not beat them, or two or more generators forbid the landing, m3-planetary-defenses), no enemy fleet is seen, and Wreckers ride the
+    /// fleets here. One Wrecker is launched from orbit on a Sabotage (m5-missions §Spying from orbit 2 and 3: no travel, half the spot chance;
+    /// §6 Sabotage, DefencesFirst: a shield or battery falls) and the fleets wait while one is out. True when the fleets wait (the order went
+    /// in, or a Wrecker is out, or a lower-id fleet here holds the Wreckers). With no Wrecker left, false: the usual choices follow.
+    /// </summary>
+    private bool WreckHere(Fleet f, string at, List<Fleet> mineHere, int aboard)
+    {
+        if (!WreckShieldsOn || !IsEnemyHeld(at)) return false;
+        int sh = ShieldStrengthSeen(at);
+        if (sh <= 0 || (ShellPower(mineHere) > sh && !(aboard > 0 && AssaultForbiddenSeen(at)))) return false;
+        var mi = _h.Missions;
+        var all = WreckersAboard(mineHere);
+        if (all.Count == 0) return false;
+        if (all.Any(o => mi.IsSpecialForceBusy(o.Id))) return true; // one is out: wait for its end
+        // one launch for the fleets here: the fleet that carries the lowest-id free Wrecker orders it; the others wait
+        var o = all[0];
+        var carrier = mineHere.FirstOrDefault(x => x.Ships.Contains(o.AboardShip));
+        if (carrier == null) return false;
+        if (carrier.Id != f.Id) return true;
+        var order = new Praedra.Core.Missions.StartMissionOrder(0, _side, Praedra.Core.Missions.MissionKind.Sabotage, new List<int>(), new List<int> { o.Id }, new List<int>(), at);
+        if (mi.CheckStart(order).Reason != null) return false;
+        long seq = _h.Game.Submit(sq => order with { Sequence = sq });
+        Note(seq, "MissionSabotage", $"{o.Class} {o.Id} from fleet {f.Id} over {at}, shields {sh} (wreck the shields)");
+        return true;
+    }
+
+    /// <summary>
+    /// WreckShields, daily before the fleet review: (1) each armed own fleet standing still on a held world takes aboard the free Wreckers
+    /// standing there, up to WreckShieldsForces aboard (m5-missions §Spying from orbit 1, one load order per fleet); (2) every
+    /// WreckGatherEveryDays, while fewer than WreckShieldsPool Wreckers ride fleets or stand at the rally world, free Wreckers elsewhere walk
+    /// to the rally, where the strike fleets gather (a MoveGroup, m5-missions §Orders). Fleets and forces in id order.
+    /// </summary>
+    private void PlanWreckers()
+    {
+        var mi = _h.Missions;
+        var free = FreeAgentForces().Where(t => IsWrecker(t.O)).Select(t => t.O).ToList();
+        if (free.Count == 0) return;
+        var taken = new HashSet<int>(); // lookup only, never iterated
+        int cap = Math.Min(_p.WreckShieldsForces, mi.Params.FleetSpecialForcesMax);
+        foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Ships.Count > 0 && f.Transit == null && f.At != null && Held(f.At)).OrderBy(f => f.Id))
+        {
+            if (Str(f) <= 0 || _h.Bombardment.Power(f) <= 0) continue;
+            int room = Math.Min(cap - WreckersAboard(new[] { f }).Count, mi.Params.FleetSpecialForcesMax - mi.SpecialForcesAboard(f).Count);
+            if (room <= 0) continue;
+            var load = free.Where(o => o.System == f.At && !taken.Contains(o.Id)).Take(room).Select(o => o.Id).ToList();
+            if (load.Count == 0) continue;
+            var order = new Praedra.Core.Missions.LoadSpecialForcesOrder(0, _side, f.Id, load);
+            if (mi.CheckLoadSpecialForces(order) != null) continue;
+            long seq = _h.Game.Submit(sq => order with { Sequence = sq });
+            Note(seq, "LoadSpecialForces", $"{load.Count} Wreckers board fleet {f.Id} at {f.At} (wreck the shields)");
+            taken.UnionWith(load);
+        }
+        if (_p.WreckShieldsPool <= 0 || Today % WreckGatherEveryDays != 0 || Rally() is not { } rally) return;
+        int have = S.Fleets.Values.Where(f => f.Side == _side && f.Ships.Count > 0).Sum(f => WreckersAboard(new[] { f }).Count)
+            + free.Count(o => o.System == rally && !taken.Contains(o.Id));
+        var send = free.Where(o => o.System != rally && !taken.Contains(o.Id)).Take(Math.Max(0, _p.WreckShieldsPool - have)).Select(o => o.Id).ToList();
+        if (send.Count == 0) return;
+        var walk = new Praedra.Core.Missions.MoveGroupOrder(0, _side, new List<int>(), send, rally);
+        long ws = _h.Game.Submit(sq => walk with { Sequence = sq });
+        Note(ws, "MoveGroup", $"{send.Count} Wreckers walk to the rally {rally} (wreck the shields)");
+    }
+
+    /// <summary>Days between two Wrecker walks to the rally (AI tuning; keeps no memory, so a loaded game walks as the uninterrupted one).</summary>
+    private const int WreckGatherEveryDays = 10;
+
+    // ================================================================== Shields felt (the fog hides the shields from a fleet in orbit)
+
+    /// <summary>
+    /// ShieldsFeltDays (fog): the shields the side's own last shelling of <paramref name="system"/> met (BombardmentStarted S: the shelling side
+    /// sees what its hits lost, m3-bombardment §2), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
+    /// m5-fog-and-hq §F2: a fleet in orbit sees no facilities) and within ShieldsFeltDays; 0 after an own Sabotage there succeeded since (a shield
+    /// may have fallen: the next shelling tells). Null = the picture stands.
+    /// </summary>
+    private bool ShieldsFeltOn => _p.ShieldsFeltDays > 0 && _view != null && _side == Side.Collective;
+
+    private int? ShieldsFelt(string system, int? pictureStamp)
+    {
+        if (!ShieldsFeltOn) return null;
+        foreach (var n in NotesSince(AiNoteKind.ShieldsFelt, Today - _p.ShieldsFeltDays))
+        {
+            if (n.System != system) continue;
+            if (pictureStamp is int ps && n.Day < ps) return null; // a look since then: the picture is newer
+            return Math.Max(0, n.Value);
+        }
+        return null;
+    }
 }

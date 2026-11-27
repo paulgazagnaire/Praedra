@@ -34,6 +34,12 @@ public enum AiNoteKind
     HarvesterYardGone,
     /// <summary>An own Burn the Books ended without success (MissionEnded Failed or Foiled): the AI waits before trying again. Not saved before 2026-11-04.</summary>
     BooksFailed,
+    /// <summary>
+    /// ShieldsFelt (SimpleAiParams.ShieldsFeltDays): an own shelling at System met shields of Value (BombardmentStarted S, m3-bombardment §2),
+    /// or Value -1: an own Sabotage there succeeded (MissionSucceeded), so a shield may have fallen since. Noted only while kept (off: none).
+    /// Not saved before 2026-11-27: an older save loads with none.
+    /// </summary>
+    ShieldsFelt,
 }
 
 /// <summary>
@@ -65,11 +71,12 @@ public sealed class AiKeepDays
     public int Character { get; set; }
     public int HarvesterYardGone { get; set; }
     public int BooksFailed { get; set; }
+    public int ShieldsFelt { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, _ => Character,
     };
 }
 
@@ -143,6 +150,9 @@ public sealed class AiMemory
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },
                 MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.BurnTheBooks && me.Outcome is MissionOutcome.Failed or MissionOutcome.Foiled
                     => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target, Value = me.Outcome == MissionOutcome.Foiled ? 1 : 0 }, // 1: foiled (betrayed or sensed), 0: the roll failed
+                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0 => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.S },
+                MissionSucceeded ms when ms.Side == Side && ms.MissionKind == MissionKind.Sabotage && Keep.ShieldsFelt > 0
+                    => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = ms.Target, Value = -1 },
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },
                 CharacterArrived a when a.Side == enemy => At(a.Character, a.System),
                 CharacterDetached d when d.Side == enemy => At(d.Character, d.System),
@@ -191,8 +201,9 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0)
     {
+        Keep.ShieldsFelt = Math.Max(Keep.ShieldsFelt, shieldsFelt);
         Keep.HarvesterYardGone = Math.Max(Keep.HarvesterYardGone, harvesterYardGone);
         Keep.BooksFailed = Math.Max(Keep.BooksFailed, booksFailed);
         Keep.Battle = Math.Max(Keep.Battle, battle); Keep.SystemLost = Math.Max(Keep.SystemLost, systemLost);

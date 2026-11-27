@@ -616,6 +616,7 @@ public sealed partial class SimpleAi
         int aboard = _h.Troops.RegimentsAboard(f).Count;
         int d = DefendersAt(at);
         bool canShell = _h.Bombardment.Power(f) > 0;
+        if (WreckHere(f, at, mineHere, aboard)) return; // WreckShields (SimpleAiCollectivePlans.cs): Wreckers sabotage the shields from orbit first
         if (AssaultForbiddenSeen(at))
         {
             // rule: m3-assault check 4, m3-bombardment §Resolution (shields are Military targets): SiegeShields shells the shields down first
@@ -638,13 +639,13 @@ public sealed partial class SimpleAi
         // guerrilla raid: a pile that cannot take the world even after shelling its garrison shells the mines, refineries and yards instead
         // (m3-bombardment §3 Civilian), RaidStrikes times, then moves on (Leave)
         if (ShakeHere(f, at, mineHere, aboard, d)) return; // Neutralise (SimpleAiCollectivePlans.cs): shell a thin garrison bare, no landing
-        if (RaidTarget(at, canShell) && !(aboard >= 1 && aboard >= Need(d / 2)))
+        if (RaidTarget(at, canShell) && RaidShieldsOk(at, ShellPower(mineHere), false) && !(aboard >= 1 && aboard >= Need(d / 2)))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Civilian);
             Note(seq, "Raid", $"fleet {f.Id} raids {at}");
             return;
         }
-        if (d > 0 && _h.Bombardment.Power(f) > 0 && ((win && _view == null) || RecentBombardments(at) < maxShell))
+        if (d > 0 && _h.Bombardment.Power(f) > 0 && RaidShieldsOk(at, ShellPower(mineHere), false) && ((win && _view == null) || RecentBombardments(at) < maxShell))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Military);
             Note(seq, "Bombard", $"fleet {f.Id} shells {at}");
@@ -714,6 +715,7 @@ public sealed partial class SimpleAi
         bool search = HqSearchOn && strength >= _p.WinStrikeStrength;
         bool finishing = Finishing();
         bool blind = BlindOn();
+        int shellPower = ShellPower(pile.Members); bool wrecks = PileWrecks(pile.Members); // Neutralise, RaidShieldsSeen, WreckShields (SimpleAiCollectivePlans.cs)
         var harvesterYards = HarvesterYardHuntOn ? HarvesterBuildSeenAt().ToHashSet(StringComparer.Ordinal) : null; // lookups only
         foreach (var sys in g.Systems)
         {
@@ -773,9 +775,9 @@ public sealed partial class SimpleAi
             }
             // guerrilla raid: a world it cannot take, shelled for its civilian targets (m3-bombardment §3 Civilian)
             // HarvesterYardValue: a harvester seen under construction is raided at any distance, its value on top
-            if ((hops[sys.Index] <= reach || isYard) && RaidTarget(s, canBombard))
+            if ((hops[sys.Index] <= reach || isYard) && RaidTarget(s, canBombard) && RaidShieldsOk(s, shellPower, wrecks))
                 score = Math.Max(score, (CampaignTargetValue(sys, (long)_p.RaidValuePerFacility * FacilitiesAt(s) * PlanLike(sys) / 100, raid: true) + (isYard ? _p.HarvesterYardValue : 0)) * 1000 / (ticks + 20));
-            if (NeutraliseOn && canBombard) score = Math.Max(score, NeutraliseScore(sys, ShellPower(pile.Members), ticks)); // SimpleAiCollectivePlans.cs
+            if (NeutraliseOn && canBombard) score = Math.Max(score, NeutraliseScore(sys, shellPower, ticks, wrecks)); // SimpleAiCollectivePlans.cs
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;
