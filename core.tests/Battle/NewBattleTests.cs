@@ -250,6 +250,27 @@ public class NewBattleTests
         Assert.True(hullAdmiral > hullNone, $"{hullAdmiral} > {hullNone}");
     }
 
+    // m4-battle-new N19 (Admiral boosts fighters; Ponytail on #414): the boost scales damage dealt, not who can be hurt. A Plough's ion shot (2.25 x 1.5 =
+    // 3.375) cannot pass a Mandate II's shield deflection 4.0: it holds fire unboosted and still at +25% (4.22), because target choice and the hold-fire
+    // test both read the unboosted shot (a change that lets the boost lift a shot over deflection breaks this test). Control: against an Indenture
+    // (deflection 1.5) the same Plough fires its ions, boosted or not. The Plough rides an Ark (a squadron with no berth is lost at once).
+    [Fact]
+    public void N19_TheBoostNeverChangesWhoASquadronCanHurt()
+    {
+        int IonShots(int boost, string target)
+        {
+            var (nb, units) = QuickBattle.PrepareNew(NewNoRolls with { New = new NewBattleParams { TickCap = 60 } }, Ships, new[] { (Ark, 1), ("Plough", 1) }, new[] { (target, 1) }, 1,
+                collectiveCanLand: false, handCanLand: false, carry: true, prepare: u => First(u, Side.Collective, "Plough").FighterBoostPercent = boost, logEvents: true);
+            nb.Run();
+            int sq = First(units, Side.Collective, "Plough").ObjectId;
+            return nb.Log!.Count(e => e.Unit == sq && (e.Kind == "hit" || e.Kind == "miss") && e.Detail == nameof(WeaponKind.IonCannon));
+        }
+        Assert.Equal(0, IonShots(0, "Mandate II"));
+        Assert.Equal(0, IonShots(25, "Mandate II"));
+        Assert.True(IonShots(0, "Indenture") > 0);
+        Assert.True(IonShots(25, "Indenture") > 0);
+    }
+
     // m4-battle-new N14: a squadron whose carrier dies at t = 3 (before the launch at 5) is lost and never fires
     [Fact]
     public void N14_ASquadronWhoseCarrierDiesBeforeLaunchIsLostAndNeverFires()

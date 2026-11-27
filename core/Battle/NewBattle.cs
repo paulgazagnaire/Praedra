@@ -602,7 +602,7 @@ public sealed class NewBattle
                 if (u.Capital && (mask & (1 << (int)b.Arc)) == 0) continue;
                 int guns = _m.GunsActive(b, me);
                 if (guns <= 0 || range > b.Range) continue;
-                if (_m.ShotValue(b.Weapon, b.ShotDamage * Boost(u), u.C, him) <= 0) continue; // holds fire, cooldown stays 0 (an Admiral's boost counts: §8 step 4 item 3)
+                if (_m.ShotValue(b.Weapon, b.ShotDamage, u.C, him) <= 0) continue; // holds fire, cooldown stays 0 (unboosted, like target choice: §8 step 4 item 3)
                 u.Cooldown[bi] = b.Reload;
                 uint thr = _data.Weapon(b.Weapon).Threshold[(int)tgt.C.Size];
                 double dmg = b.ShotDamage * hr * Boost(u);
@@ -615,7 +615,7 @@ public sealed class NewBattle
             }
             // torpedoes: one salvo, all at the same tick, at the first tick there is a capital target in torpedo range that the salvo can hurt
             if (!u.Capital && u.TorpedoesLeft > 0 && !tgt.C.IsSquadron && range <= u.C.TorpedoRange
-                && _m.ShotValue(WeaponKind.Torpedo, u.C.TorpedoDamage * Boost(u), u.C, him) > 0)
+                && _m.ShotValue(WeaponKind.Torpedo, u.C.TorpedoDamage, u.C, him) > 0)
             {
                 uint thr = _data.Weapon(WeaponKind.Torpedo).Threshold[(int)tgt.C.Size];
                 double dmg = u.C.TorpedoDamage * hr * Boost(u);
