@@ -519,7 +519,7 @@ public partial class GameScreen
         Control Sphere(Color c, int across) => new TextureRect { Texture = SystemSphere.Of(c, across), MouseFilter = MouseFilterEnum.Ignore, StretchMode = TextureRect.StretchModeEnum.KeepCentered };
         Item(Sphere(Ui.You, 12), "Your system");
         Item(Sphere(Ui.Enemy, 12), "Enemy system (as last seen)");
-        Item(Sphere(Ui.Neutral, 9), "Nobody's system");
+        Item(Sphere(Ui.Neutral, 9), "Neutral system");
         Item(Sphere(GalaxyView.UnknownColor, 7), "Never explored");
         Item(new Glyph(Glyph.Kind.Cross, Ui.Danger, 11), "Destroyed by a harvester");
         Item(new Glyph(Glyph.Kind.DoubleRing, Colors.White, 14, Ui.You), "Headquarters: a white ring round the sphere");   // as the map draws it

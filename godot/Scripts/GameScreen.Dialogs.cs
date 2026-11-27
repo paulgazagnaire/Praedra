@@ -348,7 +348,7 @@ public partial class GameScreen
         }),
         ("The map", new[]
         {
-            "Blue is you, orange the enemy, grey nobody; a hollow ring is a place you never explored. Away from your systems and fleets you see what you saw last. Click a sector for its window (S); Layers (top) opens the map layers and the Legend of the marks.",
+            "Blue is you, orange the enemy, grey neutral; a hollow ring is a place you never explored. Away from your systems and fleets you see what you saw last. Click a sector for its window (S); Layers (top) opens the map layers and the Legend of the marks.",
         }),
         ("Doing things", new[]
         {

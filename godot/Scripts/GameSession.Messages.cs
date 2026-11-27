@@ -122,7 +122,7 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Hand ? "Hand" : "Collective")} fleet heading for {x.System}, expected on day {x.ReachDay}.", x.System, MsgKind.Warn);
                 break;
             case OwnerChangeSeen x:
-                yield return new Message(d, $"News from {x.System}: now held by {(x.Now is Side n ? "the " + NameOf(n) : "nobody")} (was {(x.Was is Side was ? "the " + NameOf(was) : "nobody")}).", x.System, MsgKind.Info);
+                yield return new Message(d, $"News from {x.System}: now {(x.Now is Side n ? "held by the " + NameOf(n) : "neutral")} (was {(x.Was is Side was ? "the " + NameOf(was) + "'s" : "neutral")}).", x.System, MsgKind.Info);
                 break;
 
             // ---- the Hearth (HqArrived reaches the Collective only; the departure is told by the accepted order above)
@@ -179,7 +179,7 @@ public sealed partial class GameSession
             case Praedra.Core.Victory.DominanceChanged x:
             {
                 int pct = Host.Victory.Rules.DominanceSharePercent;
-                if (x.Leader is not Side lead) yield return new Message(d, "Nobody holds enough of the galaxy for a win by control any more.", null, MsgKind.Info);
+                if (x.Leader is not Side lead) yield return new Message(d, "Neither side holds enough of the galaxy for a win by control any more.", null, MsgKind.Info);
                 else if (lead == Player) yield return new Message(d, $"You hold {pct}% of the claimed worlds and the enemy capital has fallen: keep it until day {x.DueDay} to win.", null, MsgKind.Good);
                 else yield return new Message(d, $"The {NameOf(lead)} holds {pct}% of the claimed worlds: it wins on day {x.DueDay} unless you break its hold.", null, MsgKind.Bad);
                 break;
@@ -498,7 +498,7 @@ public sealed partial class GameSession
         };
         string verdict = r.Collective == BattleOutcome.Victorious ? "The Collective won."
             : r.Hand == BattleOutcome.Victorious ? "The Hand won."
-            : "Nobody won.";
+            : "Neither side won.";
         bool youWon = (Player == Side.Collective ? r.Collective : r.Hand) == BattleOutcome.Victorious;
         bool youLost = (Player == Side.Collective ? r.Hand : r.Collective) == BattleOutcome.Victorious;
         string detail =

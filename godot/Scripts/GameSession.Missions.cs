@@ -188,7 +188,7 @@ public sealed partial class GameSession
     public string TeamWords(IEnumerable<int> chars, IEnumerable<int> sfs)
     {
         var names = chars.Select(CharName).Concat(sfs.Select(SpecialForceName)).ToList();
-        return names.Count == 0 ? "nobody" : string.Join(", ", names);
+        return names.Count == 0 ? "no one" : string.Join(", ", names);
     }
 
     public string TeamOf(MissionGroup m) => TeamWords(m.Characters, m.SpecialForces);
