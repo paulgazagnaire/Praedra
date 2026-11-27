@@ -395,6 +395,20 @@ public partial class Main
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
 
+        // item 5 (Paul: the rule stays): a fleet in orbit sees ships, not troops, and the Ground window says so instead of "You see it now"
+        var looker = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.Ships.Count > 0).OrderBy(f => f.Id).FirstOrDefault();
+        string blind = gs.G.Systems.Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal)
+            .FirstOrDefault(x => s.OwnerOf(x) != me && s.Picture(x) is { } p && p.Ground == null && !s.IsDestroyed(x));
+        if (looker != null && blind != null)
+        {
+            s.Host.Fleets.AddFleet(me, "Orbit Look", new[] { s.Host.Economy.Find(looker.Ships[0])!.Class }, blind);
+            gs.OpenMgmt(GameScreen.MgKind.Ground, blind, tab: "Troops"); gs.PlayRefresh();
+            string head = gs.MgNote($"Ground note {blind}") ?? "", troops = gs.MgNote($"Ground troops unseen {blind}") ?? "";
+            Expect(head.Contains("not its ground") && head.Contains("Espionage"), $"the head of {blind}'s Ground window says the fleet sees its orbit, not its ground ({head})");
+            Expect(troops.Contains("sees ships, not troops") && troops.Contains("Espionage"), $"its Troops tab says why no troops show and what shows them ({troops})");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+
         // item 13: the pause words that came with a report go when the report closes
         const string fought = "Paused: an invasion was fought";
         var (shown, after) = gs.PlayReportPause(fought);

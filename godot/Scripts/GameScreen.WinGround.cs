@@ -149,9 +149,11 @@ public partial class GameScreen
         else
         {
             var (known, owner) = S.KnownOwnerOf(n);
-            string who = !known ? "Unexplored: you don't know who holds it." : owner == null ? "Nobody holds it." : $"Held by the {S.NameOf(owner.Value)}.";
+            string who = !known ? "Unexplored: you don't know who holds it." : owner == null ? "Neutral: neither side holds it." : $"Held by the {S.NameOf(owner.Value)}.";
             int? last = S.LastSeenDay(n);
-            string when = S.Sees(n) ? " You see it now." : last is int d ? (d >= S.Game.Day ? $" Seen today (day {d})." : $" Seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): it may have changed.") : "";
+            // a fleet (or an agent) here sees who holds it, its support and the fleets in orbit, never the ground: Paul kept the rule
+            // (2026-11-27, QA playthrough item 5: "You see it now" over a blind Troops tab read as a bug). rule: m5-fog-and-hq §F3
+            string when = S.Sees(n) ? " You see its orbit now, not its ground: an Espionage mission shows its troops." : last is int d ? (d >= S.Game.Day ? $" Seen today (day {d})." : $" Seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): it may have changed.") : "";
             words = who + when;
             ink = known && owner != null ? Ui.Enemy : Look.Soft;
         }
@@ -247,6 +249,12 @@ public partial class GameScreen
         Add(bar);
     }
 
+    /// <summary>The post a leader would leave to take this one: "General of X", or "Admiral of Fleet 2" (review 32 follow-up); null when free.</summary>
+    string PostNow(CharacterRecord c) =>
+        S.SystemPostOf(c) is string gs ? $"General of {gs}"
+        : c.AttachedFleet != 0 && c.Post != CharacterPost.None && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f) ? $"{GameSession.PostWords(c.Post)} of {S.NameOf(f)}"
+        : null;
+
     /// <summary>Whether the list of who can be a General is unfolded (one switch for every planet, kept while the game runs).</summary>
     bool _generalsOpen;
 
@@ -260,7 +268,7 @@ public partial class GameScreen
     {
         const int Shown = 3;
         var able = S.MyCharacters.Where(c => Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) != n && CanTravel(c, n) == null)
-            .Select(c => (c, days: TravelDays(c, n))).OrderBy(x => S.SystemPostOf(x.c) != null).ThenBy(x => x.days).ThenBy(x => S.CharName(x.c.Id), StringComparer.Ordinal).ToList();
+            .Select(c => (c, days: TravelDays(c, n))).OrderBy(x => PostNow(x.c) != null).ThenBy(x => x.days).ThenBy(x => S.CharName(x.c.Id), StringComparer.Ordinal).ToList();
         if (able.Count == 0)
         {
             var none = Look.Words("None of your leaders free to travel can be a General.", 12, Look.Muted);
@@ -289,8 +297,8 @@ public partial class GameScreen
             string name = S.CharName(c.Id);
             var f = c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var af) ? af : null;
             string at = Cm.LocationOf(c) ?? "";
-            string post = S.SystemPostOf(c) is string gs ? $"General of {gs}" : null;   // free leaders come first; a posted one says so on the button
-            string where = f != null ? $"on {S.NameOf(f)}" : post ?? at;
+            string post = PostNow(c);   // free leaders come first; a posted one says so on the button
+            string where = post ?? (f != null ? $"on {S.NameOf(f)}" : at);
             string when = days == 0 ? "here" : $"{Ui.Count(days, "day", "days")} away";
             var b = FleetAction($"{name} · {where} · {when}", $"General candidate {name}",
                 () => { if (f != null) OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Command"); else OpenMgmt(MgKind.Ground, Cm.LocationOf(c), tab: "Command"); },
@@ -428,12 +436,19 @@ public partial class GameScreen
         var regs = seen.Units.Where(u => !u.Agent).ToList();
         var agents = seen.Units.Where(u => u.Agent).ToList();
         var rs = FleetSection("Regiments", 16, regs.Count.ToString(), $"The regiments your side last saw on {n}. You can land troops only on a planet you hold: to take it, invade from a fleet in orbit.");
+        // a fleet in orbit never sees the ground (rule: m5-fog-and-hq §F3, group D); only an Espionage success (or an invasion) does
+        bool orbit = S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n);
         if (seen.Day is not int day)
         {
-            rs.AddChild(Para(pic == null ? $"Unexplored: you don't know who is on the ground at {n}. Send a fleet or a spy to look." : $"Nobody has looked at the ground of {n} yet."));
+            var never = Para(pic == null ? $"Unexplored: you don't know who is on the ground at {n}. Only an Espionage mission shows its troops."
+                : orbit ? $"The ground of {n} has never been seen. Your fleet here sees ships, not troops: an Espionage mission shows them."
+                : $"The ground of {n} has never been seen. An Espionage mission shows its troops.");
+            never.SetMeta(UiTest.FullName, $"Ground troops unseen {n}");
+            rs.AddChild(never);
             return;
         }
         rs.AddChild(SeenLine(day));
+        if (orbit && day < S.Game.Day) rs.AddChild(Para("Your fleet here sees ships, not troops: an Espionage mission looks again."));
         if (regs.Count > 0)
         {
             var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });

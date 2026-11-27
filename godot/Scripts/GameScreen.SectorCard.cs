@@ -153,7 +153,7 @@ public partial class GameScreen
     string TileTip(string n, bool mine, bool explored, bool dead, SystemPicture pic, Side? holder, bool known)
     {
         if (dead) return $"{n}: harvested{(S.DestroyedDay(n) is int d ? $" on day {d}" : "")}. Nothing is left.";
-        if (!explored) return $"{n}: unexplored. Send a fleet or a spy to see who holds it and what is there.";
+        if (!explored) return $"{n}: unexplored. A fleet there shows who holds it; a Reconnaissance or Espionage mission shows what is there.";
         var eco = S.Host.Economy;
         var lines = new List<string>();
         string who = mine ? (n == S.MyHqSystem ? "yours, your headquarters" : "yours") : !known ? "owner not known" : holder == null ? "nobody's" : $"held by the {S.NameOf(holder.Value)}";

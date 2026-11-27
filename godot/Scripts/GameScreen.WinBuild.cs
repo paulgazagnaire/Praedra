@@ -132,8 +132,8 @@ public partial class GameScreen
                 // whose it is and how old your picture is, as the Ground window's head says it
                 var (known, owner) = S.KnownOwnerOf(n);
                 int? last = pic?.Facilities?.Stamp ?? S.LastSeenDay(n);
-                string who = !known ? "Unexplored: you don't know what is built here." : owner == null ? "Nobody holds it." : $"Held by the {S.NameOf(owner.Value)}.";
-                string when = pic?.Facilities == null ? (known ? " Nobody has looked at its ground yet: send a fleet or a spy." : "")
+                string who = !known ? "Unexplored: you don't know what is built here." : owner == null ? "Neutral: neither side holds it." : $"Held by the {S.NameOf(owner.Value)}.";
+                string when = pic?.Facilities == null ? (known ? " Its buildings have never been seen: a fleet in orbit doesn't see them, a Reconnaissance or Espionage mission does." : "")
                     : last is int d ? (d >= S.Game.Day ? $" Buildings seen today (day {d})." : $" Buildings seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): they may have changed.") : "";
                 warns.Add((who + when, known && owner != null ? Ui.Enemy : Look.Soft));
             }
@@ -178,7 +178,7 @@ public partial class GameScreen
         int built = fac?.Value.Values.Sum() ?? 0;
         int mines = fac?.Value.Where(kv => FacilityKinds.TryParse(kv.Key, out var k) && k == FacilityKind.Mine).Sum(kv => kv.Value) ?? 0;
         int energy = pic?.Status?.Value.Energy ?? 0, raw = Math.Min(pic?.Status?.Value.Raw ?? 0, energy);
-        string seen = fac is { } f ? $"Seen day {f.Stamp}." : "Nobody has looked at its buildings yet.";
+        string seen = fac is { } f ? $"Seen day {f.Stamp}." : "Its buildings have never been seen.";
         string slots = pic?.Status is { } st ? $"Its slots were seen on day {st.Stamp}." : "Its slots are unknown.";
         gauges.AddChild(Gauge("System energy", built, built, energy, Look.Accent, Look.AccentDeep,
             $"System energy: {built} of {energy} slots taken by the buildings your side saw. {seen} {slots}"));
@@ -466,7 +466,7 @@ public partial class GameScreen
         var fac = pic?.Facilities;
         int count = fac?.Value.Where(kv => InTab(kv.Key, t)).Sum(kv => kv.Value) ?? 0;
         string left = fac == null ? "Unknown" : count == 0 ? "None seen" : $"Seen day {fac.Stamp}";
-        string tip = fac == null ? $"Nobody has looked at the buildings of {n} yet."
+        string tip = fac == null ? $"The buildings of {n} have never been seen."
             : $"{CellName(t)}: {count} seen here on day {fac.Stamp}. It may have changed since.\nClick: what was seen.";
         return CellFrame(w, n, t, count, left, "-", count > 0 ? Look.Text : Look.Dim, 0, false, tip, out _);
     }
@@ -502,7 +502,7 @@ public partial class GameScreen
             .ThenBy(kv => kv.Key, StringComparer.Ordinal).SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value)).ToList() ?? new List<string>();
         var sec = Boxed(new VBoxContainer(), 16);
         sec.AddChild(Heading2("Buildings", seen.Count.ToString()));
-        if (fac == null) sec.AddChild(Look.Words($"Nobody has looked at the buildings of {n} yet: send a fleet or a spy.", 12, Look.Soft));
+        if (fac == null) sec.AddChild(Look.Words($"The buildings of {n} have never been seen: a fleet in orbit doesn't see them, a Reconnaissance or Espionage mission does.", 12, Look.Soft));
         else if (seen.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} seen here (day {fac.Stamp}).", 12, Look.Soft));
         else
         {
