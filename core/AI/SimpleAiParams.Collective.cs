@@ -28,7 +28,7 @@ public sealed partial record SimpleAiParams
     /// <summary>
     /// Refit away (Rooster 2026-11-27, after #416: Neutralise keeps the warships out shelling, so the refit, which scrapped only idle ships on
     /// held worlds, found half as many; Paul 2026-11-26: the best navy): the refit (RefitBelowPercent) may also scrap a weak warship of a fleet
-    /// standing on a world the side does not hold, when no enemy fleet is seen there, no regiment is aboard and no landing of that fleet is pending (a shelling is no
+    /// standing on a world the side does not hold, when the ship carries nothing, no enemy fleet is seen there, no regiment is aboard and no landing of that fleet is pending (a shelling is no
     /// bar: the scrapped ship only stops adding its power). Off = only idle ships on held worlds (DEFAULT, the AI before 2026-11-27).
     /// </summary>
     public bool RefitAway { get; init; }

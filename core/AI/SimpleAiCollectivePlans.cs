@@ -85,6 +85,9 @@ public sealed partial class SimpleAi
     // ================================================================== Refit away (keeps the navy renewing while Neutralise shells)
 
     /// <summary>RefitAway: a fleet on a world the side does not hold may lose a weak warship to the refit when no enemy fleet is seen there,
-    /// no regiment is aboard and no landing of it is pending (m3-assault: the troops aboard need their ships). rule: ai tuning, SimpleAiParams.RefitAway.</summary>
-    private bool RefitAwayOk(Fleet f) => _p.RefitAway && !_h.Assault.HasPending(f.Id) && EnemyFleetsAt(f.At!).Count == 0 && _h.Troops.RegimentsAboard(f).Count == 0;
+    /// no regiment is aboard, no landing of it is pending (m3-assault: the troops aboard need their ships) and the ship itself carries nothing
+    /// (a scrapped ship sets its squadrons and special forces down where it stands, which away from home is enemy ground; Ponytail #421).
+    /// rule: ai tuning, SimpleAiParams.RefitAway.</summary>
+    private bool RefitAwayOk(Fleet f, int ship) => _p.RefitAway && _h.Economy.ObjectsAboard(ship).Count == 0 && !_h.Assault.HasPending(f.Id)
+        && EnemyFleetsAt(f.At!).Count == 0 && _h.Troops.RegimentsAboard(f).Count == 0;
 }
