@@ -373,7 +373,7 @@ public partial class GameScreen
             var b = Act($"{(p.TargetChar == id ? "> " : "")}Abduct {S.CharName(id)} (seen at {sys}, day {day}){cap}",
                 () => { p.TargetChar = cid; p.Target = at; _panelDirty = true; _panelTimer = 0; },
                 S.AbductionCap(id) is int c2
-                    ? $"A key leader: each try succeeds at most {c2}% of the time, and never while they ride a fleet or stand at their capital with a full garrison."
+                    ? $"A key leader: each try succeeds at most {c2}% of the time, and never while they ride a fleet, or stand at their capital while it holds as many regiments as it needs to stay calm."
                     : "The team goes to where you last saw them.");
             if (p.TargetChar == id) b.AddThemeColorOverride("font_color", Pending);
         }

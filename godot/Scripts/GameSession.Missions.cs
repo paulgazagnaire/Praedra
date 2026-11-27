@@ -160,7 +160,9 @@ public sealed partial class GameSession
         Fog.CharactersSeen(Player).Where(x => x.Character.Side != Player)
             .GroupBy(x => x.Character.Id)
             .Select(g => g.OrderByDescending(x => x.Stamp).ThenBy(x => x.System, StringComparer.Ordinal).First())
-            .Where(x => x.Character.Status != CharacterStatus.Captured && !(Chars.Get(x.Character.Id) is { Status: CharacterStatus.Captured } c && c.Captor == Player))
+            // a death is told to both sides (the Goal window reads it the same way), so a dead leader leaves the list (Ponytail on #420)
+            .Where(x => x.Character.Status != CharacterStatus.Captured && Chars.Get(x.Character.Id) is not { Status: CharacterStatus.Dead }
+                && !(Chars.Get(x.Character.Id) is { Status: CharacterStatus.Captured } c && c.Captor == Player))
             .Select(x => (x.Character.Id, x.System, x.Stamp))
             .OrderBy(x => CharName(x.Id), StringComparer.Ordinal).ThenBy(x => x.Id).ToList();
 
