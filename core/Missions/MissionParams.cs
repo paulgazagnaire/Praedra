@@ -148,6 +148,11 @@ public sealed record MissionParams
     /// Paul 2026-11-27, decision card "Half chance": 50. rule: m5-missions §Spying from orbit 3.
     /// </summary>
     public int OrbitSpotPercent { get; init; } = 50;
+    /// <summary>
+    /// Most days a team launched from a fleet waits for that fleet to stop before it gives up on it and goes home (or to the nearest held system).
+    /// DEFAULT 30 (Dev lead 2026-11-27, Ponytail on #412). rule: m5-missions §Spying from orbit 5.
+    /// </summary>
+    public int OrbitWaitDays { get; init; } = 30;
     /// <summary>Diplomacy needs the uprising flag off. DEFAULT true ("calm" is Missing).</summary>
     public bool DiplomacyNeedsCalm { get; init; } = true;
     /// <summary>The target-system term of the Recruitment success input, not read yet. rule: m5-missions §Defaults (RecruitSystemTerm), Missing rules 10.</summary>

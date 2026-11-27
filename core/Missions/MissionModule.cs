@@ -902,7 +902,14 @@ public sealed partial class MissionModule
             else if (m.Phase == MissionPhase.ReturnPending)
             {
                 if (Empty(m)) { RemoveGroup(ctx, m, m.Target); continue; }
-                if (LaunchFleetMoving(m)) continue; // rule: §Spying from orbit 2 (DEFAULT): it waits where it is until its fleet stops
+                // rule: §Spying from orbit 2, 5 (DEFAULT): it waits where it is until its fleet stops, at most OrbitWaitDays, then forgets the fleet
+                if (LaunchFleetMoving(m))
+                {
+                    if (m.WaitingSince == 0) m.WaitingSince = k;
+                    if (k - m.WaitingSince < Params.OrbitWaitDays) continue;
+                    m.FromFleet = 0;
+                }
+                m.WaitingSince = 0;
                 int speed = GroupSpeed(m.AllCharacters, m.AllSpecialForces.Count());
                 var trip = ReturnTrip(m, speed);
                 if (trip == null) // the side holds no reachable system: the group stays where it is, free (DEFAULT)

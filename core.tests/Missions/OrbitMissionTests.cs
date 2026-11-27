@@ -5,7 +5,7 @@ using static Praedra.Core.Tests.Missions.MissionWorld;
 namespace Praedra.Core.Tests.Missions;
 
 // m5-missions §Spying from orbit (Paul 2026-11-27: special forces ride fleets, at most 9, and a team launched from a fleet over its own system is
-// checked by every guard at half his chance). Tests OM1 to OM9.
+// checked by every guard at half his chance). Tests OM1 to OM10.
 public class OrbitMissionTests
 {
     private static MissionWorld World(MissionParams? p = null)
@@ -198,5 +198,27 @@ public class OrbitMissionTests
         w.Game.Step();
         Assert.Equal(ships.Max(), w.Host.Economy.Find(a)!.AboardShip);
         Assert.Equal(new[] { ships.Max() }, w.Game.State.Fleets[fleet].Ships);
+    }
+
+    // OM10: a team whose fleet never stops gives up after OrbitWaitDays and goes to held ground (Ponytail on #412)
+    [Fact]
+    public void OM10_ATeamWaitsAtMostOrbitWaitDays()
+    {
+        var w = World(new MissionParams { OrbitWaitDays = 3 });
+        w.Hold(X, Side.Collective, 100);
+        int fleet = Fleet(w, Side.Collective, T, "Barricade");
+        int a = w.Unit(Side.Collective, Listeners, T);
+        Assert.Null(Load(w, Side.Collective, fleet, a));
+        w.Start(Side.Collective, MissionKind.Espionage, Array.Empty<int>(), T, sfs: new[] { a });
+        w.Game.Step();
+        int id = w.LastMission;
+        for (int i = 0; i < 200 && w.M.Get(id) != null; i++)
+        {
+            var f = w.Game.State.Fleets[fleet];
+            if (f.Transit == null) w.Host.Fleets.SubmitMove(Side.Collective, fleet, f.At == Afar ? DriftHarbour : Afar); // never stands still at a Step
+            w.Game.Step();
+        }
+        Assert.Null(w.M.Get(id));
+        Assert.Equal(X, w.Host.Economy.Find(a)!.System); // the only held world
     }
 }
