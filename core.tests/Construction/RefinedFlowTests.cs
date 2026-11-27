@@ -59,4 +59,22 @@ public class RefinedFlowTests
         RefinedFlow.Made(h, Side.Hand); RefinedFlow.Use(h, Side.Hand);
         Assert.Equal(hash, h.StateHash()); // reads only
     }
+
+    // m2-mines-refineries-pools §Cycle length RF4: the screen counts whole refinery cycles (UI review 36 on #419), so a shorter window counts
+    // only its own days, and never more than the 30-day window.
+    [Fact]
+    public void RF4_AShorterWindowCountsOnlyItsOwnDays()
+    {
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+        for (int d = 0; d < 45; d++) h.Game.Step();
+        foreach (int w in new[] { 21, 24, 28 })
+        {
+            var (made, days) = RefinedFlow.Made(h, Side.Hand, w);
+            Assert.Equal(w, days);
+            int expect = h.Game.Events.OfType<ResourceProduced>().Count(e => e.Day > h.Game.Day - w && e.PoolSide == Side.Hand && e.Resource == "Refined");
+            Assert.Equal(expect, made);
+        }
+        Assert.Equal(RefinedFlow.Made(h, Side.Hand), RefinedFlow.Made(h, Side.Hand, 99)); // clamped to 30 days
+        Assert.Equal(RefinedFlow.Made(h, Side.Hand), RefinedFlow.Made(h, Side.Hand, RefinedFlow.WindowDays));
+    }
 }
