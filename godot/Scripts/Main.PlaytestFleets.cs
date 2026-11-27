@@ -406,22 +406,27 @@ public partial class Main
 
     void RefinedMark(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
     {
-        // when it shows, from the numbers alone (here a refinery's cycle is 5 days: its fastest, at no upkeep)
-        Expect(GameScreen.TrendOf(36, 30, 60, 3, 5).Falling && !GameScreen.TrendOf(70, 30, 60, 3, 5).Falling,
-            "the stock falls when the yards use more than the refineries made in 30 days (63 against 36), not when they use less (63 against 70)");
-        Expect(!GameScreen.TrendOf(0, 4, 63, 0, 5).Falling && GameScreen.TrendOf(10, 10, 31, 0, 5).Falling,
-            "it waits until a refinery could have finished a cycle (4 days on record), and scales fewer days to 30 (10 in 10 days = 30 against 31)");
+        // which mark, from the numbers alone (here a refinery's cycle is 5 days: its fastest, at no upkeep). Paul 2026-11-27: a red ▼ when
+        // it falls, then "an upward trend indicator and a stable indicator as well": over 105% of what is made falls, under 95% rises
+        var W = new Func<int, int, int, int, GameScreen.RefinedWay, GameScreen.RefinedWay>((made, days, mine, hers, was) => GameScreen.TrendOf(made, days, mine, hers, 5, was).Way);
+        const GameScreen.RefinedWay none = GameScreen.RefinedWay.Unjudged, down = GameScreen.RefinedWay.Falling, flat = GameScreen.RefinedWay.Steady, up = GameScreen.RefinedWay.Rising;
+        Expect(W(36, 30, 60, 3, none) == down && W(70, 30, 60, 3, none) == up && W(64, 30, 63, 0, none) == flat && W(0, 30, 0, 0, none) == flat && W(0, 30, 5, 0, none) == down,
+            "63 used against 36 made falls, against 70 rises, against 64 holds steady; nothing made and nothing used is steady, any use of nothing falls");
+        Expect(W(0, 4, 63, 0, none) == none && W(10, 10, 40, 0, none) == down,
+            "it waits until a refinery could have finished a cycle (4 days on record), and scales fewer days to 30 (10 in 10 days = 30 against 40)");
+        // no blinking near balance (QA r245: 88 used against 92 made dropped the ▼ for a day or two): a mark keeps showing until balance
+        Expect(W(62, 30, 63, 0, down) == down && W(64, 30, 63, 0, down) == flat && W(64, 30, 63, 0, up) == up && W(62, 30, 63, 0, up) == flat && W(62, 30, 63, 0, flat) == flat,
+            "a ▼ stays while the yards use more than is made (63 of 62), a ▲ while they use less (63 of 64); each goes back to the dash at balance, and the dash stays within 5%");
         // the words: by how much, how long the stock lasts, and the advisor's part
         string fall = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 63, 0, 5));
         Expect(fall.Contains("The red mark: your yards use about 27 more than your refineries make, so at this pace your 246 lasts about 273 days."), "the tooltip says by how much and how long the stock lasts: " + fall);
         Expect(gs.RefinedFlowWords(0, GameScreen.TrendOf(36, 30, 63, 0, 5)).Contains("your stock is empty"), "an empty stock is said as empty, not as lasting 0 days");
-        // near balance it doesn't blink (QA r245: 88 used against 92 made dropped it for a day or two): once on, it stays on above 90%
-        Expect(!GameScreen.TrendOf(66, 30, 63, 0, 5).Falling && GameScreen.TrendOf(66, 30, 63, 0, 5, wasFalling: true).Falling
-            && !GameScreen.TrendOf(72, 30, 63, 0, 5, wasFalling: true).Falling && !GameScreen.TrendOf(66, 4, 63, 0, 5, wasFalling: true).Falling,
-            "once on, the mark stays on while the yards use over 90% of what is made (63 of 66), goes off under it (63 of 72), and waits after a load");
-        string even = gs.RefinedFlowWords(12, GameScreen.TrendOf(66, 30, 63, 0, 5, wasFalling: true));
-        Expect(even.Contains("The red mark: your yards use about all your refineries make, so your 12 hardly grows."), "kept on near balance, the words say the yards take about all that is made: " + even);
-        Expect(!gs.RefinedFlowWords(246, GameScreen.TrendOf(70, 30, 63, 0, 5)).Contains("red mark"), "no red mark words while the refineries keep up");
+        string rise = gs.RefinedFlowWords(246, GameScreen.TrendOf(70, 30, 63, 0, 5)), steady = gs.RefinedFlowWords(12, GameScreen.TrendOf(64, 30, 63, 0, 5)),
+            dry = gs.RefinedFlowWords(0, GameScreen.TrendOf(64, 30, 63, 0, 5)), wait = gs.RefinedFlowWords(12, GameScreen.TrendOf(0, 4, 63, 0, 5));
+        Expect(rise.Contains("The green mark: your refineries make about 7 more than your yards use, so your stock grows.") && !rise.Contains("red mark"), "rising, the tooltip says by how much: " + rise);
+        Expect(steady.Contains("The grey dash: your yards use about what your refineries make, so your 12 holds steady.") && dry.Contains("so your stock stays empty"),
+            "steady, the tooltip says the stock holds, or stays empty: " + steady + " | " + dry);
+        Expect(wait.Contains("shows once a refinery has finished a cycle"), "with too few days on record it says when the mark shows: " + wait);
         if (s.HasAdvisor)
         {
             string hers = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 20, 43, 5)), both = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 50, 13, 5));
@@ -430,17 +435,20 @@ public partial class Main
         }
 
         // on the game: the mark follows the flow; 9999 and the mark keep the stock's width, so the bar does not shift
-        bool Expected()   // shown: still over 90% of balance (it stays on there, QA r245); hidden: not over balance
+        GameScreen.RefinedWay Expected()   // what the numbers give from the mark shown (a mark keeps showing until balance, QA r245)
         {
             var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me);
             var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
-            return GameScreen.TrendOf(made, days, mine, hers, gs.RefineryCycleNow(), wasFalling: gs.RefinedFalling).Falling;
+            return GameScreen.TrendOf(made, days, mine, hers, gs.RefineryCycleNow(), gs.RefinedWayShown).Way;
         }
         int cycle = gs.RefineryCycleNow();
         Expect(cycle >= 5 && cycle <= 10, $"the mark waits a refinery's cycle at the present upkeep: {cycle} days (5 at none, 10 at the limit)");
+        gs.PlayRefresh();
+        var before = gs.RefinedWayShown;
+        Expect(before == Expected(), $"before the build orders the mark by Refined follows the flow on day {s.Game.Day} (shown {before}): {gs.TopTips[1]}");
         int given = gs.PlayBusyYards(20);
         for (int d = 0; d < 10 && !gs.RefinedFalling; d++) gs.PlayDay();
-        Expect(gs.RefinedFalling == Expected(), $"the red mark by Refined follows the flow on day {s.Game.Day} after {given} build orders (shown {gs.RefinedFalling}): {gs.TopTips[1]}");
+        Expect(gs.RefinedWayShown == Expected(), $"the mark by Refined follows the flow on day {s.Game.Day} after {given} build orders (shown {gs.RefinedWayShown}): {gs.TopTips[1]}");
         var pool = s.Game.State.Economy.Pool(me);
         int keep = pool.Refined;
         pool.Refined = 9999; gs.PlayRefresh(); gs.ForceRefinedMark();
