@@ -89,6 +89,8 @@ public sealed partial class MissionModule
         game.RegisterOrderHandler<StartMissionOrder>(m.HandleStart);
         game.RegisterOrderHandler<MoveGroupOrder>(m.HandleMoveGroup);
         game.RegisterOrderHandler<CancelMissionOrder>(m.HandleCancel);
+        game.RegisterOrderHandler<LoadSpecialForcesOrder>(m.HandleLoadSf);
+        game.RegisterOrderHandler<UnloadSpecialForcesOrder>(m.HandleUnloadSf);
         game.RegisterHook("2", m.Departures);
         game.RegisterHook("3", m.Arrivals);
         game.RegisterHook("5.3", m.Resolve);
@@ -472,10 +474,94 @@ public sealed partial class MissionModule
         foreach (var id in allC) if (!CharacterFree(_ch.Get(id)!)) return MissionReject.NotFree;
         foreach (var id in allS) if (IsSpecialForceBusy(id)) return MissionReject.NotFree;
         foreach (var id in allS) if (!E.Objects[id].Completed) return RejectReason.NotCompleted;
-        var places = allC.Select(Where).Concat(allS.Select(id => E.Objects[id].System)).Distinct().ToList();
+        var places = allC.Select(Where).Concat(allS.Select(id => SfPlace(E.Objects[id]))).Distinct().ToList();
         if (places.Count != 1 || places[0] == null) return MissionReject.NotTogether;
         at = places[0];
         return null;
+    }
+
+    // Where a special force stands for a group: its system, or for one aboard the system its fleet stands at (null while the fleet moves).
+    // rule: m5-missions §Spying from orbit 2.
+    private string? SfPlace(EconObject o) =>
+        o.AboardShip == 0 ? o.System : _fleets.FleetOfShip(o.AboardShip) is { Transit: null, At: string at } ? at : null;
+
+    /// <summary>The special forces aboard the ships of <paramref name="fleet"/> (in missions or not: a team out keeps no seat), by id. rule: m5-missions §Spying from orbit 1.</summary>
+    public List<EconObject> SpecialForcesAboard(Fleet fleet)
+    {
+        var ships = new HashSet<int>(fleet.Ships); // lookup only, never iterated
+        return E.Objects.Values.Where(o => o.Category == ObjectCategory.SpecialForce && o.AboardShip != 0 && ships.Contains(o.AboardShip)).ToList();
+    }
+
+    // A new group leaves the ships its special forces were aboard: they count as aboard at the origin (§3), and a group made only of special
+    // forces aboard one fleet is launched from that fleet (works from orbit, comes back to it). rule: m5-missions §Spying from orbit 2.
+    private void LeaveShips(MissionGroup m, string home)
+    {
+        var aboard = m.AllSpecialForces.Where(id => E.Objects[id].AboardShip != 0).OrderBy(x => x).ToList();
+        if (aboard.Count == 0) return;
+        var fleets = aboard.Select(id => _fleets.FleetOfShip(E.Objects[id].AboardShip)?.Id ?? 0).Distinct().ToList();
+        if (!m.AllCharacters.Any() && aboard.Count == m.AllSpecialForces.Count() && fleets.Count == 1) m.FromFleet = fleets[0];
+        m.AboardAtLaunch = aboard;
+        foreach (var id in aboard) { var o = E.Objects[id]; o.AboardShip = 0; o.System = home; }
+    }
+
+    // ================================================================== special forces aboard fleets (§Spying from orbit 1)
+
+    // Checks in this order: OrbitOff, UnknownFleet, NotYours (fleet), UnknownMember, NotYours (member), DuplicateMember, EmptySelection, InTransit,
+    // NotCompleted, NotFree; load: AlreadyAboard, NotAtFleetSystem, NoCapacity; unload: NotAboard. rule: m5-missions §Spying from orbit 1 (DEFAULT order).
+    private string? CheckCarry(Side side, int fleetId, List<int> ids, bool load, out Fleet fleet, out List<EconObject> sfs)
+    {
+        fleet = null!; sfs = new List<EconObject>();
+        if (!Params.OrbitMissions) return MissionReject.OrbitOff;
+        if (!_game.State.Fleets.TryGetValue(fleetId, out var f)) return RejectReason.UnknownFleet;
+        fleet = f;
+        if (f.Side != side) return RejectReason.NotYours;
+        foreach (var id in ids) if (!E.Objects.TryGetValue(id, out var o) || o.Category != ObjectCategory.SpecialForce) return MissionReject.UnknownMember;
+        foreach (var id in ids) if (E.Objects[id].Side != side) return RejectReason.NotYours;
+        if (ids.Distinct().Count() != ids.Count) return MissionReject.DuplicateMember;
+        if (ids.Count == 0) return RejectReason.EmptySelection;
+        if (f.Transit != null || f.At == null) return RejectReason.InTransit;
+        sfs = ids.Select(id => E.Objects[id]).OrderBy(o => o.Id).ToList();
+        if (sfs.Any(o => !o.Completed)) return RejectReason.NotCompleted;
+        if (sfs.Any(o => IsSpecialForceBusy(o.Id))) return MissionReject.NotFree;
+        if (load)
+        {
+            if (sfs.Any(o => o.AboardShip != 0)) return RejectReason.AlreadyAboard;
+            if (sfs.Any(o => o.System != f.At)) return RejectReason.NotAtFleetSystem;
+            if (f.Ships.Count == 0 || SpecialForcesAboard(f).Count + sfs.Count > Params.FleetSpecialForcesMax) return RejectReason.NoCapacity;
+        }
+        else if (sfs.Any(o => o.AboardShip == 0 || !f.Ships.Contains(o.AboardShip))) return RejectReason.NotAboard;
+        return null;
+    }
+
+    /// <summary>Why a LoadSpecialForces order would be refused now (null: accepted). The handler and the screens ask this.</summary>
+    public string? CheckLoadSpecialForces(LoadSpecialForcesOrder o) => CheckCarry(o.Side, o.Fleet, o.SpecialForces ?? new(), true, out _, out _);
+    /// <summary>Why an UnloadSpecialForces order would be refused now (null: accepted). The handler and the screens ask this.</summary>
+    public string? CheckUnloadSpecialForces(UnloadSpecialForcesOrder o) => CheckCarry(o.Side, o.Fleet, o.SpecialForces ?? new(), false, out _, out _);
+
+    private OrderResult HandleLoadSf(StepContext ctx, LoadSpecialForcesOrder o)
+    {
+        if (CheckCarry(o.Side, o.Fleet, o.SpecialForces ?? new(), true, out var f, out var sfs) is { } bad) return OrderResult.Reject(bad);
+        Board(ctx, ctx.Day, f, sfs);
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    private OrderResult HandleUnloadSf(StepContext ctx, UnloadSpecialForcesOrder o)
+    {
+        if (CheckCarry(o.Side, o.Fleet, o.SpecialForces ?? new(), false, out var f, out var sfs) is { } bad) return OrderResult.Reject(bad);
+        string at = f.At!; int day = ctx.Day, fid = f.Id; var side = o.Side;
+        foreach (var s in sfs) { s.AboardShip = 0; s.System = at; }
+        var ids = new ValueList<int>(sfs.Select(s => s.Id).ToList());
+        ctx.Emit((i, _) => new SpecialForcesUnloaded(i, day, side, ids, fid, at));
+        return OrderResult.Accept((i, d) => new OrderAccepted(i, d, o.Sequence));
+    }
+
+    // Special forces go aboard the fleet's lowest-id ship (they take no troop slot; the ship only says which hull they go down with).
+    private void Board(StepContext ctx, int day, Fleet f, List<EconObject> sfs)
+    {
+        int ship = f.Ships.Min(), fid = f.Id; string at = f.At!; var side = f.Side;
+        foreach (var s in sfs) { s.AboardShip = ship; s.System = null; }
+        var ids = new ValueList<int>(sfs.Select(s => s.Id).ToList());
+        ctx.Emit((i, _) => new SpecialForcesLoaded(i, day, side, ids, fid, ship, at));
     }
 
     // Midwife's 50 when he is in the group, free, and no special force (team or decoy) is in it; else 100. rule: §1 (GNPRTB 3083; planets/11).
@@ -673,6 +759,7 @@ public sealed partial class MissionModule
             Home = home, Target = target, TargetCharacter = charTarget ? o.TargetCharacter : null, Facility = facility,
             Phase = MissionPhase.Outbound,
         };
+        LeaveShips(m, home);
         SetTrip(m, path, ctx.Day);
         S.Missions[m.Id] = m;
         Started(ctx, m);
@@ -700,6 +787,7 @@ public sealed partial class MissionModule
             Characters = chars.OrderBy(x => x).ToList(), SpecialForces = sfs.OrderBy(x => x).ToList(),
             Home = home!, Target = dest, Phase = MissionPhase.Outbound,
         };
+        LeaveShips(m, home!);
         SetTrip(m, path.Value, ctx.Day);
         S.Missions[m.Id] = m;
         Started(ctx, m);
@@ -842,6 +930,8 @@ public sealed partial class MissionModule
     /// </summary>
     private (List<string> Path, int Ticks)? ReturnTrip(MissionGroup m, int speed)
     {
+        // rule: §Spying from orbit 2 (DEFAULT): a group launched from a fleet flies back to where that fleet stands now
+        if (LaunchFleet(m) is { At: string fa } lf && Trip(m.Target, fa, speed) is { } back) return back;
         if (_fleets.OwnerOf(m.Home) == m.Side && Trip(m.Target, m.Home, speed) is { } home) return home;
         (List<string> Path, int Ticks)? best = null; string? bestName = null;
         foreach (var kv in _game.State.SystemOwners) // SortedDictionary: ordinal name order, so the first of equal ticks wins
@@ -852,10 +942,22 @@ public sealed partial class MissionModule
         return bestName == null ? null : best;
     }
 
-    // Every member becomes free at the system; the mission leaves the state.
+    // The fleet a group was launched from, while it exists, is the group's side's and stands still at a system. rule: §Spying from orbit 2.
+    private Fleet? LaunchFleet(MissionGroup m) =>
+        Params.OrbitMissions && m.FromFleet != 0 && _game.State.Fleets.TryGetValue(m.FromFleet, out var f) && f.Side == m.Side && f.Transit == null
+            && f.At != null && f.Ships.Count > 0 ? f : null;
+
+    // Every member becomes free at the system; the mission leaves the state. A group launched from a fleet that stands there boards it again,
+    // as many as there is room for, by id (the others stay on the planet). rule: §5; §Spying from orbit 2 (DEFAULT).
     private void Release(StepContext ctx, MissionGroup m, string at, int day)
     {
         PlaceMembers(m, at);
+        if (LaunchFleet(m) is { } lf && lf.At == at)
+        {
+            int room = Params.FleetSpecialForcesMax - SpecialForcesAboard(lf).Count;
+            var back = m.AllSpecialForces.Where(E.Objects.ContainsKey).OrderBy(x => x).Take(Math.Max(0, room)).Select(id => E.Objects[id]).ToList();
+            if (back.Count > 0) Board(ctx, day, lf, back);
+        }
         RemoveGroup(ctx, m, at);
         int id = m.Id; var side = m.Side;
         if (m.Kind == MissionKind.Move) ctx.Emit((i, _) => new MissionGroupArrived(i, day, id, side, at));

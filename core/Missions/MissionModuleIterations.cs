@@ -198,9 +198,17 @@ public sealed partial class MissionModule
     /// target, belonging to the mission) when the orbit-members flag is on. Our groups have no aboard state: at the origin a character attached to a
     /// fleet or a special force aboard a ship is "orbit", the others "planet"; at the target every member is "orbit". rule: §3 (B2d §3, Work 3).
     /// </summary>
-    private bool Counts(Agent a, bool atOrigin, Scope sc)
+    /// <summary>
+    /// A team launched from a fleet working over that fleet's own system: every guard still checks it, each at OrbitSpotPercent of his chance.
+    /// rule: m5-missions §Spying from orbit 3.
+    /// </summary>
+    private bool FromOrbit(MissionGroup m, string place) => Params.OrbitMissions && m.FromFleet != 0 && m.Home == m.Target && place == m.Target;
+
+    private bool Counts(MissionGroup m, Agent a, bool atOrigin, Scope sc)
     {
-        bool orbit = !atOrigin || (a.IsCharacter ? a.C!.AttachedFleet != 0 : E.Objects.TryGetValue(a.Id, out var o) && o.AboardShip != 0);
+        // a special force that left a ship to form the group still counts as aboard at the origin (m5-missions §Spying from orbit 2)
+        bool orbit = !atOrigin || (a.IsCharacter ? a.C!.AttachedFleet != 0
+            : m.AboardAtLaunch?.Contains(a.Id) == true || (E.Objects.TryGetValue(a.Id, out var o) && o.AboardShip != 0));
         return orbit ? sc.OrbitMembers : sc.PlanetMembers;
     }
 
@@ -215,9 +223,9 @@ public sealed partial class MissionModule
         string place, MissionRecord rec)
     {
         // rule: B2e §4 (0x587fa0 -> 0x5892a0): before the decoy pass, each decoy with a mutual Talent discovery meets that talented character
-        foreach (var a in Decoys(m).Where(a => Counts(a, atOrigin, sc)).ToList()) Encounter(ctx, m, t, a, place, rec, decoy: true);
+        foreach (var a in Decoys(m).Where(a => Counts(m, a, atOrigin, sc)).ToList()) Encounter(ctx, m, t, a, place, rec, decoy: true);
         if (guards.Count == 0) return null;
-        var decoys = Decoys(m).Where(a => Counts(a, atOrigin, sc)).ToList();
+        var decoys = Decoys(m).Where(a => Counts(m, a, atOrigin, sc)).ToList();
         if (decoys.Count > 0 && Data.DecoyTable == null) throw new RuleMissingException("DecoyTable", "m5-missions");
         int id = m.Id; var side = m.Side;
         foreach (var d in guards)
@@ -233,7 +241,7 @@ public sealed partial class MissionModule
             Duel(ctx, m, t, dc, d, place, rec, decoy: true); // rule: B2d §6 (failed decoy)
             decoys.Remove(dc);
         }
-        var team = Team(m).Where(a => Counts(a, atOrigin, sc)).ToList();
+        var team = Team(m).Where(a => Counts(m, a, atOrigin, sc)).ToList();
         if (team.Count == 0) return null; // rule: §3 detection walk (0x5896e0: count 0 skips the walk; Traced B2a)
         int avg = team.Sum(a => KeyEsp(m, a)) / team.Count; // C integer division (0x5887a0 idiv; Traced B2a); §6a KeyTargetBaseSkills
         int sfs = team.Count(a => !a.IsCharacter);
@@ -241,6 +249,7 @@ public sealed partial class MissionModule
         {
             if (decoyed.Contains(d.Unit.Id)) continue;
             int x = DetectionX(avg, d.Detection, sfs, d.OfficerEspionage), p = FoilChance(x);
+            if (FromOrbit(m, place)) p = p * Params.OrbitSpotPercent / 100; // rule: m5-missions §Spying from orbit 3 (Paul 2026-11-27, "Half chance")
             int r = ctx.Rng.NextInt(0, Data.Numbers.RollDie - 1);
             bool hit = r < p;
             int def = d.Unit.Id;
@@ -377,7 +386,7 @@ public sealed partial class MissionModule
             _fog.OnMissionDetected(ctx, f.Defender?.Unit.Side ?? Other(m.Side), place);
         }
         var pool = guards.Where(g => !decoyed.Contains(g.Unit.Id)).ToList();
-        foreach (var a in Team(m).Where(a => Counts(a, atOrigin, sc)).ToList())
+        foreach (var a in Team(m).Where(a => Counts(m, a, atOrigin, sc)).ToList())
         {
             if (Encounter(ctx, m, t, a, place, rec, decoy: false)) continue; // rule: B2e §4 (0x589360: a mutual discovery meets his talented character)
             if (pool.Count == 0) continue;

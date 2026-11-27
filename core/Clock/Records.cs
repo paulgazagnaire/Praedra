@@ -42,6 +42,8 @@ public enum Side { Hand = 0, Collective = 1 }
 [JsonDerivedType(typeof(Praedra.Core.Missions.StartMissionOrder), "StartMission")]
 [JsonDerivedType(typeof(Praedra.Core.Missions.MoveGroupOrder), "MoveGroup")]
 [JsonDerivedType(typeof(Praedra.Core.Missions.CancelMissionOrder), "CancelMission")]
+[JsonDerivedType(typeof(Praedra.Core.Missions.LoadSpecialForcesOrder), "LoadSpecialForces")]
+[JsonDerivedType(typeof(Praedra.Core.Missions.UnloadSpecialForcesOrder), "UnloadSpecialForces")]
 [JsonDerivedType(typeof(Praedra.Core.Harvester.DestroySystemOrder), "DestroySystem")]
 public abstract record Order(long Sequence, Side Side);
 

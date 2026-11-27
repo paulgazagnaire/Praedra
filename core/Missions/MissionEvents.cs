@@ -15,6 +15,15 @@ public sealed record StartMissionOrder(long Sequence, Side Side, MissionKind Kin
 /// <summary>Move a group of characters and special forces like a mission group (record 0x01): no table, no detection. rule: m5-missions §Orders (MoveGroup).</summary>
 public sealed record MoveGroupOrder(long Sequence, Side Side, List<int> Characters, List<int> SpecialForces, string Destination) : Order(Sequence, Side);
 
+/// <summary>
+/// Put special forces standing on the fleet's system aboard it (its lowest-id ship; leader section, not troop slots), all or nothing, at most
+/// FleetSpecialForcesMax aboard. rule: m5-missions §Spying from orbit 1 (Paul 2026-11-27).
+/// </summary>
+public sealed record LoadSpecialForcesOrder(long Sequence, Side Side, int Fleet, List<int> SpecialForces) : Order(Sequence, Side);
+
+/// <summary>Special forces aboard the fleet stand on the system it is at, held or not (as leaders, QA-120). rule: m5-missions §Spying from orbit 1.</summary>
+public sealed record UnloadSpecialForcesOrder(long Sequence, Side Side, int Fleet, List<int> SpecialForces) : Order(Sequence, Side);
+
 /// <summary>Cancel a working mission: the iteration is dropped and the team returns. rule: m5-missions §Orders (CancelMission).</summary>
 public sealed record CancelMissionOrder(long Sequence, Side Side, int Mission) : Order(Sequence, Side);
 
@@ -27,7 +36,8 @@ public static class MissionReject
         NoHarvester = "NoHarvester", TargetProtected = "TargetProtected", UnknownMission = "UnknownMission", RuleMissing = "RuleMissing",
         BooksGone = "BooksGone", // rule: m5-missions §6b (Target: the books not yet burned)
         BooksTeamOut = "BooksTeamOut", // rule: m5-missions §6b (Target: one team at a time, BooksOneTeam)
-        NoTrainer = "NoTrainer", NoStudent = "NoStudent"; // rule: m5-characters-and-talent §Talent (Train Talent: the team, Paul 2026-11-25)
+        NoTrainer = "NoTrainer", NoStudent = "NoStudent", // rule: m5-characters-and-talent §Talent (Train Talent: the team, Paul 2026-11-25)
+        OrbitOff = "OrbitOff"; // rule: m5-missions §Spying from orbit (switch OrbitMissions off: special forces never board)
 }
 
 /// <summary>Why the character sheet's exposure hook is called. rule: m5-missions §4.</summary>
@@ -155,3 +165,14 @@ public sealed record MissionSkillGained(int Index, int Day, int Mission, Side Si
 /// incident at the Tabularium.", the Collective "The books are burning." rule: m5-missions §6b Effect 2.
 /// </summary>
 public sealed record BooksBurned(int Index, int Day, string System) : GameEvent(Index, Day, nameof(BooksBurned));
+
+/// <summary>
+/// Special forces went aboard a fleet (LoadSpecialForces, or a team back from a mission it was launched on from that fleet). Day K for the order,
+/// K + 1 for a return. Fields: side, special forces, fleet, ship, system. rule: m5-missions §Spying from orbit 1.
+/// </summary>
+public sealed record SpecialForcesLoaded(int Index, int Day, Side Side, ValueList<int> SpecialForces, int Fleet, int Ship, string System)
+    : GameEvent(Index, Day, nameof(SpecialForcesLoaded));
+
+/// <summary>UnloadSpecialForces: the special forces stand on the fleet's system. Fields: side, special forces, fleet, system. rule: m5-missions §Spying from orbit 1.</summary>
+public sealed record SpecialForcesUnloaded(int Index, int Day, Side Side, ValueList<int> SpecialForces, int Fleet, string System)
+    : GameEvent(Index, Day, nameof(SpecialForcesUnloaded));

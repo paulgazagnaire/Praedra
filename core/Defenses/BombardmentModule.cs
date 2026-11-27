@@ -512,6 +512,13 @@ public sealed class BombardmentModule
             ctx.Emit((i, _) => new RegimentDestroyed(i, day, r.Id, r.Class, system, r.Side!.Value, "ShipLost"));
             _eco.DestroyUnit(ctx, day, r);
         }
+        // special forces aboard are lost with the ship, as regiments (m5-missions §Spying from orbit 1, DEFAULT)
+        foreach (var sf in _eco.Objects.Where(r => r.AboardShip == ship.Id && r.Category == ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
+        {
+            int sid = sf.Id;
+            ctx.Emit((i, _) => new Praedra.Core.Battle.UnitDestroyed(i, day, system, sid, 0, Praedra.Core.Battle.UnitLossReason.ShipLost));
+            _eco.DestroyUnit(ctx, day, sf);
+        }
         _eco.DestroyUnit(ctx, day, ship);
     }
 
