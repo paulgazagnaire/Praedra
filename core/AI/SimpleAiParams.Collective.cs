@@ -32,4 +32,31 @@ public sealed partial record SimpleAiParams
     /// bar: the scrapped ship only stops adding its power). Off = only idle ships on held worlds (DEFAULT, the AI before 2026-11-27).
     /// </summary>
     public bool RefitAway { get; init; }
+    /// <summary>
+    /// Raid past the shields (Rooster 2026-11-27; QA of #416: RaidTarget never read the shields, so a pile under them shelled for no hits,
+    /// m3-bombardment §2 hits = max(0, P - S), and Maverick's GuardRaidedShields beat the raids that way): a raid is picked and made only where
+    /// the pile's power beats the shields seen, or the pile carries Wreckers (WreckShields); a garrison is shelled only where the power there beats
+    /// them. Off = shellings ignore the shields (DEFAULT).
+    /// </summary>
+    public bool RaidShieldsSeen { get; init; }
+    /// <summary>
+    /// Wreck the shields (Paul 2026-11-27 on #412, special forces aboard fleets: "a raiding fleet carrying 9 saboteurs could be nasty", use it
+    /// hard): armed Collective fleets take Wreckers aboard at held worlds; a pile carrying them may pick a raid or Neutralise target whose shields
+    /// its power does not beat, and over it launches the Wreckers from orbit one at a time (Sabotage, half the spot chance, defences first)
+    /// until the shields fall or no Wrecker is left, then shells. The preparation is visible: shields fall before the strike. Off = no Wrecker
+    /// boards (DEFAULT).
+    /// </summary>
+    public bool WreckShields { get; init; }
+    /// <summary>WreckShields: Wreckers wanted aboard each armed fleet (the rule's cap is 9 special forces a fleet, FleetSpecialForcesMax).</summary>
+    public int WreckShieldsForces { get; init; } = 3;
+    /// <summary>WreckShields: free Wreckers walk to the rally world while fewer than this many ride fleets or stand there (0 = they board only where they stand).</summary>
+    public int WreckShieldsPool { get; init; } = 6;
+    /// <summary>
+    /// Shields felt (Rooster 2026-11-27; with fog a fleet in orbit sees no facilities, m5-fog-and-hq §F2, so the AI shelled shields it did not
+    /// know of again and again for no hits: seed 1 vs the walled Hand, 24 Neutralise shellings in 1200 days): for this many days the side reads
+    /// the shields its own last shelling of a world met (BombardmentStarted S) when that is newer than its picture; an own Sabotage success
+    /// there since reads as no shields until the next shelling tells. The Collective only for now (the Hand is Maverick's to measure). 0 = the
+    /// picture only (DEFAULT).
+    /// </summary>
+    public int ShieldsFeltDays { get; init; }
 }

@@ -99,6 +99,7 @@ public sealed partial class SimpleAi
         if (_p.UseCharactersAndMissions && (day + phase) % Math.Max(1, _p.AgentsEvery) == 0) PlanAgents();
         if ((day + phase) % _p.EconomyEvery == 0) PlanEconomy();
         if ((day + phase) % _p.ProductionEvery == 0) PlanProduction();
+        if (WreckShieldsOn) PlanWreckers(); // SimpleAiCollectivePlans.cs: Wreckers board before the fleets leave
         if ((day + phase) % _p.MilitaryEvery == 0) PlanMilitary();
     }
 
@@ -271,6 +272,7 @@ public sealed partial class SimpleAi
     {
         if (_view == null) return _h.Defenses.ShieldStrength(system);
         var fac = _view.Picture(system)?.Facilities;
+        if (ShieldsFelt(system, fac?.Stamp) is int felt) return felt; // SimpleAiCollectivePlans.cs: an own shelling since the last look met them
         if (fac == null) return 0;
         int s = 0;
         foreach (var (cls, count) in fac.Value)
@@ -295,7 +297,8 @@ public sealed partial class SimpleAi
             bombardment: _p.UseFog ? Math.Max(RecentBombardmentDays, _p.FogKillMemoryDays) : RecentBombardmentDays, // and with fog back to the last ground look (AiMemory.ForSave)
             lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays,
             character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
-            harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0);
+            harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
+            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0); // SimpleAiCollectivePlans.cs
         _mem.Ingest(Events, IsArmedCapital);
         var mem = _mem;
         mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)
