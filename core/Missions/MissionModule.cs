@@ -152,8 +152,13 @@ public sealed partial class MissionModule
     public bool IsSpecialForceBusy(int obj) => S.Missions.Values.Any(m => m.SpecialForces.Contains(obj) || m.DecoySpecialForces.Contains(obj));
 
     /// <summary>The fog's hook: the side has an agent on a working mission at the system (landed, not travelling). rule: m5-fog-and-hq §F3 3.</summary>
-    public bool AgentsAt(Side side, string system) =>
-        S.Missions.Values.Any(m => m.Side == side && m.Phase == MissionPhase.Working && m.Target == system && (m.HasTeam || m.DecoyCharacters.Count + m.DecoySpecialForces.Count > 0));
+    public bool AgentsAt(Side side, string system)
+    {
+        foreach (var m in S.Missions.Values) // a plain loop: the fog asks for every system it does not see otherwise, daily
+            if (m.Side == side && m.Phase == MissionPhase.Working && m.Target == system && (m.HasTeam || m.DecoyCharacters.Count + m.DecoySpecialForces.Count > 0))
+                return true;
+        return false;
+    }
 
     // ================================================================== lookups (public for tests and the runner)
 
@@ -363,7 +368,7 @@ public sealed partial class MissionModule
     /// group (0x504cc0). The character module's escape attempt reads it. rule: m5-characters-and-talent §Escape (Traced B2e §3 step 3).
     /// </summary>
     public int SpecialForcesOnPlanet(Side side, string system) =>
-        E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0 && o.System == system
+        E.Index.At(system).Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == 0
             && !IsSpecialForceBusy(o.Id));
 
     /// <summary>
@@ -383,7 +388,8 @@ public sealed partial class MissionModule
     /// on the ship). The escape attempt of a prisoner a ship caught with no commander reads it. rule: m5-characters-and-talent §Escape (B2e §3, Q73).
     /// </summary>
     public int SpecialForcesOnShip(Side side, int ship) =>
-        E.Objects.Values.Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && o.AboardShip == ship && !IsSpecialForceBusy(o.Id));
+        (ship != 0 ? E.Index.Aboard(ship) : E.Objects.Values.Where(o => o.AboardShip == 0))
+            .Count(o => o.Completed && o.Side == side && o.Category == ObjectCategory.SpecialForce && !IsSpecialForceBusy(o.Id));
 
     /// <summary>
     /// The guards a planet-target mission of <paramref name="side"/> meets at <paramref name="system"/>: those of the arriving check (orbit) and of the

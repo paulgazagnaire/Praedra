@@ -156,5 +156,5 @@ public sealed class LoyaltyModule
     // rule: B2c §4 (0x4ffef0, 0x503a50): the side still has a fleet or a landed regiment at the system
     private bool Present(string system, Side side) =>
         _game.State.Fleets.Values.Any(f => f.At == system && f.Side == side && f.Ships.Count + f.Squadrons.Count > 0)
-        || _eco.Objects.Any(o => o.Category == ObjectCategory.Regiment && o.Side == side && o.AboardShip == 0 && o.System == system);
+        || _eco.ObjectsAt(system).Any(o => o.Category == ObjectCategory.Regiment && o.Side == side && o.AboardShip == 0);
 }

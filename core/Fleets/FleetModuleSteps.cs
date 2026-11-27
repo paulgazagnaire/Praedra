@@ -419,7 +419,7 @@ public sealed partial class FleetModule
             var fleet = FleetOfShip(o.Id);
             string? place = fleet?.At ?? fleet?.Transit?.Path[fleet.Transit.HopIndex] ?? o.System;
             var landed = new List<EconObject>();
-            foreach (var u in E.Objects.Values.Where(u => u.AboardShip == o.Id).ToList())
+            foreach (var u in E.Index.Aboard(o.Id).ToList()) // id order
             {
                 u.AboardShip = 0; u.System = place; landed.Add(u);
             }

@@ -506,14 +506,14 @@ public sealed class BombardmentModule
     /// </summary>
     private void LoseShip(StepContext ctx, int day, string system, EconObject ship)
     {
-        foreach (var reg in _eco.Objects.Where(r => r.AboardShip == ship.Id && r.Category == ObjectCategory.Regiment).OrderBy(r => r.Id).ToList())
+        foreach (var reg in _eco.ObjectsAboard(ship.Id).Where(r => r.Category == ObjectCategory.Regiment).OrderBy(r => r.Id).ToList())
         {
             var r = reg;
             ctx.Emit((i, _) => new RegimentDestroyed(i, day, r.Id, r.Class, system, r.Side!.Value, "ShipLost"));
             _eco.DestroyUnit(ctx, day, r);
         }
         // special forces aboard are lost with the ship, as regiments (m5-missions §Spying from orbit 1, DEFAULT)
-        foreach (var sf in _eco.Objects.Where(r => r.AboardShip == ship.Id && r.Category == ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
+        foreach (var sf in _eco.ObjectsAboard(ship.Id).Where(r => r.Category == ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
         {
             int sid = sf.Id;
             ctx.Emit((i, _) => new Praedra.Core.Battle.UnitDestroyed(i, day, system, sid, 0, Praedra.Core.Battle.UnitLossReason.ShipLost));
@@ -560,5 +560,5 @@ public sealed class BombardmentModule
 
     /// <summary>The completed non-defence facilities on the system, id order (families 0x28-0x2f). rule: B7-bombardment §3.</summary>
     private List<EconObject> CivilianFacilities(string system) =>
-        _eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == system && !_def.Data.IsDefense(o.Class)).ToList();
+        _eco.ObjectsAt(system).Where(o => o.Category == ObjectCategory.Facility && o.Completed && !_def.Data.IsDefense(o.Class)).ToList();
 }

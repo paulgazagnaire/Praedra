@@ -219,7 +219,7 @@ public sealed class HarvesterModule
     // A ship leaves with the regiments aboard (m3-fleets Q6, as BattleModule.DestroyUnit); fighters aboard land when the ship leaves its fleet.
     private void LoseShip(StepContext ctx, int day, EconObject ship)
     {
-        foreach (var reg in E.Objects.Values.Where(r => r.AboardShip == ship.Id && r.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
+        foreach (var reg in E.Index.Aboard(ship.Id).Where(r => r.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
             _eco.DestroyUnit(ctx, day, reg); // special forces aboard too (m5-missions §Spying from orbit 1)
         _eco.DestroyUnit(ctx, day, ship);
     }
@@ -336,7 +336,7 @@ public sealed class HarvesterModule
         {
             var aboard = new List<EconObject>();
             foreach (var shipId in f.Ships.ToList())
-                aboard.AddRange(E.Objects.Values.Where(u => u.AboardShip == shipId)); // id order
+                aboard.AddRange(E.Index.Aboard(shipId)); // id order
             var squads = f.Squadrons.Select(id => E.Objects[id]).ToList();
             var units = new List<int>();
             units.AddRange(f.Ships); units.AddRange(f.Squadrons); units.AddRange(aboard.Select(u => u.Id));
@@ -357,7 +357,7 @@ public sealed class HarvesterModule
     // FacilityDestroyed with reason Harvester; regiments, special forces and based squadrons go through PlanetUnitDestroyed. Id order.
     private void RemovePlanet(StepContext ctx, int day, string system)
     {
-        foreach (var o in E.Objects.Values.Where(x => x.System == system && x.AboardShip == 0 && x.Category != ObjectCategory.CapitalShip).ToList())
+        foreach (var o in E.Index.At(system).Where(x => x.AboardShip == 0 && x.Category != ObjectCategory.CapitalShip).ToList())
         {
             if (o.Category == ObjectCategory.Facility) { _eco.Destroy(ctx, day, o, DestroyReason.Harvester); continue; }
             int id = o.Id; string cls = o.Class; var owner = o.Side;

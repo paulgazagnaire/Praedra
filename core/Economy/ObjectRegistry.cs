@@ -41,6 +41,7 @@ public static class ObjectRegistry
             o.Hits = new List<int>(new int[HitCounters]);
         }
         e.Objects[newId] = o;
+        e.Index.Added(o);
         return newId;
     }
 

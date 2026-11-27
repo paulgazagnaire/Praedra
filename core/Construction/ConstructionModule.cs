@@ -225,7 +225,8 @@ public sealed class ConstructionModule
     private static FacilityKind KindOf(EconObject yard) => FacilityKinds.TryParse(yard.Class, out var k) ? k : throw new InvalidOperationException("Not a facility class.");
 
     private IEnumerable<EconObject> YardsOf(string system, YardFamily family) =>
-        YardObjects().Where(o => o.System == system && Yards.FamilyOf(KindOf(o)) == family);
+        E.Index.At(system).Where(o => o.Category == ObjectCategory.Facility && o.Completed && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)
+            && Yards.FamilyOf(KindOf(o)) == family);
 
     private int RateOf(EconObject yard) => Yards.IsAdvanced(KindOf(yard)) ? Params.AdvancedCycleDays : Params.StandardCycleDays;
 
