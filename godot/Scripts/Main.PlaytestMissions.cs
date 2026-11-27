@@ -49,6 +49,14 @@ public partial class Main
             gs.Click("Close without sending"); gs.View.Select(-1); gs.PlayRefresh();
         }
 
+        // Abduction goes after the enemy leaders your side has seen; Assassination stays shut (m5-missions §Targets, Where a leader target is
+        // sought; Paul 2026-11-27, card "Spies plus Abduction")
+        var seenLeaders = s.SeenEnemyLeaders();
+        string ab = s.KindBlockedReason(MissionKind.Abduction);
+        Expect(seenLeaders.Count == 0 ? ab != null && ab.Contains("Espionage") : ab == null,
+            $"Abduction is {(ab == null ? "open" : "shut: " + ab)} with {seenLeaders.Count} enemy leaders seen");
+        Expect(s.KindBlockedReason(MissionKind.Assassination) != null, "Assassination stays shut");
+
         bool Free(CharacterRecord c) => cm.IsAvailable(c) && c.Transit == null && c.System != null;
         int Ticks(string a, string b) => fm.FindPath(a, b, 100) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
 
