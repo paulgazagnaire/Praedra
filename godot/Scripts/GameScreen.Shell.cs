@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 
 using Side = Praedra.Core.Clock.Side;
+using YardSetUse = Praedra.Core.Construction.YardSetUse;
 
 namespace PraedraViewer;
 
@@ -201,8 +202,10 @@ public partial class GameScreen
     /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
     internal enum RefinedWay { Steady, Falling, Rising }
 
-    /// <summary>Today: the yards' use today when the mark goes by a higher one of the last days (QA-132), else -1.</summary>
-    internal readonly record struct RefinedTrend(int Made, int Mine, int Hers, RefinedWay Way, bool RawShort = false, int Today = -1)
+    /// <summary>Today: the yards' use today when the mark also counts yard sets between Sibyl's builds (QA-132), else -1; Waiting: the worlds of
+    /// those sets.</summary>
+    internal readonly record struct RefinedTrend(int Made, int Mine, int Hers, RefinedWay Way, bool RawShort = false, int Today = -1,
+        IReadOnlyList<string> Waiting = null)
     {
         public bool Falling => Way == RefinedWay.Falling;
     }
@@ -210,48 +213,60 @@ public partial class GameScreen
     internal RefinedTrend RefinedTrendNow()
     {
         var (made, rawShort) = S.Host.Economy.RefinedPacePer30Days(S.Player);
-        var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        var seen = ReferenceEquals(_useSeenHost, S.Host) ? _useSeen : new List<(int Day, int Mine, int Hers)>();   // another game loaded: none of its days
-        var (m, h) = HeldUse(seen, S.Game.Day, mine, hers, SibylBuilds, S.Host.Construction.Params.StandardCycleDays);
-        return TrendOf(made, m, h, _refinedWas) with { RawShort = rawShort, Today = m + h > mine + hers ? mine + hers : -1 };
+        var sets = Praedra.Core.Economy.RefinedFlow.UseBySet(S.Host, S.Player);
+        var yesterday = ReferenceEquals(_useSeenHost, S.Host) ? Yesterday(_useSeen, S.Game.Day) : null;   // another game loaded: none of its days
+        var (mine, hers, waiting, today) = HeldUse(sets, yesterday, SibylBuilds);
+        return TrendOf(made, mine, hers, _refinedWas) with { RawShort = rawShort, Today = waiting.Count > 0 ? today : -1, Waiting = waiting };
     }
 
     bool SibylBuilds => S.HasAdvisor && S.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction);
 
-    /// <summary>The yards' use seen on the last days while Sibyl builds: (day, the player's part, hers), for the game <see cref="_useSeenHost"/>.
-    /// Noted once per refresh of the bar (<see cref="NoteUse"/>); the mark only reads it.</summary>
-    readonly List<(int Day, int Mine, int Hers)> _useSeen = new();
+    /// <summary>The yard sets seen at the last refresh of today and of yesterday while Sibyl builds, for the game <see cref="_useSeenHost"/>.
+    /// Noted at each refresh of the bar (<see cref="NoteUse"/>); the mark only reads it.</summary>
+    readonly List<(int Day, IReadOnlyList<YardSetUse> Sets)> _useSeen = new();
     Praedra.Core.Setup.GameHost _useSeenHost;
 
     void NoteUse()
     {
         if (!ReferenceEquals(_useSeenHost, S.Host)) { _useSeen.Clear(); _useSeenHost = S.Host; }   // a load starts afresh, earlier or later day
-        var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        NoteUse(_useSeen, S.Game.Day, mine, hers, SibylBuilds, S.Host.Construction.Params.StandardCycleDays);
+        NoteUse(_useSeen, S.Game.Day, Praedra.Core.Economy.RefinedFlow.UseBySet(S.Host, S.Player), SibylBuilds);
     }
 
-    /// <summary>The use the mark goes by. While Sibyl manages production she gives idle yards a new build on her next day, so each build that
-    /// ends shows a day or two of idle yards, and the use stepped 110, 88, 110 while the refineries made 95 between: the mark flipped red
-    /// and green every few days with the stock at 0 (QA-132, 2026-11-27, 26 changes in 80 days). So while she builds, the highest use of
-    /// the last <paramref name="holdDays"/> days counts (a standard yard's cycle: a yard idle for less than that is between her builds; on
-    /// QA's 80 days it leaves 0 changes). Without her, idle yards stay idle until you give them work, so today's use counts.
-    /// rule: m2-construction §Build time; m6-advisor-sibyl.</summary>
-    internal static (int Mine, int Hers) HeldUse(IReadOnlyList<(int Day, int Mine, int Hers)> seen, int day, int mine, int hers, bool sibylBuilds, int holdDays)
+    /// <summary>The use the mark goes by: (your part, hers, the worlds of the sets between her builds, today's whole use). Sibyl plans once a day,
+    /// before the step, and gives any idle yard set a new build, so a build that ends leaves its set idle at exactly one refresh: with several
+    /// sets the use stepped 110, 88, 110 while the refineries made 95, and the mark flipped red and green every few days with the stock at 0
+    /// (QA-132, 2026-11-27, 26 changes in 80 days). Holding the whole use for some days traded that flicker against a stale mark once she really
+    /// stops (no free slot, no room), and no length escaped it (UI review 38, 300 model runs). So, while she builds, each set busy at yesterday's
+    /// refresh and idle today counts at yesterday's use, as hers (she fills it, even one your own build just left); one idle a second day is
+    /// real news and counts as idle. Your part is always today's. Without her, idle yards stay idle until you give them work, so today's use
+    /// counts. A set lost or suspended today is not in today's list, so it is not held. rule: m2-construction §Build time; m6-advisor-sibyl.</summary>
+    internal static (int Mine, int Hers, IReadOnlyList<string> Waiting, int Today) HeldUse(IReadOnlyList<YardSetUse> today,
+        IReadOnlyList<YardSetUse> yesterday, bool sibylBuilds)
     {
-        var top = (Mine: mine, Hers: hers);   // today's, unless one of the last days was higher
-        if (!sibylBuilds) return top;
-        foreach (var x in seen)
-            if (x.Day < day && x.Day > day - holdDays && x.Mine + x.Hers > top.Mine + top.Hers) top = (x.Mine, x.Hers);
-        return top;
+        int mine = today.Where(x => x.Busy && !x.ByAdvisor).Sum(x => x.Use), hers = today.Where(x => x.Busy && x.ByAdvisor).Sum(x => x.Use);
+        var waiting = new List<string>();
+        if (sibylBuilds && yesterday != null)
+            foreach (var x in today.Where(x => !x.Busy))
+            {
+                var was = yesterday.FirstOrDefault(y => y.System == x.System && y.Family == x.Family);
+                if (!was.Busy) continue;
+                hers += was.Use;
+                if (!waiting.Contains(x.System)) waiting.Add(x.System);
+            }
+        return (mine, hers, waiting, today.Where(x => x.Busy).Sum(x => x.Use));
     }
 
-    /// <summary>Notes today's use for <see cref="HeldUse"/>: today's replaces an earlier note of the same day; older days than the hold drop out;
+    /// <summary>Yesterday's last note, or null (none, or the game was not refreshed that day).</summary>
+    internal static IReadOnlyList<YardSetUse> Yesterday(IReadOnlyList<(int Day, IReadOnlyList<YardSetUse> Sets)> seen, int day) =>
+        seen.FirstOrDefault(x => x.Day == day - 1).Sets;
+
+    /// <summary>Notes today's sets for <see cref="HeldUse"/>: today's replaces an earlier note of the same day; only yesterday's is kept besides;
     /// without Sibyl building nothing is kept.</summary>
-    internal static void NoteUse(List<(int Day, int Mine, int Hers)> seen, int day, int mine, int hers, bool sibylBuilds, int holdDays)
+    internal static void NoteUse(List<(int Day, IReadOnlyList<YardSetUse> Sets)> seen, int day, IReadOnlyList<YardSetUse> sets, bool sibylBuilds)
     {
         if (!sibylBuilds) { seen.Clear(); return; }
-        seen.RemoveAll(x => x.Day >= day || x.Day <= day - holdDays);   // a load to an earlier day drops the later ones too
-        seen.Add((day, mine, hers));
+        seen.RemoveAll(x => x.Day >= day || x.Day < day - 1);   // a load to an earlier day drops the later ones too
+        seen.Add((day, sets));
     }
 
     /// <summary>The mark by Refined at the last refresh: a mark keeps showing until the use crosses balance (QA r245: no blinking).</summary>
@@ -278,6 +293,14 @@ public partial class GameScreen
         return new RefinedTrend(Math.Max(0, made), mine, hers, way);
     }
 
+    /// <summary>"Fusoria", "Fusoria and Charter", "Fusoria, Charter and Hearth", or "4 worlds".</summary>
+    static string Worlds(IReadOnlyList<string> names) => names.Count switch
+    {
+        1 => names[0],
+        <= 3 => string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1],
+        _ => $"{names.Count} worlds",
+    };
+
     internal string RefinedFlowWords(int refined, RefinedTrend f)
     {
         int w = Praedra.Core.Economy.RefinedFlow.WindowDays, use = f.Mine + f.Hers;
@@ -288,7 +311,7 @@ public partial class GameScreen
         string outLine = use == 0 ? " No yard is building now."
             // the mark goes by a higher use of the last days (QA-132): say both, so the hover matches the mark and today (Ponytail on #427)
             : f.Today >= 0 ? $" While {sibyl} keeps your yards busy they use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
-                + $" Today it is {f.Today} every {w} days: a yard waits for its next build."   // neutral: the yard may be yours or hers (Ponytail on #429)
+                + $" Today it is {f.Today} every {w} days: your yards at {Worlds(f.Waiting)} are between builds, and {sibyl} plans their next one tomorrow."
             : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
             : $" Your yards now use about {use} every {w} days.";
         int gap = use - f.Made;

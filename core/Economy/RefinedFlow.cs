@@ -26,4 +26,7 @@ public static class RefinedFlow
 
     /// <summary>Refined used per <see cref="WindowDays"/> days at the present pace: (the player's builds, the advisor's).</summary>
     public static (int Player, int Advisor) Use(GameHost host, Side side) => host.Construction.RefinedUsePer30Days(side);
+
+    /// <summary>The same use per yard set, idle ones included with the use they would have (UI review 38 P2 2).</summary>
+    public static IReadOnlyList<Praedra.Core.Construction.YardSetUse> UseBySet(GameHost host, Side side) => host.Construction.RefinedUseBySet(side);
 }
