@@ -285,7 +285,7 @@ public partial class GameScreen
             var kk = k;
             string why = KindRefusal(k);
             bool chosen = p.Kind == k;
-            var b = Act($"{(chosen ? "> " : "")}{GameSession.KindWords(k, Me)}{(why != null ? " - " + why : "")}", () => ChooseKind(kk), GameSession.KindHelp(k, Me), why != null);
+            var b = Act($"{(chosen ? "> " : "")}{GameSession.KindWords(k, Me)}{(why != null ? " - " + why : "")}", () => ChooseKind(kk), GameSession.KindHelp(k, Me, S.Fog.Params), why != null);
             if (chosen) b.AddThemeColorOverride("font_color", Pending);
         }
         if (p.Kind is MissionKind kind && KindRefusal(kind) != null) { p.Kind = null; p.Target = null; p.TargetChar = null; }
@@ -294,7 +294,7 @@ public partial class GameScreen
         if (p.Kind is not MissionKind sel) { CloseRow(); return; }
         if (sel == MissionKind.TrainTalent) { TrainingStep(p); CloseRow(); return; } // no map pick: the team trains where it stands
         Heading("3. Target");
-        Line(GameSession.KindHelp(sel, Me), Dim, 13);
+        Line(GameSession.KindHelp(sel, Me, S.Fog.Params), Dim, 13);
         if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-harvester §5
         if (sel == MissionKind.BurnTheBooks) Line("The target is Charter.", Dim, 13); // rule: m5-missions §6b Target
         if (sel == MissionKind.Rescue)

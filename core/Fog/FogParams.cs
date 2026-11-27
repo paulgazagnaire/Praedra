@@ -50,14 +50,16 @@ public sealed record FogParams
     public SectorSuspicion SectorSuspicion { get; init; } = SectorSuspicion.Off;
     /// <summary>
     /// Hearth tip: chance in 1000 that a Hand espionage success anywhere the Hearth is not also tells the Hand where the Hearth stands now
-    /// (one draw per such success; none at 0). New, Decided (Paul 2026-10-26: "a (very) small chance"). DEFAULT 20 (2%). rule: §N6a.
+    /// (one draw per such success; none at 0). New, Decided (Paul 2026-10-26: "a (very) small chance"; raised by Paul 2026-11-27, "Better spy
+    /// odds but 5 to 7%", after QA's UI game found no path to the Hearth: 60, 6%). rule: §N6a.
     /// </summary>
-    public int HearthTipPermille { get; init; } = 20;
+    public int HearthTipPermille { get; init; } = 60;
     /// <summary>
     /// The same draw's next band: chance in 1000 that, failing the exact tip, the Hand gets the coarse "the Hearth is in sector X" clue
-    /// (§N6 HqSectorClue). New, Decided with HearthTipPermille (Paul 2026-10-26). DEFAULT 50 (5%), AI trainer's ask. rule: §N6a.
+    /// (§N6 HqSectorClue). New, Decided with HearthTipPermille (Paul 2026-10-26). DEFAULT 150 (15%, Dev lead 2026-11-27, scaled with Paul's
+    /// exact-tip raise; was 50, the AI trainer's ask). rule: §N6a.
     /// </summary>
-    public int HearthTipSectorPermille { get; init; } = 50;
+    public int HearthTipSectorPermille { get; init; } = 150;
     /// <summary>
     /// An espionage success also writes the fleets (group E only) of every system one jump from the target that the spy's side does not hold:
     /// what enemy fleets stand next door. New, Decided (Paul 2026-11-25, pick 1A after the espionage stats: "spies almost never see fleets").

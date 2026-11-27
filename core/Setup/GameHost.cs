@@ -466,6 +466,17 @@ public sealed class GameHost
         "\"TalentTrainingGainPercent\":" + OldTrainingGainPercent + "(?=[,}])(?<between>.*?)\"TalentTrainingChancePercent\":" + OldTrainingChancePercent + "(?=[,}])",
         System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// The Hearth tip odds a save pinned before 2026-11-27 (20 and 50 permille, the old DEFAULTs; no setting ever let a player choose them).
+    /// Paul chose better spy odds ("5 to 7%") after QA's UI game found no path to the Hearth, so pinned 20 and 50 load as 60 and 150, as the
+    /// 240-day win did for old saves (QA-121). rule: m5-fog-and-hq §N6a.
+    /// </summary>
+    internal const int OldHearthTipPermille = 20, NewHearthTipPermille = 60, OldHearthTipSectorPermille = 50, NewHearthTipSectorPermille = 150;
+    private static readonly System.Text.RegularExpressions.Regex OldHearthTip =
+        new("\"HearthTipPermille\":" + OldHearthTipPermille + "(?=[,}])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex OldHearthTipSector =
+        new("\"HearthTipSectorPermille\":" + OldHearthTipSectorPermille + "(?=[,}])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static string UpgradeSettingsJson(string json)
     {
         json = OldTrainingSpeed.Replace(json, m => "\"TalentTrainingGainPercent\":" + Praedra.Core.Characters.CharacterParams.ClassicTrainingGainPercent
@@ -474,6 +485,8 @@ public sealed class GameHost
         json = json.Replace(OldTrainerPick, NewTrainerPick, StringComparison.Ordinal);
         json = OldDominance.Replace(json, "\"DominanceDays\":" + NewDominanceDays);
         json = json.Replace(OldSabotagePick, NewSabotagePick, StringComparison.Ordinal);
+        json = OldHearthTip.Replace(json, "\"HearthTipPermille\":" + NewHearthTipPermille);
+        json = OldHearthTipSector.Replace(json, "\"HearthTipSectorPermille\":" + NewHearthTipSectorPermille);
         return json;
     }
 
