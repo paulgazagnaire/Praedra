@@ -185,6 +185,13 @@ public sealed partial class GameSession
         return $"{cls} #{unit}";
     }
 
+    /// <summary>One special force by its name ("Listeners #12"), several as "3 special forces".</summary>
+    string SpecialForcesWords(IEnumerable<int> ids)
+    {
+        var list = ids.ToList();
+        return list.Count == 1 ? SpecialForceName(list[0]) : $"{list.Count} special forces";
+    }
+
     public string TeamWords(IEnumerable<int> chars, IEnumerable<int> sfs)
     {
         var names = chars.Select(CharName).Concat(sfs.Select(SpecialForceName)).ToList();

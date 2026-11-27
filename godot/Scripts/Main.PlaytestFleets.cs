@@ -310,6 +310,100 @@ public partial class Main
         ScreenFixes(gs, s, me);
     }
 
+    /// <summary>
+    /// Special forces aboard a fleet (m5-missions §Spying from orbit 1-3), in the Command tabs only (Paul 2026-11-27): the Fleet window's place
+    /// for them with its N/9 count; a drag from the planet's Command tab takes them aboard, a line in the log says so; a right-click sends one
+    /// on Espionage from orbit, and the planner says each guard's chance to spot it is halved; the mission is launched from the fleet; a drag
+    /// back onto the Command tab of a world you don't hold lands the other one; a fleet with no ships refuses them; fleet to fleet works.
+    /// </summary>
+    void OrbitTeam(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
+    {
+        var mm = s.Missions; var eco = s.Host.Economy;
+        if (!mm.Params.OrbitMissions) { GD.Print("  (missions from orbit are off: not checked)"); return; }
+        var esp = mm.Data.Get(Praedra.Core.Missions.MissionKind.Espionage);
+        string cls = eco.Costs.Rows.Where(r => r.Category == Praedra.Core.Economy.ObjectCategory.SpecialForce && (me == Praedra.Core.Clock.Side.Hand ? r.Hand : r.Collective))
+            .Select(r => r.Name).Where(n => s.Host.Troops.Data.SpecialForce(n) is { } k && (k.MissionBit & esp.SpecialForceMask) != 0)
+            .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+        string ship = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.Ships.Count > 0).OrderBy(f => f.Id).Select(f => eco.Find(f.Ships[0])?.Class).FirstOrDefault(c => c != null);
+        string spot = gs.G.Systems.Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal)
+            .FirstOrDefault(x => s.OwnerOf(x) == null && !s.IsDestroyed(x) && !s.Game.State.Fleets.Values.Any(f => f.At == x));
+        if (cls == null || ship == null || spot == null) { GD.Print($"  (no spy class, ship or quiet neutral world on this side: orbit missions not checked; {cls}, {ship}, {spot})"); return; }
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        int fid = s.Host.Fleets.AddFleet(me, "Orbit Team", new[] { ship }, spot);
+        int a = eco.AddObject(me, cls, spot), b = eco.AddObject(me, cls, spot);
+        string an = s.SpecialForceName(a), bn = s.SpecialForceName(b), win = $"Fleet {fid}", zone = $"Fleet {fid} SpecialForces", ground = $"Ground {spot} SpecialForces";
+        gs.OpenMgmt(GameScreen.MgKind.Ground, spot, tab: "Command");
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command"); gs.PlayRefresh();
+        // special forces only in Command tabs, the fleet's and the planet's (Paul 2026-11-27)
+        string gcmd = gs.MgPageText($"Ground {spot}", "Command"), gtroops = gs.MgPageText($"Ground {spot}", "Troops");
+        Expect(gcmd.Contains("SPECIAL FORCES") && gcmd.Contains(an) && !gtroops.Contains("SPECIAL FORCES") && !gtroops.Contains(an),
+            $"{spot}'s special forces stand in its Command tab, not its Troops tab: " + gcmd.Replace("\n", " / ") + " || " + gtroops.Replace("\n", " / "));
+        string cmd = gs.MgPageText(win, "Command");
+        int max = mm.Params.FleetSpecialForcesMax;
+        // during a drag a window's page scrolls when the pointer rests near its bottom or top edge, not in the middle nor outside (review 35:
+        // the special forces place sat below the fold, and nothing scrolled during a drag). A headless run has no pointer: the rule alone.
+        var page = new Rect2(100, 100, 344, 580);
+        float mid = GameScreen.EdgePush(page, new Vector2(200, 390)), low = GameScreen.EdgePush(page, new Vector2(200, 676)), lower = GameScreen.EdgePush(page, new Vector2(200, 679.5f)),
+            high = GameScreen.EdgePush(page, new Vector2(200, 104)), outside = GameScreen.EdgePush(page, new Vector2(200, 700));
+        Expect(mid == 0 && low > 0 && lower > low && high < 0 && outside == 0,
+            $"a drag near a page's bottom edge scrolls it down, harder nearer the edge, near the top up, in the middle or outside not ({mid} {low} {lower} {high} {outside})");
+        Expect(gs.MgHasZone(zone) && cmd.Contains("SPECIAL FORCES") && cmd.Contains($"0/{max}"), $"the Fleet window's Command tab has a place for special forces, 0/{max}: " + cmd.Replace("\n", " / "));
+        string intoTroops = gs.MgJudge($"F:{a}", $"Fleet {fid} Troops");
+        Expect(intoTroops != null && intoTroops.Contains("Command tab"), $"the fleet's Troops tab says where special forces ride: {intoTroops}");
+        Expect(gs.MgDrop($"F:{a}", zone) == null && gs.MgDrop($"F:{b}", zone) == null, $"drag {an} and {bn} from {spot}'s Command tab onto Orbit Team");
+        int from = s.Messages.Count;
+        gs.PlayDay();
+        var fl = s.Game.State.Fleets[fid];
+        var aboard = mm.SpecialForcesAboard(fl).Select(o => o.Id).OrderBy(x => x).ToList();
+        Expect(aboard.SequenceEqual(new[] { a, b }.OrderBy(x => x)), $"both ride Orbit Team the next day ({string.Join(", ", aboard)})");
+        Expect(s.Messages.Skip(from).Any(m => m.Text == $"{an} boarded Orbit Team at {spot}."), "the log says each boarded: " + string.Join(" | ", s.Messages.Skip(from).Select(m => m.Text)));
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command"); gs.PlayRefresh();
+        cmd = gs.MgPageText(win, "Command");
+        Expect(cmd.Contains($"2/{max}") && cmd.Contains(an), $"the Fleet window shows them, 2/{max}");
+        Expect(gs.MgJudge($"F:{b}", ground) == null, $"{spot}'s Command tab, a world you don't hold, takes one back down: {gs.MgJudge($"F:{b}", ground)}");
+
+        // Espionage from orbit, by a right-click on the card in the Fleet window
+        var menu = gs.MenuOf($"F:{a}");
+        Expect(menu.Contains("Espionage...") && gs.RunMenu($"F:{a}", "Espionage...") && gs.PlannerOpen, $"right-click {an} aboard: Espionage opens the planner ({string.Join(" | ", menu)})");
+        gs.PickSystem(spot); gs.PlayRefresh();
+        string plan = gs.PanelText();
+        Expect(plan.Contains("From orbit: the team works from Orbit Team and never lands") && plan.Contains("halved"), "the planner says each guard's chance to spot the team is halved: " + plan.Replace("\n", " / "));
+        Expect(gs.Click($"Send: Espionage on {spot}"), "send it");
+        gs.PlayDay();
+        var mission = s.MyMissions.LastOrDefault(x => x.SpecialForces.Contains(a));
+        Expect(mission != null && mission.FromFleet == fid, $"the mission is launched from Orbit Team (from fleet {mission?.FromFleet})");
+
+        // the other one lands on the world below
+        from = s.Messages.Count;
+        Expect(gs.MgDrop($"F:{b}", ground) == null, $"drag {bn} onto {spot}'s Command tab");
+        gs.PlayDay();
+        Expect(eco.Find(b) is { AboardShip: 0 } ob && ob.System == spot, $"{bn} stands on {spot}");
+        Expect(s.Messages.Skip(from).Any(m => m.Text == $"{bn} landed from Orbit Team at {spot}."), "the log says it landed: " + string.Join(" | ", s.Messages.Skip(from).Select(m => m.Text)));
+
+        // a fleet with no ships carries none (the core's NoCapacity, Ponytail on #415): the drop says why instead of failing quietly.
+        // The ships are set aside only for this screen judgment and put back before the clock moves.
+        var keep = fl.Ships.ToList(); fl.Ships.Clear();
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command"); gs.PlayRefresh();
+        string noShips = gs.MgJudge($"F:{b}", zone);
+        fl.Ships.AddRange(keep); gs.PlayRefresh();
+        Expect(noShips != null && noShips.Contains("Orbit Team has no ships"), $"a fleet with no ships refuses {bn}: {noShips}");
+
+        // from one fleet to another here: the drop lands it, then boards it (two orders, run in the order given)
+        Expect(gs.MgDrop($"F:{b}", zone) == null, $"drag {bn} back aboard Orbit Team");
+        gs.PlayDay();
+        int fid2 = s.Host.Fleets.AddFleet(me, "Orbit Two", new[] { ship }, spot);
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command");
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid2, tab: "Command"); gs.PlayRefresh();
+        string swap = gs.MgDrop($"F:{b}", $"Fleet {fid2} SpecialForces");
+        Expect(swap == null, $"drag {bn} from Orbit Team onto Orbit Two: {swap}");
+        gs.PlayDay();
+        var fl2 = s.Game.State.Fleets[fid2];
+        Expect(mm.SpecialForcesAboard(fl2).Any(o => o.Id == b) && !mm.SpecialForcesAboard(fl).Any(o => o.Id == b),
+            $"{bn} rides Orbit Two the next day, not Orbit Team ({string.Join(", ", mm.SpecialForcesAboard(fl2).Select(o => o.Id))})");
+        if (gs.PlannerOpen) gs.Click("Close without sending");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+    }
+
     void RefinedMark(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
     {
         // when it shows, from the numbers alone (here a refinery's cycle is 5 days: its fastest, at no upkeep)
@@ -463,6 +557,9 @@ public partial class Main
         // the red ▼ by Refined (Paul 2026-11-27): it shows when the yards use more refined than the refineries make, and its tooltip
         // says by how much, how long the stock lasts and the advisor's part; 9999 and the mark keep the frame's width, so the bar does not shift
         RefinedMark(gs, s, me);
+
+        // special forces ride fleets and spy from orbit (Paul 2026-11-27; m5-missions §Spying from orbit): the screens
+        OrbitTeam(gs, s, me);
 
         // item 13: the pause words that came with a report go when the report closes
         const string fought = "Paused: an invasion was fought";
