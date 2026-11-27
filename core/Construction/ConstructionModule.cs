@@ -166,6 +166,33 @@ public sealed class ConstructionModule
         return p == null ? 0 : p.Units.TakeWhile(id => E.Objects.TryGetValue(id, out var u) && u.ByAdvisor).Count();
     }
 
+    /// <summary>
+    /// How much refined the side's yards use at their present pace, per 30 days, split into the player's own builds and the advisor's (the
+    /// current unit of each project decides whose it is). Each working yard takes 1 refined per cycle (4 days standard, 2 advanced), a founding
+    /// yard 1 per standard cycle; a suspended yard and an empty project take none. A read for the screen (QA's UI game, 2026-11-27, item 2:
+    /// "Refined went 300 to 22 and nothing says why"); it reads state only and changes nothing. rule: m2-construction §Build time.
+    /// </summary>
+    public (int Player, int Advisor) RefinedUsePer30Days(Side side)
+    {
+        const int Days = 30;
+        int player = 0, advisor = 0;
+        var yards = YardObjects().Where(y => y.System != null && _eco.OwnerOf(y) == side).ToList();
+        foreach (var p in C.AllProjects().Where(p => p.Side == side && p.Units.Count > 0))
+        {
+            if (IsSuspendedAt(p.System)) continue;
+            int std = 1, adv = 0; // a founding yard is its own one standard yard
+            if (!p.Founding)
+            {
+                var here = yards.Where(y => y.System == p.System && Yards.FamilyOf(KindOf(y)) == p.Family).ToList();
+                std = here.Count(y => RateOf(y) == Params.StandardCycleDays);
+                adv = here.Count - std;
+            }
+            int use = Days * std / Params.StandardCycleDays + Days * adv / Params.AdvancedCycleDays;
+            if (E.Objects.TryGetValue(p.Units[0], out var u) && u.ByAdvisor) advisor += use; else player += use;
+        }
+        return (player, advisor);
+    }
+
     public long SubmitStop(Side side, string system, YardFamily family) =>
         _game.Submit(seq => new StopBuildOrder(seq, side, system, family));
 

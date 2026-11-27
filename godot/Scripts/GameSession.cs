@@ -95,6 +95,8 @@ public sealed partial class GameSession
     readonly Dictionary<int, string> _classOf = new();
     readonly Dictionary<int, (string Name, Side Side)> _fleetOf = new();
     readonly Dictionary<int, int> _fleetOfUnit = new();
+    readonly Dictionary<int, Side> _sideOfUnit = new();   // whose each unit was: a unit aboard is not in a battle's lists
+    readonly Dictionary<int, int> _sfAboard = new();      // your special forces aboard a fleet: id -> fleet (m5-missions §Spying from orbit 1)
     // Battles being collected while the events of one day are read.
     readonly Dictionary<string, BattleDraft> _battles = new(StringComparer.Ordinal);
     string _lastContact;
@@ -300,6 +302,7 @@ public sealed partial class GameSession
         var advised = HasAdvisor ? Advisor.PlanDay() : Array.Empty<SubmittedOrder>(); // after the player's orders, before the opponent's
         foreach (var x in advised) _pending[x.Sequence] = "Sibyl's order (" + SibylWords(x.Detail).Text + ")";
         if (!OpponentIdle) Opponent.PlanDay();
+        int firstEvent = Game.Events.Count; // this Step's events start here (the list only grows)
         Game.Step();
         var outcome = new StepOutcome();
         foreach (var t in switched)
@@ -307,7 +310,9 @@ public sealed partial class GameSession
             var m = new Message(day, t, null, MsgKind.Info) { Cat = MsgCat.Orders, Tag = "Sibyl" };
             Messages.Add(m); outcome.New.Add(m);
         }
-        var accepted = Game.Events.OfType<OrderAccepted>().Select(e => e.Sequence).ToHashSet();
+        // only this Step's events: the whole history was rescanned every day, a cost that grew with the game (QA senior QS-2)
+        var accepted = new HashSet<long>();
+        for (int i = firstEvent; i < Game.Events.Count; i++) if (Game.Events[i] is OrderAccepted a) accepted.Add(a.Sequence);
         foreach (var x in advised.Where(x => accepted.Contains(x.Sequence))) // a refused one shows as "Order refused" only (ReadEvents)
         {
             var (text, place) = SibylWords(x.Detail);
@@ -364,10 +369,13 @@ public sealed partial class GameSession
 
     void Snapshot()
     {
-        _classOf.Clear(); _fleetOf.Clear(); _fleetOfUnit.Clear();
+        _classOf.Clear(); _fleetOf.Clear(); _fleetOfUnit.Clear(); _sideOfUnit.Clear(); _sfAboard.Clear();
         foreach (var o in Host.Economy.Objects)
             if (o.Category is ObjectCategory.CapitalShip or ObjectCategory.Fighter or ObjectCategory.Regiment or ObjectCategory.SpecialForce or ObjectCategory.Facility)
+            {
                 _classOf[o.Id] = o.Class;
+                if (o.Side is Side us) _sideOfUnit[o.Id] = us;
+            }
         SnapshotMissions();
         foreach (var f in Game.State.Fleets.Values)
         {
@@ -375,7 +383,15 @@ public sealed partial class GameSession
             foreach (int id in f.Ships) _fleetOfUnit[id] = f.Id;
             foreach (int id in f.Squadrons) _fleetOfUnit[id] = f.Id;
         }
+        foreach (var o in Host.Economy.Objects)
+            if (o.Category == ObjectCategory.SpecialForce && o.Side == Player && o.AboardShip != 0 && _fleetOfUnit.TryGetValue(o.AboardShip, out int sff))
+                _sfAboard[o.Id] = sff;
     }
+
+    /// <summary>A fleet in a message: yours by its name; the enemy's as "a Collective fleet", since "Fleet 1 (Collective)" reads as your own
+    /// Fleet 1 (QA playthrough 2026-11-27, item 13). Start: the words open the sentence.</summary>
+    string FleetCalled(int id, Side? side, bool start) =>
+        side == Player || side == null ? FleetName(id) : $"{(start ? "A" : "a")} {NameOf(side.Value)} fleet";
 
     string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"Fleet {id}");
 
@@ -613,13 +629,17 @@ public sealed partial class GameSession
     /// <summary>Which posts the character's record allows. rule: m5-characters-and-talent §Posts (Capability).</summary>
     public string CapabilityOf(CharacterRecord c)
     {
-        var cls = Chars.ClassOf(c);
-        var can = new List<string>();
-        if (cls.CanAdmiral) can.Add("Admiral");
-        if (cls.CanCommander) can.Add("Commander");
-        if (cls.CanGeneral) can.Add("General");
+        var can = FleetPosts.Where(p => Chars.CanHold(c, p)).Select(PostWords).ToList();
         return can.Count == 0 ? "Cannot hold a post (may ride a fleet as a passenger)." : "Can be " + string.Join(", ", can) + ".";
     }
+
+    /// <summary>
+    /// The fleet posts in the order the Fleet window shows them: Admiral, General, and Commander only with the Classic switch (Paul 2026-11-27, "Merge
+    /// into Admiral"). rule: m5-characters-and-talent §Posts (Commander merged into Admiral).
+    /// </summary>
+    public CharacterPost[] FleetPosts => Chars.Params.CommanderIntoAdmiral
+        ? new[] { CharacterPost.Admiral, CharacterPost.General }
+        : new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander };
 
     public static string PostWords(CharacterPost p) => p switch
     {

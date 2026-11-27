@@ -44,7 +44,7 @@ public partial class GameScreen
     const int DropRowH = 32;      // a row of the search results or the layers list: the bar's words, 32 px apart
     const int DropPad = 5;        // a drop-down's box round its black cells
     // the frame's widths of the stocks and the day, made for 9999 and 9999/9999: the bar keeps them, so it does not shift as numbers grow
-    const int RawW = 78, RefinedW = 102, UpkeepW = 137, DayW = 55;
+    const int RawW = 78, RefinedW = 109, UpkeepW = 137, DayW = 55;   // Refined: the frame's 102 + 7 for its red ▼ (Paul 2026-11-27), so 9999 and the mark fit
 
     Control _barLayer;
     HBoxContainer _barLeft, _barRight, _dayWords;
@@ -52,11 +52,12 @@ public partial class GameScreen
     ColorRect _searchEnd;   // the search's closing line: hidden once the search narrows and reaches the stocks' line
     Control _rawCell, _refinedCell, _upkeepCell;   // one stock each: its icon, name and number, in the stocks' cell
     Label _goalCaption, _goalValue, _rawCaption, _refinedCaption;
+    TextureRect _refinedFall;   // the small red ▼ after Refined's number: the yards use more than the refineries make (Paul 2026-11-27)
     readonly List<PanelContainer> _barTextCells = new();
     static Font _barFont;
     static Font BarFont => _barFont ??= Ui.Operator ?? ThemeDB.FallbackFont;
 
-    const string RawTip = "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined.";
+    const string RawTip = "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined. Mines and refineries slow down as your upkeep fills (see Upkeep).";
     const string RefinedTip = "Refined: the material you spend on ships, troops and buildings. Each yard takes it as it builds.";
 
     Control BuildTopBar()
@@ -149,6 +150,8 @@ public partial class GameScreen
         _barRight.AddChild(TextCell(stocks));
         (_rawCell, _rawCaption, _rawLabel) = StockItem(stocks, RawIcon, "Raw", RawTip);
         (_refinedCell, _refinedCaption, _refinedLabel) = StockItem(stocks, RefinedIcon, "Refined", RefinedTip);
+        _refinedFall = FallMark();
+        _refinedCell.AddChild(_refinedFall);
         (_upkeepCell, _upkeepCaption, _upkeepLabel) = StockItem(stocks, UpkeepIcon, "Upkeep", "");
         BarLine(_barRight);
 
@@ -501,6 +504,26 @@ public partial class GameScreen
             for (int x = 0; x < 16; x++)
                 if (rows[y][x] is >= '1' and <= '4' and var t) img.SetPixel(x, y, ramp[t - '0']);
         return ImageTexture.CreateFromImage(img);
+    }
+
+    /// <summary>The small red ▼ by Refined (Paul 2026-11-27): a pixel triangle 7 wide and 4 high, flat red as the upkeep's over-limit words,
+    /// made in code like every bar icon (Paul 2026-11-18). Hidden until the stock falls.</summary>
+    static TextureRect FallMark()
+    {
+        var img = Image.CreateEmpty(7, 4, false, Image.Format.Rgba8);
+        for (int y = 0; y < 4; y++)
+            for (int x = y; x < 7 - y; x++) img.SetPixel(x, y, Ui.Danger);
+        return new TextureRect
+        {
+            Texture = ImageTexture.CreateFromImage(img),
+            TextureFilter = TextureFilterEnum.Nearest,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+            CustomMinimumSize = new Vector2(7, 4),
+            SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            MouseFilter = MouseFilterEnum.Ignore,   // its words are the stock's tooltip
+            Visible = false,
+        };
     }
 
     static TextureRect PixelIcon(string[] rows, Color color)

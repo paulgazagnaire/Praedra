@@ -34,7 +34,7 @@ public partial class GameScreen
         else if (mine) { if (name != S.MyHqSystem) tags.Add(("YOURS", Ui.You)); } // the capital tag already says it
         else if (pic == null) tags.Add(("UNEXPLORED", Ui.Text3));
         else if (!ownerKnown) tags.Add(("OWNER ?", Ui.Text3));
-        else if (owner == null) tags.Add(("NOBODY'S", Ui.Neutral));
+        else if (owner == null) tags.Add(("NEUTRAL", Ui.Neutral));
         else tags.Add(("ENEMY", Ui.Enemy));
         // the Ground window's head (Paul 2026-11-24: "the Selected tab still uses the old layout inside the new frame -> it should be updated"):
         // the sector in small capitals, the name in the pixel capitals with its tag, then one line of what matters
@@ -56,7 +56,8 @@ public partial class GameScreen
             using (Card(Look.Bg, Look.Outline, 8))
             {
                 Line("Unexplored. You know nothing about this system yet: who holds it, what is built there or who is there.", Look.Text, 13);
-                Note("Send a fleet there to look, or a spy on an Espionage mission. Systems you hold or have a fleet at are seen live; the rest show what you saw last.");
+                Note("A fleet there shows who holds it and the fleets in orbit; " + (S.Fog.Params.ReconRevealsFacilities ? "a Reconnaissance mission shows its buildings too, an Espionage mission its troops as well." : "an Espionage mission shows its buildings and troops too.")
+                    + " Systems you hold are seen in full; the rest show what you saw last.");
             }
             CharactersAtSystem(name, false);
             FleetsHere(name, sees, null);
@@ -242,7 +243,7 @@ public partial class GameScreen
             Line(sees ? "Seen live now (you have a fleet here)."
                 : last is int ld ? $"Last seen day {ld} ({Ui.DaysAgo(age)}). Fleets there are not seen: it may have changed since." : "Not seen since the start of the war.",
                 sees ? Ui.Good : old ? Ui.Warn : Look.Text, 13);
-        Line(!ownerKnown ? "Owner: unknown" : owner == null ? "Owner: nobody (neutral)" : $"Owner: {S.You(owner.Value)}", !ownerKnown || owner == null ? Ui.Text2 : Ui.Enemy);
+        Line(!ownerKnown ? "Owner: unknown" : owner == null ? "Owner: neutral" : $"Owner: {S.You(owner.Value)}", !ownerKnown || owner == null ? Ui.Text2 : Ui.Enemy);
         if (pic.Owner is { } po)
         {
             int s = Me == Side.Collective ? po.Value.CollectiveSupport : 100 - po.Value.CollectiveSupport;
@@ -259,7 +260,7 @@ public partial class GameScreen
         Heading("Buildings");
         if (pic.Facilities is { } fac)
             Line((fac.Value.Count == 0 ? "none" : string.Join(", ", fac.Value.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value == 1 ? kv.Key : $"{kv.Value} x {kv.Key}"))) + $"   (seen day {fac.Stamp})", Ui.Text2);
-        else Line("unknown (nobody has looked at the ground yet)", Dim);
+        else Line($"never seen ({BuildingsMissions} shows them)", Dim);
         if (pic.HarvesterQueued is { Value: true } hq) Line($"A harvester was being built here (seen day {hq.Stamp}).", Bad);
 
         RegimentsHere(name, false, pic);
@@ -270,10 +271,11 @@ public partial class GameScreen
 
         Heading("How to take it");
         if (S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
-            Note(owner != null ? "Bombard it, then invade with troops aboard your fleet: both are in the fleet's Orders tab (select your fleet here, then Attack, retreat, scrap...)."
-                : "Nobody holds this planet. Invade with regiments aboard from your fleet's Orders tab (select your fleet here, then Attack, retreat, scrap...).");
-        else Note(owner == null && ownerKnown ? $"Nobody holds this planet. Send a fleet with regiments aboard, then press Invade; or win the people over with {DiplomacyWord} first. You can only build on systems you own."
-            : "You can only build on systems you own. To take it, send a fleet with regiments aboard, beat any fleet there, and press Invade.");
+            // the orders sit under Fleet actions in the fleet window (Paul 2026-11-22, F2); a neutral world has no defenders (m3-assault §0)
+            Note(owner != null ? "Bombard it, then invade with regiments aboard your fleet: Bombardment and Invasion are under Fleet actions in its fleet window (F)."
+                : "Neutral: no troops defend it, so an invasion with regiments aboard takes it unless its defences stop the landing. Invasion is under Fleet actions in your fleet's window (F).");
+        else Note(owner == null && ownerKnown ? $"Neutral: neither side holds it. Send a fleet with regiments aboard, then press Invasion in its fleet window; or win the people over with {DiplomacyWord} first. You can only build on systems you hold."
+            : "You can only build on systems you hold. To take it, send a fleet with regiments aboard, beat any fleet there, and press Invasion in its fleet window.");
     }
 
     /// <summary>The enemy leaders your picture of a system shows (group D), by name, with the day you saw them.</summary>
@@ -314,7 +316,7 @@ public partial class GameScreen
         using (Card(Look.Bg, new Color(Ui.Danger, 0.7f), 8))
         {
             Line(S.DestroyedWords(name), new Color("ffc2c2"), 17);
-            Line("The planet and everything on it are gone for good: no buildings, troops or people. Nobody holds this system and nobody can build on it, invade it, bombard it or send missions there.", Ui.Text2, Ui.Small);
+            Line("The planet and everything on it are gone for good: no buildings, troops or people. No side holds this system, and no one can build on it, invade it, bombard it or send missions there.", Ui.Text2, Ui.Small);
             Line("It stays on the map as a field of debris. Fleets can still pass through it and stop there.", Ui.Text2, Ui.Small);
         }
         FleetsHere(name, true, S.Picture(name));

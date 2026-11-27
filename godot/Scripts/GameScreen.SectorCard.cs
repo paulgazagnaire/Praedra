@@ -147,16 +147,20 @@ public partial class GameScreen
 
     /// <summary>Whether your side knows this system beyond its picture and name: yours, or looked at (the map's own fog test, S.Explored).
     /// One rule for the tile and the system's window.</summary>
+    /// <summary>The missions that show a world's buildings: Reconnaissance too while its switch is on, Espionage always; a fleet in orbit
+    /// never does. rule: m5-fog-and-hq §F2 (Recon, switch ReconRevealsFacilities), §F3</summary>
+    string BuildingsMissions => S.Fog.Params.ReconRevealsFacilities ? "a Reconnaissance or Espionage mission" : "an Espionage mission";
+
     bool Scouted(string n) => !S.IsDestroyed(n) && (S.OwnerOf(n) == Me || (S.Picture(n) != null && S.Explored(n)));
 
     /// <summary>The numbers behind the marks, for the tooltip: the tile itself shows none.</summary>
     string TileTip(string n, bool mine, bool explored, bool dead, SystemPicture pic, Side? holder, bool known)
     {
         if (dead) return $"{n}: harvested{(S.DestroyedDay(n) is int d ? $" on day {d}" : "")}. Nothing is left.";
-        if (!explored) return $"{n}: unexplored. Send a fleet or a spy to see who holds it and what is there.";
+        if (!explored) return $"{n}: unexplored. A fleet there shows who holds it; {BuildingsMissions} shows what is built there.";
         var eco = S.Host.Economy;
         var lines = new List<string>();
-        string who = mine ? (n == S.MyHqSystem ? "yours, your headquarters" : "yours") : !known ? "owner not known" : holder == null ? "nobody's" : $"held by the {S.NameOf(holder.Value)}";
+        string who = mine ? (n == S.MyHqSystem ? "yours, your headquarters" : "yours") : !known ? "owner not known" : holder == null ? "neutral" : $"held by the {S.NameOf(holder.Value)}";
         lines.Add($"{n}: {who}.");
         foreach (var (word, _, tip) in Alarms(n, mine)) lines.Add($"{word}: {tip}");
         if (mine)

@@ -47,9 +47,9 @@ public partial class GameScreen
     string LeaderPosts(CharacterRecord c)
     {
         if (c == null) return null;
-        var cls = Cm.ClassOf(c);
-        var can3 = new[] { cls.CanAdmiral ? "Admiral" : null, cls.CanGeneral ? "General" : null, cls.CanCommander ? "Commander" : null }.Where(x => x != null).ToArray();
-        return can3.Length == 3 ? "any post" : can3.Length == 0 ? "passenger" : string.Join(", ", can3);
+        var posts = S.FleetPosts;
+        var can = posts.Where(p => Cm.CanHold(c, p)).Select(GameSession.PostWords).ToArray();
+        return can.Length == posts.Length ? "any post" : can.Length == 0 ? "passenger" : string.Join(", ", can);
     }
 
     /// <summary>A leader's picture: their side's sprite for their role, a fleet officer, a general or an official (Paul 2026-11-23: a hero

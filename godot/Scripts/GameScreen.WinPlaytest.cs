@@ -41,6 +41,15 @@ public partial class GameScreen
         return null;
     }
 
+    /// <summary>Whether a chip may be dropped on a zone, without dropping it: null when it may, else why not ("" where it already is).</summary>
+    internal string MgJudge(string chipKey, string zoneKey)
+    {
+        var z = _zones.FirstOrDefault(x => x.Key == zoneKey && IsInstanceValid(x.Box));
+        if (z == null) return "no such zone: " + zoneKey;
+        var all = Drag.ParseAll(chipKey);
+        return all.Count == 0 ? "bad chip: " + chipKey : Judge(z, all[0]);
+    }
+
     /// <summary>The words of the right-click menu on the button named <paramref name="fullName"/>, or none.</summary>
     internal IReadOnlyList<string> MenuOf(string fullName) =>
         MenuCard(fullName) is { } b && _menus.TryGetValue(b, out var items) ? items().Select(i => i.Text).ToList() : new List<string>();
@@ -94,6 +103,51 @@ public partial class GameScreen
     {
         _view._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, DoubleClick = doubleClick, Position = at });
         _view._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = at });
+    }
+
+    /// <summary>Where a management window stands (null when it is not open), and putting it somewhere as a drag of its head would.</summary>
+    internal Rect2? MgRect(string key) => _mgWins.FirstOrDefault(w => w.Key == key) is { } w ? new Rect2(w.Panel.Position, new Vector2(WidthOf(w), w.Panel.Size.Y)) : null;
+    internal void PlayPlaceMg(string key, Vector2 at) { if (_mgWins.FirstOrDefault(w => w.Key == key) is { } w) w.Panel.Position = ClampWin(at, w.Panel.Size); }
+    /// <summary>The left edge of Sibyl's panel, on the screen.</summary>
+    internal float DrawerLeft => _mgLayer.Size.X - DrawerWidth;
+    internal void PlayCloseDrawer() => CloseDrawer();
+    /// <summary>Each open window whose content wants more than its column width (W4: 344, or 698 for a wide one), with that width.</summary>
+    internal List<string> MgTooWide()
+    {
+        PlayRebuildMg();
+        return _mgWins.Select(w => (w.Key, want: Math.Max(w.Panel.GetCombinedMinimumSize().X, w.Panel.Size.X), width: WidthOf(w)))
+            .Where(x => x.want > x.width + 0.5f).Select(x => $"{x.Key} {x.want:0} > {x.width:0}").ToList();
+    }
+    /// <summary>Every window rebuilt now, as the next frames would after a press in one.</summary>
+    internal void PlayRebuildMg() { foreach (var w in _mgWins.ToList()) RebuildMg(w); }
+    /// <summary>Whether a window shows the edge of a window over another (review 32), after a frame's check.</summary>
+    internal bool EdgeShows(string key)
+    {
+        MarkOverlaps();
+        return _mgWins.FirstOrDefault(w => w.Key == key) is { } w && w.Panel.GetThemeStylebox("panel") is StyleBoxFlat b && b.BorderColor == Look.Outline;
+    }
+    /// <summary>A pause that came with a report, as RunDay makes it: the pill's words while the report is open, then once it is closed.</summary>
+    internal (string Open, string Closed) PlayReportPause(string note)
+    {
+        ShowReport(new Message(S.Game.Day, "A test invasion", null, MsgKind.Info, "A test invasion", "One line."));
+        _reportNote = note; Pause(note);
+        string open = _banner.Text;
+        HideModal(_reportPanel);
+        return (open, _banner.Text);
+    }
+    /// <summary>The words of a shown label of the windows, by its full name (null when none shows).</summary>
+    internal string MgNote(string fullName)
+    {
+        Label Walk(Node n)
+        {
+            foreach (var c in n.GetChildren())
+            {
+                if (c is Label l && l.IsVisibleInTree() && l.HasMeta(UiTest.FullName) && l.GetMeta(UiTest.FullName).AsString() == fullName) return l;
+                if (Walk(c) is { } r) return r;
+            }
+            return null;
+        }
+        return Walk(_mgLayer)?.Text;
     }
 
     /// <summary>Picks the line of the open fleet list that starts with a fleet's name, as a click would; false if none.</summary>

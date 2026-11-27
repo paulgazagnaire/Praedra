@@ -36,6 +36,11 @@ public sealed class BattleUnit
     public int Carrier { get; set; }
     /// <summary>Characters and special-forces units aboard (each adds 1 to the target value). rule: m4-battle-classic §5 (Traced, inferred "aboard").</summary>
     public int Passengers { get; set; }
+    /// <summary>
+    /// New battle, squadron: percent added to its shot and torpedo damage by its fleet's Admiral (leadership / <see cref="NewBattleParams.AdmiralFighterStep"/>);
+    /// 0 = none. rule: m4-battle-new §8 step 4 (Admiral boosts fighters, Paul 2026-11-27).
+    /// </summary>
+    public int FighterBoostPercent { get; set; }
     /// <summary>Classic: a squadron in a hangar (state 1): at the start, a hyperdrive-less squadron of the Hand aboard its carrier; on retreat, one that docked.</summary>
     public bool Docked { get; set; }
     /// <summary>Still in the battle: not destroyed and not gone.</summary>

@@ -122,7 +122,7 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Sensors: {SensorSizeWords(x.Size)} {(x.FleetSide == Side.Hand ? "Hand" : "Collective")} fleet heading for {x.System}, expected on day {x.ReachDay}.", x.System, MsgKind.Warn);
                 break;
             case OwnerChangeSeen x:
-                yield return new Message(d, $"News from {x.System}: now held by {(x.Now is Side n ? "the " + NameOf(n) : "nobody")} (was {(x.Was is Side was ? "the " + NameOf(was) : "nobody")}).", x.System, MsgKind.Info);
+                yield return new Message(d, $"News from {x.System}: now {(x.Now is Side n ? "held by the " + NameOf(n) : "neutral")} (was {(x.Was is Side was ? "the " + NameOf(was) + "'s" : "neutral")}).", x.System, MsgKind.Info);
                 break;
 
             // ---- the Hearth (HqArrived reaches the Collective only; the departure is told by the accepted order above)
@@ -163,7 +163,7 @@ public sealed partial class GameSession
             }
             case FleetRetreated r:
                 if (_battles.TryGetValue(r.From, out var rb))
-                    rb.Retreats.Add($"{FleetName(r.Fleet)} retreated to {r.To}");
+                    rb.Retreats.Add($"{FleetCalled(r.Fleet, FleetSide(r.Fleet), true)} retreated to {r.To}");
                 if (Mine(FleetSide(r.Fleet)))
                     yield return new Message(d, $"{FleetName(r.Fleet)} retreated from {r.From} to {r.To}.", r.From, MsgKind.Warn);
                 break;
@@ -179,7 +179,7 @@ public sealed partial class GameSession
             case Praedra.Core.Victory.DominanceChanged x:
             {
                 int pct = Host.Victory.Rules.DominanceSharePercent;
-                if (x.Leader is not Side lead) yield return new Message(d, "Nobody holds enough of the galaxy for a win by control any more.", null, MsgKind.Info);
+                if (x.Leader is not Side lead) yield return new Message(d, "Neither side holds enough of the galaxy for a win by control any more.", null, MsgKind.Info);
                 else if (lead == Player) yield return new Message(d, $"You hold {pct}% of the claimed worlds and the enemy capital has fallen: keep it until day {x.DueDay} to win.", null, MsgKind.Good);
                 else yield return new Message(d, $"The {NameOf(lead)} holds {pct}% of the claimed worlds: it wins on day {x.DueDay} unless you break its hold.", null, MsgKind.Bad);
                 break;
@@ -191,7 +191,24 @@ public sealed partial class GameSession
                 o.PauseReason ??= "battle";
                 break;
             case UnitDestroyed u when _battles.TryGetValue(u.System, out var bd):
-                bd.Lost.Add((u.Unit, bd.Collective.Contains(u.Unit) ? Side.Collective : Side.Hand));
+                // a unit aboard a ship (a regiment, a special force) is in neither list: whose it was comes from before the day ran
+                bd.Lost.Add((u.Unit, bd.Collective.Contains(u.Unit) ? Side.Collective : bd.Hand.Contains(u.Unit) ? Side.Hand
+                    : _sideOfUnit.TryGetValue(u.Unit, out var lostSide) ? lostSide : Side.Hand));
+                break;
+            // a special force of yours lost with its ship outside a battle (return fire on a bombardment): the battle report can't tell it
+            // (Dev lead 2026-11-27; m5-missions §Spying from orbit 1, lost as regiments aboard)
+            case UnitDestroyed u when u.Reason == UnitLossReason.ShipLost && _sfAboard.TryGetValue(u.Unit, out int sfFleet):
+                yield return new Message(d, $"Your {SpecialForceName(u.Unit)} aboard {FleetName(sfFleet)} was lost with its ship at {u.System}.", u.System, MsgKind.Bad);
+                break;
+            // your special forces boarding and landing (m5-missions §Spying from orbit 1): yours only, a line for each order
+            // the morning snapshot is kept current, so one that boards and is lost with its ship the same day still gets its line (Ponytail on #415)
+            case Praedra.Core.Missions.SpecialForcesLoaded x when x.Side == Player:
+                foreach (int id in x.SpecialForces.Items) _sfAboard[id] = x.Fleet;
+                yield return new Message(d, $"{SpecialForcesWords(x.SpecialForces.Items)} boarded {FleetName(x.Fleet)} at {x.System}.", x.System, MsgKind.Info);
+                break;
+            case Praedra.Core.Missions.SpecialForcesUnloaded x when x.Side == Player:
+                foreach (int id in x.SpecialForces.Items) _sfAboard.Remove(id);
+                yield return new Message(d, $"{SpecialForcesWords(x.SpecialForces.Items)} landed from {FleetName(x.Fleet)} at {x.System}.", x.System, MsgKind.Info);
                 break;
             case BattleEnded be:
                 // QA round 204: the player's held ships are one news line per battle, not one per ship
@@ -356,7 +373,9 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Construction at {p.System} was cancelled ({(p.Reason == "SystemDestroyed" ? "the system was destroyed" : p.Reason)}).", p.System, MsgKind.Warn);
                 break;
             case UnitCompleted u when u.Side == Player:
-                yield return new Message(d, $"{u.Class} completed at {u.Yard}.", u.Yard, MsgKind.Good);
+                // where it goes when it was ordered for another world: Sibyl's garrison orders are built at the nearest training facility, so Tranches
+                // "completed at Charter" left for other worlds with no word of it (QA's UI game, 2026-11-27, item 4)
+                yield return new Message(d, u.Destination != null && u.Destination != u.Yard ? $"{u.Class} completed at {u.Yard}, on its way to {u.Destination}." : $"{u.Class} completed at {u.Yard}.", u.Yard, MsgKind.Good);
                 break;
             case DeliveryArrived u when ObjectIsMine(u.Object):
                 yield return new Message(d, $"{u.Class} delivered to {u.System}.", u.System, MsgKind.Good);
@@ -376,14 +395,19 @@ public sealed partial class GameSession
             // ---- bombardment
             case BombardmentStarted b:
                 if (b.Side == Player || OwnerOf(b.System) == Player)
-                    yield return new Message(d, $"{FleetName(b.Fleet)} ({NameOf(b.Side)}) bombards {b.System}.", b.System, b.Side == Player ? MsgKind.Info : MsgKind.Bad);
+                    yield return new Message(d, $"{FleetCalled(b.Fleet, b.Side, true)} bombards {b.System}.", b.System, b.Side == Player ? MsgKind.Info : MsgKind.Bad);
                 break;
             case BombardmentResolved b:
             {
-                string text = b.Hits == 0
-                    ? $"Bombardment of {b.System}: the shields held, no damage."
-                    : $"Bombardment of {b.System}: {b.Hits} hit(s); {b.Regiments} regiment(s) and {b.Facilities} facilit(ies) destroyed" +
-                      (b.Energy + b.Raw > 0 ? $", {b.Energy} energy and {b.Raw} raw slot(s) lost." : ".");
+                // only what was lost, short enough for one Log row ("and 0 facilit..." was cut off: QA's UI game, 2026-11-27, item 9)
+                var lost = new List<string>();
+                if (b.Regiments > 0) lost.Add(Ui.Count(b.Regiments, "regiment", "regiments"));
+                if (b.Facilities > 0) lost.Add(Ui.Count(b.Facilities, "building", "buildings"));
+                if (b.Energy > 0) lost.Add(Ui.Count(b.Energy, "energy slot", "energy slots"));
+                if (b.Raw > 0) lost.Add(Ui.Count(b.Raw, "raw slot", "raw slots"));
+                string text = b.Hits == 0 ? $"Bombardment of {b.System}: the shields held, no damage."
+                    : lost.Count == 0 ? $"Bombardment of {b.System}: {Ui.Count(b.Hits, "hit", "hits")}, nothing destroyed."
+                    : $"Bombardment of {b.System}: {string.Join(", ", lost)} destroyed.";
                 yield return new Message(d, text, b.System, OwnerOf(b.System) == Player ? MsgKind.Bad : MsgKind.Info);
                 break;
             }
@@ -491,7 +515,7 @@ public sealed partial class GameSession
         };
         string verdict = r.Collective == BattleOutcome.Victorious ? "The Collective won."
             : r.Hand == BattleOutcome.Victorious ? "The Hand won."
-            : "Nobody won.";
+            : "Neither side won.";
         bool youWon = (Player == Side.Collective ? r.Collective : r.Hand) == BattleOutcome.Victorious;
         bool youLost = (Player == Side.Collective ? r.Hand : r.Collective) == BattleOutcome.Victorious;
         string detail =

@@ -42,6 +42,12 @@ public sealed class BattleModule
 
     public BattleParams Params { get; private set; }
 
+    /// <summary>
+    /// Leadership of a fleet's Admiral (0 if none), wired by GameHost to the characters; 0 until then, so battle tests without characters do not change.
+    /// rule: m4-battle-new §8 step 4 (Admiral boosts fighters, Paul 2026-11-27).
+    /// </summary>
+    public Func<Fleets.Fleet, int> AdmiralLeadership { get; set; } = _ => 0;
+
     private BattleModule(Game game, Galaxy galaxy, FleetModule fleets, EconomyModule eco, BattleParams p, NewBattleData? newData)
     {
         _game = game; _galaxy = galaxy; _fleets = fleets; _eco = eco; Params = p; _newData = newData;
@@ -220,7 +226,23 @@ public sealed class BattleModule
                 if (o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side &&
                     ((o.AboardShip != 0 && shipSet.Contains(o.AboardShip)) || (o.AboardShip == 0 && o.System == sys))) squads.Add(o.Id);
             foreach (var id in ships) force.Units.Add(MakeUnit(force.Units.Count, E.Objects[id], side, true));
-            foreach (var id in squads) force.Units.Add(MakeUnit(force.Units.Count, E.Objects[id], side, false));
+            // rule: m4-battle-new §8 step 4 (Admiral boosts fighters, Paul 2026-11-27): a squadron of a fleet, or aboard one of its ships, takes that
+            // fleet's Admiral; a based squadron has none
+            var boost = new Dictionary<int, int>(); // lookup only: squadron or ship id -> percent
+            if (!Classic && Params.New.AdmiralFighterStep > 0)
+                foreach (var f in fleets.OrderBy(f => f.Id))
+                {
+                    int pct = AdmiralLeadership(f) / Params.New.AdmiralFighterStep;
+                    if (pct <= 0) continue;
+                    foreach (var id in f.Ships) boost[id] = pct;
+                    foreach (var id in f.Squadrons) boost[id] = pct;
+                }
+            foreach (var id in squads)
+            {
+                var u = MakeUnit(force.Units.Count, E.Objects[id], side, false);
+                if (boost.TryGetValue(id, out var p) || (u.Carrier != 0 && boost.TryGetValue(u.Carrier, out p))) u.FighterBoostPercent = p;
+                force.Units.Add(u);
+            }
         }
         return force;
     }
@@ -394,8 +416,8 @@ public sealed class BattleModule
         int id = d.Unit.ObjectId, sec = d.Second; var why = d.Reason;
         if (!E.Objects.TryGetValue(id, out var obj)) return;
         if (d.Unit.IsCapital)
-            foreach (var reg in E.Objects.Values.Where(r => r.AboardShip == id && r.Category == ObjectCategory.Regiment).OrderBy(r => r.Id).ToList())
-            {
+            foreach (var reg in E.Objects.Values.Where(r => r.AboardShip == id && r.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
+            { // special forces aboard go down with the ship too (m5-missions §Spying from orbit 1, DEFAULT as regiments)
                 int rid = reg.Id;
                 ctx.Emit((i, _) => new UnitDestroyed(i, day, sys, rid, sec, UnitLossReason.ShipLost));
                 _eco.DestroyUnit(ctx, day, reg);

@@ -47,9 +47,9 @@ public partial class GameScreen
             // the Troops count (Paul 2026-11-24, A): the regiments here out of those needed to keep the planet calm. rule: m2-support (garrison)
             int have = S.Host.Support.RegimentCount(n), need = S.Host.Support.RequiredGarrison(n);
             FleetStrip(w,
-                ("Command", null, null, () => GroundCommand(n, gen, here, null)),
+                ("Command", null, null, () => GroundCommand(n, gen, here, null, sf)),
                 // a planet that needs no garrison shows the regiments alone, "14" not "14/0" (Paul 2026-11-25, "B"); none and none: no count
-                ("Troops", need > 0 ? $"{have}/{need}" : have > 0 ? have.ToString() : null, have < need ? Ui.Warn : null, () => GroundTroops(n, regs, sf)),
+                ("Troops", need > 0 ? $"{have}/{need}" : have > 0 ? have.ToString() : null, have < need ? Ui.Warn : null, () => GroundTroops(n, regs)),
                 ("Fighters", based.Count == 0 ? null : based.Count.ToString(), null, () => GroundFighters(n, based)),
                 ("Fleets", fleetsCount, null, () => GroundFleets(n, own, foes, foesDay)));
             if (w.Pages.TryGetValue("Troops", out var tt))
@@ -61,10 +61,10 @@ public partial class GameScreen
         {
             var seen = EnemyGround(pic);
             var sf = MySpecialForcesAt(n);
-            int units = seen.Units.Count;
+            int units = seen.Units.Count(u => !u.Agent);   // the regiments: agents show in the Command tab (Paul 2026-11-27)
             FleetStrip(w,
-                ("Command", null, null, () => GroundCommand(n, null, here, pic)),
-                ("Troops", units == 0 ? null : units.ToString(), null, () => GroundTroopsSeen(n, seen, sf, pic)),
+                ("Command", null, null, () => GroundCommand(n, null, here, pic, sf, seen)),
+                ("Troops", units == 0 ? null : units.ToString(), null, () => GroundTroopsSeen(n, seen, pic)),
                 ("Fighters", null, null, GroundFightersSeen),
                 ("Fleets", fleetsCount, null, () => GroundFleets(n, own, foes, foesDay)));
         }
@@ -149,9 +149,14 @@ public partial class GameScreen
         else
         {
             var (known, owner) = S.KnownOwnerOf(n);
-            string who = !known ? "Unexplored: you don't know who holds it." : owner == null ? "Nobody holds it." : $"Held by the {S.NameOf(owner.Value)}.";
+            // a fleet (or an agent) here sees who holds it, its support and the fleets in orbit, never the ground: Paul kept the rule
+            // (2026-11-27, QA playthrough item 5: "You see it now" over a blind Troops tab read as a bug). rule: m5-fog-and-hq §F3. One fact
+            // here; the Troops tab says how to see more (review 33). Seen live, a neutral world has no defenders (m3-assault §0).
+            bool live = S.Sees(n), orbit = S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n);
+            string who = !known ? "Unexplored: you don't know who holds it." : owner == null ? (live ? "Neutral: no troops defend it." : "Neutral: neither side holds it.")
+                : $"Held by the {S.NameOf(owner.Value)}.";
             int? last = S.LastSeenDay(n);
-            string when = S.Sees(n) ? " You see it now." : last is int d ? (d >= S.Game.Day ? $" Seen today (day {d})." : $" Seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): it may have changed.") : "";
+            string when = live ? (owner == null && known ? "" : orbit ? " Your fleet sees its orbit, not its ground." : " You see it now, but not its ground.") : last is int d ? (d >= S.Game.Day ? $" Seen today (day {d})." : $" Seen day {d} ({Ui.DaysAgo(S.Game.Day - d)}): it may have changed.") : "";
             words = who + when;
             ink = known && owner != null ? Ui.Enemy : Look.Soft;
         }
@@ -168,14 +173,15 @@ public partial class GameScreen
         return v;
     }
 
-    // ================================================================== Command: the General, the leaders here, missions
+    // ================================================================== Command: the General, the leaders and special forces here, missions
 
     /// <summary>
-    /// The frame's Command tab: Ground command (the General's post, on a planet you hold), then the characters standing here as cards; on a
-    /// planet you don't hold, the enemy leaders last seen there. Then who is on the way, and the buttons: a mission from here, the
-    /// Infrastructure window.
+    /// The frame's Command tab: Ground command (the General's post, on a planet you hold), then the characters standing here as cards, then
+    /// your special forces (Paul 2026-11-27: they belong only in Command tabs); on a planet you don't hold, the enemy leaders and agents last
+    /// seen there. Then who is on the way, and the buttons: a mission from here, the Infrastructure window.
     /// </summary>
-    void GroundCommand(string n, CharacterRecord gen, List<CharacterRecord> here, SystemPicture pic)
+    void GroundCommand(string n, CharacterRecord gen, List<CharacterRecord> here, SystemPicture pic, List<EconObject> sf,
+        (List<(string Class, bool Hand, bool Agent)> Units, int? Day) ground = default)
     {
         bool mine = pic == null && S.OwnerOf(n) == Me;
         if (mine)
@@ -195,6 +201,7 @@ public partial class GameScreen
                 : $"Drag {S.CharName(gen.Id)} off the post to release them.");
             col.AddChild(gz.Box);
             cmd.AddChild(col);
+            if (gen == null) WhoCanBeGeneral(cmd, n, here);
         }
 
         var chars = FleetSection("Leaders", 16, null, mine ? "Your leaders standing on the planet, not on a fleet. Drag one onto a fleet in orbit, a post, or another system."
@@ -207,6 +214,8 @@ public partial class GameScreen
         if (here.Count == 0) lz.Flow.AddChild(EmptyCard(landable ? DropLeader : "Bring a fleet here to land leaders"));
         lz.Box.TooltipText = Ui.Wrap(mine ? "Drag a leader here to land them on the planet." : "Drag a leader off a fleet of yours here to land them.");
         chars.AddChild(lz.Box);
+
+        GroundSpecialForces(n, sf, mine);
 
         // the enemy leaders your side last saw here (group D: rule m5-fog-and-hq §F1), read only
         if (pic?.Characters is { } seen && seen.Value.Where(c => c.Side != Me).OrderBy(c => c.Id).ToList() is { Count: > 0 } foes)
@@ -223,6 +232,15 @@ public partial class GameScreen
                 card.SetMeta(UiTest.FullName, "Enemy leader " + name);
                 flow.AddChild(card);
             }
+            sec.AddChild(flow);
+        }
+        // the enemy agents your side last saw here, read only (m5-fog-and-hq §F1 group D)
+        if (ground.Units?.Where(u => u.Agent).ToList() is { Count: > 0 } agents && ground.Day is int day)
+        {
+            var sec = FleetSection("Enemy special forces", 16, agents.Count.ToString(), $"The enemy agents your side last saw on {n}.");
+            sec.AddChild(SeenLine(day));
+            var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
+            foreach (var u in agents) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, day));
             sec.AddChild(flow);
         }
 
@@ -244,6 +262,72 @@ public partial class GameScreen
                 "Pick a team standing here (leaders and special forces), the kind of mission and the target."));
         bar.AddChild(InfraButton(n));
         Add(bar);
+    }
+
+    /// <summary>The post a leader would leave to take this one: "General of X", or "Admiral of Fleet 2" (review 32 follow-up); null when free.</summary>
+    string PostNow(CharacterRecord c) =>
+        S.SystemPostOf(c) is string gs ? $"General of {gs}"
+        : c.AttachedFleet != 0 && c.Post != CharacterPost.None && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var f) ? $"{GameSession.PostWords(c.Post)} of {S.NameOf(f)}"
+        : null;
+
+    /// <summary>Whether the list of who can be a General is unfolded (one switch for every planet, kept while the game runs).</summary>
+    bool _generalsOpen;
+
+    /// <summary>
+    /// Under an empty General post: which of your leaders can take it, free ones first and nearest first, each a button that opens the
+    /// window where they stand so they can be dragged here (leaders move by drag only, Paul 2026-11-22). The post used to say who can't
+    /// only during a drag, and never who can (QA playthrough 2026-11-27, item 11). Most posts are empty, so the list folds into one line
+    /// that keeps the Leaders section, the drag source, near the top (review 32).
+    /// </summary>
+    void WhoCanBeGeneral(VBoxContainer cmd, string n, List<CharacterRecord> here)
+    {
+        const int Shown = 3;
+        var able = S.MyCharacters.Where(c => Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) != n && CanTravel(c, n) == null)
+            .Select(c => (c, days: TravelDays(c, n))).OrderBy(x => PostNow(x.c) != null).ThenBy(x => x.days).ThenBy(x => S.CharName(x.c.Id), StringComparer.Ordinal).ToList();
+        if (able.Count == 0)
+        {
+            var none = Look.Words("None of your leaders free to travel can be a General.", 12, Look.Muted);
+            none.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            none.SetMeta(UiTest.FullName, $"Ground {n} who can be General");
+            cmd.AddChild(none);
+            return;
+        }
+        string why = here.Count > 0 && !here.Any(c => Cm.ClassOf(c).CanGeneral) ? "No leader here can be a General. " : "";
+        var words = Look.Words($"Who can be a General ({able.Count}) {(_generalsOpen ? "▾" : "▸")}", 12, Look.Muted);
+        var fold = new Button { Flat = true, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand,
+            SizeFlagsHorizontal = SizeFlags.ShrinkBegin,
+            TooltipText = Ui.Wrap(why + (_generalsOpen ? "Fold the list." : $"Show the nearest {Math.Min(Shown, able.Count)}, each a way to the window where they stand.")) };
+        foreach (var state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus" }) fold.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
+        Fill(fold, words, 0, 2);
+        fold.MouseEntered += () => words.AddThemeColorOverride("font_color", Look.Text);
+        fold.MouseExited += () => words.AddThemeColorOverride("font_color", Look.Muted);
+        fold.Pressed += () => { _generalsOpen = !_generalsOpen; MgRefreshSoon(); };
+        fold.SetMeta(UiTest.FullName, $"Ground {n} who can be General");
+        cmd.AddChild(fold);
+        if (!_generalsOpen) return;
+        var rows = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        rows.AddThemeConstantOverride("separation", 8);
+        foreach (var (c, days) in able.Take(Shown))
+        {
+            string name = S.CharName(c.Id);
+            var f = c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var af) ? af : null;
+            string at = Cm.LocationOf(c) ?? "";
+            string post = PostNow(c);   // free leaders come first; a posted one says so on the button
+            string where = post ?? (f != null ? $"on {S.NameOf(f)}" : at);
+            string when = days == 0 ? "here" : $"{Ui.Count(days, "day", "days")} away";
+            var b = FleetAction($"{name} · {where} · {when}", $"General candidate {name}",
+                () => { if (f != null) OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Command"); else OpenMgmt(MgKind.Ground, Cm.LocationOf(c), tab: "Command"); },
+                $"{name}{(post != null ? ", " + post + "," : "")} stands {(f != null ? $"on {S.NameOf(f)} at {f.At}" : $"at {at}")}. Open that window and drag {name} onto this General post"
+                + (days == 0 ? "." : $": they fly here first, {Ui.Count(days, "day", "days")}."));
+            b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+            rows.AddChild(b);
+        }
+        cmd.AddChild(rows);
+        if (able.Count > Shown)
+        {
+            var more = Look.Words($"and {able.Count - Shown} more in Leaders (C).", 12, Look.Muted);
+            cmd.AddChild(more);
+        }
     }
 
     /// <summary>The way to the planet's Infrastructure window, as its own "Ground and military" button the other way.</summary>
@@ -281,9 +365,10 @@ public partial class GameScreen
 
     // ================================================================== Troops
 
-    /// <summary>The frame's Troops tab on your planet: the regiments, then the special forces, each a card; then Train troops (the Infrastructure
-    /// window on its training facilities). Any enemy unit standing here shows after them, in the enemy's colour.</summary>
-    void GroundTroops(string n, List<EconObject> regs, List<EconObject> sf)
+    /// <summary>The frame's Troops tab on your planet: the regiments, each a card; then Train troops (the Infrastructure window on its training
+    /// facilities). Any enemy regiment standing here shows after them, in the enemy's colour. Special forces are in the Command tab, with the
+    /// leaders (Paul 2026-11-27: "Special forces only belong in command tabs, either in fleets or ground").</summary>
+    void GroundTroops(string n, List<EconObject> regs)
     {
         var rs = FleetSection("Regiments", 16, null, "Below 60% loyalty a planet needs regiments to stay calm: one for every 10 points under 60. Too few and it rises up.");
         var rz = DropZone($"Ground {n} Regiments", "land", d => RefuseToGround(d, n, 'R'), d => DropToGround(d, n));
@@ -292,9 +377,6 @@ public partial class GameScreen
         if (regs.Count == 0) rz.Flow.AddChild(EmptyCard("Drop regiments here to land them", FleetBodyW, WideEmptyH));
         rs.AddChild(rz.Box);
 
-        // special forces: they never ride fleets (m3-troops-and-special-forces); dragged to another system's window they go there (a Move mission)
-        var ss = FleetSection("Special forces", 16, null, "Agents never ride fleets. Right-click one to send it on a mission; drag it onto another system's Troops tab to move it there.");
-        ss.AddChild(SpecialForcesZone(n, sf));
 
         // enemy ground units on your own planet, live (an invasion under way, or agents caught)
         var foes = S.Host.Troops.RegimentsOnSystem(n).Where(o => o.Side != Me).OrderBy(o => o.Class, StringComparer.Ordinal).ThenBy(o => o.Id).ToList();
@@ -308,14 +390,30 @@ public partial class GameScreen
 
         var bar = ButtonRow();
         bar.AddChild(InfraButton(n, InfraTab.Training, "Train troops"));
-        if (sf.Any(SfReady))
-            bar.AddChild(FleetAction("Send a mission...", $"Mission from {n}", () => { CloseSectorView(); OpenPlanner(n); },
-                "Pick a team standing here (leaders and special forces), the kind of mission and the target."));
         Add(bar);
     }
 
+    /// <summary>
+    /// Your special forces at a system, in the Command tab under the leaders (Paul 2026-11-27: "Special forces only belong in command tabs,
+    /// either in fleets or ground"): the place to drop them, to send them here or to land them off a fleet of yours. Dragged to another
+    /// system's window they go there (a Move mission); in New they also ride fleets, at most FleetSpecialForcesMax a fleet, and land at any
+    /// system the fleet stands at (m5-missions §Spying from orbit 1); in Classic never (m3-troops-and-special-forces). On a world you don't
+    /// hold it shows only when yours stand there or a fleet of yours there carries some.
+    /// </summary>
+    void GroundSpecialForces(string n, List<EconObject> sf, bool mine)
+    {
+        bool orbit = Mm.Params.OrbitMissions;
+        bool carried = orbit && S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n && f.Transit == null && Mm.SpecialForcesAboard(f).Count > 0);
+        if (!mine && sf.Count == 0 && !carried) return;
+        string tip = !orbit ? "Agents never ride fleets. Right-click one to send it on a mission; drag it onto another system's Command tab to move it there."
+            : mine ? $"Right-click one to send it on a mission. Drag it onto a fleet's Command tab here to take it aboard (at most {Mm.Params.FleetSpecialForcesMax} a fleet), or onto another system's Command tab to move it there."
+            : "Your agents standing here. Right-click one to send it on a mission." + (carried ? " Drag one here from your fleet's Command tab to land it." : "");
+        var ss = FleetSection("Special forces", 16, null, tip);
+        ss.AddChild(SpecialForcesZone(n, sf, carried && sf.Count == 0 ? "Drop special forces here to land them" : "Drop special forces here to send them"));
+    }
+
     /// <summary>Your special forces at a system, each a card (drag to move it, right-click for a mission), in their drop place.</summary>
-    Control SpecialForcesZone(string n, List<EconObject> sf)
+    Control SpecialForcesZone(string n, List<EconObject> sf, string empty = "Drop special forces here to send them")
     {
         var sz = DropZone($"Ground {n} SpecialForces", "send here", d => RefuseToGround(d, n, 'F'), d => DropToGround(d, n));
         CardFlow(sz.Flow);
@@ -331,7 +429,7 @@ public partial class GameScreen
             sz.Flow.AddChild(card);
             shown++;
         }
-        if (shown == 0) sz.Flow.AddChild(EmptyCard("Drop special forces here to send them", FleetBodyW, WideEmptyH));
+        if (shown == 0) sz.Flow.AddChild(EmptyCard(empty, FleetBodyW, WideEmptyH));
         return sz.Box;
     }
 
@@ -359,38 +457,45 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// The Troops tab of a planet you don't hold: the enemy's regiments and special forces as your side last saw them, each a card in the
-    /// enemy's colour, with the day; nothing to drag. Your own special forces there, if any, as on your planets.
+    /// The Troops tab of a planet you don't hold: the enemy's regiments as your side last saw them, each a card in the enemy's colour, with
+    /// the day; nothing to drag. Special forces, yours and the enemy's, are in the Command tab (Paul 2026-11-27).
     /// </summary>
-    void GroundTroopsSeen(string n, (List<(string Class, bool Hand, bool Agent)> Units, int? Day) seen, List<EconObject> sf, SystemPicture pic)
+    void GroundTroopsSeen(string n, (List<(string Class, bool Hand, bool Agent)> Units, int? Day) seen, SystemPicture pic)
     {
         var regs = seen.Units.Where(u => !u.Agent).ToList();
-        var agents = seen.Units.Where(u => u.Agent).ToList();
-        var rs = FleetSection("Regiments", 16, regs.Count.ToString(), $"The regiments your side last saw on {n}. You can land troops only on a planet you hold: to take it, invade from a fleet in orbit.");
-        if (seen.Day is not int day)
+        // a fleet in orbit never sees the ground (rule: m5-fog-and-hq §F3, group D); an Espionage success or an invasion does. Seen live, a
+        // neutral world has no defenders at all: regiments would make their side its holder, and an assault meets only the holder's
+        // (m2-control-and-capture, Derived; m3-assault §0), so there what can stop a landing is its defences (§1, check 4), buildings (review 33)
+        bool orbit = S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == n);
+        bool neutralNow = S.Sees(n) && S.KnownOwnerOf(n) is (true, null);
+        var rs = FleetSection("Regiments", 16, neutralNow ? "0" : seen.Day == null ? null : regs.Count.ToString(),   // never seen: no made-up 0
+            $"The regiments your side last saw on {n}. You can land troops only on a planet you hold: to take it, invade from a fleet in orbit.");
+        if (neutralNow)
         {
-            rs.AddChild(Para(pic == null ? $"Unexplored: you don't know who is on the ground at {n}. Send a fleet or a spy to look." : $"Nobody has looked at the ground of {n} yet."));
-            return;
+            var free = Para($"No troops defend a neutral world: an invasion with regiments aboard takes it, unless its defences stop the landing. "
+                + (pic?.Facilities is { } fac ? $"Its defences, seen day {fac.Stamp}, are in its Infrastructure window." : $"Its defences are unseen from orbit: {BuildingsMissions} shows them."));
+            free.SetMeta(UiTest.FullName, $"Ground troops unseen {n}");
+            rs.AddChild(free);
         }
-        rs.AddChild(SeenLine(day));
-        if (regs.Count > 0)
+        else if (seen.Day is not int never)
         {
-            var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
-            foreach (var u in regs) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, day));
-            rs.AddChild(flow);
+            var blind = Para(pic == null ? $"Unexplored: you don't know who is on the ground at {n}. A fleet there shows who holds it; an Espionage mission shows its troops."
+                : orbit ? $"The ground of {n} has never been seen. Your fleet here sees ships, not troops: an Espionage mission shows them."
+                : $"The ground of {n} has never been seen. An Espionage mission shows its troops.");
+            blind.SetMeta(UiTest.FullName, $"Ground troops unseen {n}");
+            rs.AddChild(blind);
         }
-        else rs.AddChild(Para("No regiments were seen."));
-        if (agents.Count > 0)
+        else
         {
-            var ss = FleetSection("Special forces", 16, agents.Count.ToString(), $"The enemy agents your side last saw on {n}.");
-            var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
-            foreach (var u in agents) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, day));
-            ss.AddChild(flow);
-        }
-        if (sf.Count > 0)
-        {
-            var ys = FleetSection("Your special forces", 16, sf.Count.ToString(), "Your agents standing here. Right-click one to send it on a mission.");
-            ys.AddChild(SpecialForcesZone(n, sf));
+            rs.AddChild(SeenLine(never));
+            if (orbit && never < S.Game.Day) rs.AddChild(Para("Your fleet here sees ships, not troops: an Espionage mission looks again."));
+            if (regs.Count > 0)
+            {
+                var flow = CardFlow(new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore });
+                foreach (var u in regs) flow.AddChild(EnemyUnitCard(u.Class, u.Hand, never));
+                rs.AddChild(flow);
+            }
+            else rs.AddChild(Para("No regiments were seen."));
         }
     }
 

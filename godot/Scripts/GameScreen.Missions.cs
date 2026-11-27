@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using Praedra.Core.Characters;
 using Praedra.Core.Economy;
+using Praedra.Core.Fleets;
 using Praedra.Core.Missions;
 
 using Side = Praedra.Core.Clock.Side;
@@ -107,6 +108,22 @@ public partial class GameScreen
     List<EconObject> MySpecialForcesAt(string name) =>
         S.Host.Economy.Objects.Where(o => o.Category == ObjectCategory.SpecialForce && o.Side == Me && o.System == name && o.AboardShip == 0).OrderBy(o => o.Id).ToList();
 
+    /// <summary>Your special forces aboard your fleets standing at a system, fleet by fleet (New: m5-missions §Spying from orbit 1): they can go
+    /// on missions from there, and a team made only of those aboard one fleet works from orbit (§Spying from orbit 2, 3).</summary>
+    List<(EconObject Sf, Fleet Fleet)> MySpecialForcesAboardAt(string name) =>
+        S.Game.State.Fleets.Values.Where(f => f.Side == Me && f.At == name && f.Transit == null).OrderBy(f => f.Id)
+            .SelectMany(f => Mm.SpecialForcesAboard(f).OrderBy(o => o.Id).Select(o => (o, f))).ToList();
+
+    /// <summary>The fleet a planned team works from: every member a special force aboard that one fleet (no leader), else null.
+    /// rule: m5-missions §Spying from orbit 2 ("launched from the fleet" only when it is all special forces aboard that one fleet).</summary>
+    Fleet OrbitFleet(MissionPlan p)
+    {
+        if (p.Chars.Count > 0 || p.Sfs.Count == 0) return null;
+        var aboard = MySpecialForcesAboardAt(p.Home);
+        var fleets = p.Sfs.Select(id => aboard.FirstOrDefault(x => x.Sf.Id == id).Fleet).Distinct().ToList();
+        return fleets.Count == 1 ? fleets[0] : null;
+    }
+
     bool SfReady(EconObject o) => o.Completed && !Mm.IsSpecialForceBusy(o.Id) && S.PendingMissionOfSpecialForce(o.Id) == null;
 
     string SpecialForceState(EconObject o) =>
@@ -129,7 +146,7 @@ public partial class GameScreen
     bool CanJoin(CharacterRecord c) => Cm.IsAvailable(c) && c.Transit == null && c.System != null && S.PendingMissionOf(c.Id) == null;
 
     bool CanSendFrom(string system) =>
-        S.MyCharacters.Any(c => c.System == system && CanJoin(c)) || MySpecialForcesAt(system).Any(SfReady);
+        S.MyCharacters.Any(c => c.System == system && CanJoin(c)) || MySpecialForcesAt(system).Any(SfReady) || MySpecialForcesAboardAt(system).Any(x => SfReady(x.Sf));
 
     void OpenPlanner(string home, int? character = null, int? unit = null)
     {
@@ -260,7 +277,8 @@ public partial class GameScreen
         Heading("1. Team (all at " + home + ")");
         // drop members who are no longer here or free (a day may have passed)
         p.Chars.RemoveWhere(id => Cm.Get(id) is not { } c || c.System != home || !CanJoin(c));
-        p.Sfs.RemoveWhere(id => S.Host.Economy.Find(id) is not { } o || o.System != home || !SfReady(o));
+        var aboardHere = MySpecialForcesAboardAt(home);
+        p.Sfs.RemoveWhere(id => S.Host.Economy.Find(id) is not { } o || !SfReady(o) || !(o.AboardShip == 0 ? o.System == home : aboardHere.Any(x => x.Sf.Id == id)));
         var here = S.MyCharacters.Where(c => c.Status != CharacterStatus.Dead && Cm.LocationOf(c) == home).ToList();
         foreach (var c in here)
         {
@@ -274,7 +292,12 @@ public partial class GameScreen
             if (SfReady(o)) TeamBox($"{S.SpecialForceName(o.Id)}  ({SpecialForceSkills(o)})", p.Sfs, o.Id);
             else Line($"{S.SpecialForceName(o.Id)} cannot go: {SpecialForceState(o)}", Dim, 13);
         }
-        if (here.Count == 0 && MySpecialForcesAt(home).Count == 0) Line("None of your characters or special forces is here.", Dim);
+        foreach (var (o, fl) in aboardHere)   // aboard your fleets here (m5-missions §Spying from orbit 1)
+        {
+            if (SfReady(o)) TeamBox($"{S.SpecialForceName(o.Id)}, aboard {S.NameOf(fl)}  ({SpecialForceSkills(o)})", p.Sfs, o.Id);
+            else Line($"{S.SpecialForceName(o.Id)}, aboard {S.NameOf(fl)}, cannot go: {SpecialForceState(o)}", Dim, 13);
+        }
+        if (here.Count == 0 && MySpecialForcesAt(home).Count == 0 && aboardHere.Count == 0) Line("None of your characters or special forces is here.", Dim);
 
         // ---- 2. kind: what the core allows this team; the rest greyed with a one-line reason
         Heading("2. Mission");
@@ -285,7 +308,7 @@ public partial class GameScreen
             var kk = k;
             string why = KindRefusal(k);
             bool chosen = p.Kind == k;
-            var b = Act($"{(chosen ? "> " : "")}{GameSession.KindWords(k, Me)}{(why != null ? " - " + why : "")}", () => ChooseKind(kk), GameSession.KindHelp(k, Me), why != null);
+            var b = Act($"{(chosen ? "> " : "")}{GameSession.KindWords(k, Me)}{(why != null ? " - " + why : "")}", () => ChooseKind(kk), GameSession.KindHelp(k, Me, S.Fog.Params), why != null);
             if (chosen) b.AddThemeColorOverride("font_color", Pending);
         }
         if (p.Kind is MissionKind kind && KindRefusal(kind) != null) { p.Kind = null; p.Target = null; p.TargetChar = null; }
@@ -294,7 +317,7 @@ public partial class GameScreen
         if (p.Kind is not MissionKind sel) { CloseRow(); return; }
         if (sel == MissionKind.TrainTalent) { TrainingStep(p); CloseRow(); return; } // no map pick: the team trains where it stands
         Heading("3. Target");
-        Line(GameSession.KindHelp(sel, Me), Dim, 13);
+        Line(GameSession.KindHelp(sel, Me, S.Fog.Params), Dim, 13);
         if (sel == MissionKind.SpikeTheHarvester) Line(S.EnemyHarvesterNote, Dim, 13); // rule: m5-harvester §5
         if (sel == MissionKind.BurnTheBooks) Line("The target is Charter.", Dim, 13); // rule: m5-missions §6b Target
         if (sel == MissionKind.Rescue)
@@ -321,6 +344,10 @@ public partial class GameScreen
                     : $"Target: {chk.Target}. {chk.Ticks} days on the way, arrives day {chk.ArrivalDay}.", Good);
                 Line($"First result between day {chk.ArrivalDay + rec.TimerMin} and day {chk.ArrivalDay + rec.TimerMin + rec.TimerSpread}{(rec.Repeats ? "; then it keeps working until you cancel it" : "")}." +
                      (rec.Foilable ? " Enemy units at the target may catch the team." : ""), Dim, 13);
+                // a team of special forces aboard one fleet (m5-missions §Spying from orbit 2, 3; Paul 2026-11-27, "Half chance")
+                if (OrbitFleet(p) is { } of)
+                    Line(chk.Target == of.At ? $"From orbit: the team works from {S.NameOf(of)} and never lands. Each guard's chance to spot it is halved while {S.NameOf(of)} stays over {of.At}."
+                        : $"The team sets out from {S.NameOf(of)} and comes back to it, or to your nearest system if {S.NameOf(of)} is gone or full.", Good, 13);
             }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
             Act($"Send: {GameSession.KindWords(sel, Me)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Logs (E).", chk.Reason != null);

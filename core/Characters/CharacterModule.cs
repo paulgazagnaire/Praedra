@@ -276,6 +276,38 @@ public sealed partial class CharacterModule
     }
 
 
+    /// <summary>
+    /// Whether he may hold this fleet post: his data flag, except under <see cref="CharacterParams.CommanderIntoAdmiral"/>, where no one is Commander
+    /// and a Commander flag also allows Admiral. The order checks and the screens ask this. rule: m5-characters-and-talent §Posts (Commander merged into Admiral).
+    /// </summary>
+    public bool CanHold(CharacterRecord c, CharacterPost post)
+    {
+        var cls = ClassOf(c);
+        if (!Params.CommanderIntoAdmiral) return cls.Can(post);
+        return post switch
+        {
+            CharacterPost.Commander => false,
+            CharacterPost.Admiral => cls.CanAdmiral || cls.CanCommander,
+            _ => cls.Can(post),
+        };
+    }
+
+    /// <summary>
+    /// Load of an older save under <see cref="CharacterParams.CommanderIntoAdmiral"/>: a Commander becomes a passenger of his fleet and a pending
+    /// join as Commander becomes a plain join. Returns how many changed. rule: m5-characters-and-talent §Posts (Commander merged into Admiral).
+    /// </summary>
+    public int RetireCommanders()
+    {
+        if (!Params.CommanderIntoAdmiral) return 0;
+        int n = 0;
+        foreach (var c in S.Characters.Values.OrderBy(c => c.Id))
+        {
+            if (c.Post == CharacterPost.Commander) { c.Post = CharacterPost.None; n++; }
+            if (c.JoinPost == CharacterPost.Commander) { c.JoinPost = CharacterPost.None; n++; }
+        }
+        return n;
+    }
+
     /// <summary>Setup or tests: give a character a fleet post without the order's checks (raises nothing).</summary>
     public void SetPost(int id, int fleetId, CharacterPost post)
     {
@@ -618,7 +650,7 @@ public sealed partial class CharacterModule
         else if (c.AttachedFleet != 0) return CharacterReject.AlreadyAttached;
         if (IsOnMission(c.Id)) return CharacterReject.OnMission;
         if (!leavesPostsFirst && HeldSystemPost(c) != null) return CharacterReject.HoldsSystemPost;
-        if (!ClassOf(c).Can(o.Post)) return CharacterReject.NoCapability;
+        if (!CanHold(c, o.Post)) return CharacterReject.NoCapability;
         if (!leavesPostsFirst && o.Post != CharacterPost.None && PostHolder(f.Id, o.Post) != null) return CharacterReject.PostTaken;
         return null;
     }
@@ -709,7 +741,7 @@ public sealed partial class CharacterModule
             // rule: §Moving a character alone (Joining a fleet on arrival): the fleet is his side's and he can hold the post asked for
             if (!State.Fleets.TryGetValue(o.JoinFleet, out var jf)) return OrderResult.Reject(RejectReason.UnknownFleet);
             if (jf.Side != o.Side) return OrderResult.Reject(RejectReason.NotYours);
-            if (!ClassOf(c).Can(o.JoinPost)) return OrderResult.Reject(CharacterReject.NoCapability);
+            if (!CanHold(c, o.JoinPost)) return OrderResult.Reject(CharacterReject.NoCapability);
         }
         var path = _fleets.FindPath(c.System, o.System, Params.CharacterSpeed);
         if (!path.Ok) return OrderResult.Reject(path.Status == Travel.PathStatus.AlreadyThere ? RejectReason.AlreadyThere : CharacterReject.NoPath);
@@ -754,7 +786,7 @@ public sealed partial class CharacterModule
                 if (c.JoinFleet is int jf and not 0 && State.Fleets.TryGetValue(jf, out var jfl) && jfl.At == sys && jfl.Side == c.Side
                     && c.Status is CharacterStatus.Free or CharacterStatus.Injured && (!c.JoinByOrder || (!Moving(jfl) && c.Status == CharacterStatus.Free)))
                 {
-                    var post = c.JoinPost != CharacterPost.None && ClassOf(c).Can(c.JoinPost) && PostHolder(jf, c.JoinPost) == null ? c.JoinPost : CharacterPost.None;
+                    var post = c.JoinPost != CharacterPost.None && CanHold(c, c.JoinPost) && PostHolder(jf, c.JoinPost) == null ? c.JoinPost : CharacterPost.None;
                     var cause = c.JoinByOrder ? CharacterCause.Order : CharacterCause.Autoroute;
                     c.AttachedFleet = jf; c.Post = post;
                     ctx.Emit((i, _) => new CharacterAttached(i, day, c.Id, c.Side, jf, post, cause));

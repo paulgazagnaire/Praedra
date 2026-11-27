@@ -308,4 +308,23 @@ public class HqRevealTests
         foreach (var t in new[] { typeof(FleetPicture), typeof(Sighting), typeof(SystemKnowledge), typeof(GroundPicture), typeof(FleetSighted) })
             Assert.DoesNotContain(t.GetProperties(), p => p.Name.EndsWith("Id", StringComparison.Ordinal) || p.Name == "Fleet");
     }
+
+    // m5-fog-and-hq HR17: a save that pinned the old tip odds (20 and 50, before 2026-11-27) loads with Paul's better spy odds; other values stay
+    [Fact]
+    public void HR17_OldSavesGetTheBetterSpyOdds()
+    {
+        GameHost Make(int exact, int sector) => NewGame.Create(new NewGameOptions { Seed = 1, Settings = new GameSettings
+            { Fog = new FogParams { HearthTipPermille = exact, HearthTipSectorPermille = sector } } });
+        var h = Make(20, 50);
+        h.Game.Step();
+        string save = h.SaveWithSettings();
+        Assert.Contains("\"HearthTipPermille\":20", save);
+        var l = GameHost.Load(save);
+        Assert.Equal(60, l.Fog.Params.HearthTipPermille);
+        Assert.Equal(150, l.Fog.Params.HearthTipSectorPermille);
+        Assert.Equal(h.StateHash(), l.StateHash()); // the state itself is unchanged
+        var other = GameHost.Load(Make(200, 5).SaveWithSettings());
+        Assert.Equal(200, other.Fog.Params.HearthTipPermille);
+        Assert.Equal(5, other.Fog.Params.HearthTipSectorPermille);
+    }
 }

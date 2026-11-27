@@ -219,8 +219,8 @@ public sealed class HarvesterModule
     // A ship leaves with the regiments aboard (m3-fleets Q6, as BattleModule.DestroyUnit); fighters aboard land when the ship leaves its fleet.
     private void LoseShip(StepContext ctx, int day, EconObject ship)
     {
-        foreach (var reg in E.Objects.Values.Where(r => r.AboardShip == ship.Id && r.Category == ObjectCategory.Regiment).OrderBy(r => r.Id).ToList())
-            _eco.DestroyUnit(ctx, day, reg);
+        foreach (var reg in E.Objects.Values.Where(r => r.AboardShip == ship.Id && r.Category is ObjectCategory.Regiment or ObjectCategory.SpecialForce).OrderBy(r => r.Id).ToList())
+            _eco.DestroyUnit(ctx, day, reg); // special forces aboard too (m5-missions §Spying from orbit 1)
         _eco.DestroyUnit(ctx, day, ship);
     }
 

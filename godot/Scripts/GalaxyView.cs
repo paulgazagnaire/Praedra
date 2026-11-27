@@ -336,19 +336,26 @@ public partial class GalaxyView : Control
             else
             {
                 MousePos = mm.Position;
-                int h = Pick(mm.Position);
-                int hs = h >= 0 ? -1 : SectorAt(mm.Position);
-                if (h != Hovered || hs != HoveredSector)
-                {
-                    Hovered = h; HoveredSector = hs;
-                    MouseDefaultCursorShape = h >= 0 || hs >= 0 ? CursorShape.PointingHand : CursorShape.Arrow;
-                    StateChanged?.Invoke(); QueueRedraw();
-                }
+                HoverAt(mm.Position);
             }
         }
         else if (e is InputEventMagnifyGesture mg) ZoomAt(mg.Position, mg.Factor);
-        else if (e is InputEventPanGesture pg) { _center += pg.Delta * 6f / PxPerUnit; Changed(); }
+        else if (e is InputEventPanGesture pg) { _center += pg.Delta * 6f / PxPerUnit; Changed(); RehoverMouse(); }
     }
+
+    void HoverAt(Vector2 at)
+    {
+        int h = Pick(at);
+        int hs = h >= 0 ? -1 : SectorAt(at);
+        if (h == Hovered && hs == HoveredSector) return;
+        Hovered = h; HoveredSector = hs;
+        MouseDefaultCursorShape = h >= 0 || hs >= 0 ? CursorShape.PointingHand : CursorShape.Arrow;
+        StateChanged?.Invoke(); QueueRedraw();
+    }
+
+    /// <summary>The map moved under a still mouse (a zoom, a pan): what it points at now. Without this the hover card of the system
+    /// pointed at before the zoom stayed over another one (QA playthrough 2026-11-27: "The Shoal · yours" over Charter).</summary>
+    void RehoverMouse() { if (MousePos is Vector2 m && !_dragging) HoverAt(m); }
 
     public override void _Notification(int what)
     {
@@ -364,20 +371,29 @@ public partial class GalaxyView : Control
         var after = ScreenToWorld(screen);
         _center += before - after;
         Changed();
+        RehoverMouse();
     }
 
     public void ZoomCentre(float factor) => ZoomAt(Size / 2f, factor);
     public void PanPixels(Vector2 px) { _center += px / PxPerUnit; Changed(); }
 
+    /// <summary>
+    /// The system a click or the mouse means: one whose dot is under it; else a headquarters whose rings are (they read as the place: at
+    /// the whole-map zoom a click on Charter's rings picked Hartwell, the dot nearer the click, QA playthrough 2026-11-27); else the nearest
+    /// dot within reach.
+    /// </summary>
     int Pick(Vector2 screen)
     {
-        int best = -1; float bestD = PickRadiusPx * PickRadiusPx;
+        float r = SystemRadius, onDotR = (r + 1.5f) * (r + 1.5f), ringR = (r + 10f) * (r + 10f);
+        int best = -1, onDot = -1, ring = -1; float bestD = PickRadiusPx * PickRadiusPx, dotD = onDotR, ringD = ringR;
         for (int i = 0; i < _pos.Length; i++)
         {
             float d = SystemScreen(i).DistanceSquaredTo(screen);
+            if (d < dotD) { dotD = d; onDot = i; }
+            if (d < ringD && IsHq?.Invoke(i) == true && OwnerOf?.Invoke(i) != null) { ringD = d; ring = i; }
             if (d < bestD) { bestD = d; best = i; }
         }
-        return best;
+        return onDot >= 0 ? onDot : ring >= 0 ? ring : best;
     }
 
     /// <summary>The sector whose shape holds a screen point (-1: open space).</summary>

@@ -98,11 +98,16 @@ public sealed partial class GameSession
     /// <summary>The Hand's word for Diplomacy (Paul 2026-11-26).</summary>
     public const string HandDiplomacy = "Outreach";
 
+    static readonly Praedra.Core.Fog.FogParams DefaultOdds = new();
+
     /// <summary>What the mission does and where it may go, one line (from the rule sheet's effects and target legality). rule: m5-missions §Targets, §6.</summary>
-    public static string KindHelp(MissionKind k, Side side) => k switch
+    /// <param name="odds">This game's fog rules, for the Hearth tip odds the Hand's Espionage line states; null = the sheet's DEFAULTs.</param>
+    public static string KindHelp(MissionKind k, Side side, Praedra.Core.Fog.FogParams? odds = null) => k switch
     {
         MissionKind.Diplomacy when side == Side.Hand => "Sponsored by Alma. Raises support for you at a neutral system or one of yours (not in revolt). Keeps trying until you cancel it. Skill: diplomacy.",
         MissionKind.Diplomacy => "Raises support for you at a neutral system or one of yours (not in revolt). Keeps trying until you cancel it. Skill: diplomacy.",
+        // the Hearth odds are said, so a player knows spying on enemy worlds is how the Hearth is found (QA's UI game, 2026-11-27; m5-fog-and-hq §N6a)
+        MissionKind.Espionage when side == Side.Hand => $"Any system: on success you see its facilities, troops and fleets (and maybe more of its side's systems). Each success on a world you don't hold has a {(odds ?? DefaultOdds).HearthTipPermille / 10}% chance to show where the Hearth is, or else {(odds ?? DefaultOdds).HearthTipSectorPermille / 10}% to name its sector. Skill: espionage.",
         MissionKind.Espionage => "Any system: on success you see its facilities, troops and fleets (and maybe more of its side's systems). Skill: espionage.",
         MissionKind.Reconnaissance => "Any system: a look at it. Succeeds by itself unless the team is caught. Skill: espionage.",
         MissionKind.Sabotage => "An enemy or neutral system: destroys one facility, its cannons and shields first. Very hard: the team is usually caught. Skill: combat and espionage.",
@@ -180,10 +185,17 @@ public sealed partial class GameSession
         return $"{cls} #{unit}";
     }
 
+    /// <summary>One special force by its name ("Listeners #12"), several as "3 special forces".</summary>
+    string SpecialForcesWords(IEnumerable<int> ids)
+    {
+        var list = ids.ToList();
+        return list.Count == 1 ? SpecialForceName(list[0]) : $"{list.Count} special forces";
+    }
+
     public string TeamWords(IEnumerable<int> chars, IEnumerable<int> sfs)
     {
         var names = chars.Select(CharName).Concat(sfs.Select(SpecialForceName)).ToList();
-        return names.Count == 0 ? "nobody" : string.Join(", ", names);
+        return names.Count == 0 ? "no one" : string.Join(", ", names);
     }
 
     public string TeamOf(MissionGroup m) => TeamWords(m.Characters, m.SpecialForces);

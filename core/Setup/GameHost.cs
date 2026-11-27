@@ -198,6 +198,7 @@ public sealed class GameHost
         // cleared on a holder change and the uprising incident codes 3 to 5. rule: m5-characters-and-talent §Where it runs in the day Step.
         Characters = Praedra.Core.Characters.CharacterModule.Attach(game, Fleets, data.Characters, settings.Characters);
         Bombardment.AdmiralLeadership = Characters.AdmiralLeadership;
+        Battles.AdmiralLeadership = Characters.AdmiralLeadership; // rule: m4-battle-new §8 step 4 (Admiral boosts fighters)
         // rule: B7-bombardment §4.3: the holder's General standing on the system multiplies the batteries' return fire (the system General post is
         // cleared on a holder change, so its holder is the system's)
         Bombardment.BatteryGeneralLeadership = Characters.SystemGeneralLeadership;
@@ -298,6 +299,8 @@ public sealed class GameHost
         host._aiMemory.AddRange(memories);
         // rule: m5-characters-and-talent §Rule (New) 4b: a save pinned to Random was upgraded to Pair (UpgradeSettingsJson): set up its trainer pairs
         if (upgradedTrainers && host.Characters.Params.TrainerPick == Praedra.Core.Characters.TrainerPick.Pair) host.Characters.SetUpTrainers();
+        // rule: m5-characters-and-talent §Posts (Commander merged into Admiral, Paul 2026-11-27): an older save's Commanders become passengers
+        host.Characters.RetireCommanders();
         return host;
     }
 
@@ -466,6 +469,17 @@ public sealed class GameHost
         "\"TalentTrainingGainPercent\":" + OldTrainingGainPercent + "(?=[,}])(?<between>.*?)\"TalentTrainingChancePercent\":" + OldTrainingChancePercent + "(?=[,}])",
         System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// The Hearth tip odds a save pinned before 2026-11-27 (20 and 50 permille, the old DEFAULTs; no setting ever let a player choose them).
+    /// Paul chose better spy odds ("5 to 7%") after QA's UI game found no path to the Hearth, so pinned 20 and 50 load as 60 and 150, as the
+    /// 240-day win did for old saves (QA-121). rule: m5-fog-and-hq §N6a.
+    /// </summary>
+    internal const int OldHearthTipPermille = 20, NewHearthTipPermille = 60, OldHearthTipSectorPermille = 50, NewHearthTipSectorPermille = 150;
+    private static readonly System.Text.RegularExpressions.Regex OldHearthTip =
+        new("\"HearthTipPermille\":" + OldHearthTipPermille + "(?=[,}])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex OldHearthTipSector =
+        new("\"HearthTipSectorPermille\":" + OldHearthTipSectorPermille + "(?=[,}])", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     private static string UpgradeSettingsJson(string json)
     {
         json = OldTrainingSpeed.Replace(json, m => "\"TalentTrainingGainPercent\":" + Praedra.Core.Characters.CharacterParams.ClassicTrainingGainPercent
@@ -474,6 +488,8 @@ public sealed class GameHost
         json = json.Replace(OldTrainerPick, NewTrainerPick, StringComparison.Ordinal);
         json = OldDominance.Replace(json, "\"DominanceDays\":" + NewDominanceDays);
         json = json.Replace(OldSabotagePick, NewSabotagePick, StringComparison.Ordinal);
+        json = OldHearthTip.Replace(json, "\"HearthTipPermille\":" + NewHearthTipPermille);
+        json = OldHearthTipSector.Replace(json, "\"HearthTipSectorPermille\":" + NewHearthTipSectorPermille);
         return json;
     }
 

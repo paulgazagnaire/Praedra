@@ -27,7 +27,10 @@ public partial class GameScreen : Control
     const int MaxStepsPerFrame = 30;
     const float PanPixelsPerSecond = 700f;
     const int AutosaveEvery = 30;                          // days
-    const int MaxLogItems = 400;
+    const int MaxLogItems = 400;                           // rows in the Log list at once (the filter's newest)
+    // messages kept for the Log's filters: each filter shows its own newest MaxLogItems. With one 400 cap for all, Sibyl's order lines pushed a
+    // Reconnaissance result out of Logs > Leaders within weeks (QA's UI game, 2026-11-27, item 6)
+    const int MaxLogKept = 4000;
 
     public GameSession S { get; private set; }
     public Galaxy G => S.Data.Galaxy;
@@ -43,6 +46,9 @@ public partial class GameScreen : Control
     bool _panelDirty = true, _fleetListDirty = true, _attentionDirty = true;
     double _panelTimer;
     string _pauseNote;
+    /// <summary>The pause words that came with a report: closing that report clears them, the report was the news (QA playthrough 2026-11-27,
+    /// item 13: "Paused: an invasion..." stayed after the report closed).</summary>
+    string _reportNote;
 
     // Screenshot options (set by Main from the command line).
     public string ShotPath;
@@ -169,12 +175,12 @@ public partial class GameScreen : Control
         {
             "battle" => "Paused: a battle was fought",
             "captured" => "Paused: a system changed hands",
-            "invaded" or "invasion" => "Paused: an invasion is taking place",
+            "invaded" or "invasion" => "Paused: an invasion was fought",
             "destroyed" => "Paused: the harvester destroyed a system",
             null => null,
             _ => "Paused",
         };
-        if (why != null && oc.Popup != null) ShowReport(oc.Popup);
+        if (why != null && oc.Popup != null) { ShowReport(oc.Popup); _reportNote = note; }
         note ??= ChosenPause(oc.New);
         if (note == null && capital != null) { note = capital; ShowTab(DrawerTab.Needs); }
         if (note != null) { Pause(note); return false; }
@@ -191,6 +197,7 @@ public partial class GameScreen : Control
     public override void _Process(double delta)
     {
         if (_view == null) return;
+        MarkOverlaps();
 
         if (_playing)
         {
