@@ -166,7 +166,9 @@ public static class AiLevels
     /// no hits; Paul on #412: special forces aboard fleets, used hard): ShieldsFeltDays, RaidShieldsSeen and WreckShields with it. 96 seeds, MedE,
     /// main 94bf76b, Hand / Collective / open: Medium mirror 5 / 72 / 19 off, 7 / 80 / 9 shields felt and seen, 4 / 78 / 14 with the Wreckers
     /// too; walled Medium Hand (FortifyWorlds 4, FortifyBatteries 2) 3 / 76 / 17, 2 / 83 / 11, 4 / 87 / 5. Orbit sabotage vs the walled Hand:
-    /// about 10 launched a game, about 4 in 10 started succeed. Notes: specs/engine/ai-notes/rooster-log.md.</remarks>
+    /// about 10 launched a game, about 4 in 10 started succeed. After review (#426, a shelling with no hits must not show the exact shields):
+    /// noting the strike's P cost most of the walled gain (6 / 79 / 11 and 4 / 78 / 14), as the batteries ground ships before P is counted; noting
+    /// the shelling fleets' own power (#427) gives 4 / 79 / 13 and 4 / 83 / 9. Notes: specs/engine/ai-notes/rooster-log.md.</remarks>
     private static SimpleAiParams Neutralised(SimpleAiParams p) => p with
     {
         Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,

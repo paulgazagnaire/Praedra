@@ -299,9 +299,9 @@ public sealed partial class SimpleAi
             character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
             shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0); // SimpleAiCollectivePlans.cs
-        _mem.Ingest(Events, IsArmedCapital);
+        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower);
         var mem = _mem;
-        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower); // a save between Steps (AiMemory.CatchUp)
     }
 
     // ================================================================== game plan (AI trainer 2026-11-19)
