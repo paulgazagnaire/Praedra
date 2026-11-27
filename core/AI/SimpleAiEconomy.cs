@@ -802,7 +802,7 @@ public sealed partial class SimpleAi
             double use = str * 1000 / m;
             if (use * 100 >= bestUse * _p.RefitBelowPercent) continue;
             var f = _h.Fleets.FleetOfShip(o.Id);
-            if (f == null || f.Transit != null || f.At == null || !Held(f.At) || Pending(f)) continue;
+            if (f == null || f.Transit != null || f.At == null || !(Held(f.At) ? !Pending(f) : RefitAwayOk(f))) continue; // RefitAway: SimpleAiCollectivePlans.cs
             cands.Add((use, o.Id, m, f));
         }
         var guarded = cands.Select(c => c.Fleet.Id).Distinct().Where(f => _h.Characters.InPlay.Any(ch => ch.AttachedFleet == f || ch.HeldAboard == f)).ToHashSet();
