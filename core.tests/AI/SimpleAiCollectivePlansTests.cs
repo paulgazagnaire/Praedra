@@ -21,6 +21,18 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, p.NeutraliseElsewherePercent);
     }
 
+    // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
+    [Theory]
+    [InlineData(AiLevel.Easy, false)]
+    [InlineData(AiLevel.Medium, true)]
+    [InlineData(AiLevel.Hard, true)]
+    public void NeutraliseIsOnAtMediumAndHard(AiLevel level, bool on)
+    {
+        var p = AiLevels.For(level);
+        Assert.Equal(on, p.Neutralise);
+        Assert.Equal(on ? 100 : 0, p.NeutraliseElsewherePercent);
+    }
+
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
     // With Neutralise on, Collective fleets shell thin Hand garrisons on half-loyal worlds bare (Military, no landing) in most games, and the Hand loses
     // worlds to "troops left" (seeds 1-4, Medium mirror, MedE, day 800; the counts are printed, not asserted: one game swings too much).
