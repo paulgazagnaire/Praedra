@@ -60,7 +60,14 @@ public static class AiLevels
             // without Siege, 3 / 26 / 3 with it. FrontPlans and FrontMemory cost nothing (79 vs 80 of 96 at Medium, 74 vs 75 at Hard). Cut: a
             // second front at Medium (69 of 96), Hand fronts (0 of 32), RoomFloor, ShellHoles, a stronger Outreach drive.
             // Notes: specs/engine/ai-notes/2026-11-27-commander-night-log.md.
-            AiLevel.Medium => BestNavy(PlayToWin(p)) with { FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, Campaign = true, StrandedAgentsHome = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
+            // AI trainer "Rooster" 2026-11-27 (the commander's Collective plan 11, Neutralise; Medium and Hard, via Neutralised below): Collective
+            // fleets shell the last 1 to 3 Hand regiments off worlds leaning its way (support 41+), which then go neutral or join by support
+            // (m2-control-and-capture §Control), anywhere, not only in a Neutralise front. MedE, fog, day 3000, main f5482cc, Hand / Collective / open
+            // (Hearth lost): Medium mirror, 96 seeds, 11 / 57 / 28 (19) before, 1 / 77 / 18 (5) with it; Hard Hand walling 3 worlds against the
+            // Medium Collective, 96 seeds, 14 / 50 / 32 (18) and 15 / 63 / 18 (21); Medium Hand walling 4 worlds with 2 batteries, 32 seeds,
+            // 2 / 17 / 13 and 1 / 23 / 8; Medium Hand against the Hard Collective, 32 seeds, 2 / 19 / 11 and 0 / 23 / 9. Front-only (no
+            // NeutraliseElsewherePercent) changed nothing (4 / 20 / 8 against 5 / 18 / 9). Notes: specs/engine/ai-notes/rooster-log.md.
+            AiLevel.Medium => Neutralised(BestNavy(PlayToWin(p))) with { FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, Campaign = true, StrandedAgentsHome = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -74,7 +81,7 @@ public static class AiLevels
             // 192 seeds, Hand / Collective / open: before the big start 4 / 175 / 13; with it (3 Mandate fleet) 28 / 126 / 38 at reach 5,
             // 22 / 139 / 31 at reach 6 (Medium Collective 34 / 132 / 26). Its agent counts below no longer help (96 seeds: 15 / 66 / 15 with them,
             // 17 / 68 / 11 without) but are kept, as nothing better replaced them.
-            AiLevel.Hard => BestNavy(PlayToWin(p)) with
+            AiLevel.Hard => Neutralised(BestNavy(PlayToWin(p))) with
             {
                 MilitaryEvery = 1, HuntSpeculators = 8, SafeHearth = true, Cells = true, Guerrilla = true, Campaign = true, StrandedAgentsHome = true,
                 CellsForcesWanted = 20, CellsSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
@@ -148,6 +155,12 @@ public static class AiLevels
         RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10,
         GarrisonsFirstHoldsNavy = true,
     };
+
+    /// <summary>Neutralise at Medium and Hard (AI trainer "Rooster" 2026-11-27, numbers at Medium above): the Collective shells thin garrisons bare anywhere.</summary>
+    private static SimpleAiParams Neutralised(SimpleAiParams p) => p with { Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere };
+
+    /// <summary>NeutraliseElsewherePercent at Medium and Hard: a world it can shell bare is worth a plain invasion target anywhere.</summary>
+    private const int NeutraliseAnywhere = 100;
 
     /// <summary>The level named by a word (easy, medium, normal, hard; any case), or null.</summary>
     public static AiLevel? Parse(string? word) => word?.Trim().ToLowerInvariant() switch

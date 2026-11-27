@@ -137,7 +137,7 @@ public class SimpleAiNavyTests
             foreach (var id in eco.Objects.Where(o => o.Class == "Refinery" && eco.OwnerOf(o) == Side.Collective).Select(o => o.Id).OrderBy(i => i).ToList())
                 if (eco.Free(Side.Collective) >= 90) eco.RemoveObject(id);
             Assert.InRange(eco.Free(Side.Collective), 0, 89);
-            var p = AiLevels.For(AiLevel.Medium) with { RefitBelowPercent = below, TroopCapacityTarget = 0 };
+            var p = AiLevels.For(AiLevel.Medium) with { RefitBelowPercent = below, TroopCapacityTarget = 0, Neutralise = false }; // with Neutralise on (2026-11-27) this setup makes no refit by day 300; pinned off to test the refit alone
             var m = new AiMatch(host, p, p);
             int n = 0;
             while (host.Game.Day < 300 && host.Victory.Winner == null)

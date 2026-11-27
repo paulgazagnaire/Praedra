@@ -42,7 +42,8 @@ public class AiLevelTests
         nameof(SimpleAiParams.HoldShipPercent), nameof(SimpleAiParams.GarrisonsFirstHoldsNavy),
     };
     // AI trainer 2026-11-27: the adaptive commander's shipped plans at Medium and Hard (SimpleAiCommanderTests)
-    private static readonly string[] Commander = { nameof(SimpleAiParams.FortifyWorlds), nameof(SimpleAiParams.SiegeShields), nameof(SimpleAiParams.FrontPlans), nameof(SimpleAiParams.FrontMemory) };
+    private static readonly string[] Commander = { nameof(SimpleAiParams.FortifyWorlds), nameof(SimpleAiParams.SiegeShields), nameof(SimpleAiParams.FrontPlans), nameof(SimpleAiParams.FrontMemory),
+        nameof(SimpleAiParams.Neutralise), nameof(SimpleAiParams.NeutraliseElsewherePercent) }; // Rooster 2026-11-27, SimpleAiCollectivePlansTests
     private static readonly string[] GamePlan = { nameof(SimpleAiParams.PlanSectorSpreadPercent), nameof(SimpleAiParams.PlanSystemSpreadPercent) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
@@ -108,7 +109,7 @@ public class AiLevelTests
         Assert.Equal(b with { SafeHearth = true, Cells = true, Guerrilla = true, HarvesterYardValue = 2000, InvasionReadyAtRally = true, BooksTalentWindow = true, CollectiveMilitaryEvery = 2, FoundYardsBelow = 1, PlanSectorSpreadPercent = 30, PlanSystemSpreadPercent = 15, WinRushDefenders = 20, InvasionRegimentTarget = 30, TroopCapacityTarget = 36, AfterCharterDiplomats = 8,
             WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
             RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10, GarrisonsFirstHoldsNavy = true, Campaign = true, StrandedAgentsHome = true,
-            FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true }, AiLevels.For(AiLevel.Medium, b));
+            FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, Neutralise = true, NeutraliseElsewherePercent = 100 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]
