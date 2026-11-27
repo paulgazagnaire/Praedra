@@ -206,7 +206,8 @@ public sealed partial class SimpleAi
             if (Ticks(from, w, UnratedSpeed) == int.MaxValue) continue;
             if (OwnDefencesAt(w).Shields >= _p.GuardRaidedShields) continue;
             var k = ShieldKind();
-            if (!Available(FacilityKinds.ClassName(k)) || !Affordable(k)) continue;
+            // the guard keeps the economy alive, so like a construction yard (YardsFromMargin) it may use the upkeep margin
+            if (!Available(FacilityKinds.ClassName(k)) || !(Affordable(k) || (!LowRoom && Budget + _p.MaintenanceMargin >= Maint(FacilityKinds.ClassName(k))))) continue;
             _fortifyOrdered[(w, false)] = _fortifyOrdered.GetValueOrDefault((w, false)) + 1;
             return (k, w);
         }
