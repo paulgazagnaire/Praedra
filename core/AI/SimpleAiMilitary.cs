@@ -637,6 +637,7 @@ public sealed partial class SimpleAi
         int maxShell = _view != null && win ? _p.FogWinBombardmentsPer30Days : _p.MaxBombardmentsPer30Days;
         // guerrilla raid: a pile that cannot take the world even after shelling its garrison shells the mines, refineries and yards instead
         // (m3-bombardment §3 Civilian), RaidStrikes times, then moves on (Leave)
+        if (ShakeHere(f, at, mineHere, aboard, d)) return; // Neutralise (SimpleAiCollectivePlans.cs): shell a thin garrison bare, no landing
         if (RaidTarget(at, canShell) && !(aboard >= 1 && aboard >= Need(d / 2)))
         {
             long seq = _h.Bombardment.SubmitBombard(_side, f.Id, at, BombardCategory.Civilian);
@@ -774,6 +775,7 @@ public sealed partial class SimpleAi
             // HarvesterYardValue: a harvester seen under construction is raided at any distance, its value on top
             if ((hops[sys.Index] <= reach || isYard) && RaidTarget(s, canBombard))
                 score = Math.Max(score, (CampaignTargetValue(sys, (long)_p.RaidValuePerFacility * FacilitiesAt(s) * PlanLike(sys) / 100, raid: true) + (isYard ? _p.HarvesterYardValue : 0)) * 1000 / (ticks + 20));
+            if (NeutraliseOn && canBombard) score = Math.Max(score, NeutraliseScore(sys, ShellPower(pile.Members), ticks)); // SimpleAiCollectivePlans.cs
             if (score > 0) scored.Add((s, score));
         }
         if (scored.Count == 0) return null;

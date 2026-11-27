@@ -56,6 +56,8 @@ public enum AiFrontPlan
     Bleed,
     /// <summary>Raid and sabotage the mines and yards there (m3-bombardment, m5-missions §6), then invade.</summary>
     Starve,
+    /// <summary>Shell the thin garrisons of the Hand's half-loyal worlds bare, so they go neutral or join with no landing (SimpleAiParams.Neutralise).</summary>
+    Neutralise,
 }
 
 public sealed partial class SimpleAi
@@ -245,6 +247,7 @@ public sealed partial class SimpleAi
             [AiFrontPlan.Bleed] = 60 * f.Soft,
             [AiFrontPlan.Starve] = f.Fleets > 0 ? 0 : 12 * f.Facilities,
         };
+        if (NeutraliseOn) fit[AiFrontPlan.Neutralise] = NeutraliseFit(sector); // SimpleAiCollectivePlans.cs
         foreach (var k in fit.Keys.ToList())
         {
             fit[k] = fit[k] * (100 + _rng.NextInt(0, 20)) / 100; // the game plan's small tilt (Paul 2026-11-19)

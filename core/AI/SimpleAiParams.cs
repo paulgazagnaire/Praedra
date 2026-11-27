@@ -8,7 +8,7 @@ namespace Praedra.Core.AI;
 /// overridable per side. Strength numbers are percent of the reference force REF (3 Mandates, m4-battle-new §12),
 /// the scale of <see cref="Praedra.Core.Fleets.FleetModule.StrengthOf"/>: 100 = as strong as REF.
 /// </summary>
-public sealed record SimpleAiParams
+public sealed partial record SimpleAiParams
 {
     // ---- how often each area is reviewed (a side's reviews are offset by its side number so the two sides do not all act on one day)
     /// <summary>Days between economy reviews (mines, refineries, yards). DEFAULT.</summary>
