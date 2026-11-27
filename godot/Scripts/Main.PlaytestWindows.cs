@@ -58,8 +58,7 @@ public partial class Main
             + $" (story W9, QA-104){(noteWhy == null ? "" : ": " + noteWhy)}");
 
         // ---------------------------------------------------------------- a leader onto a post, then back onto the planet
-        var cls = cm.ClassOf(lead);
-        var post = new[] { CharacterPost.Admiral, CharacterPost.General, CharacterPost.Commander }.FirstOrDefault(cls.Can);
+        var post = gs.S.FleetPosts.FirstOrDefault(p => cm.CanHold(lead, p));
         string zone = post == CharacterPost.None ? $"Fleet {fid} Passengers" : $"Fleet {fid} {post}";
         string why = gs.MgDrop($"L:{lead.Id}", zone);
         Expect(why == null, $"drop {lname} on {zone}: {why ?? "sent"}");
@@ -74,7 +73,7 @@ public partial class Main
         Expect(lead.AttachedFleet == 0 && cm.LocationOf(lead) == sys, $"next day {lname} stands on {sys} again");
 
         // ---------------------------------------------------------------- through the system General's post: two orders from one drop
-        if (s.OwnerOf(sys) == me && cls.CanGeneral && cm.SystemGeneralOf(sys) == null)
+        if (s.OwnerOf(sys) == me && cm.ClassOf(lead).CanGeneral && cm.SystemGeneralOf(sys) == null)
         {
             Expect(gs.MgDrop($"L:{lead.Id}", $"Ground {sys} General") == null, $"drop {lname} on the General's post of {sys}");
             gs.PlayDay();
