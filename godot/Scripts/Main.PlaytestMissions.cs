@@ -223,9 +223,9 @@ public partial class Main
         gs.View.Select(-1); gs.PlayRefresh();
 
         // the unit's own card (Paul 2026-11-19: "a right click option to select the mission type and destination"): right-click it in the
-        // system window's Troops tab, pick Espionage, click the target on the map, send
+        // system window's Command tab (Paul 2026-11-27: special forces only in Command tabs), pick Espionage, click the target on the map, send
         gs.ShotWindow("ground", yard); gs.PlayRefresh();
-        Expect(gs.Click($"Tab Ground {yard} Troops"), "open the Troops tab of the system window");
+        Expect(gs.Click($"Tab Ground {yard} Command"), "open the Command tab of the system window");
         gs.PlayRefresh();
         string card = $"F:{unit.Id}";
         var menu = gs.MenuOf(card);

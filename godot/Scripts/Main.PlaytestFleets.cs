@@ -311,10 +311,10 @@ public partial class Main
     }
 
     /// <summary>
-    /// Special forces aboard a fleet (m5-missions §Spying from orbit 1-3): the Fleet window's place for them with its N/9 count; a drag from
-    /// the planet's Troops tab takes them aboard, a line in the log says so; a right-click sends one on Espionage from orbit, and the planner
-    /// says each guard's chance to spot it is halved; the mission is launched from the fleet; a drag back onto the Troops tab of a world you
-    /// don't hold lands the other one.
+    /// Special forces aboard a fleet (m5-missions §Spying from orbit 1-3), in the Command tabs only (Paul 2026-11-27): the Fleet window's place
+    /// for them with its N/9 count; a drag from the planet's Command tab takes them aboard, a line in the log says so; a right-click sends one
+    /// on Espionage from orbit, and the planner says each guard's chance to spot it is halved; the mission is launched from the fleet; a drag
+    /// back onto the Command tab of a world you don't hold lands the other one; a fleet with no ships refuses them; fleet to fleet works.
     /// </summary>
     void OrbitTeam(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
     {
@@ -332,12 +332,18 @@ public partial class Main
         int fid = s.Host.Fleets.AddFleet(me, "Orbit Team", new[] { ship }, spot);
         int a = eco.AddObject(me, cls, spot), b = eco.AddObject(me, cls, spot);
         string an = s.SpecialForceName(a), bn = s.SpecialForceName(b), win = $"Fleet {fid}", zone = $"Fleet {fid} SpecialForces", ground = $"Ground {spot} SpecialForces";
-        gs.OpenMgmt(GameScreen.MgKind.Ground, spot, tab: "Troops");
+        gs.OpenMgmt(GameScreen.MgKind.Ground, spot, tab: "Command");
         gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command"); gs.PlayRefresh();
+        // special forces only in Command tabs, the fleet's and the planet's (Paul 2026-11-27)
+        string gcmd = gs.MgPageText($"Ground {spot}", "Command"), gtroops = gs.MgPageText($"Ground {spot}", "Troops");
+        Expect(gcmd.Contains("SPECIAL FORCES") && gcmd.Contains(an) && !gtroops.Contains("SPECIAL FORCES") && !gtroops.Contains(an),
+            $"{spot}'s special forces stand in its Command tab, not its Troops tab: " + gcmd.Replace("\n", " / ") + " || " + gtroops.Replace("\n", " / "));
         string cmd = gs.MgPageText(win, "Command");
         int max = mm.Params.FleetSpecialForcesMax;
         Expect(gs.MgHasZone(zone) && cmd.Contains("SPECIAL FORCES") && cmd.Contains($"0/{max}"), $"the Fleet window's Command tab has a place for special forces, 0/{max}: " + cmd.Replace("\n", " / "));
-        Expect(gs.MgDrop($"F:{a}", zone) == null && gs.MgDrop($"F:{b}", zone) == null, $"drag {an} and {bn} from {spot}'s Troops tab onto Orbit Team");
+        string intoTroops = gs.MgJudge($"F:{a}", $"Fleet {fid} Troops");
+        Expect(intoTroops != null && intoTroops.Contains("Command tab"), $"the fleet's Troops tab says where special forces ride: {intoTroops}");
+        Expect(gs.MgDrop($"F:{a}", zone) == null && gs.MgDrop($"F:{b}", zone) == null, $"drag {an} and {bn} from {spot}'s Command tab onto Orbit Team");
         int from = s.Messages.Count;
         gs.PlayDay();
         var fl = s.Game.State.Fleets[fid];
@@ -347,7 +353,7 @@ public partial class Main
         gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command"); gs.PlayRefresh();
         cmd = gs.MgPageText(win, "Command");
         Expect(cmd.Contains($"2/{max}") && cmd.Contains(an), $"the Fleet window shows them, 2/{max}");
-        Expect(gs.MgJudge($"F:{b}", ground) == null, $"{spot}'s Troops tab, a world you don't hold, takes one back down: {gs.MgJudge($"F:{b}", ground)}");
+        Expect(gs.MgJudge($"F:{b}", ground) == null, $"{spot}'s Command tab, a world you don't hold, takes one back down: {gs.MgJudge($"F:{b}", ground)}");
 
         // Espionage from orbit, by a right-click on the card in the Fleet window
         var menu = gs.MenuOf($"F:{a}");
@@ -362,10 +368,31 @@ public partial class Main
 
         // the other one lands on the world below
         from = s.Messages.Count;
-        Expect(gs.MgDrop($"F:{b}", ground) == null, $"drag {bn} onto {spot}'s Troops tab");
+        Expect(gs.MgDrop($"F:{b}", ground) == null, $"drag {bn} onto {spot}'s Command tab");
         gs.PlayDay();
         Expect(eco.Find(b) is { AboardShip: 0 } ob && ob.System == spot, $"{bn} stands on {spot}");
         Expect(s.Messages.Skip(from).Any(m => m.Text == $"{bn} landed from Orbit Team at {spot}."), "the log says it landed: " + string.Join(" | ", s.Messages.Skip(from).Select(m => m.Text)));
+
+        // a fleet with no ships carries none (the core's NoCapacity, Ponytail on #415): the drop says why instead of failing quietly.
+        // The ships are set aside only for this screen judgment and put back before the clock moves.
+        var keep = fl.Ships.ToList(); fl.Ships.Clear();
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command"); gs.PlayRefresh();
+        string noShips = gs.MgJudge($"F:{b}", zone);
+        fl.Ships.AddRange(keep); gs.PlayRefresh();
+        Expect(noShips != null && noShips.Contains("Orbit Team has no ships"), $"a fleet with no ships refuses {bn}: {noShips}");
+
+        // from one fleet to another here: the drop lands it, then boards it (two orders, run in the order given)
+        Expect(gs.MgDrop($"F:{b}", zone) == null, $"drag {bn} back aboard Orbit Team");
+        gs.PlayDay();
+        int fid2 = s.Host.Fleets.AddFleet(me, "Orbit Two", new[] { ship }, spot);
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid, tab: "Command");
+        gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fid2, tab: "Command"); gs.PlayRefresh();
+        string swap = gs.MgDrop($"F:{b}", $"Fleet {fid2} SpecialForces");
+        Expect(swap == null, $"drag {bn} from Orbit Team onto Orbit Two: {swap}");
+        gs.PlayDay();
+        var fl2 = s.Game.State.Fleets[fid2];
+        Expect(mm.SpecialForcesAboard(fl2).Any(o => o.Id == b) && !mm.SpecialForcesAboard(fl).Any(o => o.Id == b),
+            $"{bn} rides Orbit Two the next day, not Orbit Team ({string.Join(", ", mm.SpecialForcesAboard(fl2).Select(o => o.Id))})");
         if (gs.PlannerOpen) gs.Click("Close without sending");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
     }

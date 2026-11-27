@@ -162,6 +162,7 @@ public partial class GameScreen
     /// <summary>Onto the planet: a leader leaves their post, a regiment or squadron lands. Only on a planet you hold.</summary>
     string RefuseToGround(Drag d, string n, char kind)
     {
+        if (d.Kind == 'F' && kind == 'R') return "Special forces stand in the Command tab.";   // Paul 2026-11-27: only in Command tabs
         if (d.Kind != kind) return "";
         var (at, fleet) = WhereNow(d);
         if (kind == 'L')
@@ -282,6 +283,7 @@ public partial class GameScreen
         if (fleet == f.Id) return "";
         if (!Still(f)) return $"{S.NameOf(f)} is travelling.";
         if (MergesAwayWhy(f) is string gone) return gone;
+        if (f.Ships.Count == 0) return $"{S.NameOf(f)} has no ships: special forces ride ships, not fighters.";   // the core's NoCapacity for an empty fleet (m5-missions §Spying from orbit 1)
         if (S.Host.Economy.Find(d.Id) is not { } o) return "";
         string name = S.SpecialForceName(o.Id);
         if (!SfReady(o)) return $"{name} is busy.";
@@ -291,7 +293,7 @@ public partial class GameScreen
             : Mm.CheckLoadSpecialForces(new LoadSpecialForcesOrder(0, Me, f.Id, One(d.Id)));
         if (why != null && why != RejectReason.NoCapacity) return Words(why);
         int max = Mm.Params.FleetSpecialForcesMax;
-        if (Mm.SpecialForcesAboard(f).Count + SfBoarding(f) >= max) return $"{S.NameOf(f)} already carries {max} special forces, its most.";
+        if (Mm.SpecialForcesAboard(f).Count + SfBoarding(f) >= max) return $"{S.NameOf(f)} already carries {max} special forces, the most a fleet carries.";
         return null;
     }
 
@@ -310,6 +312,7 @@ public partial class GameScreen
     /// <summary>Onto a fleet: a regiment or squadron boards it (from the planet, or from another fleet here by landing first).</summary>
     string RefuseOnto(Drag d, Fleet f, char kind)
     {
+        if (d.Kind == 'F' && kind == 'R' && Mm.Params.OrbitMissions) return "Special forces ride in the fleet's Command tab.";   // review 35: say where, not a silent dim
         if (d.Kind != kind) return "";
         var (at, fleet) = WhereNow(d);
         if (fleet == f.Id) return "";

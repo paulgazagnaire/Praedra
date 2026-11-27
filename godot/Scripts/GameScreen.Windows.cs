@@ -435,7 +435,7 @@ public partial class GameScreen
         bool dragging = GetViewport().GuiIsDragging() || _shotDrag != null;
         if (_shotDrag is { } sd) _dragging = sd;
         if (dragging != _wasDragging) { _wasDragging = dragging; LightZones(dragging ? _dragging : null); }
-        if (dragging) DragHint(); else _dragHint.Visible = false;
+        if (dragging) { DragHint(); EdgeScroll(delta); } else _dragHint.Visible = false;
         SyncNoteLayer(dragging);
         _mgTimer -= delta;
         if (_mgDirty && _mgTimer <= 0 && !dragging && !Input.IsMouseButtonPressed(MouseButton.Left))
@@ -448,6 +448,32 @@ public partial class GameScreen
             foreach (var w in _mgWins.ToList())
                 if (w.Stale && _mgWins.Contains(w) && !ReadingTip(w.Panel) && !RenameBoxIn(w)) RebuildMg(w);   // nor while its name is typed
     }
+
+    /// <summary>
+    /// While something is dragged, the page of the window under the pointer scrolls when the pointer rests near its top or bottom edge, so
+    /// a drop place below the fold can be reached without letting go (review 35: a special force's place in a fleet's Command tab sat under
+    /// the fold, and nothing scrolled during a drag). The topmost window under the pointer scrolls, faster the nearer the edge.
+    /// </summary>
+    void EdgeScroll(double delta)
+    {
+        const float Edge = 40, Speed = 700;   // px from the edge where it starts; px a second at the very edge
+        var m = GetViewport().GetMousePosition();
+        var w = _mgWins.Where(x => IsInstanceValid(x.Scroll) && x.Scroll.IsVisibleInTree() && x.Scroll.GetGlobalRect().HasPoint(m))
+            .OrderByDescending(x => x.Panel.GetIndex()).FirstOrDefault();
+        if (w == null) return;
+        var r = w.Scroll.GetGlobalRect();
+        float top = m.Y - r.Position.Y, bottom = r.End.Y - m.Y;
+        float push = top < Edge ? -(Edge - top) / Edge : bottom < Edge ? (Edge - bottom) / Edge : 0;
+        if (push == 0) return;
+        _edgeCarry += push * Speed * (float)delta;
+        int step = (int)_edgeCarry;
+        if (step == 0) return;
+        _edgeCarry -= step;
+        w.Scroll.ScrollVertical += step;
+    }
+
+    /// <summary>The part of a pixel EdgeScroll owes the page (ScrollVertical takes whole pixels).</summary>
+    float _edgeCarry;
 
     // ================================================================== content
 

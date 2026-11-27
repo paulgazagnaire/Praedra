@@ -347,7 +347,7 @@ public partial class GameScreen
                 // a team of special forces aboard one fleet (m5-missions §Spying from orbit 2, 3; Paul 2026-11-27, "Half chance")
                 if (OrbitFleet(p) is { } of)
                     Line(chk.Target == of.At ? $"From orbit: the team works from {S.NameOf(of)} and never lands. Each guard's chance to spot it is halved while {S.NameOf(of)} stays over {of.At}."
-                        : $"The team sets out from {S.NameOf(of)} and comes back to it.", Good, 13);
+                        : $"The team sets out from {S.NameOf(of)} and comes back to it, or to your nearest system if {S.NameOf(of)} is gone or full.", Good, 13);
             }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
             Act($"Send: {GameSession.KindWords(sel, Me)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Logs (E).", chk.Reason != null);
