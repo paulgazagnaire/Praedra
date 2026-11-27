@@ -375,6 +375,49 @@ public sealed class EconomyModule
     }
 
     /// <summary>
+    /// Refined the side's pool gets per 30 days at the present pace, for the screen: each refinery that works for the side (completed, held,
+    /// not suspended) finishes one cycle every <see cref="CycleDays"/> at its system's support and its dealt share (one about to start gets an
+    /// even slice), less what smuggling diverts, plus what the other side's refineries lose to it; when the raw stock and the mines' pace
+    /// cannot feed every cycle, the side's own refineries make only what the raw allows. It reads the state only and changes nothing, in the
+    /// same tense as <c>ConstructionModule.RefinedUsePer30Days</c> (QA-131, 2026-11-27: a count of the last 30 days lags lost refineries and
+    /// slower cycles, so the trend mark by Refined showed a rise while the stock fell). rule: m2-mines-refineries-pools §Cycle length,
+    /// §Asking for raw / serving a line, §Diversion (smuggling).
+    /// </summary>
+    public int RefinedPacePer30Days(Side side)
+    {
+        const int Days = 30;
+        var memo = new Dictionary<string, bool>(StringComparer.Ordinal); // lookup only, never iterated
+        int load = Load(side);
+        // per 30 days in hundredths: gross refinery cycles of the side, what it keeps of them, what comes in from the other side, and raw for them
+        long gross = 0, kept = 0, incoming = 0, raw = 100L * E.Pool(side).Raw;
+        foreach (var kind in new[] { FacilityKind.Mine, FacilityKind.Refinery })
+        {
+            bool mine = kind == FacilityKind.Mine;
+            foreach (var who in new[] { side, Other(side) })
+            {
+                var working = Cyclers(kind).Where(f => f.Completed && OwnerOf(f) == who && !IsSuspended(f, memo)).ToList(); // id order
+                int even = Math.Min(Params.CapacityPerFacility, (who == side ? load : Load(who)) / Math.Max(1, working.Count));
+                foreach (var f in working)
+                {
+                    int support = Math.Clamp(SupportOf(f.System!, who), Params.SupportFloor, Params.SupportCeiling);
+                    int d = Math.Max(1, CycleDays(Params, support, f.WorkSide == who ? f.Share : even));
+                    int v = DiversionPercent(f.System!, who);
+                    long cycles = Days * 100L / d;
+                    if (who == side)
+                    {
+                        if (mine) raw += cycles * (100 - v) / 100;
+                        else { gross += cycles; kept += cycles * (100 - v) / 100; }
+                    }
+                    else if (mine) raw += cycles * v / 100;
+                    else incoming += cycles * v / 100;
+                }
+            }
+        }
+        if (gross > raw && gross > 0) kept = kept * raw / gross; // each cycle takes one raw: short raw, fewer cycles
+        return (int)((kept + incoming) / 100);
+    }
+
+    /// <summary>
     /// Is a mine or refinery suspended: its system under the blockade that stops it, or in uprising (with <see cref="UprisingStopsMining"/>)?
     /// rule: m2-mines-refineries-pools §Blockade and uprising (B5b §3, [EXE-own] 0x50bbb0).
     /// </summary>

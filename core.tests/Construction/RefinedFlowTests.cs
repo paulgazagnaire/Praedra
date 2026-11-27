@@ -60,21 +60,58 @@ public class RefinedFlowTests
         Assert.Equal(hash, h.StateHash()); // reads only
     }
 
-    // m2-mines-refineries-pools §Cycle length RF4: the screen counts whole refinery cycles (UI review 36 on #419), so a shorter window counts
-    // only its own days, and never more than the 30-day window.
+    // m2-mines-refineries-pools §Cycle length RF4: the pace is what the refineries really make. Over 60 quiet days the count of batches is
+    // within a tenth of the pace read at the start (QA-131: the trend mark compares it with the yards' pace, both in the present tense).
     [Fact]
-    public void RF4_AShorterWindowCountsOnlyItsOwnDays()
+    public void RF4_ThePaceMatchesWhatTheRefineriesMake()
     {
         var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
-        for (int d = 0; d < 45; d++) h.Game.Step();
-        foreach (int w in new[] { 21, 24, 28 })
+        for (int d = 0; d < 30; d++) h.Game.Step(); // past the startup cycles
+        foreach (var side in new[] { Side.Hand, Side.Collective })
         {
-            var (made, days) = RefinedFlow.Made(h, Side.Hand, w);
-            Assert.Equal(w, days);
-            int expect = h.Game.Events.OfType<ResourceProduced>().Count(e => e.Day > h.Game.Day - w && e.PoolSide == Side.Hand && e.Resource == "Refined");
-            Assert.Equal(expect, made);
+            int pace = RefinedFlow.MadePace(h, side);
+            Assert.True(pace > 0);
         }
-        Assert.Equal(RefinedFlow.Made(h, Side.Hand), RefinedFlow.Made(h, Side.Hand, 99)); // clamped to 30 days
-        Assert.Equal(RefinedFlow.Made(h, Side.Hand), RefinedFlow.Made(h, Side.Hand, RefinedFlow.WindowDays));
+        int hand = RefinedFlow.MadePace(h, Side.Hand), coll = RefinedFlow.MadePace(h, Side.Collective), from = h.Game.Day;
+        for (int d = 0; d < 60; d++) h.Game.Step();
+        int Made(Side s) => h.Game.Events.OfType<ResourceProduced>().Count(e => e.Day > from && e.PoolSide == s && e.Resource == "Refined") / 2;
+        Assert.InRange(Made(Side.Hand), hand * 9 / 10, hand * 11 / 10);
+        Assert.InRange(Made(Side.Collective), coll * 9 / 10, coll * 11 / 10);
+    }
+
+    // m2-mines-refineries-pools §Blockade and uprising RF5: a refinery world in uprising leaves the pace at once, not 30 days later.
+    [Fact]
+    public void RF5_ASuspendedRefineryLeavesThePaceAtOnce()
+    {
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+        for (int d = 0; d < 10; d++) h.Game.Step();
+        var s = h.Game.State;
+        string world = s.Economy.Objects.Values.Where(o => o.Completed && o.Class == "Refinery" && o.System != null && s.SystemOwners.TryGetValue(o.System, out var w) && w == Side.Hand)
+            .Select(o => o.System!).OrderBy(x => x, StringComparer.Ordinal).First();
+        int before = RefinedFlow.MadePace(h, Side.Hand);
+        var was = h.Economy.IsInUprising;
+        h.Economy.IsInUprising = sys => sys == world || was(sys);
+        Assert.True(RefinedFlow.MadePace(h, Side.Hand) < before);
+        h.Economy.IsInUprising = was;
+        Assert.Equal(before, RefinedFlow.MadePace(h, Side.Hand));
+    }
+
+    // m2-mines-refineries-pools §Asking for raw / serving a line RF6: each cycle takes one raw, so with no mines and no raw the side's own
+    // refineries make nothing; and the pace reads only.
+    [Fact]
+    public void RF6_NoRawNoRefined()
+    {
+        var h = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedA });
+        for (int d = 0; d < 10; d++) h.Game.Step();
+        var s = h.Game.State;
+        string hash = h.StateHash();
+        Assert.True(RefinedFlow.MadePace(h, Side.Hand) > 0);
+        Assert.Equal(hash, h.StateHash()); // reads only
+        foreach (var id in s.Economy.Objects.Values.Where(o => o.Class == "Mine" && h.Economy.OwnerOf(o) == Side.Hand).Select(o => o.Id).OrderBy(i => i).ToList())
+            h.Economy.RemoveObject(id);
+        h.Economy.SetPools(Side.Hand, 0, h.Economy.Refined(Side.Hand));
+        // what is left can only come from the Collective's refineries losing batches to smuggling
+        int incoming = RefinedFlow.MadePace(h, Side.Hand);
+        Assert.True(incoming < 5, $"no raw: {incoming}");
     }
 }

@@ -543,8 +543,8 @@ public partial class GameScreen
 
     void ShowRefinedWay(RefinedWay way)
     {
-        _refinedMark.Visible = way != RefinedWay.Unjudged;
-        if (_refinedMark.Visible) _refinedMark.Texture = WayPicture(way);
+        _refinedMark.Visible = true;   // both paces are known from the first day, after a load too: the mark always shows (QA-131)
+        _refinedMark.Texture = WayPicture(way);
     }
 
     static TextureRect PixelIcon(string[] rows, Color color)
