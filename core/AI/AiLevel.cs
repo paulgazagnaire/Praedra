@@ -51,7 +51,16 @@ public static class AiLevels
             // Collective, MedE, fog, day 3000, Hand / Collective / open: 192 seeds on main 561755b before the big start 15 / 135 / 42; big start
             // (4 Mandate, 12 Gleaner) 61 / 99 / 32; 96 seeds: 4 Mandate fleet, every 3 days 24 / 54 / 18; 3 Mandate fleet, every 2 days
             // 14 / 70 / 12; 192 seeds, 3 Mandate fleet, every 2 days 34 / 132 / 26. Notes: specs/engine/ai-notes/2026-11-20-big-hand-start.md.
-            AiLevel.Medium => BestNavy(PlayToWin(p)) with { CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, Campaign = true, StrandedAgentsHome = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
+            // AI trainer 2026-11-27 (the adaptive commander, Paul 2026-11-26 "push this to the max"; QA-126 neither AI built defences): at Medium
+            // and Hard both sides wall their capital (FortifyWorlds 1: 2 shields and a Lien-150 on Charter / the Hearth's world), shell shields
+            // they can beat before landing (SiegeShields), and the Collective picks each front's plan by fit (FrontPlans: Campaign, Bleed,
+            // Starve) and remembers what failed where (FrontMemory). MedE, fog, day 3000, Hand / Collective / open: Medium mirror, 96 seeds,
+            // 6 / 80 / 10 before, 7 / 64 / 25 with walls and the first Siege (Charter taken 80 times, not 124); 32 seeds with the Siege that
+            // only shells what it can beat 2 / 22 / 8; Hard Collective 1 / 26 / 5 before, 1 / 24 / 7 after; Hand walling 3 worlds 3 / 17 / 12
+            // without Siege, 3 / 26 / 3 with it. FrontPlans and FrontMemory cost nothing (79 vs 80 of 96 at Medium, 74 vs 75 at Hard). Cut: a
+            // second front at Medium (69 of 96), Hand fronts (0 of 32), RoomFloor, ShellHoles, a stronger Outreach drive.
+            // Notes: specs/engine/ai-notes/2026-11-27-commander-night-log.md.
+            AiLevel.Medium => BestNavy(PlayToWin(p)) with { FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, CollectiveMilitaryEvery = MediumCollectiveMilitaryEvery, SafeHearth = true, Cells = true, Guerrilla = true, Campaign = true, StrandedAgentsHome = true, HarvesterYardValue = HarvesterYardHunt, InvasionReadyAtRally = true, BooksTalentWindow = true, FoundYardsBelow = FoundBelow },
             // AI trainer 2026-10-17 (sim tourney, 16 seeds x both sides, Medium against Medium plus one change; a placebo change scored 55%, so
             // only a gap well above that counts): a military review every day (Medium every 3) took 63% of the systems, the one clear win of 15
             // tried. Probe speculators on the HQ hunt found the Hearth in 13 of 16 games against 8 for Medium without costing systems (51%); kept
@@ -71,6 +80,7 @@ public static class AiLevels
                 CellsForcesWanted = 20, CellsSubversion = 10, WatchLooks = 4, RaidStrikes = 3, HarvesterYardValue = HarvesterYardHunt,
                 InvasionReadyAtRally = true, BooksTalentWindow = true, CellsHops = HardReach, GuerrillaHops = HardReach,
                 FoundYardsBelow = FoundBelow, CampaignsAtOnce = 2,
+                FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, // the adaptive commander, as Medium (2026-11-27)
             },
             _ => p,
         };

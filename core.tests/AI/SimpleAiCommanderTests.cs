@@ -25,6 +25,24 @@ public class SimpleAiCommanderTests
         Assert.Equal(0, p.RoomFloor);
     }
 
+    // AI trainer 2026-11-27 (night log 2026-11-27-commander-night-log.md): Medium and Hard wall the capital, shell shields they can beat,
+    // and pick front plans with memory; Easy does none of it; the cut plans stay off at every level.
+    [Theory]
+    [InlineData(AiLevel.Easy, false)]
+    [InlineData(AiLevel.Medium, true)]
+    [InlineData(AiLevel.Hard, true)]
+    public void TheCommanderPlansAreOnAtMediumAndHard(AiLevel level, bool on)
+    {
+        var p = AiLevels.For(level);
+        Assert.Equal(on ? 1 : 0, p.FortifyWorlds);
+        Assert.Equal(on, p.SiegeShields);
+        Assert.Equal(on, p.FrontPlans);
+        Assert.Equal(on, p.FrontMemory);
+        Assert.False(p.HandFronts);
+        Assert.Equal(0, p.RoomFloor);
+        Assert.Equal(0, p.ShellHoles);
+    }
+
     private static (int Shields, int Batteries) DefencesAt(GameHost host, string system, Side side)
     {
         int sh = 0, bat = 0;
@@ -46,7 +64,7 @@ public class SimpleAiCommanderTests
         var on = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
         string charter = Praedra.Core.Control.ControlModule.CapitalSystem;
         var start = DefencesAt(on, charter, Side.Hand);
-        var mOff = new AiMatch(off, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium));
+        var mOff = new AiMatch(off, AiLevels.For(AiLevel.Medium) with { FortifyWorlds = 0 }, AiLevels.For(AiLevel.Medium));
         var mOn = new AiMatch(on, AiLevels.For(AiLevel.Medium) with { FortifyWorlds = 1 }, AiLevels.For(AiLevel.Medium));
         mOff.RunTo(60); mOn.RunTo(60);
         var a = DefencesAt(off, charter, Side.Hand); var b = DefencesAt(on, charter, Side.Hand);
