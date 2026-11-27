@@ -326,7 +326,7 @@ public sealed partial record SimpleAiParams
     public int CampaignHoldPercent { get; init; } = 70;
     public int CampaignChoices { get; init; } = 3;
     /// <summary>
-    /// Campaigns at once (AI trainer 2026-11-26; Paul 2026-11-26: the Collective starts scattered on the outer rim and can attack from several
+    /// Campaigns at once (AI trainer 2026-11-26; Paul 2026-11-26: the Collective starts scattered in the Farreach and can attack from several
     /// angles at once, the number of simultaneous attacks can rise with difficulty). Each runs as the first, in its own sector at least
     /// CampaignApartHops lanes from the others' worlds when it can be. DEFAULT 1; Hard 2 (AiLevels). rule: ai tuning.
     /// </summary>
