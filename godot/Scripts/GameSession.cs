@@ -380,6 +380,11 @@ public sealed partial class GameSession
         }
     }
 
+    /// <summary>A fleet in a message: yours by its name; the enemy's as "a Collective fleet", since "Fleet 1 (Collective)" reads as your own
+    /// Fleet 1 (QA playthrough 2026-11-27, item 13). Start: the words open the sentence.</summary>
+    string FleetCalled(int id, Side? side, bool start) =>
+        side == Player || side == null ? FleetName(id) : $"{(start ? "A" : "a")} {NameOf(side.Value)} fleet";
+
     string FleetName(int id) => _fleetOf.TryGetValue(id, out var f) ? f.Name : (Game.State.Fleets.TryGetValue(id, out var g) ? g.Name : $"Fleet {id}");
 
     /// <summary>

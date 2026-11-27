@@ -172,6 +172,22 @@ public partial class GameScreen
         _mapHolder.AddChild(_hoverCard);
     }
 
+    /// <summary>
+    /// The upkeep brake, which nothing on screen told (QA playthrough 2026-11-27, item 2): every mine and refinery carries a slice of the
+    /// upkeep, and a bigger slice makes its cycle longer, so income falls as the upkeep fills; low support stretches the cycle too.
+    /// The days are the core's (rule: m2-mines-refineries-pools §Cycle length, EconomyModule.CycleDays), at full support, for the slice
+    /// each pair carries at this upkeep.
+    /// </summary>
+    string SlowdownWords(int load, int cap)
+    {
+        var p = S.Host.Economy.Params;
+        int share = cap <= 0 ? p.CapacityPerFacility : Math.Min(p.CapacityPerFacility, load * p.CapacityPerFacility / cap);
+        int free = Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, 0), now = Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, share);
+        int half = Praedra.Core.Economy.EconomyModule.CycleDays(p, 50, share);
+        return $"The fuller your upkeep, the slower your mines and refineries work: at this upkeep a cycle takes about {Ui.Count(now, "day", "days")}, "
+            + $"against {free} with none. Low support slows them too: at 50% support it takes about {Ui.Count(half, "day", "days")}.";
+    }
+
     /// <summary>12400 reads 12.4k: the stocks stay short, the exact number is in the tooltip.</summary>
     static string Short(int n) => n >= 100_000 ? $"{n / 1000}k" : n >= 10_000 ? $"{n / 1000.0:0.0}k" : n.ToString();
 
@@ -191,7 +207,8 @@ public partial class GameScreen
         _upkeepLabel.AddThemeColorOverride("font_color", over ? Ui.Danger : near ? Ui.Warn : BarValue);
         _upkeepCaption.AddThemeColorOverride("font_color", over ? Ui.Danger : near ? Ui.Warn : BarLabel);
         string upTip = $"Upkeep: {load} used of a limit of {cap}. Everything you own costs upkeep every day. The limit comes from your mines and refineries (50 for each mine-and-refinery pair). "
-            + (over ? "You are OVER the limit: units get scrapped until you are back under it. Build mines and refineries, or scrap ships." : near ? "You are close to the limit: a build order that would pass it is refused." : "");
+            + (over ? "You are OVER the limit: units get scrapped until you are back under it. Build mines and refineries, or scrap ships. " : near ? "You are close to the limit: a build order that would pass it is refused. " : "")
+            + SlowdownWords(load, cap);
         SetStockTip(_upkeepCell, _upkeepLabel, upTip);
         SetStockTip(_rawCell, _rawLabel, RawTip + (raw >= 10_000 ? $" ({raw})" : ""));
         SetStockTip(_refinedCell, _refinedLabel, RefinedTip + (refined >= 10_000 ? $" ({refined})" : ""));

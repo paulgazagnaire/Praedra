@@ -195,6 +195,7 @@ public partial class GameScreen
                 : $"Drag {S.CharName(gen.Id)} off the post to release them.");
             col.AddChild(gz.Box);
             cmd.AddChild(col);
+            if (gen == null) WhoCanBeGeneral(cmd, n, here);
         }
 
         var chars = FleetSection("Leaders", 16, null, mine ? "Your leaders standing on the planet, not on a fleet. Drag one onto a fleet in orbit, a post, or another system."
@@ -244,6 +245,66 @@ public partial class GameScreen
                 "Pick a team standing here (leaders and special forces), the kind of mission and the target."));
         bar.AddChild(InfraButton(n));
         Add(bar);
+    }
+
+    /// <summary>Whether the list of who can be a General is unfolded (one switch for every planet, kept while the game runs).</summary>
+    bool _generalsOpen;
+
+    /// <summary>
+    /// Under an empty General post: which of your leaders can take it, free ones first and nearest first, each a button that opens the
+    /// window where they stand so they can be dragged here (leaders move by drag only, Paul 2026-11-22). The post used to say who can't
+    /// only during a drag, and never who can (QA playthrough 2026-11-27, item 11). Most posts are empty, so the list folds into one line
+    /// that keeps the Leaders section, the drag source, near the top (review 32).
+    /// </summary>
+    void WhoCanBeGeneral(VBoxContainer cmd, string n, List<CharacterRecord> here)
+    {
+        const int Shown = 3;
+        var able = S.MyCharacters.Where(c => Cm.ClassOf(c).CanGeneral && S.SystemPostOf(c) != n && CanTravel(c, n) == null)
+            .Select(c => (c, days: TravelDays(c, n))).OrderBy(x => S.SystemPostOf(x.c) != null).ThenBy(x => x.days).ThenBy(x => S.CharName(x.c.Id), StringComparer.Ordinal).ToList();
+        if (able.Count == 0)
+        {
+            var none = Look.Words("None of your leaders free to travel can be a General.", 12, Look.Muted);
+            none.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            none.SetMeta(UiTest.FullName, $"Ground {n} who can be General");
+            cmd.AddChild(none);
+            return;
+        }
+        string why = here.Count > 0 && !here.Any(c => Cm.ClassOf(c).CanGeneral) ? "No leader here can be a General. " : "";
+        var words = Look.Words($"Who can be a General ({able.Count}) {(_generalsOpen ? "▾" : "▸")}", 12, Look.Muted);
+        var fold = new Button { Flat = true, FocusMode = FocusModeEnum.None, MouseDefaultCursorShape = CursorShape.PointingHand,
+            SizeFlagsHorizontal = SizeFlags.ShrinkBegin,
+            TooltipText = Ui.Wrap(why + (_generalsOpen ? "Fold the list." : $"Show the nearest {Math.Min(Shown, able.Count)}, each a way to the window where they stand.")) };
+        foreach (var state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus" }) fold.AddThemeStyleboxOverride(state, new StyleBoxEmpty());
+        Fill(fold, words, 0, 2);
+        fold.MouseEntered += () => words.AddThemeColorOverride("font_color", Look.Text);
+        fold.MouseExited += () => words.AddThemeColorOverride("font_color", Look.Muted);
+        fold.Pressed += () => { _generalsOpen = !_generalsOpen; MgRefreshSoon(); };
+        fold.SetMeta(UiTest.FullName, $"Ground {n} who can be General");
+        cmd.AddChild(fold);
+        if (!_generalsOpen) return;
+        var rows = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        rows.AddThemeConstantOverride("separation", 8);
+        foreach (var (c, days) in able.Take(Shown))
+        {
+            string name = S.CharName(c.Id);
+            var f = c.AttachedFleet != 0 && S.Game.State.Fleets.TryGetValue(c.AttachedFleet, out var af) ? af : null;
+            string at = Cm.LocationOf(c) ?? "";
+            string post = S.SystemPostOf(c) is string gs ? $"General of {gs}" : null;   // free leaders come first; a posted one says so on the button
+            string where = f != null ? $"on {S.NameOf(f)}" : post ?? at;
+            string when = days == 0 ? "here" : $"{Ui.Count(days, "day", "days")} away";
+            var b = FleetAction($"{name} · {where} · {when}", $"General candidate {name}",
+                () => { if (f != null) OpenMgmt(MgKind.Fleet, fleet: f.Id, tab: "Command"); else OpenMgmt(MgKind.Ground, Cm.LocationOf(c), tab: "Command"); },
+                $"{name}{(post != null ? ", " + post + "," : "")} stands {(f != null ? $"on {S.NameOf(f)} at {f.At}" : $"at {at}")}. Open that window and drag {name} onto this General post"
+                + (days == 0 ? "." : $": they fly here first, {Ui.Count(days, "day", "days")}."));
+            b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+            rows.AddChild(b);
+        }
+        cmd.AddChild(rows);
+        if (able.Count > Shown)
+        {
+            var more = Look.Words($"and {able.Count - Shown} more in Leaders (C).", 12, Look.Muted);
+            cmd.AddChild(more);
+        }
     }
 
     /// <summary>The way to the planet's Infrastructure window, as its own "Ground and military" button the other way.</summary>

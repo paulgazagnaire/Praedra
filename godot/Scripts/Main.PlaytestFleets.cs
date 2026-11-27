@@ -306,5 +306,98 @@ public partial class Main
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
         else GD.Print("  (no fleet of yours alone at a system: the double-click is not checked on this side)");
+
+        ScreenFixes(gs, s, me);
+    }
+
+    /// <summary>The screen problems of QA's Hand playthrough (2026-11-27): items 7, 11, 12 and 13.</summary>
+    void ScreenFixes(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
+    {
+        // item 13: at the whole-map zoom a click on your HQ's rings picks the HQ, not the dot nearest the click
+        gs.View.ResetView(); gs.PlayRefresh();
+        int hq = Enumerable.Range(0, gs.G.Systems.Count).FirstOrDefault(i => gs.View.IsHq?.Invoke(i) == true && gs.View.OwnerOf?.Invoke(i) == me, -1);
+        if (hq >= 0)
+        {
+            var c = gs.View.SystemScreen(hq);
+            float r = gs.View.SystemRadius + 7f;
+            var dots = Enumerable.Range(0, gs.G.Systems.Count).Where(i => i != hq).Select(gs.View.SystemScreen).ToList();
+            var ring = Enumerable.Range(0, 8).Select(k => c + Vector2.Right.Rotated(k * Mathf.Tau / 8) * r)
+                .FirstOrDefault(p => dots.All(d => d.DistanceTo(p) > gs.View.SystemRadius + 2f), new Vector2(float.NaN, 0));
+            if (!float.IsNaN(ring.X))
+            {
+                gs.View.Select(-1);
+                gs.PlayMapClick(ring); gs.PlayRefresh();
+                Expect(gs.View.Selected == hq, $"a click on {gs.G.Systems[hq].Name}'s rings at the whole-map zoom picks it (picked {(gs.View.Selected >= 0 ? gs.G.Systems[gs.View.Selected].Name : "nothing")})");
+            }
+            else GD.Print("  (every point of the HQ's rings is on another dot: the ring click is not checked)");
+        }
+
+        // item 12: picking a fleet from the Fleets list keeps the zoom
+        var fl = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).OrderBy(f => f.Id).FirstOrDefault();
+        if (fl != null)
+        {
+            gs.View.ResetView(); gs.PlayRefresh();
+            float z = gs.View.Zoom;
+            gs.SelectFleet(fl.Id, true); gs.PlayRefresh();
+            Expect(Mathf.IsEqualApprox(gs.View.Zoom, z), $"picking {fl.Name} from the list keeps the zoom ({z} -> {gs.View.Zoom})");
+
+            // item 7: a window standing where Sibyl's panel docks steps aside when the panel opens, and goes back when it closes
+            if (gs.WindowOpen) gs.Click("Advisor");
+            gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fl.Id);
+            string key = $"Fleet {fl.Id}";
+            gs.PlayPlaceMg(key, new Vector2(gs.DrawerLeft + 60, 60));
+            var before = gs.MgRect(key).Value.Position;
+            gs.ShotOpenSection("Needs"); gs.PlayRefresh();
+            var aside = gs.MgRect(key).Value;
+            Expect(aside.End.X <= gs.DrawerLeft + 4, $"a window over Sibyl's panel steps aside when it opens (now {aside.Position.X:0} to {aside.End.X:0}, the panel from {gs.DrawerLeft:0})");
+            gs.PlayCloseDrawer(); gs.PlayRefresh();
+            Expect(gs.MgRect(key).Value.Position == before, "it goes back when the panel closes");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+            // review 32: with no free column left of the panel, a window steps aside a head lower than the one it covers, with an edge
+            var mine = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).OrderBy(f => f.Id).Take(3).ToList();   // three: two fill the columns left of the panel, the third finds none
+            if (mine.Count >= 3)
+            {
+                foreach (var m in mine) gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: m.Id);
+                gs.PlayRefresh();
+                gs.ShotOpenSection("Needs"); gs.PlayRefresh();
+                var rects = mine.Select(m => (key: $"Fleet {m.Id}", r: gs.MgRect($"Fleet {m.Id}").Value)).ToList();
+                Expect(rects.All(x => x.r.End.X <= gs.DrawerLeft + 4), "no window stays over Sibyl's open panel: " + string.Join(", ", rects.Select(x => $"{x.key} {x.r.Position.X:0}-{x.r.End.X:0}")));
+                for (int a = 0; a < rects.Count; a++)
+                    for (int b = a + 1; b < rects.Count; b++)
+                    {
+                        if (!rects[a].r.Intersects(rects[b].r)) continue;
+                        float dy = Math.Abs(rects[a].r.Position.Y - rects[b].r.Position.Y);
+                        Expect(dy >= 63, $"{rects[a].key} and {rects[b].key} overlap, one starts a head lower ({dy:0} px apart)");
+                        Expect(gs.EdgeShows(rects[a].key) || gs.EdgeShows(rects[b].key), $"of {rects[a].key} and {rects[b].key}, the one on top shows its edge");
+                    }
+                gs.PlayCloseDrawer(); gs.PlayRefresh();
+                while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+            }
+        }
+
+        // item 11: an empty General post says who can take it
+        if (s.Game.State.SystemOwners.Where(kv => kv.Value == me).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal)
+                .FirstOrDefault(n => s.Host.Characters.SystemGeneralOf(n) == null) is string open)
+        {
+            gs.OpenMgmt(GameScreen.MgKind.Ground, open, tab: "Command"); gs.PlayRefresh();
+            string fold = $"Ground {open} who can be General";
+            string none = gs.MgNote(fold);
+            if (none != null) Expect(none.StartsWith("None", StringComparison.Ordinal), $"the empty General post of {open} says none can take it ({none})");
+            else
+            {
+                // folded to one line (review 32), which opens the list of who can
+                Expect(gs.Has(fold) && !gs.Has("General candidate"), $"the empty General post of {open} shows one folded line of who can take it");
+                gs.Click(fold); gs.PlayRebuildMg();
+                Expect(gs.Has("General candidate"), $"unfolded, it lists who can take the General post of {open}");
+                gs.Click(fold); gs.PlayRebuildMg();
+            }
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+
+        // item 13: the pause words that came with a report go when the report closes
+        const string fought = "Paused: an invasion was fought";
+        var (shown, after) = gs.PlayReportPause(fought);
+        Expect(shown == fought && after != fought, $"the report's pause words go with the report (open: '{shown}', closed: '{after}')");
     }
 }

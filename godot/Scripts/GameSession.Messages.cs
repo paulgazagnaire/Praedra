@@ -163,7 +163,7 @@ public sealed partial class GameSession
             }
             case FleetRetreated r:
                 if (_battles.TryGetValue(r.From, out var rb))
-                    rb.Retreats.Add($"{FleetName(r.Fleet)} retreated to {r.To}");
+                    rb.Retreats.Add($"{FleetCalled(r.Fleet, FleetSide(r.Fleet), true)} retreated to {r.To}");
                 if (Mine(FleetSide(r.Fleet)))
                     yield return new Message(d, $"{FleetName(r.Fleet)} retreated from {r.From} to {r.To}.", r.From, MsgKind.Warn);
                 break;
@@ -376,7 +376,7 @@ public sealed partial class GameSession
             // ---- bombardment
             case BombardmentStarted b:
                 if (b.Side == Player || OwnerOf(b.System) == Player)
-                    yield return new Message(d, $"{FleetName(b.Fleet)} ({NameOf(b.Side)}) bombards {b.System}.", b.System, b.Side == Player ? MsgKind.Info : MsgKind.Bad);
+                    yield return new Message(d, $"{FleetCalled(b.Fleet, b.Side, true)} bombards {b.System}.", b.System, b.Side == Player ? MsgKind.Info : MsgKind.Bad);
                 break;
             case BombardmentResolved b:
             {
