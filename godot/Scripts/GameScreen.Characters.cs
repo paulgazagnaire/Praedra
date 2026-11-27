@@ -20,7 +20,7 @@ public partial class GameScreen
 
     static readonly Color RouteBlue = Ui.LeaderRoute;
 
-    const string LeaderHelp = "Leaders give bonuses: a fleet's Admiral multiplies its bombardment, a fleet's General helps its regiments in an invasion, and a system's General helps the defenders. Commanders have no effect yet.";
+    const string LeaderHelp = "Leaders give bonuses: a fleet's Admiral multiplies its bombardment and makes its fighters hit harder in battle, a fleet's General helps its regiments in an invasion, and a system's General helps the defenders.";
 
     // ================================================================== the Leaders tab
 

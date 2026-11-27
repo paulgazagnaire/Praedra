@@ -41,7 +41,7 @@ public partial class Main
         Expect(panel.Contains("; Talent: "), "the Talent rank of the known talented character is shown");
         GD.Print("  characters: " + string.Join(" | ", s.MyCharacters.Select(c => $"{s.CharName(c.Id)} {s.WhereIsCharacter(c)} [{s.RoleOf(c)}] {s.CapabilityOf(c)}")));
 
-        bool CanPost(CharacterRecord c) { var k = cm.ClassOf(c); return k.CanAdmiral || k.CanCommander || k.CanGeneral; }
+        bool CanPost(CharacterRecord c) => s.FleetPosts.Any(p => cm.CanHold(c, p));
         bool Standing(CharacterRecord c) => c.Status == CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null && c.System != null && s.SystemPostOf(c) == null;
         int Ticks(string a, string b) => fm.FindPath(a, b, cm.Params.CharacterSpeed) is { Ok: true } p ? p.TotalTicks : int.MaxValue;
 
@@ -60,8 +60,7 @@ public partial class Main
         // ---------------------------------------------------------------- attach it to the fleet: drag it onto a post of the fleet's window
         // (the only way: Paul 2026-11-22, moving a leader is never a click in a menu)
         OpenFleetTab(gs, fleet, "Command");
-        var cls = cm.ClassOf(mover);
-        var post = new[] { CharacterPost.Admiral, CharacterPost.Commander, CharacterPost.General }.FirstOrDefault(p => cls.Can(p) && cm.HolderOf(fleet.Id, p) == null);
+        var post = s.FleetPosts.FirstOrDefault(p => cm.CanHold(mover, p) && cm.HolderOf(fleet.Id, p) == null);
         string zone = post == CharacterPost.None ? $"Fleet {fleet.Id} Passengers" : $"Fleet {fleet.Id} {post}";
         Expect(gs.MenuOf($"Zone {zone}").Count == 0 && !gs.CardTip($"Zone {zone}").Contains("Click", StringComparison.Ordinal)
             && gs.CardTip($"Zone {zone}").StartsWith("Drag a leader here", StringComparison.Ordinal),

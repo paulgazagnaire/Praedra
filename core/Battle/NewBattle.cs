@@ -605,7 +605,7 @@ public sealed class NewBattle
                 if (_m.ShotValue(b.Weapon, b.ShotDamage, u.C, him) <= 0) continue; // holds fire, cooldown stays 0
                 u.Cooldown[bi] = b.Reload;
                 uint thr = _data.Weapon(b.Weapon).Threshold[(int)tgt.C.Size];
-                double dmg = b.ShotDamage * hr;
+                double dmg = b.ShotDamage * hr * Boost(u);
                 for (int g = 0; g < guns; g++)
                 {
                     bool hit = _rng.NextUInt() < thr; // one draw per gun, deflected shots included
@@ -618,7 +618,7 @@ public sealed class NewBattle
                 && _m.ShotValue(WeaponKind.Torpedo, u.C.TorpedoDamage, u.C, him) > 0)
             {
                 uint thr = _data.Weapon(WeaponKind.Torpedo).Threshold[(int)tgt.C.Size];
-                double dmg = u.C.TorpedoDamage * hr;
+                double dmg = u.C.TorpedoDamage * hr * Boost(u);
                 int n = u.TorpedoesLeft; u.TorpedoesLeft = 0;
                 for (int g = 0; g < n; g++)
                 {
@@ -629,6 +629,9 @@ public sealed class NewBattle
             }
         }
     }
+
+    // rule: m4-battle-new §8 step 4 (Admiral boosts fighters, Paul 2026-11-27): a squadron's damage x (1 + its fleet Admiral's percent / 100); ships x 1
+    private static double Boost(NU u) => u.Capital || u.B.FighterBoostPercent <= 0 ? 1.0 : 1.0 + u.B.FighterBoostPercent / 100.0;
 
     // ---------------------------------------------------------------- step 4b: damage applied
 

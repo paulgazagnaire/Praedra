@@ -76,6 +76,12 @@ public sealed record NewBattleParams
     public int CraftHull { get; init; } = 8;
     /// <summary>A squadron with at least this many craft alive counts as whole at the end. DEFAULT.</summary>
     public int SquadronSurvivalCraft { get; init; } = 6;
+    /// <summary>
+    /// The fleet's Admiral boosts its fighter squadrons: each squadron's shot and torpedo damage gains leadership / this percent (integer division),
+    /// so leadership 100 gives +25%. DEFAULT 4 (Paul 2026-11-27, "Merge into Admiral": the Commander post goes, the Admiral takes its fighter job);
+    /// 0 = off. rule: m4-battle-new §8 step 4.
+    /// </summary>
+    public int AdmiralFighterStep { get; init; } = 4;
 
     // ---- subsystem rolls. rule: m4-battle-new §8 step 4b.6, Random draws (the thresholds 50/65/80/90/95 and the cap are BattleParams', shared with Classic)
     /// <summary>The shield-generator draw is NextInt(100). Traced idea.</summary>

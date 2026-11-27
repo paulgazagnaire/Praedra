@@ -193,6 +193,13 @@ public sealed record CharacterParams
     // ---- switches (§Defaults for undecided items)
     /// <summary>Attached characters ride their fleet; false = detached at departure when a MoveFleet is accepted. DEFAULT true.</summary>
     public bool OfficersRideFleet { get; init; } = true;
+    /// <summary>
+    /// New (Paul 2026-11-27, "Merge into Admiral"): no fleet Commander post. Whoever could be Commander can be Admiral, and a Commander in an older
+    /// save becomes a passenger at load. The Admiral's leadership also boosts the fleet's fighter squadrons in the New battle
+    /// (<see cref="Battle.NewBattleParams.AdmiralFighterStep"/>). DEFAULT true; false = Classic (a Commander post with no effect).
+    /// rule: m5-characters-and-talent §Posts (Commander merged into Admiral).
+    /// </summary>
+    public bool CommanderIntoAdmiral { get; init; } = true;
     /// <summary>Characters die with a destroyed fleet. DEFAULT false; on is undefined (Missing): refused.</summary>
     public bool CharactersLostWithFleet { get; init; }
     /// <summary>An enemy fleet stops or captures a lone character in transit. DEFAULT false; on has no rule: refused.</summary>
