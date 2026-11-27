@@ -99,7 +99,7 @@ public partial class GameScreen
             bool gone = CapitalTermMet();
             Check(c1, gone, "Take the Hearth, the Collective headquarters",
                 gone ? $"Done: it fell at {truth.System}."
-                : hq == null ? "Where it is: unknown. Explore Collective systems and send spies to find it."
+                : hq == null ? HearthSearchWords()
                 : $"Last seen at {hq.System}, day {hq.Stamp}. It can move: look again before you strike.", gone ? truth.System : hq?.System);
         }
         else
@@ -186,6 +186,17 @@ public partial class GameScreen
         if (sub != null) cv.AddChild(Ui.Label(sub, "Hint"));
         into.AddChild(card);
         return cv;
+    }
+
+    /// <summary>How the Hand finds the Hearth while it is unknown: the spy odds, and the sectors its spies already named (QA's UI game, 2026-11-27,
+    /// "no path to the win"; Paul's pick: better spy odds). rule: m5-fog-and-hq §N6a.</summary>
+    string HearthSearchWords()
+    {
+        var fp = S.Fog.Params;
+        string odds = $"Send Espionage missions to worlds you don't hold: each success has a {fp.HearthTipPermille / 10}% chance to show where it is, or else {fp.HearthTipSectorPermille / 10}% to name its sector.";
+        var sectors = S.Fog.Clues(Me).Select(c => c.Sector).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+        return sectors.Count == 0 ? "Where it is: unknown. " + odds
+            : $"Your spies place it in {(sectors.Count == 1 ? "the sector " + sectors[0] : "one of the sectors " + string.Join(", ", sectors))} (it can move). Spy on worlds there. " + odds;
     }
 
     /// <summary>One condition: a tick (done) or an empty ring, the condition, how it stands, and a link to the place.</summary>

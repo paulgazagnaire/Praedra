@@ -47,7 +47,7 @@ public sealed partial class SimpleAi
             .OrderByDescending(s => _advisor ? 0 : HopsFromEnemy(s, FoundSafeHops)).ThenByDescending(s => Math.Min(eco.SlotsOf(s).Energy, FoundGoodEnergy))
                 .ThenBy(s => FoundTie(s)).ThenByDescending(s => eco.SlotsOf(s).Energy).ThenBy(s => s, StringComparer.Ordinal).FirstOrDefault();
         if (site == null) return;
-        long seq = _h.Construction.SubmitBuild(_side, site, YardFamily.Construction, cls, 1, site);
+        long seq = _h.Construction.SubmitBuild(_side, site, YardFamily.Construction, cls, 1, site, byAdvisor: _advisor); // marked as hers: the screen splits refined use (RefinedUsePer30Days)
         Note(seq, "Build", $"{cls} founded at {site}");
         _plannedLoad += Maint(cls);
         _reservedEnergy[site] = _reservedEnergy.GetValueOrDefault(site) + 1;
@@ -56,7 +56,7 @@ public sealed partial class SimpleAi
     private void OrderFacility(string yard, FacilityKind kind, string dest)
     {
         string cls = FacilityKinds.ClassName(kind);
-        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Construction, cls, 1, dest);
+        long seq = _h.Construction.SubmitBuild(_side, yard, YardFamily.Construction, cls, 1, dest, byAdvisor: _advisor);
         Note(seq, "Build", $"{cls} at {dest} from {yard}");
         _busy.Add((yard, YardFamily.Construction));
         _plannedLoad += Maint(cls);

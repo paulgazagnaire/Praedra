@@ -99,7 +99,7 @@ public partial class GameScreen
     {
         if (_log == null) return;
         _allMessages.Add(m);
-        if (_allMessages.Count > MaxLogItems) _allMessages.RemoveAt(0);
+        if (_allMessages.Count > MaxLogKept) _allMessages.RemoveAt(0);
         if (PassesFilter(m)) { AppendLogRow(m); if (_logHost.Visible) ScrollLogToEnd(); }
         if (fresh && ToastWorthy(m)) Toast(m.Text, m.Kind, m.System);
         if (fresh && !(_drawer.Visible && _tab == DrawerTab.Log)) _unread++;
