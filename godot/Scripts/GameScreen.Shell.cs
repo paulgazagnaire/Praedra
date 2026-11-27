@@ -287,8 +287,8 @@ public partial class GameScreen
         string sibyl = AdvisorName ?? "your advisor";
         string outLine = use == 0 ? " No yard is building now."
             // the mark goes by a higher use of the last days (QA-132): say both, so the hover matches the mark and today (Ponytail on #427)
-            : f.Today >= 0 ? $" While {sibyl} keeps your yards busy they use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for hers."
-                + $" Today it is {f.Today}: a yard that finished a build waits for her next one."
+            : f.Today >= 0 ? $" While {sibyl} keeps your yards busy they use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
+                + $" Today it is {f.Today} every {w} days: a yard waits for its next build."   // neutral: the yard may be yours or hers (Ponytail on #429)
             : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
             : $" Your yards now use about {use} every {w} days.";
         int gap = use - f.Made;

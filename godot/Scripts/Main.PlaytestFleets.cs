@@ -467,7 +467,7 @@ public partial class Main
         if (s.HasAdvisor)
         {
             string between = gs.RefinedFlowWords(0, GameScreen.TrendOf(95, 0, 110, GameScreen.RefinedWay.Falling) with { Today = 88 });
-            Expect(between.Contains("While Sibyl keeps your yards busy they use about 110 every 30 days: 0 for your orders, 110 for hers. Today it is 88: a yard that finished a build waits for her next one.")
+            Expect(between.Contains("While Sibyl keeps your yards busy they use about 110 every 30 days: 0 for your orders, 110 for Sibyl's. Today it is 88 every 30 days: a yard waits for its next build.")
                     && !between.Contains("now use"),
                 "on a day between her builds the hover says both the use the mark goes by and today's (Ponytail on #427): " + between);
         }
