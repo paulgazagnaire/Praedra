@@ -438,11 +438,39 @@ public partial class Main
             Expect(both.Contains("Even without Sibyl's builds, your own orders use more"), "and when your own orders are short anyway, it says that: " + both);
         }
 
+        // QA-132: while Sibyl builds, a day or two of idle yards between her builds does not flip the mark. QA's days: the refineries make 95,
+        // her yards use 110, and a build that ends leaves 88 for a day (or two, back to back) until she gives the yards the next one
+        var uses = new[] { 110, 88, 110, 110, 110, 88, 88, 110, 110, 110, 110, 88, 110, 110, 88, 88, 110, 110 };
+        int Flips(bool sibyl)
+        {
+            var seen = new List<(int Day, int Mine, int Hers)>();
+            var was = flat; int n = 0;
+            for (int d = 0; d < uses.Length; d++)
+            {
+                var (mi, he) = GameScreen.HeldUse(seen, 500 + d, 0, uses[d], sibyl, 4);
+                var w = W(95, mi, he, was);
+                if (d > 0 && w != was) n++;
+                was = w;
+            }
+            return n;
+        }
+        Expect(Flips(true) == 0 && Flips(false) >= 6,
+            $"while Sibyl builds, the day or two of idle yards between her builds leaves the ▼ alone ({Flips(true)} changes in {uses.Length} days; {Flips(false)} on today's use alone)");
+        var seen2 = new List<(int Day, int Mine, int Hers)>();
+        GameScreen.HeldUse(seen2, 600, 30, 80, true, 4);
+        Expect(GameScreen.HeldUse(seen2, 601, 30, 58, true, 4) == (30, 80) && GameScreen.HeldUse(seen2, 605, 30, 58, true, 4) == (30, 58)
+                && GameScreen.HeldUse(seen2, 606, 0, 0, false, 4) == (0, 0) && GameScreen.HeldUse(seen2, 607, 30, 58, true, 4) == (30, 58),
+            "the highest use of the last 4 days counts while she builds, an older one drops out, and without her today's use counts");
+
         // on the game: the mark follows today's two paces, from the first refresh; 9999 and the mark keep the stock's width, so the bar does not shift
         GameScreen.RefinedWay Expected(GameScreen.RefinedWay was)   // what the paces give from the mark shown before (a mark keeps showing until balance, QA r245)
         {
             var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
-            return GameScreen.TrendOf(Praedra.Core.Economy.RefinedFlow.MadePace(s.Host, me), mine, hers, was).Way;
+            var held = gs.RefinedTrendNow();   // the use the mark goes by: today's, or while Sibyl builds the highest of the last days (QA-132)
+            bool sibyl = s.HasAdvisor && s.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction);
+            Expect(sibyl ? held.Mine + held.Hers >= mine + hers : (held.Mine, held.Hers) == (mine, hers),
+                $"the mark goes by today's use ({mine}+{hers}), or while Sibyl builds by the highest of the last days ({held.Mine}+{held.Hers})");
+            return GameScreen.TrendOf(Praedra.Core.Economy.RefinedFlow.MadePace(s.Host, me), held.Mine, held.Hers, was).Way;
         }
         gs.PlayRefresh();
         var before = gs.RefinedWayShown;
