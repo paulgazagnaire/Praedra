@@ -233,7 +233,7 @@ public partial class GameScreen
         if (!f.Falling) return inLine + outLine;
         // the red mark's words: by how much, how long the stock lasts, and whether the advisor's builds are what tip it
         int gap = use - f.Made30;
-        string fall = $" The red mark: that is about {gap} more than your refineries make, "
+        string fall = $" The red mark: your yards use about {gap} more than your refineries make, "
             + (refined <= 0 ? "and your stock is empty: the yards wait for what your refineries make." : $"so at this pace your {refined} lasts about {Ui.Count(refined * w / gap, "day", "days")}.");
         string hers = !(S.HasAdvisor && f.Hers > 0) ? ""
             : f.Mine <= f.Made30 ? $" Your own orders fit what your refineries make: {AdvisorName ?? "your advisor"}'s builds are what run it down. Her switches are in her panel (top right)."

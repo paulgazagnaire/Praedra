@@ -319,7 +319,7 @@ public partial class Main
             "it waits until a refinery could have finished a cycle (4 days on record), and scales fewer days to 30 (10 in 10 days = 30 against 31)");
         // the words: by how much, how long the stock lasts, and the advisor's part
         string fall = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 63, 0, 5));
-        Expect(fall.Contains("The red mark: that is about 27 more than your refineries make, so at this pace your 246 lasts about 273 days."), "the tooltip says by how much and how long the stock lasts: " + fall);
+        Expect(fall.Contains("The red mark: your yards use about 27 more than your refineries make, so at this pace your 246 lasts about 273 days."), "the tooltip says by how much and how long the stock lasts: " + fall);
         Expect(gs.RefinedFlowWords(0, GameScreen.TrendOf(36, 30, 63, 0, 5)).Contains("your stock is empty"), "an empty stock is said as empty, not as lasting 0 days");
         Expect(!gs.RefinedFlowWords(246, GameScreen.TrendOf(70, 30, 63, 0, 5)).Contains("red mark"), "no red mark words while the refineries keep up");
         if (s.HasAdvisor)

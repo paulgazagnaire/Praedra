@@ -273,7 +273,7 @@ public partial class GameScreen
         if (S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == name))
             // the orders sit under Fleet actions in the fleet window (Paul 2026-11-22, F2); a neutral world has no defenders (m3-assault §0)
             Note(owner != null ? "Bombard it, then invade with regiments aboard your fleet: Bombardment and Invasion are under Fleet actions in its fleet window (F)."
-                : "Neutral: no troops defend it. Invade with regiments aboard: Invasion is under Fleet actions in your fleet's window (F).");
+                : "Neutral: no troops defend it, so an invasion with regiments aboard takes it unless its defences stop the landing. Invasion is under Fleet actions in your fleet's window (F).");
         else Note(owner == null && ownerKnown ? $"Neutral: neither side holds it. Send a fleet with regiments aboard, then press Invasion in its fleet window; or win the people over with {DiplomacyWord} first. You can only build on systems you hold."
             : "You can only build on systems you hold. To take it, send a fleet with regiments aboard, beat any fleet there, and press Invasion in its fleet window.");
     }
