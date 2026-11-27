@@ -628,7 +628,7 @@ public sealed partial class SimpleAi
         int s = _h.Economy.SupportOf(system, _side); // its own world: the AI sees it
         if (!_p.ClassicGarrisonFloor)
         {
-            if (system == CriticalSystem()) need = Math.Max(need, _p.CriticalGarrison);
+            if (system == CriticalSystem()) need = Math.Max(need, CapitalAlarm() ? Math.Max(_p.CriticalGarrison, _p.CapitalAlarmGarrison) : _p.CriticalGarrison); // rule: ai tuning, SimpleAiParams.CapitalAlarmDays
             if (s < Praedra.Core.Control.ControlModule.JoinSupport) need = Math.Max(need, 1);
             return need;
         }

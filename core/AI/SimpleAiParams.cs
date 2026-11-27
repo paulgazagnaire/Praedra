@@ -331,6 +331,16 @@ public sealed record SimpleAiParams
     public int GuardRaidedDays { get; init; }
     public int GuardRaidedShields { get; init; } = 2;
     public int GuardRaidedWorlds { get; init; } = 6;
+    /// <summary>
+    /// Capital alarm (AI trainer 2026-11-27, the sparring Hand; a human keeps its fleet home when its capital is in danger, not all the time):
+    /// for CapitalAlarmDays after an enemy fleet stood on the critical world (Charter for the Hand, the Hearth's world for the Collective) or a
+    /// world one lane from it, or fought or shelled there, the home guard wants the task-force strength (the strongest enemy fleet known, with
+    /// TaskForceMarginPercent) instead of HomeDefenceStrength, strike piles go home while it is short, and the world keeps CapitalAlarmGarrison
+    /// regiments. Measured 2026-11-27: every Charter fall in seeds 1-8 was a landing with no Hand ship at Charter and 0-3 regiments on it, while
+    /// a home guard of 200 at all times starved the Hand (0 wins of 32). 0 = off (DEFAULT).
+    /// </summary>
+    public int CapitalAlarmDays { get; init; }
+    public int CapitalAlarmGarrison { get; init; } = 16;
     public int CampaignPrepareDays { get; init; } = 120;
     public int CampaignMaxDays { get; init; } = 420;
     public int CampaignHoldPercent { get; init; } = 70;
