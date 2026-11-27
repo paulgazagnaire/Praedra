@@ -324,11 +324,17 @@ public partial class GameScreen
     // The rules as the player meets them, in plain words, short enough to read in one go without scrolling (impeccable critique
     // 2026-11-14: the old 818 words were cut off on the first screen). The win conditions are the core's (rule: m5-setup-and-victory
     // §Victory); the numbers live in the Goal window (G), which reads them from the rules.
+    // the second way to win, with this game's numbers (QA playthrough 2026-11-27: How to play left it out); empty when the rules turn it off
+    const string ControlWin = "{control}";
+    string ControlWinWords => Vm.Rules.DominanceSharePercent <= 0 ? null
+        : $"Or, once the enemy capital has fallen, hold {Vm.Rules.DominanceSharePercent}% of the systems the two sides hold for {Vm.Rules.DominanceDays} days.";
+
     static readonly (string Head, string[] Lines)[] HowTo =
     {
         ("How you win", new[]
         {
             "Take the enemy capital and hold its two key leaders prisoner, at the same time. The Hand must first find the Hearth, the Collective's hidden headquarters. Goal (G) shows who, where, and how close each side is.",
+            ControlWin,
         }),
         ("Time", new[]
         {
@@ -359,7 +365,8 @@ public partial class GameScreen
         {
             lines.AddChild(Ui.Space(4));
             lines.AddChild(Ui.Section(h));
-            foreach (var l in ls) lines.AddChild(Ui.Label(l, null, Ui.Text2));
+            foreach (var l in ls)
+                if ((l == ControlWin ? ControlWinWords : l) is string words) lines.AddChild(Ui.Label(words, null, Ui.Text2));
         }
         var ok = Ui.Button("Got it", CloseHowTo, "Close (F1 opens it again)", "Primary");
         ok.CustomMinimumSize = new Vector2(160, 36);

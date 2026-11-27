@@ -56,7 +56,7 @@ public partial class GameScreen
     static Font _barFont;
     static Font BarFont => _barFont ??= Ui.Operator ?? ThemeDB.FallbackFont;
 
-    const string RawTip = "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined.";
+    const string RawTip = "Raw: ore dug by your mines. It waits for your refineries, which turn it into Refined. Mines and refineries slow down as your upkeep fills (see Upkeep).";
     const string RefinedTip = "Refined: the material you spend on ships, troops and buildings. Each yard takes it as it builds.";
 
     Control BuildTopBar()

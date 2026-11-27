@@ -96,6 +96,27 @@ public partial class GameScreen
         _view._GuiInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = at });
     }
 
+    /// <summary>Where a management window stands (null when it is not open), and putting it somewhere as a drag of its head would.</summary>
+    internal Rect2? MgRect(string key) => _mgWins.FirstOrDefault(w => w.Key == key) is { } w ? new Rect2(w.Panel.Position, new Vector2(WidthOf(w), w.Panel.Size.Y)) : null;
+    internal void PlayPlaceMg(string key, Vector2 at) { if (_mgWins.FirstOrDefault(w => w.Key == key) is { } w) w.Panel.Position = ClampWin(at, w.Panel.Size); }
+    /// <summary>The left edge of Sibyl's panel, on the screen.</summary>
+    internal float DrawerLeft => _mgLayer.Size.X - DrawerWidth;
+    internal void PlayCloseDrawer() => CloseDrawer();
+    /// <summary>The words of a shown label of the windows, by its full name (null when none shows).</summary>
+    internal string MgNote(string fullName)
+    {
+        Label Walk(Node n)
+        {
+            foreach (var c in n.GetChildren())
+            {
+                if (c is Label l && l.IsVisibleInTree() && l.HasMeta(UiTest.FullName) && l.GetMeta(UiTest.FullName).AsString() == fullName) return l;
+                if (Walk(c) is { } r) return r;
+            }
+            return null;
+        }
+        return Walk(_mgLayer)?.Text;
+    }
+
     /// <summary>Picks the line of the open fleet list that starts with a fleet's name, as a click would; false if none.</summary>
     internal bool PlayPickFromFleetGroup(string name)
     {

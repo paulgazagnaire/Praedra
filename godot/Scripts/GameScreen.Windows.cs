@@ -281,11 +281,13 @@ public partial class GameScreen
 
     /// <summary>The places a window snaps to: tall columns side by side across the screen (four on a 1440 wide screen). A wide window
     /// starts on any column it fits from.</summary>
-    List<Vector2> Slots(bool leftFirst = true, float width = MgWidth)
+    /// <summary>The window columns, from the left (or from the right). Beside Sibyl's panel: only the columns left of it while it is open.</summary>
+    List<Vector2> Slots(bool leftFirst = true, float width = MgWidth, bool besideDrawer = false)
     {
         var vp = _mgLayer.Size;
+        float right = vp.X - 8 - (besideDrawer && DrawerOpen ? DrawerWidth : 0);
         var cols = new List<Vector2>();
-        for (float x = 16; x + width <= vp.X - 8; x += MgWidth + SlotGap) cols.Add(new Vector2(x, TopClear));
+        for (float x = 16; x + width <= right; x += MgWidth + SlotGap) cols.Add(new Vector2(x, TopClear));
         if (cols.Count == 0) cols.Add(new Vector2(16, TopClear));
         if (!leftFirst) cols.Reverse();
         return cols;
@@ -310,7 +312,7 @@ public partial class GameScreen
             var r = new Rect2(p + new Vector2(4, 4), new Vector2(WidthOf(w) - 8, 112));
             return !others.Any(o => o.Intersects(r)) && !(sec is Rect2 s && s.Intersects(r));
         }
-        var slots = Slots(leftFirst: !(SectorViewOpen && _secLeft), width: WidthOf(w));
+        var slots = Slots(leftFirst: !(SectorViewOpen && _secLeft), width: WidthOf(w), besideDrawer: true);
         foreach (var p in slots)
             if (Free(p)) { w.Panel.Position = p; return; }
         // no free column, and only the sector window is in the way (the wide Infrastructure window beside it): the place on the map's side
@@ -324,6 +326,42 @@ public partial class GameScreen
         }
         var last = others.Count > 0 ? others[^1].Position : new Vector2(16, TopClear);
         w.Panel.Position = ClampWin(last + new Vector2(28, 36), new Vector2(WidthOf(w), 200));
+    }
+
+    // ================================================================== Sibyl's panel and the windows
+
+    bool DrawerOpen => _drawer?.Visible == true;
+    readonly Dictionary<MgWin, (Vector2 From, Vector2 To)> _asideForDrawer = new();
+
+    /// <summary>
+    /// Sibyl's panel docks at the right edge under the floating windows, so a window standing there hid it, and the urgent pill that opens
+    /// it looked dead (QA playthrough 2026-11-27, item 7). When the panel opens, a window over it steps left beside it, into a free column
+    /// if there is one; when the panel closes, a window nobody has moved since goes back where it was.
+    /// </summary>
+    void StepAsideForDrawer()
+    {
+        if (_mgLayer == null) return;
+        float edge = _mgLayer.Size.X - DrawerWidth;
+        int stacked = 0;   // no free column left: the windows step aside one over the other, each title still showing
+        foreach (var w in _mgWins.ToList())
+        {
+            var at = w.Panel.Position;
+            if (at.X + WidthOf(w) <= edge + 4) continue;
+            var others = _mgWins.Where(x => x != w).Select(x => new Rect2(x.Panel.Position, new Vector2(WidthOf(x), Math.Max(120, x.Panel.Size.Y)))).ToList();
+            var free = Slots(leftFirst: false, width: WidthOf(w), besideDrawer: true)
+                .Where(p => !others.Any(o => o.Intersects(new Rect2(p + new Vector2(4, 4), new Vector2(WidthOf(w) - 8, 112))))).ToList();
+            var to = free.Count > 0 ? free[0] : ClampWin(new Vector2(edge - WidthOf(w) - 8 - 28 * stacked, at.Y + 36 * stacked++), new Vector2(WidthOf(w), 200));
+            w.Panel.Position = to;
+            _asideForDrawer[w] = (_asideForDrawer.TryGetValue(w, out var was) ? was.From : at, to);
+            Fit(w, w.Scroll.ScrollVertical);
+        }
+    }
+
+    void BackFromDrawer()
+    {
+        foreach (var (w, (from, to)) in _asideForDrawer)
+            if (_mgWins.Contains(w) && IsInstanceValid(w.Panel) && w.Panel.Position == to) { w.Panel.Position = from; Fit(w, w.Scroll.ScrollVertical); }
+        _asideForDrawer.Clear();
     }
 
     void ToggleMin(MgWin w)

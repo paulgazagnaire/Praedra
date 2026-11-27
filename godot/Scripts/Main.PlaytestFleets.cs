@@ -306,5 +306,64 @@ public partial class Main
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
         else GD.Print("  (no fleet of yours alone at a system: the double-click is not checked on this side)");
+
+        ScreenFixes(gs, s, me);
+    }
+
+    /// <summary>The screen problems of QA's Hand playthrough (2026-11-27): items 7, 11, 12 and 13.</summary>
+    void ScreenFixes(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
+    {
+        // item 13: at the whole-map zoom a click on your HQ's rings picks the HQ, not the dot nearest the click
+        gs.View.ResetView(); gs.PlayRefresh();
+        int hq = Enumerable.Range(0, gs.G.Systems.Count).FirstOrDefault(i => gs.View.IsHq?.Invoke(i) == true && gs.View.OwnerOf?.Invoke(i) == me, -1);
+        if (hq >= 0)
+        {
+            var c = gs.View.SystemScreen(hq);
+            float r = gs.View.SystemRadius + 7f;
+            var dots = Enumerable.Range(0, gs.G.Systems.Count).Where(i => i != hq).Select(gs.View.SystemScreen).ToList();
+            var ring = Enumerable.Range(0, 8).Select(k => c + Vector2.Right.Rotated(k * Mathf.Tau / 8) * r)
+                .FirstOrDefault(p => dots.All(d => d.DistanceTo(p) > gs.View.SystemRadius + 2f), new Vector2(float.NaN, 0));
+            if (!float.IsNaN(ring.X))
+            {
+                gs.View.Select(-1);
+                gs.PlayMapClick(ring); gs.PlayRefresh();
+                Expect(gs.View.Selected == hq, $"a click on {gs.G.Systems[hq].Name}'s rings at the whole-map zoom picks it (picked {(gs.View.Selected >= 0 ? gs.G.Systems[gs.View.Selected].Name : "nothing")})");
+            }
+            else GD.Print("  (every point of the HQ's rings is on another dot: the ring click is not checked)");
+        }
+
+        // item 12: picking a fleet from the Fleets list keeps the zoom
+        var fl = s.Game.State.Fleets.Values.Where(f => f.Side == me && f.At != null).OrderBy(f => f.Id).FirstOrDefault();
+        if (fl != null)
+        {
+            gs.View.ResetView(); gs.PlayRefresh();
+            float z = gs.View.Zoom;
+            gs.SelectFleet(fl.Id, true); gs.PlayRefresh();
+            Expect(Mathf.IsEqualApprox(gs.View.Zoom, z), $"picking {fl.Name} from the list keeps the zoom ({z} -> {gs.View.Zoom})");
+
+            // item 7: a window standing where Sibyl's panel docks steps aside when the panel opens, and goes back when it closes
+            if (gs.WindowOpen) gs.Click("Advisor");
+            gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: fl.Id);
+            string key = $"Fleet {fl.Id}";
+            gs.PlayPlaceMg(key, new Vector2(gs.DrawerLeft + 60, 60));
+            var before = gs.MgRect(key).Value.Position;
+            gs.ShotOpenSection("Needs"); gs.PlayRefresh();
+            var aside = gs.MgRect(key).Value;
+            Expect(aside.End.X <= gs.DrawerLeft + 4, $"a window over Sibyl's panel steps aside when it opens (now {aside.Position.X:0} to {aside.End.X:0}, the panel from {gs.DrawerLeft:0})");
+            gs.PlayCloseDrawer(); gs.PlayRefresh();
+            Expect(gs.MgRect(key).Value.Position == before, "it goes back when the panel closes");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
+
+        // item 11: an empty General post says who can take it
+        if (s.Game.State.SystemOwners.Where(kv => kv.Value == me).Select(kv => kv.Key).OrderBy(n => n, StringComparer.Ordinal)
+                .FirstOrDefault(n => s.Host.Characters.SystemGeneralOf(n) == null) is string open)
+        {
+            gs.OpenMgmt(GameScreen.MgKind.Ground, open, tab: "Command"); gs.PlayRefresh();
+            string who = gs.MgNote($"Ground {open} who can be General");
+            Expect(!string.IsNullOrEmpty(who) && (who.StartsWith("None", StringComparison.Ordinal) || gs.Has("General candidate")),
+                $"the empty General post of {open} says who can take it ({who ?? "no words"})");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
     }
 }

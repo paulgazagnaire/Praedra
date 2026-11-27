@@ -329,6 +329,7 @@ public partial class GameScreen
     {
         if (_plan != null && !_pickMission) _plan = null;
         _drawer.Visible = false;
+        BackFromDrawer();
         RefreshTop();
     }
 
@@ -339,6 +340,7 @@ public partial class GameScreen
         _tab = t;
         bool opening = !_drawer.Visible;
         _drawer.Visible = true;
+        StepAsideForDrawer();   // every time: a window may have been dragged over the open panel since (QA playthrough 2026-11-27, item 7)
         foreach (var (k, b) in _tabButtons) { b.SetPressedNoSignal(k == t); if (_tabPaint.TryGetValue(k, out var paint)) paint(); }
         _scroll.Visible = t != DrawerTab.Log;
         _logHost.Visible = t == DrawerTab.Log;
@@ -804,11 +806,24 @@ public partial class GameScreen
         if (!S.Game.State.Fleets.TryGetValue(id, out var f) || f.Side != Me) return;
         _view.SelectedFleet = id;
         string sys = f.At ?? f.Transit?.Path[f.Transit.HopIndex + 1];
-        if (centre && sys != null && G.TryFindSystem(sys, out int idx)) _view.Centre(idx);
         _tab = DrawerTab.Selected;
         ShowTab(DrawerTab.Selected);
+        if (centre && sys != null && G.TryFindSystem(sys, out int idx)) Reveal(idx);
         OnViewChanged();
         _panelDirty = true; _panelTimer = 0;
+    }
+
+    /// <summary>
+    /// Bring a system into the map left free of Sibyl's panel and the bar, keeping the zoom: the map stays put when it is in view already,
+    /// else it pans just enough to put it in the middle. Picking a fleet from the Fleets list used to centre and zoom in on it, which threw
+    /// the place you meant to send it off the screen (QA playthrough 2026-11-27, item 12).
+    /// </summary>
+    void Reveal(int idx)
+    {
+        var free = new Rect2(0, BarBoxH, _view.Size.X - (DrawerOpen ? DrawerWidth : 0), _view.Size.Y - BarBoxH);
+        var at = _view.SystemScreen(idx);
+        if (free.Grow(-48).HasPoint(at)) return;
+        _view.PanPixels(at - free.GetCenter());
     }
 
     public void SelectSystem(string name)

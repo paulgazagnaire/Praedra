@@ -80,6 +80,9 @@ public partial class GameScreen
             "Then click a destination system (or a row of a sector window). The route and arrival day show before anything is sent. A right-click on a system sends it there at once.", !atSystem, "Primary");
         move.Alignment = HorizontalAlignment.Center;
         if (!atSystem) Note("The fleet is travelling; give orders when it arrives.");
+        // at a world it can strike, say where the two orders it came for are (QA playthrough 2026-11-27, item 8): they stay in the Fleet
+        // window, the one place for each order (2026-11-22, F2)
+        else if (MergesAwayWhy(f) == null && CanAttackHere(f)) Note($"To invade or bombard {at}: Invasion and Bombardment are in its fleet window (F).");
         var open = Act("Open fleet window", () => OpenMgmt(MgKind.Fleet, fleet: f.Id),
             "Its orders (attack, merge, split, scrap), its ships one by one, loading fighters and troops, its leaders, and whether it fights or pulls back. F opens it too.");
         open.Alignment = HorizontalAlignment.Center;
