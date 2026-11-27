@@ -565,7 +565,8 @@ public sealed partial class SimpleAi
         if (win == null || win == from || Held(win) || p.Strength < _p.WinStrikeStrength || BouncedOff(win)) return 0;
         int speed = _h.Fleets.SpeedOf(p.Leader);
         if (speed <= 0 || Ticks(from, win, speed) == int.MaxValue) return 0;
-        if ((AssaultForbiddenSeen(win) && !_p.SiegeShields) || !SlotsSeen(win).Populated) return 0; // SiegeShields: the shields are shelled down at the target
+        // SiegeShields: the shields are shelled down at the target, only by a pile that beats them (m3-bombardment §2), else it would fly there and leave
+        if ((AssaultForbiddenSeen(win) && !(_p.SiegeShields && p.Members.Sum(f => _h.Bombardment.Power(f)) > ShieldStrengthSeen(win))) || !SlotsSeen(win).Populated) return 0;
         var enemies = TargetFleetsAt(win);
         if (enemies.Count > 0 && Duel(p.Members, enemies) < TargetOdds(win)) return 0;
         int d = DefendersAt(win);

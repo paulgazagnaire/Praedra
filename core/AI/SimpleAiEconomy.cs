@@ -238,8 +238,9 @@ public sealed partial class SimpleAi
         int sh = _fortifyOrdered.GetValueOrDefault((system, false)), bat = _fortifyOrdered.GetValueOrDefault((system, true));
         foreach (var o in _h.Economy.Objects)
         {
-            if (o.System != system || o.Category != ObjectCategory.Facility || !def.TryGetClass(o.Class, out var c)) continue;
-            if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator) sh++; else bat++;
+            if (o.System != system || o.Category != ObjectCategory.Facility || !def.TryGetClass(o.Class, out var c) || _h.Economy.OwnerOf(o) != _side) continue;
+            if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator) sh++;
+            else if (c.Job == Praedra.Core.Defenses.DefenseJob.Battery) bat++;
         }
         return (sh, bat);
     }
