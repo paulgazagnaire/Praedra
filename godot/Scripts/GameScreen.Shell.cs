@@ -233,10 +233,10 @@ public partial class GameScreen
     }
 
     /// <summary>The use the mark goes by: (your part, hers, the worlds of the sets between her builds, today's whole use). Sibyl plans once a day,
-    /// before the step, and gives any idle yard set a new build, so a build that ends leaves its set idle at exactly one refresh: with several
+    /// before the step, and gives any idle construction yard set a new build (her production builds no ships and trains only for garrisons), so a build that ends leaves its set idle at exactly one refresh: with several
     /// sets the use stepped 110, 88, 110 while the refineries made 95, and the mark flipped red and green every few days with the stock at 0
     /// (QA-132, 2026-11-27, 26 changes in 80 days). Holding the whole use for some days traded that flicker against a stale mark once she really
-    /// stops (no free slot, no room), and no length escaped it (UI review 38, 300 model runs). So, while she builds, each set busy at yesterday's
+    /// stops (no free slot, no room), and no length escaped it (UI review 38, 300 model runs). So, while she builds, each construction yard set busy at yesterday's
     /// refresh and idle today counts at yesterday's use, as hers (she fills it, even one your own build just left); one idle a second day is
     /// real news and counts as idle. Your part is always today's. Without her, idle yards stay idle until you give them work, so today's use
     /// counts. A set lost or suspended today is not in today's list, so it is not held. rule: m2-construction §Build time; m6-advisor-sibyl.</summary>
@@ -246,7 +246,7 @@ public partial class GameScreen
         int mine = today.Where(x => x.Busy && !x.ByAdvisor).Sum(x => x.Use), hers = today.Where(x => x.Busy && x.ByAdvisor).Sum(x => x.Use);
         var waiting = new List<string>();
         if (sibylBuilds && yesterday != null)
-            foreach (var x in today.Where(x => !x.Busy))
+            foreach (var x in today.Where(x => !x.Busy && x.Family == Praedra.Core.Construction.YardFamily.Construction))   // she fills only these (UI review 38 follow-up)
             {
                 var was = yesterday.FirstOrDefault(y => y.System == x.System && y.Family == x.Family);
                 if (!was.Busy) continue;
@@ -311,7 +311,7 @@ public partial class GameScreen
         string outLine = use == 0 ? " No yard is building now."
             // the mark goes by a higher use of the last days (QA-132): say both, so the hover matches the mark and today (Ponytail on #427)
             : f.Today >= 0 ? $" While {sibyl} keeps your yards busy they use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
-                + $" Today it is {f.Today} every {w} days: your yards at {Worlds(f.Waiting)} are between builds, and {sibyl} plans their next one tomorrow."
+                + $" Today it is {f.Today} every {w} days: your construction yards at {Worlds(f.Waiting)} are between builds, and {sibyl} may give them their next one tomorrow."   // may: with no room or slot she gives none (Ponytail on #429)
             : S.HasAdvisor && f.Hers > 0 ? $" Your yards now use about {use} every {w} days: {f.Mine} for your orders, {f.Hers} for {sibyl}'s."
             : $" Your yards now use about {use} every {w} days.";
         int gap = use - f.Made;

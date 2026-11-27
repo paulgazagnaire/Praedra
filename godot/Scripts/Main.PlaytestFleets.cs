@@ -443,7 +443,8 @@ public partial class Main
         // use 22 each, and a build that ends leaves its set idle at one refresh, until her next plan fills it; two such days back to back are
         // two sets, not one waiting twice (UI review 38)
         var uses = new[] { 110, 88, 110, 110, 110, 88, 88, 110, 110, 110, 110, 88, 110, 110, 88, 88, 110, 110 };
-        YardSetUse U(string world, int use, bool busy, bool hers = false) => new(world, Praedra.Core.Construction.YardFamily.Shipyard, use, busy, hers);
+        YardSetUse U(string world, int use, bool busy, bool hers = false, Praedra.Core.Construction.YardFamily family = Praedra.Core.Construction.YardFamily.Construction)
+            => new(world, family, use, busy, hers);
         int Flips(bool sibyl)
         {
             var seen = new List<(int Day, IReadOnlyList<YardSetUse> Sets)>();
@@ -464,8 +465,9 @@ public partial class Main
             $"while Sibyl builds, a yard set between her builds leaves the ▼ alone ({Flips(true)} changes in {uses.Length} days; {Flips(false)} on today's use alone)");
         // your build at A ends and hers at C, D is lost: the next day A and C count at yesterday's use as hers (she fills them), your part is
         // today's (UI review 38 P2 1), D is not held; a second idle day is real news; a day not seen holds nothing; without her nothing is held
-        var day1 = new List<YardSetUse> { U("A", 30, true), U("B", 22, true, true), U("C", 22, true, true), U("D", 7, true, true) };
-        var day2 = new List<YardSetUse> { U("A", 30, false), U("B", 22, true, true), U("C", 22, false) };
+        // E is a shipyard: her production builds no ships, so your ship that ends there is not held (UI review 38 follow-up)
+        var day1 = new List<YardSetUse> { U("A", 30, true), U("B", 22, true, true), U("C", 22, true, true), U("D", 7, true, true), U("E", 15, true, family: Praedra.Core.Construction.YardFamily.Shipyard) };
+        var day2 = new List<YardSetUse> { U("A", 30, false), U("B", 22, true, true), U("C", 22, false), U("E", 15, false, family: Praedra.Core.Construction.YardFamily.Shipyard) };
         var seen2 = new List<(int Day, IReadOnlyList<YardSetUse> Sets)>();
         GameScreen.NoteUse(seen2, 600, day1, true);
         var next = GameScreen.HeldUse(day2, GameScreen.Yesterday(seen2, 601), true);
@@ -477,14 +479,14 @@ public partial class Main
         Expect((next.Mine, next.Hers, string.Join(",", next.Waiting), next.Today) == (0, 74, "A,C", 22)
                 && (second.Mine, second.Hers, second.Waiting.Count) == (0, 22, 0) && (unseen.Hers, unseen.Waiting.Count) == (22, 0)
                 && (off.Mine, off.Hers, off.Waiting.Count) == (0, 22, 0) && seen2.Count == 0,
-            $"a set busy yesterday and idle today counts as hers for one day, your part is today's, a lost one and a second idle day are not held, nor without her ({next.Mine}+{next.Hers} at {string.Join(",", next.Waiting)}; {second.Mine}+{second.Hers}; {off.Mine}+{off.Hers})");
+            $"a set busy yesterday and idle today counts as hers for one day, your part is today's, a shipyard, a lost one and a second idle day are not held, nor without her ({next.Mine}+{next.Hers} at {string.Join(",", next.Waiting)}; {second.Mine}+{second.Hers}; {off.Mine}+{off.Hers})");
         if (s.HasAdvisor)
         {
             var f = GameScreen.TrendOf(95, 0, 110, GameScreen.RefinedWay.Falling) with { Today = 88, Waiting = new[] { "Fusoria" } };
             string between = gs.RefinedFlowWords(0, f), two = gs.RefinedFlowWords(0, f with { Waiting = new[] { "Fusoria", "Charter" } }),
                 four = gs.RefinedFlowWords(0, f with { Waiting = new[] { "A", "B", "C", "D" } });
-            Expect(between.Contains("While Sibyl keeps your yards busy they use about 110 every 30 days: 0 for your orders, 110 for Sibyl's. Today it is 88 every 30 days: your yards at Fusoria are between builds, and Sibyl plans their next one tomorrow.")
-                    && two.Contains("your yards at Fusoria and Charter are between builds") && four.Contains("your yards at 4 worlds are between builds") && !between.Contains("now use"),
+            Expect(between.Contains("While Sibyl keeps your yards busy they use about 110 every 30 days: 0 for your orders, 110 for Sibyl's. Today it is 88 every 30 days: your construction yards at Fusoria are between builds, and Sibyl may give them their next one tomorrow.")
+                    && two.Contains("your construction yards at Fusoria and Charter are between builds") && four.Contains("your construction yards at 4 worlds are between builds") && !between.Contains("now use"),
                 "on a day between her builds the hover says the use the mark goes by, today's, and where (Ponytail on #427, UI review 38): " + between);
         }
 
