@@ -201,10 +201,13 @@ public sealed partial class GameSession
                 yield return new Message(d, $"Your {SpecialForceName(u.Unit)} aboard {FleetName(sfFleet)} was lost with its ship at {u.System}.", u.System, MsgKind.Bad);
                 break;
             // your special forces boarding and landing (m5-missions §Spying from orbit 1): yours only, a line for each order
+            // the morning snapshot is kept current, so one that boards and is lost with its ship the same day still gets its line (Ponytail on #415)
             case Praedra.Core.Missions.SpecialForcesLoaded x when x.Side == Player:
+                foreach (int id in x.SpecialForces.Items) _sfAboard[id] = x.Fleet;
                 yield return new Message(d, $"{SpecialForcesWords(x.SpecialForces.Items)} boarded {FleetName(x.Fleet)} at {x.System}.", x.System, MsgKind.Info);
                 break;
             case Praedra.Core.Missions.SpecialForcesUnloaded x when x.Side == Player:
+                foreach (int id in x.SpecialForces.Items) _sfAboard.Remove(id);
                 yield return new Message(d, $"{SpecialForcesWords(x.SpecialForces.Items)} landed from {FleetName(x.Fleet)} at {x.System}.", x.System, MsgKind.Info);
                 break;
             case BattleEnded be:

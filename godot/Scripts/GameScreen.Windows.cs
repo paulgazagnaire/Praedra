@@ -452,24 +452,32 @@ public partial class GameScreen
     /// <summary>
     /// While something is dragged, the page of the window under the pointer scrolls when the pointer rests near its top or bottom edge, so
     /// a drop place below the fold can be reached without letting go (review 35: a special force's place in a fleet's Command tab sat under
-    /// the fold, and nothing scrolled during a drag). The topmost window under the pointer scrolls, faster the nearer the edge.
+    /// the fold, and nothing scrolled during a drag). The topmost window under the pointer scrolls (every window is a child of _mgLayer,
+    /// the last on top), faster the nearer the edge; the band is thin so aiming at a drop place near the edge doesn't scroll it away.
     /// </summary>
     void EdgeScroll(double delta)
     {
-        const float Edge = 40, Speed = 700;   // px from the edge where it starts; px a second at the very edge
+        const float Speed = 600;   // px a second at the very edge
         var m = GetViewport().GetMousePosition();
         var w = _mgWins.Where(x => IsInstanceValid(x.Scroll) && x.Scroll.IsVisibleInTree() && x.Scroll.GetGlobalRect().HasPoint(m))
             .OrderByDescending(x => x.Panel.GetIndex()).FirstOrDefault();
-        if (w == null) return;
-        var r = w.Scroll.GetGlobalRect();
-        float top = m.Y - r.Position.Y, bottom = r.End.Y - m.Y;
-        float push = top < Edge ? -(Edge - top) / Edge : bottom < Edge ? (Edge - bottom) / Edge : 0;
-        if (push == 0) return;
+        float push = w == null ? 0 : EdgePush(w.Scroll.GetGlobalRect(), m);
+        if (push == 0) { _edgeCarry = 0; return; }
         _edgeCarry += push * Speed * (float)delta;
         int step = (int)_edgeCarry;
         if (step == 0) return;
         _edgeCarry -= step;
         w.Scroll.ScrollVertical += step;
+    }
+
+    /// <summary>How hard a page scrolls with the pointer at <paramref name="m"/>: 0 outside the page or away from its edges; within 24 px
+    /// of the bottom up to 1 (down), of the top down to -1 (up), stronger nearer the edge.</summary>
+    internal static float EdgePush(Rect2 page, Vector2 m)
+    {
+        const float Edge = 24;   // px from the edge where it starts: thin, so aiming at a drop place near the edge doesn't scroll it away
+        if (!page.HasPoint(m)) return 0;
+        float top = m.Y - page.Position.Y, bottom = page.End.Y - m.Y;
+        return top < Edge ? -(Edge - top) / Edge : bottom < Edge ? (Edge - bottom) / Edge : 0;
     }
 
     /// <summary>The part of a pixel EdgeScroll owes the page (ScrollVertical takes whole pixels).</summary>

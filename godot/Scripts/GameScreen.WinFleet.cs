@@ -646,7 +646,7 @@ public partial class GameScreen
         int max = Mm.Params.FleetSpecialForcesMax;
         bool still = Still(f) && !S.IsDestroyed(f.At);
         var sec = FleetSection("Special forces", 16, $"{aboard.Count}/{max}",
-            $"Agents riding the fleet, at most {max} a fleet. They take no troop room. Right-click one to send it on a mission: a team made only of "
+            $"Agents riding the fleet, at most {max} a fleet. They take no troop room and don't slow the fleet. Right-click one to send it on a mission: a team made only of "
             + $"special forces aboard this fleet works from orbit, where each guard's chance to spot it is halved while the fleet stays.");
         var sz = DropZone($"Fleet {f.Id} SpecialForces", "take aboard", d => RefuseSfOnto(d, f), d => DropSfOnto(d, f));
         CardFlow(sz.Flow);

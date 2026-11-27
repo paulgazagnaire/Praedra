@@ -340,6 +340,13 @@ public partial class Main
             $"{spot}'s special forces stand in its Command tab, not its Troops tab: " + gcmd.Replace("\n", " / ") + " || " + gtroops.Replace("\n", " / "));
         string cmd = gs.MgPageText(win, "Command");
         int max = mm.Params.FleetSpecialForcesMax;
+        // during a drag a window's page scrolls when the pointer rests near its bottom or top edge, not in the middle nor outside (review 35:
+        // the special forces place sat below the fold, and nothing scrolled during a drag). A headless run has no pointer: the rule alone.
+        var page = new Rect2(100, 100, 344, 580);
+        float mid = GameScreen.EdgePush(page, new Vector2(200, 390)), low = GameScreen.EdgePush(page, new Vector2(200, 676)), lower = GameScreen.EdgePush(page, new Vector2(200, 679.5f)),
+            high = GameScreen.EdgePush(page, new Vector2(200, 104)), outside = GameScreen.EdgePush(page, new Vector2(200, 700));
+        Expect(mid == 0 && low > 0 && lower > low && high < 0 && outside == 0,
+            $"a drag near a page's bottom edge scrolls it down, harder nearer the edge, near the top up, in the middle or outside not ({mid} {low} {lower} {high} {outside})");
         Expect(gs.MgHasZone(zone) && cmd.Contains("SPECIAL FORCES") && cmd.Contains($"0/{max}"), $"the Fleet window's Command tab has a place for special forces, 0/{max}: " + cmd.Replace("\n", " / "));
         string intoTroops = gs.MgJudge($"F:{a}", $"Fleet {fid} Troops");
         Expect(intoTroops != null && intoTroops.Contains("Command tab"), $"the fleet's Troops tab says where special forces ride: {intoTroops}");
