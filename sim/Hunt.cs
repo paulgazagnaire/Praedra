@@ -71,6 +71,7 @@ internal static class Hunt
         var clock = Stopwatch.StartNew();
         var hung = new ConcurrentDictionary<string, int>();
         int count = 0;
+        var returned = new ConcurrentDictionary<string, bool>(); // every game that came back, crashed ones too
         using var done = new CancellationTokenSource();
         var watch = Task.Run(async () =>
         {
@@ -87,6 +88,7 @@ internal static class Hunt
         {
             var r = PlayOne(job, saveDays, problems, progress, clock);
             progress.TryRemove(job.Label, out _);
+            returned[job.Label] = true;
             if (r != null) finished.Add(r.Value);
             int n = Interlocked.Increment(ref count);
             if (r != null) lock (problems) Console.WriteLine($"  {n}/{work.Count} {job.Label}: {(r.Value.Winner?.ToString() ?? "no winner")} by day {r.Value.Day}, {r.Value.Seconds:0} s");
@@ -95,7 +97,7 @@ internal static class Hunt
         while (!runner.IsCompleted)
         {
             runner.Wait(2000);
-            if (!runner.IsCompleted && !hung.IsEmpty && finished.Count + hung.Count >= work.Count) break;
+            if (!runner.IsCompleted && !hung.IsEmpty && returned.Keys.Count(k => !hung.ContainsKey(k)) + hung.Count >= work.Count) break; // a slow game that came back late counts once
         }
         done.Cancel();
         foreach (var (label, day) in hung) problems.Add(new Problem("hang", $"hang at day {day}", $"day {day} did not finish within {hangSeconds} s", label, day));
@@ -142,16 +144,9 @@ internal static class Hunt
             foreach (var file in Directory.EnumerateFiles(dir).Where(f => f.EndsWith(".txt") || f.EndsWith(".json")).OrderBy(f => f, StringComparer.Ordinal))
             {
                 string path = file;
-                work.Add(new Job($"save {Path.GetFileName(path)}", () => GameHost.Load(CoreSave(File.ReadAllText(path))), AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium), false, -days));
+                work.Add(new Job($"save {Path.GetFileName(path)}", () => GameHost.Load(PlayerSaveHeader.CoreSave(File.ReadAllText(path))), AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium), false, -days));
             }
         return work;
-    }
-
-    /// <summary>A game screen's save starts with the player's line (PlayerSaveHeader: side and AI level) before the core save; drop it.</summary>
-    private static string CoreSave(string text)
-    {
-        int nl = text.IndexOf('\n');
-        return nl > 0 && PlayerSaveHeader.Read(text[..nl]) != null ? text[(nl + 1)..] : text;
     }
 
     private static AiLevel Level(char c) => c switch
@@ -165,8 +160,9 @@ internal static class Hunt
     {
         long started = clock.ElapsedTicks;
         GameHost host;
+        progress[job.Label] = (0, clock.ElapsedTicks); // a load that hangs is caught too (day 0 = while making or loading)
         try { host = job.Make(); }
-        catch (Exception e) { Report(problems, "crash", e, job.Label, 0, "while making or loading the game"); return null; }
+        catch (Exception e) { progress.TryRemove(job.Label, out _); Report(problems, "crash", e, job.Label, 0, "while making or loading the game"); return null; }
         // A save job plays --days more days from the save's own day (Days < 0 marks it).
         int endDay = job.Days < 0 ? host.Game.Day - job.Days : job.Days;
         var pending = new SortedSet<int>(saveDays.Where(d => d > host.Game.Day && d < endDay));

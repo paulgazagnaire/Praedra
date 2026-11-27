@@ -5,7 +5,7 @@ namespace Praedra.Core.Tests.Setup;
 
 // m1-clock-and-orders K12, K16 (a loaded game continues as before), crash and softlock hunt (Paul 2026-11-27: "old saves, with every crash
 // fixed"). Every save in core.tests/Setup/saves/old (QA's saves from older builds, copied from the shared qa/saves folder) loads, saves back
-// to the same state, and plays 60 more days with two Medium AIs without an exception. A rule change that breaks an old save fails here.
+// to the same state, and plays 60 more days (a game screen's save with its PlayerSaveHeader line as saved) with two Medium AIs without an exception. A rule change that breaks an old save fails here.
 public class OldSavesPlayOnTests
 {
     private const int DaysOn = 60;
@@ -19,7 +19,7 @@ public class OldSavesPlayOnTests
     [MemberData(nameof(Saves))]
     public void OldSaveLoadsAndPlaysOn(string file)
     {
-        var host = GameHost.Load(File.ReadAllText(Path.Combine(TestData.RepoRoot, "core.tests", "Setup", "saves", "old", file)));
+        var host = GameHost.Load(PlayerSaveHeader.CoreSave(File.ReadAllText(Path.Combine(TestData.RepoRoot, "core.tests", "Setup", "saves", "old", file))));
         Assert.Equal(host.StateHash(), GameHost.Load(host.SaveWithSettings()).StateHash());
         int start = host.Game.Day;
         var medium = AiLevels.For(AiLevel.Medium);

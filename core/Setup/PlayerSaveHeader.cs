@@ -23,4 +23,11 @@ public static class PlayerSaveHeader
         var level = parts.Length == 4 && Enum.TryParse(parts[3], out AiLevel l) && Enum.IsDefined(l) ? l : AiLevel.Medium;
         return (player, level);
     }
+
+    /// <summary>The core's save inside a screen save file: the text after the header line, or the whole text when it has no header.</summary>
+    public static string CoreSave(string text)
+    {
+        int nl = text.IndexOf('\n');
+        return nl > 0 && Read(text[..nl]) != null ? text[(nl + 1)..] : text;
+    }
 }
