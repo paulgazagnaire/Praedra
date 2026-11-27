@@ -621,6 +621,20 @@ public sealed partial class SimpleAi
     /// </summary>
     internal int GarrisonTarget(string system)
     {
+        if (_advisor) return BaseGarrisonTarget(system);
+        int t = BaseGarrisonTarget(system);
+        // rule: ai tuning, SimpleAiParams.CapitalAlarmDays: the capital in danger keeps CapitalAlarmGarrison regiments
+        if (system == CriticalSystem() && CapitalAlarm()) t = Math.Max(t, _p.CapitalAlarmGarrison);
+        // rule: ai tuning, SimpleAiParams.ShelledGarrison: a held world shelled lately keeps ShelledGarrison regiments (a counter to Neutralise)
+        if (_p.ShelledGarrison > 0 && ShelledLately(system)) t = Math.Max(t, _p.ShelledGarrison);
+        return t;
+    }
+
+    /// <summary>ShelledGarrison: a bombardment at the system in the side's notes of the last ShelledGarrisonDays (its own worlds are in its picture).</summary>
+    private bool ShelledLately(string system) => NotesSince(AiNoteKind.Bombardment, Today - _p.ShelledGarrisonDays).Any(n => n.System == system);
+
+    private int BaseGarrisonTarget(string system)
+    {
         int need = _h.Support.RequiredGarrison(system);
         if (_advisor) // rule: m6-advisor-sibyl §Manage Garrisons 2: the rule's need, and a calm world near a step keeps one more (the buffer)
             return _h.Support.IsUprising(system) ? need : Math.Max(need, Praedra.Core.Support.SupportModule.RequiredGarrison(_h.Support.Params,
@@ -628,7 +642,7 @@ public sealed partial class SimpleAi
         int s = _h.Economy.SupportOf(system, _side); // its own world: the AI sees it
         if (!_p.ClassicGarrisonFloor)
         {
-            if (system == CriticalSystem()) need = Math.Max(need, CapitalAlarm() ? Math.Max(_p.CriticalGarrison, _p.CapitalAlarmGarrison) : _p.CriticalGarrison); // rule: ai tuning, SimpleAiParams.CapitalAlarmDays
+            if (system == CriticalSystem()) need = Math.Max(need, _p.CriticalGarrison);
             if (s < Praedra.Core.Control.ControlModule.JoinSupport) need = Math.Max(need, 1);
             return need;
         }

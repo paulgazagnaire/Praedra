@@ -341,6 +341,13 @@ public sealed record SimpleAiParams
     /// </summary>
     public int CapitalAlarmDays { get; init; }
     public int CapitalAlarmGarrison { get; init; } = 16;
+    /// <summary>
+    /// Shelled garrison (AI trainer 2026-11-27, the sparring Hand's answer to the Collective's Neutralise plan: a human reinforces a world being
+    /// shelled): a held world with a bombardment in the side's notes of the last ShelledGarrisonDays keeps at least ShelledGarrison regiments
+    /// (the garrison builder sends them; they are never loaded off it). 0 = off (DEFAULT).
+    /// </summary>
+    public int ShelledGarrison { get; init; }
+    public int ShelledGarrisonDays { get; init; } = 120;
     public int CampaignPrepareDays { get; init; } = 120;
     public int CampaignMaxDays { get; init; } = 420;
     public int CampaignHoldPercent { get; init; } = 70;
