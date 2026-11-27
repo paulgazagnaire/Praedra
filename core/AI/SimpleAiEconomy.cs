@@ -190,7 +190,44 @@ public sealed partial class SimpleAi
             _fortifyOrdered[(w, k == FacilityKind.Lien150)] = _fortifyOrdered.GetValueOrDefault((w, k == FacilityKind.Lien150)) + 1;
             return (k, w);
         }
+        return GuardRaidedChoice(from);
+    }
+
+    /// <summary>
+    /// GuardRaidedDays (the economy guard, AI trainer 2026-11-27): the first shield one of the side's raided economy worlds still lacks, from refined
+    /// that floats (ExtraYardRefinedReserve); null when none. rule: m3-bombardment §2 (a shield absorbs its strength from the fleets' combined power).
+    /// </summary>
+    private (FacilityKind, string)? GuardRaidedChoice(string from)
+    {
+        if (_advisor || _p.GuardRaidedDays <= 0 || _h.Economy.Refined(_side) < _p.ExtraYardRefinedReserve) return null;
+        foreach (var w in RaidedWorlds())
+        {
+            if (_h.Support.IsUprising(w) || _h.Economy.FreeEnergy(w) - _reservedEnergy.GetValueOrDefault(w) < 1) continue;
+            if (Ticks(from, w, UnratedSpeed) == int.MaxValue) continue;
+            if (OwnDefencesAt(w).Shields >= _p.GuardRaidedShields) continue;
+            var k = ShieldKind();
+            if (!Available(FacilityKinds.ClassName(k)) || !Affordable(k)) continue;
+            _fortifyOrdered[(w, false)] = _fortifyOrdered.GetValueOrDefault((w, false)) + 1;
+            return (k, w);
+        }
         return null;
+    }
+
+    /// <summary>
+    /// GuardRaidedDays: held populated worlds with the side's mines or refineries that were shelled in the last GuardRaidedDays (the side's feed of
+    /// bombardments, AiNoteKind.Bombardment: its own worlds are always in its picture), the most strikes first (ties: ordinal name), at most
+    /// GuardRaidedWorlds. The key worlds (FortifyTargets) are left out: Fortify walls them.
+    /// </summary>
+    private List<string> RaidedWorlds()
+    {
+        var eco = _h.Economy;
+        var key = _p.FortifyWorlds > 0 ? FortifyTargets().Take(_p.FortifyWorlds).ToHashSet(StringComparer.Ordinal) : new HashSet<string>(StringComparer.Ordinal);
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var b in NotesSince(AiNoteKind.Bombardment, Today - _p.GuardRaidedDays))
+            if (b.System != null && Held(b.System)) counts[b.System] = counts.GetValueOrDefault(b.System) + 1;
+        return counts.Where(kv => !key.Contains(kv.Key) && eco.SlotsOf(kv.Key).Populated
+                && eco.Objects.Any(o => o.System == kv.Key && (o.Class == "Mine" || o.Class == "Refinery") && eco.OwnerOf(o) == _side))
+            .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(_p.GuardRaidedWorlds).Select(kv => kv.Key).ToList();
     }
 
     /// <summary>Fortify orders given today, by (system, battery): so two yards do not both fill the same gap. Lookup only.</summary>

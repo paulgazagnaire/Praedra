@@ -321,6 +321,16 @@ public sealed record SimpleAiParams
     public int FortifyShields { get; init; } = 2;
     /// <summary>Batteries (Lien-150) wanted on each Fortify world (<see cref="FortifyWorlds"/>).</summary>
     public int FortifyBatteries { get; init; } = 1;
+    /// <summary>
+    /// Guard raided worlds (AI trainer 2026-11-27, the economy guard under every plan; Paul 2026-11-27: "a management layer under each of them,
+    /// ensuring the basic requirements for managing resources"): a held world with the side's mines or refineries that was shelled in the last
+    /// GuardRaidedDays gets GuardRaidedShields shield generators, up to GuardRaidedWorlds worlds, the most shelled first, right after the key worlds
+    /// (Fortify). Measured 2026-11-27 (seeds 1-8, day 1000): the Medium Hand lost 41 mines and refineries per game to Collective shelling, and 59%
+    /// of those strikes had power under 40 (one Escrow I absorbs 40, m3-bombardment §2). 0 = off (DEFAULT).
+    /// </summary>
+    public int GuardRaidedDays { get; init; }
+    public int GuardRaidedShields { get; init; } = 2;
+    public int GuardRaidedWorlds { get; init; } = 6;
     public int CampaignPrepareDays { get; init; } = 120;
     public int CampaignMaxDays { get; init; } = 420;
     public int CampaignHoldPercent { get; init; } = 70;
