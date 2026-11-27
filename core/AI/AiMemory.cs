@@ -35,7 +35,8 @@ public enum AiNoteKind
     /// <summary>An own Burn the Books ended without success (MissionEnded Failed or Foiled): the AI waits before trying again. Not saved before 2026-11-04.</summary>
     BooksFailed,
     /// <summary>
-    /// ShieldsFelt (SimpleAiParams.ShieldsFeltDays): an own shelling at System met shields of Value (BombardmentStarted S, m3-bombardment §2),
+    /// ShieldsFelt (SimpleAiParams.ShieldsFeltDays): an own shelling at System met shields of Value (BombardmentStarted S when hits got
+    /// through, else its power P: the shields were at least that, m3-bombardment §2),
     /// or Value -1: an own Sabotage there succeeded (MissionSucceeded), so a shield may have fallen since. Noted only while kept (off: none).
     /// Not saved before 2026-11-27: an older save loads with none.
     /// </summary>
@@ -150,7 +151,8 @@ public sealed class AiMemory
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },
                 MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.BurnTheBooks && me.Outcome is MissionOutcome.Failed or MissionOutcome.Foiled
                     => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target, Value = me.Outcome == MissionOutcome.Foiled ? 1 : 0 }, // 1: foiled (betrayed or sensed), 0: the roll failed
-                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0 => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.S },
+                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0 // what the shelling side can read: S when hits got through, else at least P (Ponytail #426)
+                    => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.Hits > 0 ? bs.S : bs.P },
                 MissionSucceeded ms when ms.Side == Side && ms.MissionKind == MissionKind.Sabotage && Keep.ShieldsFelt > 0
                     => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = ms.Target, Value = -1 },
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },

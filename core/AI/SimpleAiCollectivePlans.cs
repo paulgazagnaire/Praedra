@@ -123,8 +123,8 @@ public sealed partial class SimpleAi
     /// WreckShields at the target, before any shelling or landing: the shields seen there stop what the fleets here came for (their power does
     /// not beat them, or two or more generators forbid the landing, m3-planetary-defenses), no enemy fleet is seen, and Wreckers ride the
     /// fleets here. One Wrecker is launched from orbit on a Sabotage (m5-missions §Spying from orbit 2 and 3: no travel, half the spot chance;
-    /// §6 Sabotage, DefencesFirst: a shield or battery falls) and the fleets wait while one is out. True when the fleets wait (the order went
-    /// in, or a Wrecker is out, or a lower-id fleet here holds the Wreckers). With no Wrecker left, false: the usual choices follow.
+    /// §6 Sabotage, DefencesFirst: a shield or battery falls) and the fleets wait while one is out. True when the fleets wait (an order went
+    /// in today, or a Wrecker is out). With no Wrecker left, or none that may start, false: the usual choices follow.
     /// </summary>
     private bool WreckHere(Fleet f, string at, List<Fleet> mineHere, int aboard)
     {
@@ -135,17 +135,25 @@ public sealed partial class SimpleAi
         var all = WreckersAboard(mineHere);
         if (all.Count == 0) return false;
         if (all.Any(o => mi.IsSpecialForceBusy(o.Id))) return true; // one is out: wait for its end
-        // one launch for the fleets here: the fleet that carries the lowest-id free Wrecker orders it; the others wait
-        var o = all[0];
-        var carrier = mineHere.FirstOrDefault(x => x.Ships.Contains(o.AboardShip));
-        if (carrier == null) return false;
-        if (carrier.Id != f.Id) return true;
-        var order = new Praedra.Core.Missions.StartMissionOrder(0, _side, Praedra.Core.Missions.MissionKind.Sabotage, new List<int>(), new List<int> { o.Id }, new List<int>(), at);
-        if (mi.CheckStart(order).Reason != null) return false;
-        long seq = _h.Game.Submit(sq => order with { Sequence = sq });
-        Note(seq, "MissionSabotage", $"{o.Class} {o.Id} from fleet {f.Id} over {at}, shields {sh} (wreck the shields)");
-        return true;
+        if (_wreckDay != Today) { _wreckDay = Today; _wreckAt.Clear(); }
+        if (_wreckAt.Contains(at)) return true; // a fleet here launched one today: wait with it
+        // one launch for the fleets here: the first Wrecker in id order that may start (any fleet here may order it: the team is launched from
+        // the fleet it rides, m5-missions §Spying from orbit 2); none may start: the fleets do not wait (Ponytail #426)
+        foreach (var o in all)
+        {
+            var order = new Praedra.Core.Missions.StartMissionOrder(0, _side, Praedra.Core.Missions.MissionKind.Sabotage, new List<int>(), new List<int> { o.Id }, new List<int>(), at);
+            if (mi.CheckStart(order).Reason != null) continue;
+            long seq = _h.Game.Submit(sq => order with { Sequence = sq });
+            Note(seq, "MissionSabotage", $"{o.Class} {o.Id} from fleet {f.Id} over {at}, shields {sh} (wreck the shields)");
+            _wreckAt.Add(at);
+            return true;
+        }
+        return false;
     }
+
+    // WreckHere: the worlds where a Wrecker was ordered today (reset each day; lookups only, never iterated, so no memory between days)
+    private int _wreckDay = int.MinValue;
+    private readonly HashSet<string> _wreckAt = new(StringComparer.Ordinal);
 
     /// <summary>
     /// WreckShields, daily before the fleet review: (1) each armed own fleet standing still on a held world takes aboard the free Wreckers
@@ -189,8 +197,8 @@ public sealed partial class SimpleAi
     // ================================================================== Shields felt (the fog hides the shields from a fleet in orbit)
 
     /// <summary>
-    /// ShieldsFeltDays (fog): the shields the side's own last shelling of <paramref name="system"/> met (BombardmentStarted S: the shelling side
-    /// sees what its hits lost, m3-bombardment §2), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
+    /// ShieldsFeltDays (fog): the shields the side's own last shelling of <paramref name="system"/> met as its player would read them
+    /// (m3-bombardment §2, hits = max(0, P - S): with hits the shields were P - hits = S; with none they were at least P, so P is noted), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
     /// m5-fog-and-hq §F2: a fleet in orbit sees no facilities) and within ShieldsFeltDays; 0 after an own Sabotage there succeeded since (a shield
     /// may have fallen: the next shelling tells). Null = the picture stands.
     /// </summary>
