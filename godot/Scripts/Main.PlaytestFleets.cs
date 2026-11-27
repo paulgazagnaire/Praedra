@@ -312,7 +312,7 @@ public partial class Main
 
     void RefinedMark(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
     {
-        // when it shows, from the numbers alone (a refinery's fastest cycle is 5 days)
+        // when it shows, from the numbers alone (here a refinery's cycle is 5 days: its fastest, at no upkeep)
         Expect(GameScreen.TrendOf(36, 30, 60, 3, 5).Falling && !GameScreen.TrendOf(70, 30, 60, 3, 5).Falling,
             "the stock falls when the yards use more than the refineries made in 30 days (63 against 36), not when they use less (63 against 70)");
         Expect(!GameScreen.TrendOf(0, 4, 63, 0, 5).Falling && GameScreen.TrendOf(10, 10, 31, 0, 5).Falling,
@@ -334,8 +334,10 @@ public partial class Main
         {
             var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me);
             var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
-            return GameScreen.TrendOf(made, days, mine, hers, Praedra.Core.Economy.EconomyModule.CycleDays(s.Host.Economy.Params, 100, 0)).Falling;
+            return GameScreen.TrendOf(made, days, mine, hers, gs.RefineryCycleNow()).Falling;
         }
+        int cycle = gs.RefineryCycleNow();
+        Expect(cycle >= 5 && cycle <= 10, $"the mark waits a refinery's cycle at the present upkeep: {cycle} days (5 at none, 10 at the limit)");
         int given = gs.PlayBusyYards(20);
         for (int d = 0; d < 10 && !gs.RefinedFalling; d++) gs.PlayDay();
         Expect(gs.RefinedFalling == Expected(), $"the red mark by Refined follows the flow on day {s.Game.Day} after {given} build orders (shown {gs.RefinedFalling}): {gs.TopTips[1]}");

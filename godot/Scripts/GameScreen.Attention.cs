@@ -143,7 +143,7 @@ public partial class GameScreen
         }
         if (idleShipRows.Count > 0)
             list.Add(new Item("idle-shipyards", Level.Warn, $"Idle shipyards at {Ui.Count(idleShipRows.Count, "system", "systems")}: no warships on the way",
-                (S.HasAdvisor ? "Nobody builds warships but you: Sibyl never does. " : "Nobody builds warships but you. ") + "Click a system to order ships there. Shipyards on one world share a ship, so two there build it twice as fast.", null,
+                (S.HasAdvisor ? "Only you build warships: Sibyl never does. " : "Only you build warships. ") + "Click a system to order ships there. Shipyards on one world share a ship, so two there build it twice as fast.", null,
                 new() { ("Show the Yards layer", () => SetLayer(MapLayer.Yards), null) }) { Rows = idleShipRows });
         if (idleRows.Count > 0)
             infos.Add(new Item("idle-yards", Level.Info, $"Idle yards at {Ui.Count(idleRows.Count, "system", "systems")}", "An idle yard builds nothing. Click a system to give it work, or keep the refined for something else.", null,

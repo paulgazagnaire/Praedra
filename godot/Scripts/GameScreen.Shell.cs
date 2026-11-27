@@ -194,7 +194,8 @@ public partial class GameScreen
     /// <summary>Where the refined comes from and goes: made in the last 30 days, what the yards use at their present pace (Sibyl's builds
     /// apart), and whether the stock is falling (QA's UI game, 2026-11-27, item 2: "Refined went 300 to 22 and nothing says why").
     /// Falling = the yards use more than the refineries make (Paul 2026-11-27: "Add a small red ▼ by Refined"), judged only once the days
-    /// on record cover a refinery's fastest cycle: before that no refinery can have finished one, so there is nothing to compare.
+    /// on record cover a refinery's cycle at your present upkeep: before that a refinery may not have finished one (right after a load, as
+    /// events are not saved), so a short window would read as falling for no reason (Ponytail on #413).
     /// rule: m2-construction §Build time; m2-mines-refineries-pools §Cycle length.</summary>
     internal readonly record struct RefinedTrend(int Made, int Days, int Made30, int Mine, int Hers, bool Falling);
 
@@ -202,14 +203,24 @@ public partial class GameScreen
     {
         var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(S.Host, S.Player);
         var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
-        return TrendOf(made, days, mine, hers, Praedra.Core.Economy.EconomyModule.CycleDays(S.Host.Economy.Params, 100, 0));
+        return TrendOf(made, days, mine, hers, RefineryCycleNow());
     }
 
-    /// <summary>The trend from the numbers alone: <paramref name="fastest"/> is a refinery's fastest cycle in days.</summary>
-    internal static RefinedTrend TrendOf(int made, int days, int mine, int hers, int fastest)
+    /// <summary>A refinery's cycle in days at your present upkeep, at full support: the share as in <see cref="SlowdownWords"/>.
+    /// rule: m2-mines-refineries-pools §Cycle length.</summary>
+    internal int RefineryCycleNow()
+    {
+        var p = S.Host.Economy.Params;
+        int load = S.Host.Economy.Load(S.Player), cap = S.Host.Economy.Capacity(S.Player);
+        int share = cap <= 0 ? p.CapacityPerFacility : Math.Min(p.CapacityPerFacility, load * p.CapacityPerFacility / cap);
+        return Praedra.Core.Economy.EconomyModule.CycleDays(p, 100, share);
+    }
+
+    /// <summary>The trend from the numbers alone: <paramref name="cycle"/> is a refinery's cycle in days, the least days on record to judge by.</summary>
+    internal static RefinedTrend TrendOf(int made, int days, int mine, int hers, int cycle)
     {
         int made30 = days > 0 ? made * Praedra.Core.Economy.RefinedFlow.WindowDays / days : 0;   // right after a load fewer days are on record: scaled to the window
-        return new RefinedTrend(made, days, made30, mine, hers, days > 0 && days >= fastest && mine + hers > made30);
+        return new RefinedTrend(made, days, made30, mine, hers, days > 0 && days >= cycle && mine + hers > made30);
     }
 
     internal string RefinedFlowWords(int refined, RefinedTrend f)
