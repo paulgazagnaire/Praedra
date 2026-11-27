@@ -328,7 +328,8 @@ public sealed partial class FleetModule
             list.Add(Strength.Unit(cls, ratio, o.Hits is { Count: > 1 } ? o.Hits[1] : 0));
         }
         foreach (var id in f.Squadrons) list.Add(Strength.Unit(ClassOf(E.Objects[id])!));
-        foreach (var o in E.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.AboardShip != 0 && f.Ships.Contains(o.AboardShip)).OrderBy(o => o.Id))
+        // the fighters aboard any ship of the fleet, id order (from the registry index: QA senior QS-1)
+        foreach (var o in f.Ships.Distinct().SelectMany(s => E.Index.Aboard(s)).Where(o => o.Category == ObjectCategory.Fighter).OrderBy(o => o.Id))
             list.Add(Strength.Unit(ClassOf(o)!));
         return list;
     }
@@ -345,7 +346,7 @@ public sealed partial class FleetModule
 
     /// <summary>Units of a category aboard one ship (squadrons: Fighter; regiments: Regiment), by object id.</summary>
     public IEnumerable<EconObject> UnitsAboard(int shipId, ObjectCategory category) =>
-        E.Objects.Values.Where(u => u.AboardShip == shipId && u.Category == category);
+        (shipId != 0 ? E.Index.Aboard(shipId) : E.Objects.Values.Where(u => u.AboardShip == 0)).Where(u => u.Category == category);
 
     /// <summary>Free berths per ship id of a fleet (fighter_capacity less squadrons aboard). rule: m3-fleets §Carrying rules.</summary>
     public SortedDictionary<int, int> FreeBerthsByShip(Fleet f) => FreeByShip(f, ObjectCategory.Fighter, c => c.FighterCapacity);
@@ -360,8 +361,9 @@ public sealed partial class FleetModule
     {
         var free = new SortedDictionary<int, int>();
         foreach (var id in f.Ships) free[id] = capacity(ClassOf(E.Objects[id])!);
-        foreach (var u in E.Objects.Values)
-            if (u.Category == cat && u.AboardShip != 0 && free.ContainsKey(u.AboardShip)) free[u.AboardShip]--;
+        foreach (var id in free.Keys.ToList())
+            foreach (var u in E.Index.Aboard(id))
+                if (u.Category == cat) free[id]--;
         return free;
     }
 
@@ -430,7 +432,7 @@ public sealed partial class FleetModule
 
     /// <summary>Completed squadrons of a side based at a system (on it, not aboard, not flying), by id. rule: m3-fleets §Fighters based at a system.</summary>
     public IEnumerable<EconObject> BasedSquadrons(string system, Side side) =>
-        E.Objects.Values.Where(o => o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side && o.System == system && o.AboardShip == 0);
+        E.Index.At(system).Where(o => o.Category == ObjectCategory.Fighter && o.Completed && o.Side == side && o.AboardShip == 0);
 
     // ------------------------------------------------------------------ common order checks
 

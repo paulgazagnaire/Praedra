@@ -81,7 +81,7 @@ public sealed class TroopModule
     /// ascending by id: the defenders list of the assault (m3-assault step 0).
     /// </summary>
     public List<EconObject> RegimentsOnSystem(string system, Side? exceptSide = null) =>
-        E.Objects.Values.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.System == system && o.AboardShip == 0
+        E.Index.At(system).Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.AboardShip == 0
             && (exceptSide == null || o.Side != exceptSide)).ToList();
 
     /// <summary>

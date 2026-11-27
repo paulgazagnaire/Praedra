@@ -217,7 +217,7 @@ public sealed class ResearchModule
         if (R.Of(side).Exhausted[(int)kind]) return RejectReason.NothingToResearch;
         if (_fleets.OwnerOf(system) != side) return RejectReason.NoMatchingYard;
         var fam = FamilyOf(kind);
-        bool yard = _eco.Objects.Any(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == system
+        bool yard = _eco.ObjectsAt(system).Any(o => o.Category == ObjectCategory.Facility && o.Completed
             && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k) && Yards.FamilyOf(k) == fam);
         return yard ? null : RejectReason.NoMatchingYard;
     }

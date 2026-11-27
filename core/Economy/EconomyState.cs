@@ -17,17 +17,30 @@ namespace Praedra.Core.Economy;
 public sealed class EconObject
 {
     public int Id { get; set; }
-    public ObjectCategory Category { get; set; }
+    public ObjectCategory Category { get => _category; set { if (_category == value) return; _category = value; Index?.Changed(); } }
+    private ObjectCategory _category;
     /// <summary>Class name as in the costs file ("Mine", "Mandate", ...).</summary>
-    public string Class { get; set; } = "";
+    public string Class { get => _class; set { if (_class == value) return; _class = value; Index?.Changed(); } }
+    private string _class = "";
     /// <summary>Owner of a non-facility object. Null for facilities (owner = owner of <see cref="System"/>).</summary>
-    public Side? Side { get; set; }
+    public Side? Side { get => _side; set { if (_side == value) return; _side = value; Index?.Changed(); } }
+    private Side? _side;
     /// <summary>Facility: the system it stands on or will stand on. Regiments and special forces: where they are.</summary>
-    public string? System { get; set; }
-    public bool Completed { get; set; }
+    public string? System
+    {
+        get => _system;
+        set { if (_system == value) return; string? from = _system; _system = value; Index?.Moved(this, from); }
+    }
+    private string? _system;
+    /// <summary>The registry index this object is filed in (derived, never saved; see <see cref="ObjectIndex"/>). The setters of the fields
+    /// that say where an object is and what it is (Category, Class, Side, System, Completed, AboardShip) tell it.</summary>
+    internal ObjectIndex? Index;
+    public bool Completed { get => _completed; set { if (_completed == value) return; _completed = value; Index?.Changed(); } }
+    private bool _completed;
     // ---- carrying (m3-fleets §Carrying rules)
     /// <summary>Squadron or regiment: the id of the capital ship it rides on; 0 = not aboard (it is on <see cref="System"/> or in a squadron-only fleet).</summary>
-    public int AboardShip { get; set; }
+    public int AboardShip { get => _aboardShip; set { if (_aboardShip == value) return; int from = _aboardShip; _aboardShip = value; Index?.Boarded(this, from); } }
+    private int _aboardShip;
     // ---- ship state (m3-ships-and-fighters §Damaged state). Capital ships only; no M3 rule changes them except DebugSetDamage.
     /// <summary>Current hull, 0 to the class maximum; starts at the maximum. 0 for everything that is not a capital ship.</summary>
     public int Hull { get; set; }
@@ -117,6 +130,9 @@ public sealed class EconomyState
     /// <summary>The id the next object gets. DEFAULT: ids start at 1 (no sheet says).</summary>
     public int NextObjectId { get; set; } = 1;
     public SortedDictionary<int, EconObject> Objects { get; init; } = new();
+    /// <summary>Objects by system (derived from <see cref="Objects"/>, never saved or hashed; QA senior QS-1).</summary>
+    internal ObjectIndex Index => _index ??= new ObjectIndex(this);
+    private ObjectIndex? _index;
     /// <summary>Slot values that differ from the file, by system name.</summary>
     public SortedDictionary<string, SlotState> Slots { get; init; } = new(StringComparer.Ordinal);
     /// <summary>
@@ -137,6 +153,7 @@ public sealed class EconomyState
     {
         NextObjectId = o.NextObjectId;
         foreach (var kv in o.Objects) Objects[kv.Key] = kv.Value;
+        Index.Invalidate();
         foreach (var kv in o.Slots) Slots[kv.Key] = kv.Value;
         foreach (var kv in o.CollectiveSupport) CollectiveSupport[kv.Key] = kv.Value;
         Hand.CopyFrom(o.Hand);
