@@ -156,8 +156,13 @@ public static class AiLevels
         GarrisonsFirstHoldsNavy = true,
     };
 
-    /// <summary>Neutralise at Medium and Hard (AI trainer "Rooster" 2026-11-27, numbers at Medium above): the Collective shells thin garrisons bare anywhere.</summary>
-    private static SimpleAiParams Neutralised(SimpleAiParams p) => p with { Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere };
+    /// <summary>Neutralise at Medium and Hard (AI trainer "Rooster" 2026-11-27, numbers at Medium above): the Collective shells thin garrisons bare anywhere.
+    /// </summary>
+    /// <remarks>Rooster 2026-11-27 (Dev lead after #416: the refit found half as many idle ships, the warships being out shelling; Paul: the best navy):
+    /// RefitAway with it. Collective refit scraps per 32 games, MedE, main 0a5c3b4: Medium mirror 38 without Neutralise, 17 with it, 32 with
+    /// RefitAway too (Hand / Collective / open 4 / 18 / 10, 3 / 24 / 5, 2 / 21 / 9); Medium Hand against the Hard Collective 16, 9, 21
+    /// (1 / 24 / 7, 0 / 28 / 4, 1 / 26 / 5). Wins move within noise (about 3 of 32).</remarks>
+    private static SimpleAiParams Neutralised(SimpleAiParams p) => p with { Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true };
 
     /// <summary>NeutraliseElsewherePercent at Medium and Hard: a world it can shell bare is worth a plain invasion target anywhere.</summary>
     private const int NeutraliseAnywhere = 100;
