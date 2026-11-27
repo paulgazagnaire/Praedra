@@ -119,6 +119,28 @@ public partial class GameScreen
     internal int SpeedValue => Speeds[_speedIndex];
     internal string Banner => InMoveMode ? _moveBanner ?? "" : _banner.GetParent<Control>().Visible ? _banner.Text : "";
     internal string TopText => $"Day {_dayLabel.Text} | {_rawLabel.Text} | {_refinedLabel.Text} | {_upkeepLabel.Text} | {(_ordersLabel.IsVisibleInTree() ? _ordersLabel.Text : "")}";
+    internal bool RefinedFalling => _refinedFall.Visible;
+    /// <summary>The Refined stock's width now, and the frame's width it must keep while the names show (none on a narrow bar).</summary>
+    internal (float Now, float Room) RefinedCellWidth => (Math.Max(_refinedCell.Size.X, _refinedCell.GetCombinedMinimumSize().X), _barLevel < 1 ? RefinedW : float.PositiveInfinity);
+    /// <summary>Shows the mark whatever the flow says, until the next refresh: its width is checked even on a game whose stock is not falling.</summary>
+    internal void ForceRefinedMark() => _refinedFall.Visible = true;
+    /// <summary>Every idle shipyard and training yard of yours gets an order for <paramref name="count"/> of its cheapest unit, so the yards
+    /// use refined (the red ▼ by Refined). Returns how many orders were given.</summary>
+    internal int PlayBusyYards(int count)
+    {
+        var eco = S.Host.Economy; var cons = S.Host.Construction; int given = 0;
+        foreach (var n in S.Game.State.SystemOwners.Where(kv => kv.Value == Me).Select(kv => kv.Key).OrderBy(k => k, StringComparer.Ordinal).ToList())
+            foreach (var fam in IdleYardFamilies(n).Where(f => f != Praedra.Core.Construction.YardFamily.Construction))
+            {
+                var row = eco.Costs.Rows.Where(r => (Me == Praedra.Core.Clock.Side.Hand ? r.Hand : r.Collective) && r.Cost > 0
+                        && Praedra.Core.Construction.Yards.BuiltBy(r.Category) == fam && cons.IsResearched(Me, r.Name))
+                    .OrderBy(r => r.Cost).ThenBy(r => r.Name, StringComparer.Ordinal).FirstOrDefault();
+                if (row == null) continue;
+                cons.SubmitBuild(Me, n, fam, row.Name, count);
+                given++;
+            }
+        return given;
+    }
     internal string[] TopTips => new[] { _rawLabel.TooltipText, _refinedLabel.TooltipText, _upkeepLabel.TooltipText, _dayLabel.TooltipText };
     internal string PanelText() => LabelsIn(_pv);
     static string LabelsIn(Node n) => string.Join("\n", AllNodes(n).OfType<Label>().Where(l => l.IsVisibleInTree() || !l.IsInsideTree()).Select(l => l.Text));

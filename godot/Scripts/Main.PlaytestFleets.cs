@@ -310,6 +310,43 @@ public partial class Main
         ScreenFixes(gs, s, me);
     }
 
+    void RefinedMark(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
+    {
+        // when it shows, from the numbers alone (a refinery's fastest cycle is 5 days)
+        Expect(GameScreen.TrendOf(36, 30, 60, 3, 5).Falling && !GameScreen.TrendOf(70, 30, 60, 3, 5).Falling,
+            "the stock falls when the yards use more than the refineries made in 30 days (63 against 36), not when they use less (63 against 70)");
+        Expect(!GameScreen.TrendOf(0, 4, 63, 0, 5).Falling && GameScreen.TrendOf(10, 10, 31, 0, 5).Falling,
+            "it waits until a refinery could have finished a cycle (4 days on record), and scales fewer days to 30 (10 in 10 days = 30 against 31)");
+        // the words: by how much, how long the stock lasts, and the advisor's part
+        string fall = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 63, 0, 5));
+        Expect(fall.Contains("The red mark: that is about 27 more than your refineries make, so at this pace your 246 lasts about 273 days."), "the tooltip says by how much and how long the stock lasts: " + fall);
+        Expect(gs.RefinedFlowWords(0, GameScreen.TrendOf(36, 30, 63, 0, 5)).Contains("your stock is empty"), "an empty stock is said as empty, not as lasting 0 days");
+        Expect(!gs.RefinedFlowWords(246, GameScreen.TrendOf(70, 30, 63, 0, 5)).Contains("red mark"), "no red mark words while the refineries keep up");
+        if (s.HasAdvisor)
+        {
+            string hers = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 20, 43, 5)), both = gs.RefinedFlowWords(246, GameScreen.TrendOf(36, 30, 50, 13, 5));
+            Expect(hers.Contains("20 for your orders, 43 for Sibyl's") && hers.Contains("Sibyl's builds are what run it down"), "when her builds tip it, the tooltip says so: " + hers);
+            Expect(both.Contains("Even without Sibyl's builds, your own orders use more"), "and when your own orders are short anyway, it says that: " + both);
+        }
+
+        // on the game: the mark follows the flow; 9999 and the mark keep the stock's width, so the bar does not shift
+        bool Expected()
+        {
+            var (made, days) = Praedra.Core.Economy.RefinedFlow.Made(s.Host, me);
+            var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(s.Host, me);
+            return GameScreen.TrendOf(made, days, mine, hers, Praedra.Core.Economy.EconomyModule.CycleDays(s.Host.Economy.Params, 100, 0)).Falling;
+        }
+        int given = gs.PlayBusyYards(20);
+        for (int d = 0; d < 10 && !gs.RefinedFalling; d++) gs.PlayDay();
+        Expect(gs.RefinedFalling == Expected(), $"the red mark by Refined follows the flow on day {s.Game.Day} after {given} build orders (shown {gs.RefinedFalling}): {gs.TopTips[1]}");
+        var pool = s.Game.State.Economy.Pool(me);
+        int keep = pool.Refined;
+        pool.Refined = 9999; gs.PlayRefresh(); gs.ForceRefinedMark();
+        var (now, room) = gs.RefinedCellWidth;
+        Expect(now <= room + 0.5f, $"9999 and the mark fit the Refined stock's width, so the bar does not shift ({now} of {room})");
+        pool.Refined = keep; gs.PlayRefresh();
+    }
+
     /// <summary>The screen problems of QA's Hand playthrough (2026-11-27): items 7, 11, 12 and 13.</summary>
     void ScreenFixes(GameScreen gs, GameSession s, Praedra.Core.Clock.Side me)
     {
@@ -420,6 +457,10 @@ public partial class Main
             Expect(wide.Count == 0, "no window grows past its columns (W4): " + string.Join(", ", wide));
             while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
         }
+
+        // the red ▼ by Refined (Paul 2026-11-27): it shows when the yards use more refined than the refineries make, and its tooltip
+        // says by how much, how long the stock lasts and the advisor's part; 9999 and the mark keep the frame's width, so the bar does not shift
+        RefinedMark(gs, s, me);
 
         // item 13: the pause words that came with a report go when the report closes
         const string fought = "Paused: an invasion was fought";
