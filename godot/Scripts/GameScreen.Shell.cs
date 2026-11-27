@@ -210,7 +210,28 @@ public partial class GameScreen
     {
         var (made, rawShort) = S.Host.Economy.RefinedPacePer30Days(S.Player);
         var (mine, hers) = Praedra.Core.Economy.RefinedFlow.Use(S.Host, S.Player);
+        bool sibylBuilds = S.HasAdvisor && S.Advisor.IsOn(Praedra.Core.AI.SibylJob.ManageProduction);
+        (mine, hers) = HeldUse(_useSeen, S.Game.Day, mine, hers, sibylBuilds, S.Host.Construction.Params.StandardCycleDays);
         return TrendOf(made, mine, hers, _refinedWas) with { RawShort = rawShort };
+    }
+
+    /// <summary>The yards' use seen on the last days while Sibyl builds: (day, the player's part, hers).</summary>
+    readonly List<(int Day, int Mine, int Hers)> _useSeen = new();
+
+    /// <summary>The use the mark goes by. While Sibyl manages production she gives idle yards a new build on her next day, so each build that
+    /// ends shows a day or two of idle yards, and the use stepped 110, 88, 110 while the refineries made 95 between: the mark flipped red
+    /// and green every few days with the stock at 0 (QA-132, 2026-11-27, 26 changes in 80 days). So while she builds, the highest use of
+    /// the last <paramref name="holdDays"/> days counts (a standard yard's cycle: a yard idle for less than that is between her builds; on
+    /// QA's 80 days it leaves 0 changes). Without her, idle yards stay idle until you give them work, so today's use counts.
+    /// rule: m2-construction §Build time; m6-advisor-sibyl.</summary>
+    internal static (int Mine, int Hers) HeldUse(List<(int Day, int Mine, int Hers)> seen, int day, int mine, int hers, bool sibylBuilds, int holdDays)
+    {
+        if (!sibylBuilds) { seen.Clear(); return (mine, hers); }
+        seen.RemoveAll(x => x.Day >= day || x.Day <= day - holdDays);   // today's is replaced; a load to an earlier day drops the later ones
+        seen.Add((day, mine, hers));
+        var top = seen[^1];
+        foreach (var x in seen) if (x.Mine + x.Hers > top.Mine + top.Hers) top = x;
+        return (top.Mine, top.Hers);
     }
 
     /// <summary>The mark by Refined at the last refresh: a mark keeps showing until the use crosses balance (QA r245: no blinking).</summary>
