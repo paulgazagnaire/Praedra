@@ -74,6 +74,13 @@ public sealed partial class SimpleAi
 
     public void PlanDay()
     {
+        BeginPass(); // per-pass caches (SimpleAiPassCache.cs), dropped at the end
+        try { PlanDayPass(); }
+        finally { EndPass(); }
+    }
+
+    private void PlanDayPass()
+    {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
         _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear(); _hqMoveTo = null;
         int day = Today, phase = (int)_side;
@@ -108,13 +115,14 @@ public sealed partial class SimpleAi
         _advisorNotes.Clear();
         _view = null; // her own side's worlds and yards only: nothing of the other side is read
         _advisor = true;
+        BeginPass();
         try
         {
             // rule: m6-advisor-sibyl: garrisons first, then the idle construction yards (training facilities, then her production)
             if (garrisons) PlanGarrison();
             PlanAdvisorYards(garrisons, production);
         }
-        finally { _advisor = false; }
+        finally { _advisor = false; EndPass(); }
     }
 
     /// <summary>True while <see cref="PlanAdvisor"/> runs: the advisor's rules apply. rule: m6-advisor-sibyl.</summary>
@@ -218,7 +226,7 @@ public sealed partial class SimpleAi
     private int ShipyardsSeenAt(string system)
     {
         static bool IsShipyard(string cls) => FacilityKinds.TryParse(cls, out var k) && FacilityKinds.IsYard(k) && Yards.FamilyOf(k) == YardFamily.Shipyard;
-        if (_view == null) return _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == system && IsShipyard(o.Class));
+        if (_view == null) return _h.Economy.ObjectsAt(system).Count(o => o.Completed && o.Category == ObjectCategory.Facility && IsShipyard(o.Class));
         return _view.Picture(system)?.Facilities?.Value.Where(kv => IsShipyard(kv.Key)).Sum(kv => kv.Value) ?? 0;
     }
 
@@ -237,7 +245,7 @@ public sealed partial class SimpleAi
 
     /// <summary>Completed facilities at a system of another side. No fog: the truth. Fog: group C of the picture (0 when never seen).</summary>
     private int FacilitiesAt(string system) => _view == null
-        ? _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == system)
+        ? _h.Economy.ObjectsAt(system).Count(o => o.Completed && o.Category == ObjectCategory.Facility)
         : _view.Picture(system)?.Facilities?.Value.Values.Sum() ?? 0;
 
     /// <summary>Slot values of a system not held. No fog: the truth. Fog: group A of the picture; never seen = populated, no slots (worth a look).</summary>
@@ -430,9 +438,11 @@ public sealed partial class SimpleAi
     private bool Held(string s) => _h.Fleets.OwnerOf(s) == _side;
     /// <summary>Was the system destroyed by the harvester? Public to both sides (the galaxy notice "Planet Destroyed"); the AI never targets or counts one. rule: m5-harvester §2 effect 5.</summary>
     private bool Destroyed(string s) => _h.Game.State.Harvester.IsDestroyed(s);
-    private IEnumerable<string> HeldSystems() => S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key); // sorted ordinal
+    private IEnumerable<string> HeldSystems() => _pass is { } c
+        ? c.Held ??= S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key).ToList()
+        : S.SystemOwners.Where(kv => kv.Value == _side).Select(kv => kv.Key); // sorted ordinal
     private int UnratedSpeed => _h.Construction.Params.UnratedDeliverySpeed;
-    private int Budget => _h.Economy.Free(_side) - _plannedLoad - (_advisor ? 0 : _p.MaintenanceMargin); // rule: m6-advisor-sibyl §Manage Garrisons 6 (no margin)
+    private int Budget => FreeRoom() - _plannedLoad - (_advisor ? 0 : _p.MaintenanceMargin); // rule: m6-advisor-sibyl §Manage Garrisons 6 (no margin)
     private int Maint(string cls) => _h.Economy.Costs.Get(cls).Maintenance;
     private bool Suspended(string sys) => _h.Support.IsUprising(sys) || _h.Fleets.IsEconomicBlockade(sys, _side);
 
@@ -482,9 +492,14 @@ public sealed partial class SimpleAi
         o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k) && Yards.FamilyOf(k) == fam;
 
     /// <summary>Held systems with a finished, working yard of the family, ordinal order.</summary>
-    private List<string> YardSystems(YardFamily fam) =>
-        _h.Economy.Objects.Where(o => o.Completed && IsYardClass(o, fam) && o.System != null && Held(o.System) && !Suspended(o.System))
+    private List<string> YardSystems(YardFamily fam)
+    {
+        if (_pass is { } c && c.Yards.TryGetValue(fam, out var hit)) return new List<string>(hit); // a copy: callers may change theirs
+        var list = _h.Economy.Objects.Where(o => o.Completed && IsYardClass(o, fam) && o.System != null && Held(o.System) && !Suspended(o.System))
             .Select(o => o.System!).Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList();
+        if (_pass != null) _pass.Yards[fam] = new List<string>(list);
+        return list;
+    }
 
     /// <summary>Yards of the family owned by the side, queued ones included.</summary>
     private int CountYards(YardFamily fam) => _h.Economy.Objects.Count(o => IsYardClass(o, fam) && _h.Economy.OwnerOf(o) == _side);
@@ -497,7 +512,7 @@ public sealed partial class SimpleAi
         _capitalDone = true;
         if (_side == Side.Hand && Held(Praedra.Core.Control.ControlModule.CapitalSystem)) return _capital = Praedra.Core.Control.ControlModule.CapitalSystem;
         // No HQ in the core yet: the held system with the most finished facilities (DEFAULT).
-        _capital = HeldSystems().Select(s => (s, n: _h.Economy.Objects.Count(o => o.Completed && o.Category == ObjectCategory.Facility && o.System == s)))
+        _capital = HeldSystems().Select(s => (s, n: _h.Economy.ObjectsAt(s).Count(o => o.Completed && o.Category == ObjectCategory.Facility)))
             .Where(t => t.n > 0).OrderByDescending(t => t.n).ThenBy(t => t.s, StringComparer.Ordinal).Select(t => t.s).FirstOrDefault();
         return _capital;
     }

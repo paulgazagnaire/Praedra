@@ -47,7 +47,8 @@ public enum TravelMode
 /// Routes: legs are either off-route (any two systems, factor 100) or along a route link (its factor). An off-route leg ends only at a
 /// route system, the destination or a waypoint, so a path never stops at an off-route system on the way. Lowest total ticks; ties:
 /// fewest legs; then the smaller predecessor (ordinal name). Straight: one leg. Each leg is max(1, base * speed / factor) ticks.
-/// Cached per (start, speed) for the search and per (start, end, speed) for results.
+/// Cached per (start, speed) for the search and per (start, end, speed) for results. The caches, the leg tables and the cache of
+/// searches that avoid systems are derived from the galaxy alone (never from game state), so they only save time: same answers.
 /// </summary>
 public sealed class Pathfinder
 {
@@ -56,6 +57,14 @@ public sealed class Pathfinder
     private readonly Dictionary<(int, int), Tree> _trees = new();
     private readonly int[] _routeSystems;
     private readonly int[,] _dist;
+    // Speed lookups (derived from the galaxy, never saved; QA senior QS-1): off-route base (map distance / 5) by a * n + b; position of a
+    // system among the route systems (-1 = off route); per speed, the ticks of the leg between two route systems by position (Leg).
+    private readonly int[] _base;
+    private readonly int[] _routePos;
+    private readonly Dictionary<int, int[]> _routeLegs = new();
+    // Searches that avoid systems, by (start, speed, avoided set): the same fleet re-plans the same way round day after day. Bounded: cleared when full.
+    private readonly Dictionary<string, Tree> _avoidTrees = new(StringComparer.Ordinal);
+    private const int AvoidTreesMax = 1024;
 
     public Pathfinder(Galaxy galaxy, TravelMode mode = TravelMode.Routes)
     {
@@ -69,6 +78,12 @@ public sealed class Pathfinder
                 var sa = galaxy.Systems[a]; var sb = galaxy.Systems[b];
                 _dist[a, b] = _dist[b, a] = TravelFormula.MapDistance(sa.MapX, sa.MapY, sb.MapX, sb.MapY);
             }
+        _base = new int[n * n];
+        for (int a = 0; a < n; a++)
+            for (int b = 0; b < n; b++) _base[a * n + b] = _dist[a, b] / TravelFormula.DistanceDivisor;
+        _routePos = new int[n];
+        Array.Fill(_routePos, -1);
+        for (int i = 0; i < _routeSystems.Length; i++) _routePos[_routeSystems[i]] = i;
     }
 
     public Galaxy Galaxy => _galaxy;
@@ -113,12 +128,45 @@ public sealed class Pathfinder
         if (speed <= 0) return PathResult.Rejected(PathStatus.Immobile);
         if (start == end) return PathResult.Rejected(PathStatus.AlreadyThere);
         var skip = new HashSet<int>(avoid); skip.Remove(start); skip.Remove(end); // lookup only
-        return Walk(BuildTree(start, speed, skip), start, end, speed);
+        // the tree depends on (start, speed, the avoided set) only; the end is avoided by no one, as the start (removed above)
+        string key = start + "/" + speed + "/" + string.Join(",", skip.OrderBy(i => i));
+        if (!_avoidTrees.TryGetValue(key, out var tree))
+        {
+            if (_avoidTrees.Count >= AvoidTreesMax) _avoidTrees.Clear();
+            _avoidTrees[key] = tree = BuildTree(start, speed, skip);
+        }
+        return Walk(tree, start, end, speed);
     }
 
     /// <summary>Ticks of an off-route leg: the original formula, max(1, (isqrt / 5) * speed / 100). rule: m1-travel §Per-leg formula (Traced).</summary>
     private int OffRoute(int a, int b, int speed) =>
-        TravelFormula.HopTicks(_dist[a, b] / TravelFormula.DistanceDivisor, speed, TravelFormula.PercentDivisor);
+        TravelFormula.HopTicks(_base[a * _routePos.Length + b], speed, TravelFormula.PercentDivisor);
+
+    /// <summary>
+    /// <see cref="Leg"/> between every two route systems for one speed, by route position (row * route count + column). Built once per speed;
+    /// the same values as <see cref="Leg"/> (off-route, or the first route link of the pair when faster).
+    /// </summary>
+    private int[] RouteLegs(int speed)
+    {
+        if (_routeLegs.TryGetValue(speed, out var hit)) return hit;
+        int r = _routeSystems.Length;
+        var legs = new int[r * r];
+        for (int i = 0; i < r; i++)
+            for (int j = 0; j < r; j++) legs[i * r + j] = OffRoute(_routeSystems[i], _routeSystems[j], speed);
+        for (int i = 0; i < r; i++)
+        {
+            int a = _routeSystems[i];
+            var seen = new HashSet<int>(); // lookup only: FindLane takes the first link to a neighbour
+            foreach (var nb in _galaxy.NeighboursOf(a))
+            {
+                int j = _routePos[nb.System];
+                if (!seen.Add(nb.System) || j < 0) continue;
+                legs[i * r + j] = Math.Min(legs[i * r + j], TravelFormula.RouteLegTicks(_dist[a, nb.System], speed, nb.Lane.FactorPercent));
+            }
+        }
+        _routeLegs[speed] = legs;
+        return legs;
+    }
 
     /// <summary>Ticks of the leg a-b: the faster of off-route and its route link, if any. rule: m1-travel §Per-leg formula (route legs).</summary>
     private int Leg(int a, int b, int speed)
@@ -151,32 +199,47 @@ public sealed class Pathfinder
         if (skip != null) nodes = nodes.Where(i => !skip.Contains(i)).ToArray(); // an avoided system is reached only as the destination (below)
         var done = new bool[n];
         ticks[start] = 0;
-        bool Better(long t, int l, int u, int v) =>
-            t < ticks[v] || (t == ticks[v] && (l < legs[v] || (l == legs[v] && u < prev[v])));
-        for (int round = 0; round < nodes.Length; round++)
+        // Leg(u, v) from the per-speed table between route systems; a pair with an off-route start has no link, so it is off-route.
+        // Each round settles the smallest (ticks, legs, nodes order) of the nodes not yet settled, then relaxes them in nodes order; the next
+        // round's pick is found during that same pass (a node's value is final for the round once relaxed), so one pass per round.
+        var table = RouteLegs(speed); int r = _routeSystems.Length;
+        var open = (int[])nodes.Clone(); int count = open.Length; // the nodes not settled, nodes order
+        int pick = -1; // position in open of the next node to settle
+        for (int k = 0; k < count; k++)
         {
-            int u = -1;
-            foreach (int c in nodes) // smallest (ticks, legs, index)
-                if (!done[c] && ticks[c] != long.MaxValue && (u < 0 || ticks[c] < ticks[u] || (ticks[c] == ticks[u] && legs[c] < legs[u])))
-                    u = c;
-            if (u < 0) break;
+            int c = open[k];
+            if (ticks[c] != long.MaxValue && (pick < 0 || ticks[c] < ticks[open[pick]] || (ticks[c] == ticks[open[pick]] && legs[c] < legs[open[pick]]))) pick = k;
+        }
+        while (pick >= 0)
+        {
+            int u = open[pick];
+            Array.Copy(open, pick + 1, open, pick, count - pick - 1); count--;
             done[u] = true;
-            foreach (int v in nodes)
+            int pu = _routePos[u], lu = legs[u] + 1; long tu = ticks[u];
+            pick = -1;
+            for (int k = 0; k < count; k++)
             {
-                if (done[v]) continue;
-                long t = ticks[u] + Leg(u, v, speed);
-                if (Better(t, legs[u] + 1, u, v)) { ticks[v] = t; legs[v] = legs[u] + 1; prev[v] = u; }
+                int v = open[k], pv = _routePos[v];
+                long t = tu + (pu >= 0 && pv >= 0 ? table[pu * r + pv] : OffRoute(u, v, speed));
+                long tv = ticks[v];
+                if (t < tv || (t == tv && (lu < legs[v] || (lu == legs[v] && u < prev[v])))) { ticks[v] = tv = t; legs[v] = lu; prev[v] = u; }
+                if (tv != long.MaxValue && (pick < 0 || tv < ticks[open[pick]] || (tv == ticks[open[pick]] && legs[v] < legs[open[pick]]))) pick = k;
             }
         }
+        var settled = new List<int>(nodes.Length); // nodes order
+        foreach (int u in nodes) if (done[u]) settled.Add(u);
         for (int e = 0; e < n; e++)
         {
             if (done[e]) continue;
-            foreach (int u in nodes)
+            // off-route legs u -> e; the map distance is symmetric, so e's row of the base table is read (one row, in memory order)
+            long te = ticks[e]; int le = legs[e], pe = prev[e], row = e * n;
+            foreach (int u in settled)
             {
-                if (!done[u]) continue;
-                long t = ticks[u] + OffRoute(u, e, speed);
-                if (Better(t, legs[u] + 1, u, e)) { ticks[e] = t; legs[e] = legs[u] + 1; prev[e] = u; }
+                long t = ticks[u] + TravelFormula.HopTicks(_base[row + u], speed, TravelFormula.PercentDivisor);
+                int l = legs[u] + 1;
+                if (t < te || (t == te && (l < le || (l == le && u < pe)))) { te = t; le = l; pe = u; }
             }
+            ticks[e] = te; legs[e] = le; prev[e] = pe;
         }
         return new Tree { Ticks = ticks, Legs = legs, Prev = prev };
     }

@@ -261,7 +261,7 @@ public sealed class AssaultModule
     // rule: m3-assault §Resolution 4: the completed facilities by id, then Energy, then Raw; k = rand(0..n-1).
     private void Collateral(StepContext ctx, int day, string system, int round)
     {
-        var facilities = _eco.Objects.Where(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == system).ToList();
+        var facilities = _eco.ObjectsAt(system).Where(o => o.Category == ObjectCategory.Facility && o.Completed).ToList();
         int n = facilities.Count + 2;
         int k = ctx.Rng.NextInt(0, n - 1);
         if (k < facilities.Count)

@@ -314,14 +314,10 @@ public sealed partial class SimpleAi
     {
         int speed = _h.Fleets.SpeedOf(f);
         if (speed <= 0) return null;
-        var hops = Hops(); var g = _h.Data.Galaxy;
         var cands = new List<(string Sys, long Score)>();
-        foreach (var sys in g.Systems)
+        foreach (var (s, value) in ScoutCandidates()) // galaxy order: not held, not destroyed, worth a look
         {
-            string s = sys.Name;
-            if (s == f.At || Held(s) || claimed.Contains(s) || Destroyed(s)) continue;
-            int value = ScoutValue(s, hops[sys.Index]);
-            if (value <= 0) continue;
+            if (s == f.At || claimed.Contains(s)) continue;
             int ticks = TicksCached(f.At!, s, speed);
             if (ticks == int.MaxValue) continue;
             long score = value * 1000L / (ticks + 10);

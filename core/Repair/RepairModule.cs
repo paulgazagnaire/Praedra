@@ -42,7 +42,7 @@ public sealed class RepairModule
     public bool HasOwnYard(string system, Side side)
     {
         if (_fleets.OwnerOf(system) != side) return false;
-        return E.Objects.Values.Any(o => o.Category == ObjectCategory.Facility && o.Completed && o.System == system
+        return E.Index.At(system).Any(o => o.Category == ObjectCategory.Facility && o.Completed
             && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k) && Yards.FamilyOf(k) == YardFamily.Shipyard);
     }
 

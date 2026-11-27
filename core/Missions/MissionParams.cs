@@ -169,6 +169,15 @@ public sealed record MissionParams
     /// <summary>Call the character sheet's OnTeamExposed for a failed team (a foiled team duels instead, B2d §6). DEFAULT true (a no-op until that sheet defines a rule).</summary>
     public bool ExposureHooks { get; init; } = true;
 
+    /// <summary>
+    /// Where a team sent after an enemy leader flies (Abduction, Assassination). On: an order that names a system with the leader goes to that
+    /// system (where the side last saw the leader), and the order checks only what the side knows; if the leader is not there on landing the
+    /// mission ends TargetInvalid. Off, or an order without a system (the AI's): the team flies to the leader's position at order time.
+    /// DEFAULT on (Lead, the recommended option of Paul's card of 2026-11-27, open call 3 of the Mission window; pending his answer).
+    /// rule: m5-missions §Targets (Where a leader target is sought).
+    /// </summary>
+    public bool CharacterTargetWhereSeen { get; init; } = true;
+
     /// <summary>Key targets of Assassination (the exposure gate, one capped roll, kidnap or kill). DEFAULT true (Decided Paul 2026-10-16). rule: m5-missions §6a.</summary>
     public bool KeyTargetRules { get; init; } = true;
     /// <summary>A key-target team qualifies for kill or kidnap if one character has at least this combat. Proposal, m5-missions §6a, missions/09 §4.</summary>

@@ -203,7 +203,7 @@ public sealed partial class SimpleAi
     private int CompleteShieldsAt(string system)
     {
         var def = _h.Data.Defenses;
-        return _h.Economy.Objects.Count(o => o.System == system && o.Completed && o.Category == ObjectCategory.Facility && _h.Economy.OwnerOf(o) == _side
+        return _h.Economy.ObjectsAt(system).Count(o => o.Completed && o.Category == ObjectCategory.Facility && _h.Economy.OwnerOf(o) == _side
             && def.TryGetClass(o.Class, out var c) && c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator);
     }
 
@@ -236,9 +236,9 @@ public sealed partial class SimpleAi
     {
         var def = _h.Data.Defenses;
         int sh = _fortifyOrdered.GetValueOrDefault((system, false)), bat = _fortifyOrdered.GetValueOrDefault((system, true));
-        foreach (var o in _h.Economy.Objects)
+        foreach (var o in _h.Economy.ObjectsAt(system))
         {
-            if (o.System != system || o.Category != ObjectCategory.Facility || !def.TryGetClass(o.Class, out var c) || _h.Economy.OwnerOf(o) != _side) continue;
+            if (o.Category != ObjectCategory.Facility || !def.TryGetClass(o.Class, out var c) || _h.Economy.OwnerOf(o) != _side) continue;
             if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator) sh++;
             else if (c.Job == Praedra.Core.Defenses.DefenseJob.Battery) bat++;
         }
@@ -257,7 +257,7 @@ public sealed partial class SimpleAi
         string? cap = _side == Side.Collective && _view?.KnownHq?.System is { } hq && held.Contains(hq) ? hq : Capital();
         if (cap != null && held.Contains(cap)) list.Add(cap);
         if (ShellHolesOn > 0 && cap != null) list.AddRange(BoltHoles(cap, held));
-        int Count(string s, Func<EconObject, bool> f) => eco.Objects.Count(o => o.System == s && o.Category == ObjectCategory.Facility && f(o));
+        int Count(string s, Func<EconObject, bool> f) => eco.ObjectsAt(s).Count(o => o.Category == ObjectCategory.Facility && f(o));
         list.AddRange(held.Where(s => !list.Contains(s))
             .Select(s => (s, yards: Count(s, o => FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k)), mines: Count(s, o => o.Class == "Mine")))
             .Where(t => t.yards + t.mines > 0)
@@ -281,7 +281,7 @@ public sealed partial class SimpleAi
     /// its mine and refinery pairs bombarded down and never rebuilt): the side's free upkeep room, less what it ordered today, is under the floor.
     /// Not the advisor (Sibyl has her own rule, m6-advisor-sibyl §Manage Production 0).
     /// </summary>
-    private bool LowRoom => !_advisor && _p.RoomFloor > 0 && _h.Economy.Free(_side) - _plannedLoad < _p.RoomFloor;
+    private bool LowRoom => !_advisor && _p.RoomFloor > 0 && FreeRoom() - _plannedLoad < _p.RoomFloor;
 
     /// <summary>RoomFloor: a mine or a refinery, the one the side has fewer of first (capacity = 50 x min(mines, refineries), m2-maintenance §Capacity).</summary>
     private (FacilityKind, string)? PairChoice(string from)
@@ -312,7 +312,7 @@ public sealed partial class SimpleAi
     private static YardFamily FamilyOfKind(FacilityKind k) => Yards.FamilyOf(k);
 
     /// <summary>Yards of a family standing or queued on a system (the side's).</summary>
-    private int YardsAt(string system, YardFamily fam) => _h.Economy.Objects.Count(o => o.System == system && IsYardClass(o, fam));
+    private int YardsAt(string system, YardFamily fam) => _h.Economy.ObjectsAt(system).Count(o => IsYardClass(o, fam));
 
     private string? PickSite(string from, FacilityKind kind)
     {
@@ -345,7 +345,7 @@ public sealed partial class SimpleAi
         return best;
     }
 
-    private int YardsAnyAt(string system) => _h.Economy.Objects.Count(o => o.System == system && o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
+    private int YardsAnyAt(string system) => _h.Economy.ObjectsAt(system).Count(o => o.Category == ObjectCategory.Facility && FacilityKinds.TryParse(o.Class, out var k) && FacilityKinds.IsYard(k));
 
     /// <summary>FoundYardsBelow: steps on the Nearby graph out to here count as safer; farther is no safer. AI tuning (AI trainer 2026-11-20).</summary>
     private const int FoundSafeHops = 4;
@@ -552,7 +552,7 @@ public sealed partial class SimpleAi
         // the world PlanHqHide sends the Hearth to today keeps all its regiments: the HQ only goes in transit in this Step, so SpecialSystem
         // does not cover it yet, and a fleet loading them would leave the Hearth arriving on a bare world (SafeHearth, seed 2 on 2026-11-16)
         if (system == _hqMoveTo) return new List<int>();
-        var ids = _h.Economy.Objects.Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == _side && o.System == system && o.AboardShip == 0)
+        var ids = _h.Economy.ObjectsAt(system).Where(o => o.Category == ObjectCategory.Regiment && o.Completed && o.Side == _side && o.AboardShip == 0)
             .Select(o => o.Id).ToList();
         int keep = Held(system) ? GarrisonTarget(system) : 0;
         return ids.Count > keep ? ids.Skip(keep).ToList() : new List<int>();
@@ -631,7 +631,7 @@ public sealed partial class SimpleAi
         return best;
     }
 
-    private int YardsDoneAt(string system, YardFamily fam) => _h.Economy.Objects.Count(o => o.Completed && o.System == system && IsYardClass(o, fam));
+    private int YardsDoneAt(string system, YardFamily fam) => _h.Economy.ObjectsAt(system).Count(o => o.Completed && IsYardClass(o, fam));
 
     /// <summary>
     /// The warship that gives the most strength per price (refined cost plus upkeep), counting each fighter berth as one squadron of the best
@@ -802,7 +802,7 @@ public sealed partial class SimpleAi
             double use = str * 1000 / m;
             if (use * 100 >= bestUse * _p.RefitBelowPercent) continue;
             var f = _h.Fleets.FleetOfShip(o.Id);
-            if (f == null || f.Transit != null || f.At == null || !Held(f.At) || Pending(f)) continue;
+            if (f == null || f.Transit != null || f.At == null || !(Held(f.At) ? !Pending(f) : RefitAwayOk(f, o.Id))) continue; // RefitAway: SimpleAiCollectivePlans.cs
             cands.Add((use, o.Id, m, f));
         }
         var guarded = cands.Select(c => c.Fleet.Id).Distinct().Where(f => _h.Characters.InPlay.Any(ch => ch.AttachedFleet == f || ch.HeldAboard == f)).ToHashSet();

@@ -647,7 +647,13 @@ public sealed class FogModule
 
     /// <summary>Live access of kinds 1 to 3 now: the side holds the system, has a fleet placed there, or an agent on a mission there. rule: §F3.</summary>
     public bool HasLiveAccess(Side side, string system) =>
-        _fleets.OwnerOf(system) == side || State.Fleets.Values.Any(f => f.Side == side && f.At == system) || AgentHere(side, system);
+        _fleets.OwnerOf(system) == side || FleetPlacedAt(side, system) || AgentHere(side, system);
+
+    private bool FleetPlacedAt(Side side, string system)
+    {
+        foreach (var f in State.Fleets.Values) if (f.Side == side && f.At == system) return true; // a plain loop: the AI and the event audience ask often
+        return false;
+    }
 
     /// <summary>Does the side see the system live today (the UI's "lit" systems)? Same as <see cref="HasLiveAccess"/>.</summary>
     public bool Sees(Side side, string system) => HasLiveAccess(side, system);
@@ -796,19 +802,16 @@ public sealed class FogModule
 
     private static class Accessors
     {
-        private static readonly Dictionary<Type, EventAccessors> Cache = new(); // lookup only, never iterated
-        private static readonly object Lock = new();
-        public static EventAccessors Get(Type t)
+        // lookup only, never iterated; read without a lock (every game of a parallel batch reads it for every event). The value for a type is
+        // always the same, so a second thread making it at the same time changes nothing.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, EventAccessors> Cache = new();
+        public static EventAccessors Get(Type t) => Cache.GetOrAdd(t, Make);
+
+        private static EventAccessors Make(Type t)
         {
-            lock (Lock)
-            {
-                if (Cache.TryGetValue(t, out var a)) return a;
-                PropertyInfo? P(string name, params Type[] types) { var p = t.GetProperty(name); return p != null && types.Contains(p.PropertyType) ? p : null; }
-                var side = P("Side", typeof(Side), typeof(Side?)) ?? P("Holder", typeof(Side), typeof(Side?)) ?? P("Owner", typeof(Side), typeof(Side?));
-                a = new EventAccessors(side, P("Fleet", typeof(int)), P("System", typeof(string)));
-                Cache[t] = a;
-                return a;
-            }
+            PropertyInfo? P(string name, params Type[] types) { var p = t.GetProperty(name); return p != null && types.Contains(p.PropertyType) ? p : null; }
+            var side = P("Side", typeof(Side), typeof(Side?)) ?? P("Holder", typeof(Side), typeof(Side?)) ?? P("Owner", typeof(Side), typeof(Side?));
+            return new EventAccessors(side, P("Fleet", typeof(int)), P("System", typeof(string)));
         }
     }
 
@@ -844,7 +847,11 @@ public sealed class FogModule
             return _fleets.TryGetValue(sys, out var r) ? r : (IReadOnlyList<Fleet>)Array.Empty<Fleet>();
         }
 
-        public bool HasFleet(Side side, string sys) => FleetsAt(sys).Any(f => f.Side == side);
+        public bool HasFleet(Side side, string sys)
+        {
+            foreach (var f in FleetsAt(sys)) if (f.Side == side) return true; // a plain loop: called for every system of both sides daily
+            return false;
+        }
 
         public IReadOnlyList<EconObject> Objects(string sys)
         {

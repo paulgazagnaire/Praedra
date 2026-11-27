@@ -18,6 +18,7 @@ public class SimpleAiCollectivePlansTests
     {
         var p = new SimpleAiParams();
         Assert.False(p.Neutralise);
+        Assert.False(p.RefitAway);
         Assert.Equal(0, p.NeutraliseElsewherePercent);
     }
 
@@ -31,6 +32,7 @@ public class SimpleAiCollectivePlansTests
         var p = AiLevels.For(level);
         Assert.Equal(on, p.Neutralise);
         Assert.Equal(on ? 100 : 0, p.NeutraliseElsewherePercent);
+        Assert.Equal(on, p.RefitAway); // keeps the navy renewing while the warships shell (Dev lead after #416)
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
