@@ -29,6 +29,7 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, p.WinWallsForgetDays);
         Assert.False(p.WinSiege);
         Assert.Equal(40, p.WinSiegeMarginPower);
+        Assert.False(p.GuardedOriginWait);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -342,5 +343,32 @@ public class SimpleAiCollectivePlansTests
         on.Ingest(feed, _ => false);
         Assert.Equal(new[] { ((string?)"Charter", 9, 80) }, on.Notes.Where(n => n.Kind == AiNoteKind.ShieldsHit).Select(n => (n.System, n.Day, n.Value)).ToList());
         Assert.Equal(2, on.Notes.Count(n => n.Kind == AiNoteKind.ShieldsFelt));
+    }
+
+    // GuardedOriginWait (QA-136; m5-missions §Guards, orbit leaving check: a team setting out to another system from a world with enemy fleets
+    // and no own Lien-150 is checked by every ship there). QA's game: seed 8383, MedA, Hard mirror, New battle, QA's base parameters, to day
+    // 1000, with the leader rules of main ba6a7f7 (no fleet catch, no inbound sightings, plain Autoroute): Hand ships over Natalis foiled every
+    // departure and 15 Collective leaders were taken in the mission duels, 14 at Natalis. With the switch none.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void NoMissionSetsOutPastEnemyShips()
+    {
+        int Duels(bool wait)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 8383, Preset = StartPreset.MedA, Settings = new GameSettings
+            {
+                Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.New },
+                Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false, FleetsCatchLoneLeaders = false },
+                Fog = new Praedra.Core.Fog.FogParams { EspionageSeesInbound = false },
+            } });
+            var b = new SimpleAiParams { UseFog = true, LeaderMarks = false, SpecialForceAgents = false, TaskForces = true };
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard, b), AiLevels.For(AiLevel.Hard, b) with { GuardedOriginWait = wait });
+            while (host.Game.Day < 1000 && host.Victory.Winner == null) m.Step();
+            return host.Game.Events.OfType<Praedra.Core.Characters.CharacterCaptured>().Count(c => c.Side == Side.Collective && c.Cause == "MissionDuel");
+        }
+        int off = Duels(false), on = Duels(true);
+        _out.WriteLine($"Collective leaders taken in mission duels by day 1000: {off} without, {on} with GuardedOriginWait");
+        Assert.True(off >= 10, $"only {off} duel captures: the test no longer shows QA-136");
+        Assert.True(on <= 2, $"{on} duel captures with GuardedOriginWait");
     }
 }

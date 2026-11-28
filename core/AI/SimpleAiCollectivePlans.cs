@@ -321,4 +321,26 @@ public sealed partial class SimpleAi
             if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator && c.Shield > 0) least = Math.Min(least, c.Shield);
         return least == int.MaxValue ? 0 : least * Math.Max(1, _h.Defenses.Params.AssaultGateShields);
     }
+
+    // ================================================================== Guarded origin (QA-136: no team leaves past enemy ships)
+
+    private bool GuardedOriginOn => _p.GuardedOriginWait && _side == Side.Collective;
+
+    /// <summary>
+    /// GuardedOriginWait: the side sees an enemy fleet at the system (its picture's fleets; a held world's orbit is in view) and owns no completed
+    /// Lien-150 there, so a team setting out from it to another system meets the orbit leaving check (m5-missions §Guards: enemyFleets and not
+    /// ownIon). Cached per day.
+    /// </summary>
+    private bool OriginGuarded(string system)
+    {
+        if (!GuardedOriginOn) return false;
+        if (_guardedDay != Today) { _guarded.Clear(); _guardedDay = Today; }
+        if (_guarded.TryGetValue(system, out bool g)) return g;
+        var fam = _h.Missions.FacilityFamily;
+        bool ion = fam != null && _h.Economy.Objects.Any(o => o.Category == ObjectCategory.Facility && o.Completed && o.Side == _side && o.System == system
+            && fam(o.Class) == Praedra.Core.Missions.MissionModule.IonCannonFamily);
+        return _guarded[system] = !ion && EnemyFleetsAt(system).Count > 0;
+    }
+    private readonly Dictionary<string, bool> _guarded = new(StringComparer.Ordinal); // lookup only, cleared each day
+    private int _guardedDay = int.MinValue;
 }

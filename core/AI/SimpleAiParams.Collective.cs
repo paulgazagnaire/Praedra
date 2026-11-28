@@ -86,4 +86,13 @@ public sealed partial record SimpleAiParams
     public bool WinSiege { get; init; }
     /// <summary>WinSiege: the bombardment power a pile must have above the shields seen at the win target to pick it (the hits that do the work; ai tuning).</summary>
     public int WinSiegeMarginPower { get; init; } = 40;
+    /// <summary>
+    /// Guarded origin (QA-136, Rooster 2026-11-28): no mission team of the side sets out to another system from a world where it sees enemy
+    /// fleets in orbit and owns no completed Lien-150, since the orbit leaving check puts every member through those ships (m5-missions
+    /// §Guards, orbit check: members on the planet count when the mission travels); and its free leaders standing there walk to the nearest
+    /// held world with no enemy fleet seen. QA seed 8383 (Hard mirror, MedA, New battle): Hand Tranches over Natalis foiled every departure and
+    /// 15 Collective characters were captured in the duels, days 556 to 782. The Collective only for now. Off = missions leave from anywhere
+    /// (DEFAULT).
+    /// </summary>
+    public bool GuardedOriginWait { get; init; }
 }
