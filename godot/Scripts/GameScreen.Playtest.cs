@@ -158,6 +158,8 @@ public partial class GameScreen
     internal string HqStatusText => _hqStatusLabel.GetParent<Control>().Visible ? _hqStatusLabel.Text : "";
     internal IReadOnlyList<string> AttentionTitles => _attention.Select(a => a.Title).ToList();
     internal string OrderBarText => _orderBar.Visible ? _orderTitle.Text + "\n" + _orderBody.Text : "";
+    /// <summary>The colour of the order bar's second line (amber when a leader heading alone may be caught on arrival).</summary>
+    internal Color OrderBodyColor => _orderBody.GetThemeColor("font_color");
     /// <summary>The systems the sector window shows, in card order.</summary>
     internal IReadOnlyList<string> SectorViewCards => _secCards.Keys.ToList();
     /// <summary>The words on one card (owner, numbers, links), for the playtest.</summary>

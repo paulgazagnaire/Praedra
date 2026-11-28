@@ -363,9 +363,12 @@ public partial class GameScreen
         _dragTake = all.ToList();
         _dragCount = all.Count;
         _dragMixed = all.Select(ThingName).Distinct().Count() > 1;
-        var (fit, why) = JudgeAll(z);
-        return why ?? DropWords(all[0], z, fit);
+        if (!FillDragHint(all[0], z)) return "";   // the words DragHint shows, both lines
+        return _dragHintText.Text + (_dragHintWarn.Visible ? "\n" + _dragHintWarn.Text : "");
     }
+
+    /// <summary>The drag hint's two colours as PlayDropHint last filled them: the first line, and the amber warning line.</summary>
+    internal (Color Main, Color Warn) DragHintColors => (_dragHintText.GetThemeColor("font_color"), _dragHintWarn.GetThemeColor("font_color"));
 
     /// <summary>Close the window on top as its X button does (for the playtest).</summary>
     internal void PlayCloseTop() => CloseTopMgmt();   // a screenshot holds a drag without a mouse

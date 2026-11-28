@@ -241,6 +241,7 @@ public partial class GameScreen
     {
         if (Cm.Get(_moveChar) is not { } c || c.System == null || c.Transit != null) { CancelMove(); return; }
         string name = S.CharName(c.Id);
+        _moveWarn = false;
         int h = _view.Hovered;
         if (h < 0 || G.Systems[h].Name == c.System)
         {
@@ -255,7 +256,10 @@ public partial class GameScreen
             {
                 _view.PathPreview = pr.Systems;
                 _view.PathColor = RouteBlue;
-                _moveBanner = $"{name} to {to}: {pr.TotalTicks} days, arrives day {S.Game.Day + pr.TotalTicks}. Click to confirm.";
+                // what the player's picture shows at the end of the trip, on its own amber line (rule: m5-characters-and-talent §Moving a character alone, Caught on arrival)
+                string caught = CaughtWarning(name, to);
+                _moveWarn = caught != null;
+                _moveBanner = $"{name} to {to}: {pr.TotalTicks} days, arrives day {S.Game.Day + pr.TotalTicks}. Click to confirm." + (caught != null ? "\n" + caught : "");
             }
             else { _view.PathPreview = null; _moveBanner = $"No route from {c.System} to {to}."; }
         }
