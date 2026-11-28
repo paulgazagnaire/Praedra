@@ -573,7 +573,7 @@ public sealed partial class SimpleAi
     /// the side sees the system today) and the group D characters of its pictures (free ones, stamp in the window; m5-fog-and-hq §F1 group D).
     /// The newest word on each character wins; on the same day the feed wins. Third source (m5-fog-and-hq §N6d): the side's inbound sightings,
     /// a leader its spies saw travelling to a system, counted as seen there on his reach day when that day is in the window or at most
-    /// AmbushWaitMaxDays ahead (a team landing before him lies in wait, m5-missions §Targets); any newer word wins over it.
+    /// AmbushWaitMaxDays ahead (a team landing before him lies in wait, m5-missions §Targets); any word learned on or after the spy's stamp wins over it.
     /// </summary>
     private List<(int Character, string System)> FogEnemyCharacters()
     {
@@ -603,8 +603,9 @@ public sealed partial class SimpleAi
         if (_p.UseInboundSightings) foreach (var x in _view!.LeadersInbound)
         {
             if (x.ReachDay < since || x.ReachDay > Today + ahead) continue;
-            if (last.TryGetValue(x.Character, out var w) && w.Day >= x.ReachDay) continue; // the feed's word is as new or newer
-            if (fromPicture.TryGetValue(x.Character, out var p) && p.Stamp >= x.ReachDay) continue;
+            // newer word wins, dated by when it was learned: the spy's stamp, not the arrival day (Ponytail on #439)
+            if (last.TryGetValue(x.Character, out var w) && w.Day >= x.Day) continue; // the feed's word is as new or newer
+            if (fromPicture.TryGetValue(x.Character, out var p) && p.Stamp >= x.Day) continue;
             result[x.Character] = x.System;
         }
         return result.Select(kv => (kv.Key, kv.Value)).ToList();

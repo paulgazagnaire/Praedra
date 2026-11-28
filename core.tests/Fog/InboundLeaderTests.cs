@@ -79,7 +79,9 @@ public class InboundLeaderTests
         Assert.Equal(new[] { L1, L4 }.OrderBy(i => i), all.Select(i => i.Character));
         var group = all.Single(i => i.Character == L4);
         Assert.Equal(("A05", h.Missions.Missions.Single(m => m.Side == Side.Collective).ArrivalDay), (group.System, group.ReachDay));
+        Assert.True(group.InGroup);
         var x = all.Single(i => i.Character == L1);
+        Assert.False(x.InGroup);
         Assert.Equal((L1, "A05", stamp), (x.Character, x.System, x.Day));
         Assert.Empty(h.Fog.LeadersInbound(Side.Collective));
         var seen = h.Game.Events.OfType<LeaderInboundSeen>().Single(e => e.Character == L1);

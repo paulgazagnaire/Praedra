@@ -67,7 +67,7 @@ public sealed class SideKnowledge
 }
 
 /// <summary>
-/// An inbound sighting: a leader of the other side seen by the side's spies travelling alone to <see cref="System"/>, where he will stand on
+/// An inbound sighting: a leader of the other side seen by the side's spies travelling (alone, or in a mission group: InGroup) to <see cref="System"/>, where he will stand on
 /// <see cref="ReachDay"/>; <see cref="Day"/> is the espionage mission's stamp. rule: m5-fog-and-hq §N6d.
 /// </summary>
 public sealed class InboundLeader
@@ -76,7 +76,11 @@ public sealed class InboundLeader
     public string System { get; set; } = "";
     public int ReachDay { get; set; }
     public int Day { get; set; }
-    internal InboundLeader Clone() => new() { Character = Character, System = System, ReachDay = ReachDay, Day = Day };
+    /// <summary>The spy saw him travelling in a mission group (InboundSeesMissionGroups), not alone. Saved only when true (Rooster #439: a fleet
+    /// catches only a leader arriving alone, m5-characters-and-talent §Caught on arrival, so the AI needs to tell them apart).</summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool InGroup { get; set; }
+    internal InboundLeader Clone() => new() { Character = Character, System = System, ReachDay = ReachDay, Day = Day, InGroup = InGroup };
 }
 
 /// <summary>A Sensor Station warning already given: the fleet, the station system and the day the fleet reaches it. rule: m5-fog-and-hq §N4.</summary>

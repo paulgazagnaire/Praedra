@@ -158,12 +158,14 @@ public sealed partial class GameSession
     /// </summary>
     public IReadOnlyList<(int Id, string System, int Day)> SeenEnemyLeaders() =>
         Fog.CharactersSeen(Player).Where(x => x.Character.Side != Player && x.Character.Status != CharacterStatus.Captured)
-            .Select(x => (x.Character.Id, x.System, Day: x.Stamp))
-            .Concat(Fog.LeadersInbound(Player).Select(x => (Id: x.Character, x.System, Day: x.ReachDay)))
+            .Select(x => (x.Character.Id, x.System, Day: x.Stamp, Learned: x.Stamp, Inbound: false))
+            .Concat(Fog.LeadersInbound(Player).Select(x => (Id: x.Character, x.System, Day: x.ReachDay, Learned: x.Day, Inbound: true)))
             .GroupBy(x => x.Id)
-            .Select(g => g.OrderByDescending(x => x.Day).ThenBy(x => x.System, StringComparer.Ordinal).First())
+            // the newest word by when it was learned (a picture taken on or after the spy's stamp wins: Ponytail on #439)
+            .Select(g => g.OrderByDescending(x => x.Learned).ThenBy(x => x.Inbound).ThenBy(x => x.System, StringComparer.Ordinal).First())
             // a death is told to both sides (the Goal window reads it the same way), so a dead leader leaves the list (Ponytail on #420)
             .Where(x => Chars.Get(x.Id) is not { Status: CharacterStatus.Dead } && !(Chars.Get(x.Id) is { Status: CharacterStatus.Captured } c && c.Captor == Player))
+            .Select(x => (x.Id, x.System, x.Day))
             .OrderBy(x => CharName(x.Id), StringComparer.Ordinal).ThenBy(x => x.Id).ToList();
 
     /// <summary>The day the player's spies said this enemy leader will stand at the system (an inbound sighting), or null. rule: m5-fog-and-hq §N6d.</summary>

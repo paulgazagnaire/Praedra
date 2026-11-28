@@ -235,11 +235,11 @@ public sealed class FogModule
         {
             if (c.Side != enemy || !c.Placed || c.AttachedFleet != 0
                 || c.Status is not (Praedra.Core.Characters.CharacterStatus.Free or Praedra.Core.Characters.CharacterStatus.Injured)) continue;
-            string dest; int reach;
+            string dest; int reach; bool inGroup = false;
             if (onMission.Contains(c.Id))
             {
                 if (!Params.InboundSeesMissionGroups || !group.TryGetValue(c.Id, out var g)) continue;
-                (dest, reach) = g;
+                (dest, reach) = g; inGroup = true;
             }
             else if (c.Transit is { } t)
             {
@@ -250,7 +250,7 @@ public sealed class FogModule
             if (!systems.Contains(dest) || reach < stamp) continue; // a reach day in the past cannot happen (he would stand there already)
             var list = know.LeadersInbound ?? new List<InboundLeader>();
             list.RemoveAll(x => x.Character == c.Id);
-            list.Add(new InboundLeader { Character = c.Id, System = dest, ReachDay = reach, Day = stamp });
+            list.Add(new InboundLeader { Character = c.Id, System = dest, ReachDay = reach, Day = stamp, InGroup = inGroup });
             list.Sort((a, b) => a.Character.CompareTo(b.Character)); // rule: §N9 canonical order
             know.LeadersInbound = list;
             int cid = c.Id, rd = reach; string ds = dest;
