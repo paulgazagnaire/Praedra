@@ -126,7 +126,7 @@ public class SimpleAiAgentsTests
         // AutorouteToGuarded DEFAULT on): a leader whose world falls now walks to the nearest held world with an armed fleet of his side, a core
         // rule this old AI cannot switch off. With AutorouteToGuarded = false the hash is exactly the previous pin 762dab27...4879 (checked when
         // re-pinned).
-        Assert.Equal("0d9652b397ffc8bec9aba9e364cad81ee165d12703cdefd87adbf5519d58a42b", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...) // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
+        Assert.Equal("0d9652b397ffc8bec9aba9e364cad81ee165d12703cdefd87adbf5519d58a42b", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"
