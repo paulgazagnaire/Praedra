@@ -172,6 +172,8 @@ public partial class Main
         gs.ShotWindow("ground", trap); gs.PlayRefresh();
         string hint = gs.PlayDropHint($"L:{lone.Id}", $"Ground {trap} Leaders");
         Expect(hint.EndsWith("\n" + words, StringComparison.Ordinal), $"dragging {name} over {trap}'s Leaders warns: " + hint.Replace("\n", " / "));
+        // the drop is still allowed: its own line keeps the allowed colour, only the warning is amber, as a refused drop's words are (Ponytail on #441)
+        Expect(gs.DragHintColors.Main == Ui.WinActive && gs.DragHintColors.Warn == Ui.Warn, $"the first line stays the allowed colour, the warning is amber: {gs.DragHintColors}");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
 
         // the map's move bar: the trip on the first line, the warning on an amber second line; Esc sends nothing

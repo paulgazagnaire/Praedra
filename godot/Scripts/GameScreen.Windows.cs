@@ -93,7 +93,7 @@ public partial class GameScreen
     bool _mgDirty, _wasDragging;
     double _mgTimer;
     PanelContainer _dragHint;
-    Label _dragHintText;
+    Label _dragHintText, _dragHintWarn;
 
     // Four tall columns side by side (Paul 2026-11-03: "I liked this grid. I think 4 windows side by side could fit"; 1440 wide screen)
     const int MgWidth = 344;
@@ -125,8 +125,15 @@ public partial class GameScreen
         _mgLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _dragHint = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore, ZIndex = 10, Theme = Ui.WindowTheme };
         _dragHint.AddThemeStyleboxOverride("panel", Ui.WindowBox(10, 6));
+        var lines = Ui.VBox(2);
+        lines.MouseFilter = MouseFilterEnum.Ignore;
         _dragHintText = Ui.Label("", null, Ui.Text, Ui.Small, wrap: false);
-        _dragHint.AddChild(_dragHintText);
+        lines.AddChild(_dragHintText);
+        // a risk the drop still allows, on its own amber line: the first line keeps the allowed colour (Ponytail on #441)
+        _dragHintWarn = Ui.Label("", null, Ui.Warn, Ui.Small, wrap: false);
+        _dragHintWarn.Visible = false;
+        lines.AddChild(_dragHintWarn);
+        _dragHint.AddChild(lines);
         _mgLayer.AddChild(_dragHint);
         return _mgLayer;
     }
