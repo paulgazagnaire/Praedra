@@ -1052,7 +1052,15 @@ public sealed partial class MissionModule
         // rule: m5-harvester §2 effect 3: a mission whose target was destroyed on the way ends as a failure (cause TargetDestroyed)
         if (m.Kind != MissionKind.Move && _eco.IsDestroyed(m.Target)) { End(ctx, m, MissionOutcome.TargetDestroyed, t); return; }
         PlaceMembers(m, m.Target);
-        if (m.Kind == MissionKind.Move) { Release(ctx, m, m.Target, t); return; }
+        if (m.Kind == MissionKind.Move)
+        {
+            // rule: m5-characters-and-talent §Moving a character alone (Caught on arrival): a Move group travels without a fleet, so its leaders
+            // are caught on arrival like a leader alone (Ponytail on #440: else a one-person Move group dodges the rule), member id order
+            var members = m.AllCharacters.OrderBy(x => x).ToList();
+            Release(ctx, m, m.Target, t);
+            foreach (int cid in members) if (_ch.Get(cid) is { } c) _ch.CatchOnArrival(ctx, c, m.Target);
+            return;
+        }
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
         if (m.TargetCharacter != null && TargetReason(m) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; }
         var rec = Data.Get(m.Kind);

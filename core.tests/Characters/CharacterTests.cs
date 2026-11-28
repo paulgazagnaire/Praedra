@@ -448,6 +448,22 @@ public class CharacterTests
         }
     }
 
+    // m5-characters-and-talent CH49 (Caught on arrival): a one-person Move group is caught like a leader alone (Ponytail on #440)
+    [Fact]
+    public void CH49_AMoveGroupIsCaughtToo()
+    {
+        var w = new CharWorld(data: LineGalaxy("generated"));
+        w.Add(FortyOne, "A");
+        Assert.Null(w.Try(seq => new Praedra.Core.Missions.MoveGroupOrder(seq, Side.Collective, new List<int> { FortyOne }, new List<int>(), "C")));
+        var m = w.Host.Missions.Missions.Single();
+        while (m.ArrivalDay > w.Game.Day + 1 || !m.Departed) w.Game.Step();
+        int f = w.Fleet(Side.Hand, "C", Mandate);
+        w.Game.Step();
+        var e = Assert.Single(w.Events<CharacterCaptured>());
+        Assert.Equal((CharacterCause.Intercept, f), (e.Cause, e.HeldAboard));
+        Assert.Equal(CharacterStatus.Captured, w.C(FortyOne).Status);
+    }
+
     // m5-characters-and-talent CH14
     [Theory]
     [InlineData(true)]

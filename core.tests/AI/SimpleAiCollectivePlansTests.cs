@@ -196,8 +196,8 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, on.lateOrders);
     }
 
-    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted) or unloaded (SquadronsUnloaded, one note per
-    // squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
+    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted), delivered from another yard (DeliveryArrived,
+    // dated the day it lands) or unloaded (SquadronsUnloaded, one note per squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
     [Fact]
     public void AiMemory_NotesTheSquadronsSetDown()
     {
@@ -207,6 +207,8 @@ public class SimpleAiCollectivePlansTests
             new Praedra.Core.Construction.UnitCompleted(0, 5, 11, "Sting", Side.Collective, "Navalia", "Navalia", 1),
             new Praedra.Core.Construction.UnitCompleted(1, 5, 30, "Lancer", Side.Collective, "Navalia", "Navalia", 2),
             new Praedra.Core.Fleets.SquadronsUnloaded(2, 7, new ValueList<int>(new[] { 12, 13 }), 4, new ValueList<int>(new[] { 30 }), "Midway"),
+            new Praedra.Core.Construction.DeliveryArrived(3, 9, 1, 11, "Sting", "Tessera"),
+            new Praedra.Core.Construction.DeliveryArrived(4, 9, 2, 30, "Lancer", "Tessera"),
         };
         var off = new AiMemory { Side = Side.Collective, Fog = true };
         off.Ingest(feed, _ => false, null, Fighter);
@@ -215,7 +217,7 @@ public class SimpleAiCollectivePlansTests
         on.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
         on.Ingest(feed, _ => false, null, Fighter);
         var g = on.Notes.Where(n => n.Kind == AiNoteKind.FighterGrounded).Select(n => (n.Value, n.System, n.Day)).ToList();
-        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7) }, g);
+        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7), (11, "Tessera", 9) }, g);
         var hand = new AiMemory { Side = Side.Hand, Fog = true };
         hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
         hand.Ingest(feed, _ => false, null, _ => false);
