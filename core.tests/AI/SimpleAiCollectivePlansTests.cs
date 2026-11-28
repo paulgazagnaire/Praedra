@@ -111,7 +111,7 @@ public class SimpleAiCollectivePlansTests
     }
 
     // QA-134 with WreckNearShieldsOnly: Wreckers board only while a shielded Hand world is seen within raid reach, and get off at a held world
-    // where none is (seed 2, walled Medium Hand, day 1200: 5 boardings, 9 launches from orbit, 5 get-offs; seeds 1, 3, 4 see no boarding).
+    // where none is (seed 2, walled Medium Hand, day 1200, main a43252c: 5 boardings, 7 launches from orbit, 3 get-offs).
     [Fact]
     public void WreckersGetOffWhereNoShieldedTargetIsNear()
     {
