@@ -47,6 +47,13 @@ public sealed partial record SimpleAiParams
     /// boards (DEFAULT).
     /// </summary>
     public bool WreckShields { get; init; }
+    /// <summary>
+    /// WreckShields, QA-134 (Wreckers rode fleets up to 340 days with nothing to wreck): Wreckers board, and stay aboard, only while a shielded
+    /// enemy world is seen within raid reach of the held world the fleet stands on; else they get off there for the ground missions. Off at
+    /// every level (DEFAULT): over 96 seeds it cut the Collective's sabotage successes by 40-70% and its wins by 2-4 (walled Hand 81 -> 77,
+    /// Medium Hand 78 -> 76), since a fleet that leaves a quiet world often meets shields later. Wreckers riding idle are the price.
+    /// </summary>
+    public bool WreckNearShieldsOnly { get; init; }
     /// <summary>WreckShields: Wreckers wanted aboard each armed fleet (the rule's cap is 9 special forces a fleet, FleetSpecialForcesMax).</summary>
     public int WreckShieldsForces { get; init; } = 3;
     /// <summary>WreckShields: free Wreckers walk to the rally world while fewer than this many ride fleets or stand there (0 = they board only where they stand).</summary>
@@ -59,4 +66,12 @@ public sealed partial record SimpleAiParams
     /// picture only (DEFAULT).
     /// </summary>
     public int ShieldsFeltDays { get; init; }
+    /// <summary>
+    /// Fighters wait aboard (Rooster 2026-11-28; Medium mirror, seeds 1-8, 3000 days: 269 Collective squadrons based at its shipyards with no
+    /// ship there were wiped out in 61 battles that cost the Hand nothing, most of the Collective's battle losses): no new fighter order while
+    /// this many of the side's squadrons wait on the ground. The Collective reads this one. 0 = no cap (DEFAULT).
+    /// </summary>
+    public int FighterWaitMax { get; init; }
+    /// <summary>FighterWaitMax for the Hand (Maverick's to measure: the Hand builds about 32 Threshers a game by day 1000). 0 = no cap (DEFAULT).</summary>
+    public int FighterWaitMaxHand { get; init; }
 }

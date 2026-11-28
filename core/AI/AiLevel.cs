@@ -173,7 +173,16 @@ public static class AiLevels
     {
         Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,
         ShieldsFeltDays = ShieldsFeltWindow, RaidShieldsSeen = true, WreckShields = true,
+        FighterWaitMax = FightersWaiting,
     };
+
+    /// <summary>
+    /// FighterWaitMax at Medium and Hard (Rooster 2026-11-28; the Collective only): no new fighter order while two squadrons wait on the ground.
+    /// 96 seeds, MedE, main 81990ff, Hand / Collective / open and Collective / Hand units lost in battle: Medium mirror 4 / 79 / 13, 5390 / 6492
+    /// off, 4 / 78 / 14, 4389 / 6729 on; walled Medium Hand 4 / 83 / 9, 4660 / 5960 and 5 / 81 / 10, 3208 / 4767; Hard mirror 10 / 65 / 21,
+    /// 4420 / 4057 and 6 / 72 / 18, 3205 / 4006.
+    /// </summary>
+    private const int FightersWaiting = 2;
 
     /// <summary>ShieldsFeltDays at Medium and Hard: a shelling's lesson about the shields holds four months unless a look is newer.</summary>
     private const int ShieldsFeltWindow = 120;
