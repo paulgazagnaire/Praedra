@@ -773,3 +773,37 @@ public class SimpleAiAgentsTests
         Assert.Equal(0, on);
     }
 }
+
+// QA-135 (AI trainer 2026-11-28): most AI Abductions land after the leader has left. LeaderMissDays is off by default; on, a TargetInvalid
+// Abduction leaves a LeaderMissed note, and the AI sends no new team at that leader on that world until a newer sighting.
+public class SimpleAiLeaderMissTests
+{
+    private readonly ITestOutputHelper _out;
+    public SimpleAiLeaderMissTests(ITestOutputHelper o) { _out = o; }
+
+    [Fact]
+    public void AnEmptyWorldIsRememberedAndNotRetriedOnTheSameSighting()
+    {
+        Assert.Equal(0, new SimpleAiParams().LeaderMissDays);
+        var p = AiLevels.For(AiLevel.Medium) with { LeaderMissDays = 60 };
+        var r = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            new AiMatch(host, p, p).RunTo(1000);
+            var ev = host.Game.Events;
+            var misses = ev.OfType<MissionEnded>().Where(m => m.MissionKind == MissionKind.Abduction && m.Outcome == MissionOutcome.TargetInvalid).ToList();
+            var notes = host.AiMemoryFor(Side.Hand, true).Notes.Concat(host.AiMemoryFor(Side.Collective, true).Notes)
+                .Where(n => n.Kind == AiNoteKind.LeaderMissed).ToList();
+            int noted = misses.Count(m => notes.Any(n => n.Day == m.Day && n.System == m.Target));
+            // a new team at the same leader and world the day after a miss: the sighting that sent the first one is spent
+            var starts = ev.OfType<MissionStarted>().Where(m => m.MissionKind == MissionKind.Abduction).ToList();
+            int retried = misses.Count(x => starts.FirstOrDefault(s => s.Mission == x.Mission) is { } first
+                && starts.Any(s => s.Side == x.Side && s.TargetCharacter == first.TargetCharacter && s.Target == x.Target && s.Day > x.Day && s.Day <= x.Day + 1));
+            return (seed, misses: misses.Count, noted, retried);
+        });
+        foreach (var g in r) _out.WriteLine($"seed {g.seed}: TargetInvalid {g.misses}, noted {g.noted}, retried next day {g.retried}");
+        Assert.True(r.Sum(g => g.misses) > 0, "no TargetInvalid Abduction in 4 games");
+        Assert.All(r, g => Assert.Equal(g.misses, g.noted));
+        Assert.All(r, g => Assert.Equal(0, g.retried));
+    }
+}

@@ -298,10 +298,11 @@ public sealed partial class SimpleAi
             lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays,
             character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
-            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0); // SimpleAiCollectivePlans.cs
-        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower);
+            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0, // SimpleAiCollectivePlans.cs
+            leaderMissed: _p.LeaderMissDays);
+        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower, MissionLeader);
         var mem = _mem;
-        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower); // a save between Steps (AiMemory.CatchUp)
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower, MissionLeader); // a save between Steps (AiMemory.CatchUp)
     }
 
     // ================================================================== game plan (AI trainer 2026-11-19)
@@ -426,15 +427,18 @@ public sealed partial class SimpleAi
     /// Enemy characters the side knows to stand at a system, by character id. No fog: every free enemy character located at a system (the
     /// truth). Fog: from the side's own event feed (only at systems it sees today) and its pictures' group D characters (<see cref="FogEnemyCharacters"/>).
     /// </summary>
-    private List<(int Character, string System)> EnemyCharactersSeen()
+    private List<(int Character, string System, int Day)> EnemyCharactersSeen()
     {
         if (_view != null) return FogEnemyCharacters();
-        var list = new List<(int, string)>();
+        var list = new List<(int, string, int)>();
         foreach (var c in _h.Characters.InPlay)
             if (c.Side == Enemy && c.Status == Praedra.Core.Characters.CharacterStatus.Free && c.Transit == null && _h.Characters.LocationOf(c) is { } at)
-                list.Add((c.Id, at));
+                list.Add((c.Id, at, Today));
         return list;
     }
+
+    /// <summary>LeaderMissed: the enemy leader an own mission aims at (the side's own mission, still listed while its team flies home), or null.</summary>
+    private int? MissionLeader(int mission) => OwnMissions().FirstOrDefault(m => m.Id == mission)?.TargetCharacter;
 
     // ================================================================== helpers
 
