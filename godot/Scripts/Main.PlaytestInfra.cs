@@ -200,5 +200,29 @@ public partial class Main
                 $"the core took it: a construction yard is building itself at {bare}");
         }
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        PlaytestWindowWidths(gs);
+    }
+
+    /// <summary>
+    /// Rule W4: every window is one or two columns wide (344 or 698), at the widest it gets: the Infrastructure and Ground windows of your
+    /// planet with the most energy slots and of the planet you don't hold with the most, both pages of the strip. A font change resizes
+    /// every label, and only a measure catches a window grown by a few pixels (review 39: 708 at Charter's 15 slots).
+    /// </summary>
+    void PlaytestWindowWidths(GameScreen gs)
+    {
+        var s = gs.S;
+        var eco = s.Host.Economy;
+        string Biggest(bool mine) => s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => (s.OwnerOf(n) == s.Player) == mine && !s.IsDestroyed(n))
+            .OrderByDescending(n => eco.SlotsOf(n).Energy).ThenByDescending(n => eco.SlotsOf(n).Raw).ThenBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+        foreach (var at in new[] { Biggest(true), Biggest(false) }.Where(n => n != null))
+        {
+            gs.OpenMgmt(GameScreen.MgKind.Infra, at); gs.OpenMgmt(GameScreen.MgKind.Ground, at); gs.PlayRefresh();
+            var page0 = gs.WidthProblems();
+            gs.Click($"Strip next {at}");
+            var page1 = gs.WidthProblems();
+            Expect(page0.Count == 0 && page1.Count == 0, $"{at}'s Infrastructure ({eco.SlotsOf(at).Energy} energy slots, both pages) and Ground windows are 698 and 344 wide, nothing asks for more: "
+                + string.Join("; ", page0.Concat(page1).DefaultIfEmpty("all fit")));
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
     }
 }

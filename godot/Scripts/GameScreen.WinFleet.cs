@@ -737,7 +737,7 @@ public partial class GameScreen
     }
 
     /// <summary>This fleet's choice when an enemy fleet arrives, Defensive (fight) or Elusive (pull back), as the frames' switch (2026-11-28):
-    /// a #05060A well in a #182139 outline, 2 px in, the chosen half filled #182139. rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive
+    /// a #05060A well in a #182139 outline, 2 px in, the chosen half filled #182139, the other's word #54638A (#B8C2E0 under the mouse). rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive
     /// fleets leave in their first step and the rest fight).</summary>
     Control BehaviorRow(Fleet f)
     {
@@ -766,9 +766,11 @@ public partial class GameScreen
             b.AddThemeStyleboxOverride("pressed", Seg(Look.Outline));
             b.AddThemeStyleboxOverride("hover_pressed", Seg(Look.Outline));
             b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-            var l = Look.Words(word, 12, Look.Text, true);
+            // the unchosen word in #54638A, as the frames mark a shut tab: the #182139 half alone is 1.3:1 on the well (review 39)
+            var l = Look.Words(word, 12, chosen ? Look.Text : Look.Soft, true);
             l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             Fill(b, l, 8, 7);
+            if (!chosen) { b.MouseEntered += () => l.AddThemeColorOverride("font_color", Look.Text); b.MouseExited += () => l.AddThemeColorOverride("font_color", Look.Soft); }
             b.Pressed += () => { if (r != Elusive()) { SetRetreat(f, r); MgRefreshSoon(); } };
             b.SetMeta(UiTest.FullName, $"Behavior {word}");
             b.SetMeta("chosen", chosen);

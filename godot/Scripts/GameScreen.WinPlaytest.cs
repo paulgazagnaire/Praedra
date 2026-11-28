@@ -210,6 +210,23 @@ public partial class GameScreen
     }
 
     /// <summary>
+    /// The open windows that are not one or two columns wide (344 or 698, rule W4), or whose head, page or panel asks for more than that, as
+    /// "key: wanted in width". A font or padding change widens a window and nothing else fails (review 39: Infrastructure at 708).
+    /// </summary>
+    internal List<string> WidthProblems()
+    {
+        var bad = new List<string>();
+        foreach (var w in _mgWins.ToList())
+        {
+            RebuildMg(w);
+            float width = WidthOf(w);
+            float want = Math.Max(Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, w.Panel.GetCombinedMinimumSize().X);
+            if (width is not (MgWidth or WideWidth) || want > width + 0.5f) bad.Add($"{w.Key}{(w.Kind == MgKind.Infra ? $" page {w.Page}" : "")}: {want:0} in {width:0}");
+        }
+        return bad;
+    }
+
+    /// <summary>
     /// The shape of a fleet window's tab (Paul's frames of 2026-11-23): the widths of its cards, and its parts top to bottom, each named by
     /// what it holds (the zone's key, or the buttons in it), so a check can say the buttons sit under the cards.
     /// </summary>

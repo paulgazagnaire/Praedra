@@ -158,13 +158,15 @@ public partial class GameScreen
     /// <summary>The two slot gauges, a line between them, and on the right the way to the planet's Ground window and its fleet.</summary>
     Control InfraGauges(string n, Praedra.Core.Fog.SystemPicture pic = null)
     {
+        // the gauges take the room the links leave (no spacer: a spacer adds the row's gap twice, and the 698 px window has no 48 px to
+        // spare at Charter's 15 slots, review 39)
         var row = Boxed(new HBoxContainer(), 24);
         var gauges = Boxed(new HBoxContainer(), 24);
         gauges.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        gauges.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         if (S.OwnerOf(n) != Me) SeenGauges(gauges, pic);
         else LiveGauges(n, gauges);
         row.AddChild(gauges);
-        row.AddChild(Ui.Grow());
         row.AddChild(InfraLinks(n));
         return row;
     }
@@ -368,7 +370,7 @@ public partial class GameScreen
             }
             else if (count > 0)
             {
-                (left, ink) = ("Idle", Look.Soft);
+                (left, ink) = ("Idle", Look.Text);   // the frame's left line is the words' colour; idle yards are what a player looks for (review 39)
                 tip = $"The {fname} builds nothing. Pick what it should build under Build.";
             }
             else tip = $"No {fname} here. " + (fam == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one with this planet's construction yards.");
@@ -412,7 +414,7 @@ public partial class GameScreen
 
     /// <summary>
     /// A cell of the strip, as the frame draws it: the kind's 16 px icon, its name and how many stand here (#B8C2E0, #54638A when none);
-    /// under it the left and right words (what it does in the words' colour, the countdown in the status blue-grey; #54638A when idle)
+    /// under it the left and right words (what it does in the words' colour, the countdown in the status blue-grey; #54638A when there is none)
     /// and a 2 px bar in your blue on the #182139 line. The open cell is the page's surface, joined to it. A click opens it.
     /// </summary>
     HoverWordsButton CellFrame(MgWin w, string n, InfraTab t, int count, string left, string right, Color ink, float share, bool track, string tip, out Label leftWords)
@@ -445,7 +447,7 @@ public partial class GameScreen
         l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         l.ClipText = true; l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         line.AddChild(l);
-        line.AddChild(Look.Words(right, 12, ink == Look.Text ? Look.Quiet : ink));
+        line.AddChild(Look.Words(right, 12, right == "-" ? Look.Soft : ink == Look.Text ? Look.Quiet : ink));   // a dash stays quiet
         st.AddChild(line);
         st.AddChild(new ThinBar { Share = share, Fill = Ui.You, Track = Look.Line, CustomMinimumSize = new Vector2(0, 2) });
         v.AddChild(st);
@@ -592,7 +594,7 @@ public partial class GameScreen
         var title = Heading2("Build");
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(title);
-        var hm = Look.Words("How many", 12, Look.Soft);
+        var hm = Look.Words("How many", 12, Look.Muted);   // a label that is read: the status blue-grey, 6:1 (review 39)
         hm.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         head.AddChild(hm);
         head.AddChild(StepButton("−", "One fewer", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }));

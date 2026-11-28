@@ -33,7 +33,8 @@ public static class SibylLook
 
     /// <summary>The windows' greys before Paul's frames of 2026-11-28 (<see cref="Look"/> then, <see cref="Ui"/>) and the blue-grey each
     /// becomes in Sibyl's panel. The windows now draw in blue-greys of their own, close to these; a grey still set somewhere takes its
-    /// blue-grey here. Keyed by the old values (the tokens now share colours, and a key can only be there once).</summary>
+    /// blue-grey here. Keyed by the old values (the tokens now share colours, and a key can only be there once), and by the two new ones her
+    /// frame draws otherwise.</summary>
     public static readonly Dictionary<Color, Color> Map = new()
     {
         [new Color("dfdfdf")] = Light,       // words
@@ -50,6 +51,12 @@ public static class SibylLook
         [new Color("252525")] = Strip,       // a free slot
         [new Color("0f0f11")] = TabHover,
         [new Color("181b21")] = Strip,
+        // the windows' own blue-greys of 2026-11-28 that her frame draws otherwise (review 39): the picture tile, the head colour, the hover cell, and the one line colour
+        // the windows now give their lines, outlines and edges, which in her panel are mostly buttons' and cards' outlines
+        [new Color("0c0f17")] = new("00040f"),
+        [new Color("10141e")] = new("00040f"), // the windows' head colour, which her pages' rows use as the dark tile (#0B0B0D before)
+        [new Color("0d1019")] = TabHover,     // a shut cell under the mouse (#0F0F11 before)
+        [new Color("182139")] = ButtonLine,
         [Ui.Danger] = Urgent,                // the panel's red and yellow
         [Ui.Warn] = Watch,
     };
