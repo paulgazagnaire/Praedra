@@ -807,8 +807,13 @@ public sealed partial record SimpleAiParams
     public IReadOnlyList<string> HandAgentForces { get; init; } = new[] { "Auditors", "Notaries", "Closers" };
     /// <summary>A picture's owner is trusted for a mission target (Diplomacy on neutral, Incite) when at most this old. DEFAULT.</summary>
     public int MissionOwnerTrustDays { get; init; } = 60;
-    /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
-    public int AbductionInfoDays { get; init; } = 5;
+    /// <summary>
+    /// An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it,
+    /// within this many days. DEFAULT 2 (AI trainer 2026-11-28, QA-135; was 5): leaders move, and since the AI's teams fly to the sighting (#431)
+    /// an older one mostly lands on an empty world. Medium mirrors, 96 games: TargetInvalid Abductions 2353 -> 1909, successes 317 -> 343,
+    /// Hand/Collective/open 9/69/18 -> 9/72/15; Hard mirrors, 32 games: TargetInvalid 653 -> 620, successes 85 -> 78, 3/20/9 both.
+    /// </summary>
+    public int AbductionInfoDays { get; init; } = 2;
     /// <summary>
     /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
     /// key-target file: The Chair 2, Ravilla 4, Nobody 4, Mae Abara 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
