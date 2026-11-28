@@ -227,12 +227,18 @@ public partial class GameScreen
         if (z == null || _dragging is not { } d) { _dragHint.Visible = false; return; }
         var (fit, why) = JudgeAll(z);
         if (why == "") { _dragHint.Visible = false; return; }
-        _dragHintText.Text = why ?? DropWords(d, z, fit);
-        _dragHintText.AddThemeColorOverride("font_color", why == null ? Ui.WinActive : Ui.Warn);
+        string caught = why == null ? DropCaught(z) : null;   // allowed, but a leader would arrive alone where an armed enemy fleet is seen
+        _dragHintText.Text = why ?? DropWords(d, z, fit) + (caught != null ? "\n" + caught : "");
+        _dragHintText.AddThemeColorOverride("font_color", why == null && caught == null ? Ui.WinActive : Ui.Warn);
         _dragHint.Visible = true;
         _dragHint.ResetSize();
         _dragHint.Position = ClampWin(mouse + new Vector2(18, 22), _dragHint.Size) with { Y = Math.Min(mouse.Y + 22, _mgLayer.Size.Y - 40) };
     }
+
+    /// <summary>The first dragged leader this drop would send alone into an armed enemy fleet's reach, said as a warning; else null.
+    /// rule: m5-characters-and-talent §Moving a character alone (Caught on arrival).</summary>
+    string DropCaught(Zone z) =>
+        _dragTake.Where(x => Judge(z, x) == null).Select(x => AloneTo(x, z) is string to ? CaughtWarning(S.CharName(x.Id), to) : null).FirstOrDefault(w => w != null);
 
     /// <summary>The hint over a zone that takes the drag. With several units it says "up to": room can fill before the last one, and
     /// what can't go stays picked (QA-111).</summary>

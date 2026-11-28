@@ -95,6 +95,37 @@ public partial class GameScreen
         return Fm.FindPath(from, to, Cm.Params.CharacterSpeed).Ok ? null : $"No route from {from} to {to}.";
     }
 
+    /// <summary>
+    /// The warning for a leader who would arrive alone at <paramref name="to"/>: your picture of it shows an armed enemy fleet (now, or at your
+    /// last look, with its day) and no armed fleet of yours stands there now. Null when none, or with the rule off. Only what your side sees:
+    /// the fleet may leave, or another come, before they arrive (Dev lead, from Ponytail on #440). rule: m5-characters-and-talent §Moving a
+    /// character alone (Caught on arrival, switch FleetsCatchLoneLeaders, Paul 2026-11-28).
+    /// </summary>
+    internal string CaughtWarning(string name, string to)
+    {
+        if (!Cm.Params.FleetsCatchLoneLeaders || to == null) return null;
+        if (S.Game.State.Fleets.Values.Any(f => f.Side == Me && f.At == to && f.Transit == null && CombatStrength.IsArmed(Fm.Classes(f)))) return null;
+        var (foes, day) = EnemyFleetsAt(to, S.Picture(to));
+        if (!foes.Any(ArmedPicture)) return null;
+        return day is int d ? $"Armed enemy fleet seen at {to} on day {d}: if it is still there, {name} is caught on arrival."
+            : $"Armed enemy fleet at {to}: if it stays, {name} is caught on arrival.";
+    }
+
+    /// <summary>A fleet as your side sees it (class counts) is armed by the forced-stop test: an armed ship or squadron. rule: m1-forced-stop-and-blockade rule 6.</summary>
+    bool ArmedPicture(Praedra.Core.Fog.FleetPicture fp) =>
+        fp.Ships.Keys.Concat(fp.Squadrons.Keys).Any(k => Fm.ShipClasses.TryGetValue(k, out var sc) && CombatStrength.IsArmed(sc));
+
+    /// <summary>Where a leader dropped on <paramref name="z"/> would set off alone to (their Leaders zone on another planet, or a post or the
+    /// passengers of a fleet at another system), or null.</summary>
+    string AloneTo(Drag d, Zone z)
+    {
+        if (d.Kind != 'L') return null;
+        string to = null;
+        if (z.Key.StartsWith("Ground ", StringComparison.Ordinal) && z.Key.EndsWith(" Leaders", StringComparison.Ordinal)) to = z.Key["Ground ".Length..^" Leaders".Length];
+        else if (z.Key.StartsWith("Fleet ", StringComparison.Ordinal) && int.TryParse(z.Key.Split(' ')[1], out int fid) && S.Game.State.Fleets.TryGetValue(fid, out var f)) to = f.At;
+        return to != null && to != WhereNow(d).System ? to : null;
+    }
+
     int TravelDays(CharacterRecord c, string to) => Cm.LocationOf(c) is string from && Fm.FindPath(from, to, Cm.Params.CharacterSpeed) is { Ok: true } p ? p.TotalTicks : 0;
 
     /// <summary>A leader leaves any post and sets off for <paramref name="to"/>, joining <paramref name="f"/> there in <paramref name="post"/> (no fleet: they land).</summary>

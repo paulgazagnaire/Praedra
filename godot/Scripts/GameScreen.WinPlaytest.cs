@@ -364,7 +364,8 @@ public partial class GameScreen
         _dragCount = all.Count;
         _dragMixed = all.Select(ThingName).Distinct().Count() > 1;
         var (fit, why) = JudgeAll(z);
-        return why ?? DropWords(all[0], z, fit);
+        string caught = why == null ? DropCaught(z) : null;   // the drag hint's amber second line, as DragHint writes it
+        return why ?? DropWords(all[0], z, fit) + (caught != null ? "\n" + caught : "");
     }
 
     /// <summary>Close the window on top as its X button does (for the playtest).</summary>

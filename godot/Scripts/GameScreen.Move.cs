@@ -252,6 +252,8 @@ public partial class GameScreen
         // the HUD's window surface like every floating box (Paul 2026-11-14); a path through a known trap keeps its red frame
         _orderBar.AddThemeStyleboxOverride("panel", red ? Ui.Box(new Color(Ui.DangerDeep, 0.97f), 0, Ui.Danger, 2, 14, 10) : Ui.WindowBox(14, 10));
         _orderTitle.AddThemeColorOverride("font_color", red ? new Color("ffb4b4") : Ui.Text);
+        // a leader heading alone for an armed enemy fleet: the second line in amber, as the drag hint says it (caught on arrival)
+        if (_moveChar >= 0 && _moveWarn) _orderBody.AddThemeColorOverride("font_color", Ui.Warn); else _orderBody.RemoveThemeColorOverride("font_color");
         Ui.Clear(_orderActions);
         if (_moveFleet >= 0 && _lockedTo != null && red)
         {
