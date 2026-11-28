@@ -541,7 +541,8 @@ public partial class Main
             float r = gs.View.SystemRadius + 7f;
             var dots = Enumerable.Range(0, gs.G.Systems.Count).Where(i => i != hq).Select(gs.View.SystemScreen).ToList();
             var ring = Enumerable.Range(0, 8).Select(k => c + Vector2.Right.Rotated(k * Mathf.Tau / 8) * r)
-                .FirstOrDefault(p => dots.All(d => d.DistanceTo(p) > gs.View.SystemRadius + 2f), new Vector2(float.NaN, 0));
+                .FirstOrDefault(p => dots.All(d => d.DistanceTo(p) > gs.View.SystemRadius + 2f)
+                    && (gs.View.FleetPicker?.Invoke(p) ?? -1) < 0, new Vector2(float.NaN, 0)); // a fleet mark there takes the click first (GalaxyView)
             if (!float.IsNaN(ring.X))
             {
                 gs.View.Select(-1);

@@ -86,6 +86,18 @@ public sealed record FogParams
     /// DEFAULT 15 (Lead: Paul gave no number); 100 = always (no draw), 0 = never. rule: m5-fog-and-hq §N6d.
     /// </summary>
     public int InboundMissionGroupPercent { get; init; } = 15;
+    /// <summary>
+    /// §N6e: a side's guards may see an enemy mission team leave for a world the side holds (one draw per group, at its departure). Paul
+    /// 2026-11-28: "Yes do this. Low probability when there's only one regiment. Probability increases when there are more regiments.
+    /// Probability increases even more when a general is designed on the system." Decided, DEFAULT on; off = nothing. rule: m5-fog-and-hq §N6e.
+    /// </summary>
+    public bool GuardsSeeInbound { get; init; } = true;
+    /// <summary>§N6e: percent per defending regiment standing on the target. DEFAULT 3 (Lead: Paul gave the shape only). rule: m5-fog-and-hq §N6e.</summary>
+    public int GuardRegimentPercent { get; init; } = 3;
+    /// <summary>§N6e: the regiments' part is capped here, so a heavily held world does not make missions pointless. DEFAULT 15 (Lead). rule: m5-fog-and-hq §N6e.</summary>
+    public int GuardRegimentCapPercent { get; init; } = 15;
+    /// <summary>§N6e: added when the system's General post holds a free character. DEFAULT 10 (Lead). rule: m5-fog-and-hq §N6e.</summary>
+    public int GuardGeneralPercent { get; init; } = 10;
     /// <summary>Days a look stays "Observed", and the age at which a sighting is dropped. Proposal. rule: §N1, §N3.</summary>
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>
