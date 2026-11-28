@@ -88,6 +88,7 @@ public static class AiLevels
                 InvasionReadyAtRally = true, BooksTalentWindow = true, CellsHops = HardReach, GuerrillaHops = HardReach,
                 FoundYardsBelow = FoundBelow, CampaignsAtOnce = 2,
                 FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, // the adaptive commander, as Medium (2026-11-27)
+                AbductionInfoDays = HardAbductionInfoDays,
             },
             _ => p,
         };
@@ -105,6 +106,13 @@ public static class AiLevels
     /// With the plan on both sides the mirror was 17 / 130 / 45. Notes: specs/engine/ai-notes/2026-11-19-game-plan.md.
     /// </summary>
     private static SimpleAiParams GamePlan(SimpleAiParams p) => p with { PlanSectorSpreadPercent = PlanSectorSpread, PlanSystemSpreadPercent = PlanSystemSpread };
+
+    /// <summary>
+    /// Hard keeps Abductions on sightings up to 5 days old (AI trainer 2026-11-28, QA-135 follow-up; Ponytail's #433 review). Hard mirrors, 96 games
+    /// (MedE 1-64, MedA 1-32), 5 days against the DEFAULT 2: Collective Abductions succeeded 230 against 186, the Hand's 60 against 60,
+    /// TargetInvalid 2074 against 1823, Hand / Collective / open 19 / 55 / 22 against 13 / 53 / 30. Medium mirrors went the other way (#433).
+    /// </summary>
+    private const int HardAbductionInfoDays = 5;
 
     /// <summary>The Medium Collective's military review interval in days (AI trainer 2026-11-20, against the big Hand start; the Hand keeps 3).</summary>
     private const int MediumCollectiveMilitaryEvery = 2;
