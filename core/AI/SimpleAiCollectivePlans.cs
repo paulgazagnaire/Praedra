@@ -294,20 +294,22 @@ public sealed partial class SimpleAi
         WinSiegeOn && system == WinTarget() && shellPower > ShieldStrengthSeen(system) + _p.WinSiegeMarginPower;
 
     /// <summary>
-    /// WinSiege: the walls of the win target are believed down. An own shelling there newer than the last look at its facilities (ShieldsFelt,
-    /// within ShieldsFeltDays) met shields below the least that the assault gate's generators give (m3-assault check 4, m3-bombardment §2:
-    /// S sums the completed generators), and no own landing there was refused for the shields since that shelling. A wrong guess costs one
-    /// refused landing (WallsRefused), which reads as walls up again.
+    /// WinSiege: the walls of the win target are believed down. An own shelling there that got hits (ShieldsHit, within ShieldsFeltDays) and
+    /// is newer than the last look at its facilities met shields below the least that the assault gate's generators give (m3-assault check 4,
+    /// m3-bombardment §2: S sums the completed generators), and no own landing there was refused for the shields since that shelling
+    /// (WallsRefused, so WinWallsForgetDays must be on). Only a shelling with hits tells the true S; one with none tells only the power that
+    /// failed (ShieldsFelt), which is no proof the walls fell.
     /// </summary>
     private bool WinWallsFeltDown(string system, int? lookStamp)
     {
-        if (!WinSiegeOn || !ShieldsFeltOn || system != WinTarget()) return false;
-        AiNote? felt = null;
-        foreach (var n in NotesSince(AiNoteKind.ShieldsFelt, Today - _p.ShieldsFeltDays))
-            if (n.System == system && n.Day >= Today - _p.ShieldsFeltDays) { felt = n; break; }
-        if (felt == null || felt.Value < 0 || (lookStamp is int ls && felt.Day < ls) || felt.Value >= GateShieldsLeast()) return false;
-        foreach (var n in NotesSince(AiNoteKind.WallsRefused, felt.Day))
-            if (n.System == system && n.Day >= felt.Day) return false;
+        if (!WinSiegeOn || !WallsForgetOn || system != WinTarget()) return false;
+        int since = Today - _p.ShieldsFeltDays;
+        AiNote? hit = null;
+        foreach (var n in NotesSince(AiNoteKind.ShieldsHit, since))
+            if (n.System == system && n.Day >= since) { hit = n; break; }
+        if (hit == null || (lookStamp is int ls && hit.Day < ls) || hit.Value >= GateShieldsLeast()) return false;
+        foreach (var n in NotesSince(AiNoteKind.WallsRefused, hit.Day))
+            if (n.System == system && n.Day >= hit.Day) return false;
         return true;
     }
 

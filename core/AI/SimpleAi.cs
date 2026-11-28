@@ -310,7 +310,8 @@ public sealed partial class SimpleAi
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
             shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0, // SimpleAiCollectivePlans.cs
             fighterGrounded: FighterWaitCap > 0 ? FighterWaitDays : 0,
-            wallsRefused: WallsForgetOn ? _p.WinWallsForgetDays : 0); // SimpleAiCollectivePlans.cs
+            wallsRefused: WallsForgetOn ? _p.WinWallsForgetDays : 0, // SimpleAiCollectivePlans.cs
+            shieldsHit: WinSiegeOn && WallsForgetOn ? _p.ShieldsFeltDays : 0); // WinSiege: SimpleAiCollectivePlans.cs
         _mem.Ingest(Events, IsArmedCapital, FleetsShellPower, IsOwnFighter, AssaultAt);
         _assaultAt.Clear(); // every refusal of the orders it holds is in the feed by now (orders are checked in step 1 of the day they go in)
         var mem = _mem;
