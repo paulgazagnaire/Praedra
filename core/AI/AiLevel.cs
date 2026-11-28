@@ -88,7 +88,7 @@ public static class AiLevels
                 InvasionReadyAtRally = true, BooksTalentWindow = true, CellsHops = HardReach, GuerrillaHops = HardReach,
                 FoundYardsBelow = FoundBelow, CampaignsAtOnce = 2,
                 FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, // the adaptive commander, as Medium (2026-11-27)
-                AbductionInfoDays = HardAbductionInfoDays,
+                CollectiveAbductionInfoDays = HardCollectiveAbductionInfoDays,
             },
             _ => p,
         };
@@ -108,11 +108,12 @@ public static class AiLevels
     private static SimpleAiParams GamePlan(SimpleAiParams p) => p with { PlanSectorSpreadPercent = PlanSectorSpread, PlanSystemSpreadPercent = PlanSystemSpread };
 
     /// <summary>
-    /// Hard keeps Abductions on sightings up to 5 days old (AI trainer 2026-11-28, QA-135 follow-up; Ponytail's #433 review). Hard mirrors, 96 games
-    /// (MedE 1-64, MedA 1-32), 5 days against the DEFAULT 2: Collective Abductions succeeded 230 against 186, the Hand's 60 against 60,
-    /// TargetInvalid 2074 against 1823, Hand / Collective / open 19 / 55 / 22 against 13 / 53 / 30. Medium mirrors went the other way (#433).
+    /// The Hard Collective aims Abductions at sightings up to 5 days old; the Hard Hand keeps the DEFAULT 2 (AI trainer 2026-11-28, QA-135
+    /// follow-ups; Ponytail's #433 and #434 reviews: only the Collective must be hard to kill). Hard mirrors, 96 games (MedE 1-64, MedA 1-32),
+    /// Collective Abductions succeeded / Hand Abductions succeeded / Hand-Collective-open: both 2 days 186 / 60 / 13-53-30; both 5 days (#434)
+    /// 230 / 60 / 19-55-22; Collective 5 and Hand 2 (this) 246 / 62 / 15-59-22. Medium mirrors went the other way (#433), so Medium keeps 2.
     /// </summary>
-    private const int HardAbductionInfoDays = 5;
+    private const int HardCollectiveAbductionInfoDays = 5;
 
     /// <summary>The Medium Collective's military review interval in days (AI trainer 2026-11-20, against the big Hand start; the Hand keeps 3).</summary>
     private const int MediumCollectiveMilitaryEvery = 2;

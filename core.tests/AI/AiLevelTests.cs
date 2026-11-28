@@ -97,9 +97,20 @@ public class AiLevelTests
                                             nameof(SimpleAiParams.WatchLooks), nameof(SimpleAiParams.RaidStrikes),
                                             nameof(SimpleAiParams.CellsHops), nameof(SimpleAiParams.GuerrillaHops), // reach 6, AI trainer 2026-11-20
                                             nameof(SimpleAiParams.CampaignsAtOnce), // two campaigns at once, AI trainer 2026-11-26 (Paul: more simultaneous attacks with difficulty)
-                                            nameof(SimpleAiParams.AbductionInfoDays) }; // Hard acts on sightings up to 5 days old, its own knowledge (AI trainer 2026-11-28, QA-135)
+                                            nameof(SimpleAiParams.CollectiveAbductionInfoDays) }; // the Hard Collective acts on sightings up to 5 days old, its own knowledge (AI trainer 2026-11-28, QA-135)
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
+    }
+
+    // QA-135 follow-up (AI trainer 2026-11-28): the Hard Collective aims Abductions at sightings up to 5 days old, the Hard Hand at 2 (the DEFAULT).
+    [Fact]
+    public void HardCollective_ActsOnOlderSightingsThanTheHand()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+        var hard = AiLevels.For(AiLevel.Hard);
+        Assert.Equal(5, new SimpleAi(host, Side.Collective, hard).Params.AbductionInfoDays);
+        Assert.Equal(2, new SimpleAi(host, Side.Hand, hard).Params.AbductionInfoDays);
+        Assert.Equal(2, new SimpleAi(host, Side.Collective, AiLevels.For(AiLevel.Medium)).Params.AbductionInfoDays);
     }
 
     // A level sits on top of the base parameters the caller gives (a test or the runner may turn other switches).
