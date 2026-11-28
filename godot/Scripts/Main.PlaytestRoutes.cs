@@ -87,6 +87,9 @@ public partial class Main
         var into = gs.PlanWithWaypoints(mover.Id, new[] { trap }, dest, confirm: false);
         Expect(into.Red && into.Path.Contains(trap), "a waypoint onto the trap keeps the red warning: " + into.Banner);
 
+        // the same seen fleet warns a leader sent there alone: caught on arrival if it stays (PR #440)
+        PlaytestCaughtWarning(gs, trap);
+
         // a plain click on the red path sends nothing: the bar at the bottom offers Go anyway / Go around / Cancel; Go around flies a trap-free path
         int queued = s.QueuedOrders;
         SelectFleetByList(gs, mover);
@@ -136,5 +139,60 @@ public partial class Main
         gs.PressKey(Key.Escape);
         Expect(gs.View.PickedFleets.Count == 0 && gs.MgmtCount == open, "Esc lets the fleets picked on the map go before it closes a window");
         while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+    }
+
+    /// <summary>
+    /// A leader sent alone to a system where the player's picture shows an armed enemy fleet is told, on the drag hint and on the map's move bar,
+    /// that they are caught on arrival if it stays; a system with no enemy fleet in sight says nothing (rule: m5-characters-and-talent §Moving a
+    /// character alone, Caught on arrival, switch FleetsCatchLoneLeaders DEFAULT on; the Dev lead's ask from Ponytail on #440). The planted Net
+    /// at <paramref name="trap"/> is that fleet; the move is previewed, never sent.
+    /// </summary>
+    void PlaytestCaughtWarning(GameScreen gs, string trap)
+    {
+        var s = gs.S; var me = s.Player; var fm = s.Host.Fleets; var cm = s.Host.Characters;
+        bool ArmedHere(Side side, string at) => s.Game.State.Fleets.Values.Any(f => f.Side == side && f.At == at && f.Transit == null
+            && Praedra.Core.Fleets.CombatStrength.IsArmed(fm.Classes(f)));
+        Expect(cm.Params.FleetsCatchLoneLeaders, "fleets catch lone leaders by default");
+        Expect(ArmedHere(me == Side.Hand ? Side.Collective : Side.Hand, trap) && !ArmedHere(me, trap) && s.VisibleEnemyFleetsAt(trap).Count > 0,
+            $"the Net at {trap} is armed and in sight, and no armed fleet of yours is there");
+        var lone = s.MyCharacters.Where(c => c.Status == Praedra.Core.Characters.CharacterStatus.Free && c.AttachedFleet == 0 && c.Transit == null
+                && c.System != null && c.System != trap && s.SystemPostOf(c) == null && fm.FindPath(c.System, trap, cm.Params.CharacterSpeed).Ok)
+            .OrderBy(c => c.Id).FirstOrDefault();
+        Expect(lone != null, $"a free leader who can travel to {trap}");
+        if (lone == null) return;
+        string name = s.CharName(lone.Id);
+        string words = $"Armed enemy fleet at {trap}: if it stays, {name} is caught on arrival.";
+        Expect(gs.CaughtWarning(name, trap) == words, $"the warning for {trap}: {gs.CaughtWarning(name, trap) ?? "none"}");
+        string calm = s.Data.Galaxy.Systems.Select(x => x.Name).Where(n => s.OwnerOf(n) == me && n != trap && !ArmedHere(me, n) && s.VisibleEnemyFleetsAt(n).Count == 0)
+            .OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault();
+        if (calm != null) Expect(gs.CaughtWarning(name, calm) == null, $"no warning for {calm}, where no enemy fleet is in sight");
+
+        // the drag hint: dropping the leader on the Leaders of the planet there adds the warning, amber, under what the drop does
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        gs.ShotWindow("ground", trap); gs.PlayRefresh();
+        string hint = gs.PlayDropHint($"L:{lone.Id}", $"Ground {trap} Leaders");
+        Expect(hint.EndsWith("\n" + words, StringComparison.Ordinal), $"dragging {name} over {trap}'s Leaders warns: " + hint.Replace("\n", " / "));
+        // the drop is still allowed: its own line keeps the allowed colour, only the warning is amber, as a refused drop's words are (Ponytail on #441)
+        Expect(gs.DragHintColors.Main == Ui.WinActive && gs.DragHintColors.Warn == Ui.Warn, $"the first line stays the allowed colour, the warning is amber: {gs.DragHintColors}");
+        while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+
+        // the map's move bar: the trip on the first line, the warning on an amber second line; Esc sends nothing
+        int queued = s.QueuedOrders;
+        if (!gs.CharactersOpen) gs.ClickViaMenu("Leaders");
+        gs.PlayRefresh();
+        Expect(gs.Click($"Move {name}..."), $"click 'Move {name}...' in the Leaders tab");
+        gs.HoverTextFor(trap);
+        Expect(gs.OrderBarText.EndsWith("Click to confirm.\n" + words, StringComparison.Ordinal) && gs.OrderBodyColor == Ui.Warn,
+            $"the move bar warns on an amber second line: " + gs.OrderBarText.Replace("\n", " / "));
+        if (calm != null && calm != lone.System)
+        {
+            gs.HoverTextFor(calm);
+            Expect(gs.OrderBarText.TrimEnd('\n').EndsWith("Click to confirm.", StringComparison.Ordinal) && gs.OrderBodyColor != Ui.Warn,
+                $"hovering {calm} drops the warning: " + gs.OrderBarText.Replace("\n", " / "));
+        }
+        gs.PressKey(Key.Escape);
+        Expect(s.QueuedOrders == queued && lone.Transit == null, "Esc cancels: no order sent");
+        if (gs.CharactersOpen) gs.PressKey(Key.C);
+        gs.View.Select(-1); gs.PlayRefresh();
     }
 }

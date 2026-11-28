@@ -224,6 +224,11 @@ public sealed partial class CharacterModule
         return true;
     }
 
+    /// <summary>An armed fleet of <paramref name="side"/> stands at <paramref name="sys"/> (arrived, not on a trip; armed by the forced-stop test,
+    /// m1-forced-stop-and-blockade rule 6). rule: m5-characters-and-talent §Autoroute step 3 (guarded first) and §Caught on arrival.</summary>
+    private bool GuardedBy(Side side, string sys) =>
+        _fleets.FleetsAt(sys).Any(f => f.Side == side && f.At == sys && f.Transit == null && Praedra.Core.Fleets.CombatStrength.IsArmed(_fleets.Classes(f)));
+
     /// <summary>
     /// Autorouting (B2e §3 "Where a freed, escaped or displaced character goes", Work 13; QA-9, 2026-10-18; rule event 0x307 -> 0x549230), run in
     /// the same step: only a placed character who is not captured or dead, stands on a system (riding no fleet, not travelling, not on a mission)
@@ -247,6 +252,8 @@ public sealed partial class CharacterModule
         if (BattlePending(sys)) { c.AutoroutePending = true; return false; } // flag 0x1000 (BattlePending, inferred)
         string? dest = null; int join = 0;
         if (c.ReturnPlace is { } rp && rp != sys && Acceptable(rp)) dest = rp; // step 2
+        if (Params.AutorouteToGuarded) // step 3, guarded first (rule: m5-characters-and-talent §Autoroute step 3; Paul 2026-11-28 "Guarded world")
+            dest ??= Nearest(sys, n => _fleets.OwnerOf(n) == c.Side && !State.Blockades.ContainsKey(n) && GuardedBy(c.Side, n));
         dest ??= Nearest(sys, n => _fleets.OwnerOf(n) == c.Side && !State.Blockades.ContainsKey(n)); // step 3
         if (dest == null)
         {
