@@ -814,15 +814,6 @@ public sealed partial record SimpleAiParams
     /// Hand/Collective/open 9/69/18 -> 9/72/15; Hard mirrors, 32 games: TargetInvalid 653 -> 620, successes 85 -> 78, 3/20/9 both.
     /// </summary>
     public int AbductionInfoDays { get; init; } = 2;
-    /// <summary>
-    /// QA-135 (AI trainer 2026-11-28): an Abduction team flies only to a leader the side has known to stand at that world for at least this
-    /// percent of the trip (its own feed saw him arrive there, or be detached, made General or freed there, with no word of him leaving since,
-    /// looked up to <see cref="StayedPutLookDays"/> back). A leader who stayed as long as the trip likely stays for the landing; one seen only in a
-    /// picture has no known stay and is skipped. 0 = off. DEFAULT 0 until measured.
-    /// </summary>
-    public int StayedPutPercent { get; init; }
-    /// <summary>How far back the side's notes are read for <see cref="StayedPutPercent"/>, in days. DEFAULT 360.</summary>
-    public int StayedPutLookDays { get; init; } = 360;
     /// <summary>The Collective's own <see cref="AbductionInfoDays"/> when above 0 (the Hand keeps AbductionInfoDays). 0 = the same as the Hand. DEFAULT 0; Hard sets 5 (AiLevels).</summary>
     public int CollectiveAbductionInfoDays { get; init; }
     /// <summary>

@@ -773,36 +773,3 @@ public class SimpleAiAgentsTests
         Assert.Equal(0, on);
     }
 }
-
-// QA-135 (AI trainer 2026-11-28): StayedPutPercent (off by default). On, an AI Abduction team flies only to a leader the side's own feed placed
-// at that world at least the trip's length before the start, with no word of him leaving since (a team on his own world needs no stay).
-public class SimpleAiStayedPutTests
-{
-    private readonly ITestOutputHelper _out;
-    public SimpleAiStayedPutTests(ITestOutputHelper o) { _out = o; }
-
-    [Fact]
-    public void AbductionsGoOnlyToLeadersWhoStayedAsLongAsTheTrip()
-    {
-        Assert.Equal(0, new SimpleAiParams().StayedPutPercent);
-        var p = AiLevels.For(AiLevel.Medium) with { StayedPutPercent = 100 };
-        var r = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
-        {
-            var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
-            new AiMatch(host, p, p).RunTo(1000);
-            var starts = host.Game.Events.OfType<MissionStarted>().Where(m => m.MissionKind == MissionKind.Abduction).ToList();
-            int known = starts.Count(s =>
-            {
-                var notes = host.AiMemoryFor(s.Side, true).Notes;
-                var last = notes.LastOrDefault(n => n.Value == s.TargetCharacter && n.Day <= s.Day
-                                                    && n.Kind is AiNoteKind.EnemyCharacterAt or AiNoteKind.EnemyCharacterGone);
-                // a team already standing on the leader's world (no trip) needs no stay
-                return s.TotalTicks == 0 || last is { Kind: AiNoteKind.EnemyCharacterAt } && last.System == s.Target && s.Day - last.Day >= s.TotalTicks;
-            });
-            return (seed, starts: starts.Count, known);
-        });
-        foreach (var g in r) _out.WriteLine($"seed {g.seed}: Abductions {g.starts}, with no trip or to a leader who stayed the trip's length {g.known}");
-        Assert.True(r.Sum(g => g.starts) > 0, "no Abduction in 4 games");
-        Assert.All(r, g => Assert.Equal(g.starts, g.known));
-    }
-}
