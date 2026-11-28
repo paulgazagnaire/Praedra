@@ -2536,17 +2536,23 @@ public static partial class PixelIconData
         },
     };
 
-    /// <summary>Colours for tones 1-4 per meaning colour (index 0 = tone 1). Tone 2 is the UiKit colour itself;
-    /// dark leans cooler, light and shine warmer, at most 10 degrees of hue (pixel-icons skill, ramp()).</summary>
+    /// <summary>Colours for tones 1-4 per meaning colour (index 0 = tone 1), in the calm colours Paul chose on 2026-11-28 ("Softer, as in
+    /// the frame": Paper "All game icons - calm colours - 2026-11-28", praedra/specs/ui/paper/calm-icons-2026-11-28/). The greys (words,
+    /// name, text) take hue 225 and saturation 31, the window background's; a side or alert colour keeps each tone's hue with 0.7 of its
+    /// saturation, the light tone at most L78 and the shine at most L84 and S45, so no tone is brighter than the window text #B8C2E0.
+    /// The ramps before (tone 2 was the UiKit colour itself): you 1a4d9b 5aa9f0 9cd2f2 dbeef6, enemy 933118 f08047 f2bb91 f5e6d7, name
+    /// 48546f 909ebd bbc3d5 e5e7ed, text 454a54 7d8699 afb4bf e0e1e4, idle 8e551c eab04a eed693 f4eed8, danger b80f25 ff6b6b fbafa7 f9e4e0,
+    /// good 2e7555 5ccb8a 9ddcb1 daeedf, capital a77320 f0d27a f3e8af f7f5e2, words (the windows' words grey) 7b7b7b dfdfdf ededed f9f9f9.</summary>
     public static readonly IReadOnlyDictionary<string, string[]> Ramps = new Dictionary<string, string[]>
     {
-        ["you"] = new[] { "1a4d9b", "5aa9f0", "9cd2f2", "dbeef6" },
-        ["enemy"] = new[] { "933118", "f08047", "f2bb91", "f5e6d7" },
-        ["name"] = new[] { "48546f", "909ebd", "bbc3d5", "e5e7ed" },
-        ["text"] = new[] { "454a54", "7d8699", "afb4bf", "e0e1e4" },
-        ["idle"] = new[] { "8e551c", "eab04a", "eed693", "f4eed8" },
-        ["danger"] = new[] { "b80f25", "ff6b6b", "fbafa7", "f9e4e0" },
-        ["good"] = new[] { "2e7555", "5ccb8a", "9ddcb1", "daeedf" },
-        ["capital"] = new[] { "a77320", "f0d27a", "f3e8af", "f7f5e2" },
+        ["you"] = new[] { "2d5188", "70a8da", "a9cfe5", "c5dde7" },
+        ["enemy"] = new[] { "813c2a", "d78860", "e3bda0", "e7d6c5" },
+        ["name"] = new[] { "3f4d78", "8b99c2", "b6bed8", "cad0e3" },
+        ["text"] = new[] { "354164", "6779af", "a1accd", "cad0e3" },
+        ["idle"] = new[] { "7d552d", "d2a962", "e0d0a1", "e6dfc6" },
+        ["danger"] = new[] { "9f2838", "e98181", "ebaaa3", "e9cac4" },
+        ["good"] = new[] { "396a54", "6dba8d", "a6d3b4", "cce1d1" },
+        ["capital"] = new[] { "936e34", "dec98c", "e4dbaa", "e6e3c6" },
+        ["words"] = new[] { "3f4e78", "a1adce", "b6bed8", "cad0e3" },
     };
 }

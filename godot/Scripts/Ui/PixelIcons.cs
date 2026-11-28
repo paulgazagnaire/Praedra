@@ -6,8 +6,9 @@ namespace PraedraViewer;
 
 /// <summary>
 /// Draws the pixel icons of <see cref="PixelIconData"/> (Paul 2026-11-18: "Every icon must be code ONLY", no image files): each pixel is a
-/// filled square, 1 px at 16 or 2 px at 32 (whole-pixel doubling only), coloured by tone from the meaning colour's ramp (tone 2 is the
-/// UiKit colour itself). A greyed-out icon is flat: every tone in its one grey (Paul 2026-11-14, four greys). Screens only.
+/// filled square, 1 px at 16 or 2 px at 32 (whole-pixel doubling only), coloured by tone from the meaning colour's ramp, in the calm
+/// colours since 2026-11-28 (<see cref="PixelIconData.Ramps"/>). A greyed-out icon is flat: every tone in its one grey (Paul 2026-11-14,
+/// four greys). Screens only.
 /// </summary>
 public static class PixelIcons
 {
@@ -31,12 +32,67 @@ public static class PixelIcons
         : ink == Ui.Warn ? Ramp("idle") : ink == Ui.Danger ? Ramp("danger") : ink == Ui.Good ? Ramp("good") : ink == Ui.Gold ? Ramp("capital")
         : null;
 
-    static Color[] _words;
-    /// <summary>The windows' words grey (#BABABA) as four tones, for an icon beside a name.</summary>
-    static Color[] WordsRamp => _words ??= GreyRamp(Ui.WinActive);
+    /// <summary>The windows' words colour as four tones, for an icon beside a name: the calm words ramp (2026-11-28).</summary>
+    static Color[] WordsRamp => Ramp("words");
 
-    /// <summary>A grey ramp around a plain colour (the top bar's light grey icons): tone 2 is the colour, 1 darker, 3 lighter, 4 near white.</summary>
-    public static Color[] GreyRamp(Color mid) => new[] { mid, mid.Darkened(0.45f), mid, mid.Lightened(0.45f), mid.Lightened(0.8f) };
+    /// <summary>A grey ramp around a plain colour (the top bar's icons): tone 2 is the colour, 1 darker, 3 lighter, 4 lighter still, each
+    /// then calmed (<see cref="Calm"/>) as Paul's frames draw them since 2026-11-28, so no tone is near white.</summary>
+    public static Color[] GreyRamp(Color mid) => new[] { mid, Calm(mid.Darkened(0.45f)), Calm(mid), Calm(mid.Lightened(0.45f)), Calm(mid.Lightened(0.8f)) };
+
+    /// <summary>
+    /// A colour in no ramp, calmed as the Paper frames were on 2026-11-28 (Paul: "Softer, as in the frame"; praedra/specs/ui/paper/
+    /// frames-calm-icons-2026-11-28/job.py and overrides.json): a grey (saturation under 15) at L40 or more takes hue 225, saturation 31
+    /// and the words grey's lightness ladder (48, 87, 93, 98 become 36, 72, 78, 84); a blue-grey (hue 212 to 238) above L70 is pressed
+    /// into L70 to L84 in order, saturation 0.7 of its own (at most 45, at least 28); any other colour keeps its hue with 0.7 of its
+    /// saturation, at most L84 (and S45 above L80). Dark lines and calm blue-greys stay as they are.
+    /// </summary>
+    public static Color Calm(Color c)
+    {
+        var (h, s, l) = Hsl(c);
+        if (s < 15) return l < 40 ? c : FromHsl(225, 31, Ladder(l), c.A);
+        if (h >= 212 && h <= 238)
+            return l <= 70 ? c : FromHsl(h, Math.Clamp(s * 0.7f, 28, 45), 70 + (l - 70) * 14 / 30, c.A);
+        float s2 = s * 0.7f;
+        if (l > 80) s2 = Math.Min(s2, 45);
+        return FromHsl(h, s2, Math.Min(l, 84), c.A);
+    }
+
+    static readonly (float From, float To)[] LadderSteps = { (0, 0), (48, 36), (87, 72), (93, 78), (98, 84), (100, 86) };
+
+    static float Ladder(float l)
+    {
+        for (int i = 1; i < LadderSteps.Length; i++)
+            if (l <= LadderSteps[i].From)
+            {
+                var (a, b) = LadderSteps[i - 1];
+                var (c, d) = LadderSteps[i];
+                return b + (l - a) * (d - b) / (c - a);
+            }
+        return 86;
+    }
+
+    /// <summary>Hue in degrees, saturation and lightness in percent.</summary>
+    static (float H, float S, float L) Hsl(Color c)
+    {
+        float max = Math.Max(c.R, Math.Max(c.G, c.B)), min = Math.Min(c.R, Math.Min(c.G, c.B)), l = (max + min) / 2, d = max - min;
+        if (d < 1e-6f) return (0, 0, l * 100);
+        float s = l > 0.5f ? d / (2 - max - min) : d / (max + min);
+        float h = max == c.R ? (c.G - c.B) / d + (c.G < c.B ? 6 : 0) : max == c.G ? (c.B - c.R) / d + 2 : (c.R - c.G) / d + 4;
+        return (h * 60, s * 100, l * 100);
+    }
+
+    static Color FromHsl(float h, float s, float l, float a)
+    {
+        s /= 100; l /= 100;
+        float q = l < 0.5f ? l * (1 + s) : l + s - l * s, p = 2 * l - q, k = h / 360;
+        float Ch(float t)
+        {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            return t < 1f / 6 ? p + (q - p) * 6 * t : t < 0.5f ? q : t < 2f / 3 ? p + (q - p) * (2f / 3 - t) * 6 : p;
+        }
+        return new Color(Ch(k + 1f / 3), Ch(k), Ch(k - 1f / 3), a);
+    }
 
     /// <summary>The largest allowed pixel size (1 or 2) at which a <paramref name="w"/> x <paramref name="h"/> grid fits in
     /// <paramref name="box"/>; 0 if not even 1 fits.</summary>
