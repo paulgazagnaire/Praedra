@@ -44,7 +44,7 @@ public class AiLevelTests
     // AI trainer 2026-11-27: the adaptive commander's shipped plans at Medium and Hard (SimpleAiCommanderTests)
     private static readonly string[] Commander = { nameof(SimpleAiParams.FortifyWorlds), nameof(SimpleAiParams.SiegeShields), nameof(SimpleAiParams.FrontPlans), nameof(SimpleAiParams.FrontMemory),
         nameof(SimpleAiParams.Neutralise), nameof(SimpleAiParams.NeutraliseElsewherePercent), nameof(SimpleAiParams.RefitAway),
-        nameof(SimpleAiParams.ShieldsFeltDays), nameof(SimpleAiParams.RaidShieldsSeen), nameof(SimpleAiParams.WreckShields) }; // Rooster 2026-11-27, SimpleAiCollectivePlansTests
+        nameof(SimpleAiParams.ShieldsFeltDays), nameof(SimpleAiParams.RaidShieldsSeen), nameof(SimpleAiParams.WreckShields), nameof(SimpleAiParams.FighterWaitMax), nameof(SimpleAiParams.WinWallsForgetDays) }; // Rooster 2026-11-27, SimpleAiCollectivePlansTests
     private static readonly string[] GamePlan = { nameof(SimpleAiParams.PlanSectorSpreadPercent), nameof(SimpleAiParams.PlanSystemSpreadPercent) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
@@ -96,9 +96,21 @@ public class AiLevelTests
                                             nameof(SimpleAiParams.CellsForcesWanted), nameof(SimpleAiParams.CellsSubversion),
                                             nameof(SimpleAiParams.WatchLooks), nameof(SimpleAiParams.RaidStrikes),
                                             nameof(SimpleAiParams.CellsHops), nameof(SimpleAiParams.GuerrillaHops), // reach 6, AI trainer 2026-11-20
-                                            nameof(SimpleAiParams.CampaignsAtOnce) }; // two campaigns at once, AI trainer 2026-11-26 (Paul: more simultaneous attacks with difficulty)
+                                            nameof(SimpleAiParams.CampaignsAtOnce), // two campaigns at once, AI trainer 2026-11-26 (Paul: more simultaneous attacks with difficulty)
+                                            nameof(SimpleAiParams.CollectiveAbductionInfoDays) }; // the Hard Collective acts on sightings up to 5 days old, its own knowledge (AI trainer 2026-11-28, QA-135)
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
+    }
+
+    // QA-135 follow-up (AI trainer 2026-11-28): the Hard Collective aims Abductions at sightings up to 5 days old, the Hard Hand at 2 (the DEFAULT).
+    [Fact]
+    public void HardCollective_ActsOnOlderSightingsThanTheHand()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+        var hard = AiLevels.For(AiLevel.Hard);
+        Assert.Equal(5, new SimpleAi(host, Side.Collective, hard).Params.AbductionInfoDays);
+        Assert.Equal(2, new SimpleAi(host, Side.Hand, hard).Params.AbductionInfoDays);
+        Assert.Equal(2, new SimpleAi(host, Side.Collective, AiLevels.For(AiLevel.Medium)).Params.AbductionInfoDays);
     }
 
     // A level sits on top of the base parameters the caller gives (a test or the runner may turn other switches).
@@ -111,7 +123,7 @@ public class AiLevelTests
             WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
             RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10, GarrisonsFirstHoldsNavy = true, Campaign = true, StrandedAgentsHome = true,
             FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, Neutralise = true, NeutraliseElsewherePercent = 100, RefitAway = true,
-            ShieldsFeltDays = 120, RaidShieldsSeen = true, WreckShields = true }, AiLevels.For(AiLevel.Medium, b));
+            ShieldsFeltDays = 120, RaidShieldsSeen = true, WreckShields = true, FighterWaitMax = 2, WinWallsForgetDays = 365 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

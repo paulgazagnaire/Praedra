@@ -59,4 +59,19 @@ public sealed partial record SimpleAiParams
     /// picture only (DEFAULT).
     /// </summary>
     public int ShieldsFeltDays { get; init; }
+    /// <summary>
+    /// Fighters wait aboard (Rooster 2026-11-28; Medium mirror, seeds 1-8, 3000 days: 269 Collective squadrons based at its shipyards with no
+    /// ship there were wiped out in 61 battles that cost the Hand nothing, most of the Collective's battle losses): no new fighter order while
+    /// this many of the side's squadrons set down within the last 120 days wait on the ground (older strays no longer count, Ponytail #432).
+    /// The Collective reads this one. 0 = no cap (DEFAULT).
+    /// </summary>
+    public int FighterWaitMax { get; init; }
+    /// <summary>FighterWaitMax for the Hand (Maverick's to measure: the Hand builds about 32 Threshers a game by day 1000). 0 = no cap (DEFAULT).</summary>
+    public int FighterWaitMaxHand { get; init; }
+    /// <summary>
+    /// Forget Charter's walls (as QA-5 forgets an old garrison, FogGroundForgetDays): with fog, the Collective reads a picture of the win
+    /// target's facilities older than this many days as unknown, so an old look's shield generators no longer forbid the strike; an assault or
+    /// shelling there tells the truth again (ShieldsFelt). 0 = keep the old look (DEFAULT).
+    /// </summary>
+    public int WinWallsForgetDays { get; init; }
 }

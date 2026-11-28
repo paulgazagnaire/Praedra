@@ -4,6 +4,7 @@ using Praedra.Core.Clock;
 using Praedra.Core.Construction;
 using Praedra.Core.Control;
 using Praedra.Core.Defenses;
+using Praedra.Core.Fleets;
 using Praedra.Core.Fog;
 using Praedra.Core.Harvester;
 using Praedra.Core.Missions;
@@ -36,11 +37,22 @@ public enum AiNoteKind
     BooksFailed,
     /// <summary>
     /// ShieldsFelt (SimpleAiParams.ShieldsFeltDays): an own shelling at System met shields of Value (BombardmentStarted S when hits got
-    /// through, else its power P: the shields were at least that, m3-bombardment §2),
+    /// through; with no hits the shelling fleets' power when noted, at least the strike's P: fleets that strong do nothing there),
     /// or Value -1: an own Sabotage there succeeded (MissionSucceeded), so a shield may have fallen since. Noted only while kept (off: none).
     /// Not saved before 2026-11-27: an older save loads with none.
     /// </summary>
     ShieldsFelt,
+    /// <summary>
+    /// FighterGrounded (SimpleAiParams.FighterWaitMax): own squadron Value was set on the ground at System, built there (UnitCompleted) or
+    /// unloaded (SquadronsUnloaded). Noted only while kept (off: none). Not saved before 2026-11-28: an older save loads with none.
+    /// </summary>
+    FighterGrounded,
+    /// <summary>
+    /// WallsRefused (SimpleAiParams.WinWallsForgetDays): an own assault at System was refused because the world is fully shielded
+    /// (OrderRejected FullyShielded, m3-assault check 4): the walls stand, whatever an old look says. Noted only while kept (off: none).
+    /// Not saved before 2026-11-28: an older save loads with none.
+    /// </summary>
+    WallsRefused,
 }
 
 /// <summary>
@@ -73,11 +85,13 @@ public sealed class AiKeepDays
     public int HarvesterYardGone { get; set; }
     public int BooksFailed { get; set; }
     public int ShieldsFelt { get; set; }
+    public int FighterGrounded { get; set; }
+    public int WallsRefused { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, AiNoteKind.FighterGrounded => FighterGrounded, AiNoteKind.WallsRefused => WallsRefused, _ => Character,
     };
 }
 
@@ -128,8 +142,12 @@ public sealed class AiMemory
     private int _runDay = int.MinValue;
     private readonly Dictionary<string, BattleStarted> _runStarts = new(StringComparer.Ordinal); // lookup only
 
-    /// <summary>Copy the feed's new events into notes. <paramref name="armedCapital"/>: is this unit an armed capital ship now.</summary>
-    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital)
+    /// <summary>Copy the feed's new events into notes. <paramref name="armedCapital"/>: is this unit an armed capital ship now.
+    /// <paramref name="shellPower"/>: the bombardment power of these own fleets now (ShieldsFelt; null = the strike's own P).
+    /// <paramref name="ownFighter"/>: is this object one of the side's squadrons (FighterGrounded; null = none noted).
+    /// <paramref name="assaultAt"/>: the system of the side's own assault order of this sequence, or null (WallsRefused; null = none noted).</summary>
+    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital, Func<IReadOnlyList<int>, int>? shellPower = null, Func<int, bool>? ownFighter = null,
+        Func<long, string?>? assaultAt = null)
     {
         if (_feedSeen >= feed.Count) return;
         Side enemy = Side == Side.Hand ? Side.Collective : Side.Hand;
@@ -151,10 +169,14 @@ public sealed class AiMemory
                     => new AiNote { Kind = AiNoteKind.LookFoiled, System = me.Target },
                 MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.BurnTheBooks && me.Outcome is MissionOutcome.Failed or MissionOutcome.Foiled
                     => new AiNote { Kind = AiNoteKind.BooksFailed, System = me.Target, Value = me.Outcome == MissionOutcome.Foiled ? 1 : 0 }, // 1: foiled (betrayed or sensed), 0: the roll failed
-                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0 // what the shelling side can read: S when hits got through, else at least P (Ponytail #426)
-                    => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.Hits > 0 ? bs.S : bs.P },
+                // what the shelling side can read (Ponytail #426): S when hits got through; with none, only that fleets of this power do nothing
+                // there (the batteries ground ships before the power is counted, m3-bombardment §Resolution 4 and 5.1, so P alone reads too low)
+                BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0
+                    => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.Hits > 0 ? bs.S : Math.Max(bs.P, shellPower?.Invoke(bs.Fleets.Items) ?? 0) },
                 MissionSucceeded ms when ms.Side == Side && ms.MissionKind == MissionKind.Sabotage && Keep.ShieldsFelt > 0
                     => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = ms.Target, Value = -1 },
+                OrderRejected rj when Keep.WallsRefused > 0 && rj.Reason == Praedra.Core.Assault.AssaultReject.FullyShielded && assaultAt?.Invoke(rj.Sequence) is { } ws
+                    => new AiNote { Kind = AiNoteKind.WallsRefused, System = ws },
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },
                 CharacterArrived a when a.Side == enemy => At(a.Character, a.System),
                 CharacterDetached d when d.Side == enemy => At(d.Character, d.System),
@@ -169,6 +191,19 @@ public sealed class AiMemory
                     => new AiNote { Kind = AiNoteKind.HarvesterYardGone, System = hd.System },
                 _ => null,
             };
+            if (n == null && Keep.FighterGrounded > 0 && ownFighter != null)
+            {
+                // FighterGrounded: one note per squadron set down (an unload can set down several; they share the event's day and feed index)
+                if (e is UnitCompleted uc && uc.Side == Side && ownFighter(uc.Object))
+                    n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = uc.Destination, Value = uc.Object };
+                else if (e is SquadronsUnloaded su)
+                    foreach (int q in su.Squadrons.Items)
+                    {
+                        if (!ownFighter(q)) continue;
+                        if (n != null) { n.Day = n.Floor = e.Day; Notes.Add(n); sources.Add(i); }
+                        n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = su.System, Value = q };
+                    }
+            }
             if (n == null) continue;
             n.Day = n.Floor = e.Day;
             Notes.Add(n); sources.Add(i);
@@ -178,7 +213,7 @@ public sealed class AiMemory
         int after = int.MaxValue, next = sources.Count - 1;
         for (int i = feed.Count - 1; i >= _feedSeen && next >= 0; i--)
         {
-            if (sources[next] == i) { var n = Notes[first + next]; n.Floor = Math.Min(n.Day, after); next--; }
+            while (next >= 0 && sources[next] == i) { var n = Notes[first + next]; n.Floor = Math.Min(n.Day, after); next--; } // FighterGrounded: several notes may share an event
             after = Math.Min(after, feed[i].Day);
         }
         _feedSeen = feed.Count;
@@ -203,8 +238,10 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0, int fighterGrounded = 0, int wallsRefused = 0)
     {
+        Keep.WallsRefused = Math.Max(Keep.WallsRefused, wallsRefused);
+        Keep.FighterGrounded = Math.Max(Keep.FighterGrounded, fighterGrounded);
         Keep.ShieldsFelt = Math.Max(Keep.ShieldsFelt, shieldsFelt);
         Keep.HarvesterYardGone = Math.Max(Keep.HarvesterYardGone, harvesterYardGone);
         Keep.BooksFailed = Math.Max(Keep.BooksFailed, booksFailed);

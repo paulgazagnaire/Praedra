@@ -50,11 +50,16 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// The side's own parameters: the Collective reviews its military every <see cref="SimpleAiParams.CollectiveMilitaryEvery"/> days when that
-    /// is set. rule: ai tuning, SimpleAiParams.CollectiveMilitaryEvery (AI trainer 2026-11-20).
+    /// is set, and aims Abductions at sightings up to <see cref="SimpleAiParams.CollectiveAbductionInfoDays"/> old when that is set. rule: ai
+    /// tuning, SimpleAiParams.CollectiveMilitaryEvery (AI trainer 2026-11-20), SimpleAiParams.CollectiveAbductionInfoDays (2026-11-28).
     /// </summary>
-    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side) => side == Side.Collective && p.CollectiveMilitaryEvery > 0
-        ? p with { MilitaryEvery = p.CollectiveMilitaryEvery }
-        : p;
+    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side)
+    {
+        if (side != Side.Collective) return p;
+        if (p.CollectiveMilitaryEvery > 0) p = p with { MilitaryEvery = p.CollectiveMilitaryEvery };
+        if (p.CollectiveAbductionInfoDays > 0) p = p with { AbductionInfoDays = p.CollectiveAbductionInfoDays };
+        return p;
+    }
 
     public Side Side => _side;
     public SimpleAiParams Params => _p;
@@ -82,7 +87,7 @@ public sealed partial class SimpleAi
     private void PlanDayPass()
     {
         _submitted.Clear(); _plannedLoad = 0; _busy.Clear(); _reservedEnergy.Clear(); _reservedRaw.Clear(); _reservedYards.Clear(); _strength.Clear();
-        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear(); _hqMoveTo = null;
+        _capitalDone = _rallyDone = false; _hops = null; _finishing = null; _blind = null; _tfStrength = null; _threats = null; _alarm = null; _offensives = -1; _lost = null; _lostBattles = null; _runners = null; _bounced = null; _loading.Clear(); _hqMoveTo = null;
         int day = Today, phase = (int)_side;
         _view = _p.UseFog ? _h.Fog.ViewFor(_side) : null;
         Remember();
@@ -260,18 +265,22 @@ public sealed partial class SimpleAi
     private bool AssaultForbiddenSeen(string system)
     {
         if (_view == null) return _h.Defenses.AssaultForbidden(system);
-        var fac = _view.Picture(system)?.Facilities;
+        var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
+        if (WallsRefusedSince(system, fac?.Stamp)) return true; // an own landing there was refused for the shields since that look
         return fac != null && _h.Defenses.AssaultForbiddenBy(fac.Value);
     }
 
     /// <summary>
     /// The shields' absorption at the system as the side sees it (no fog: the truth, DefenseModule.ShieldStrength; fog: the completed shield
     /// generators of its picture). rule: m3-bombardment §2 Shields (hits = max(0, P - S)).
+    /// With ShieldsFeltDays (fog, the Collective) an own shelling newer than the picture overrides it: after hits, the true S; after none, the
+    /// power of the fleets that did nothing there, so the value then means "a power that failed here" (the batteries' return fire is in it,
+    /// not only the shields): read it only as the power a pile must beat, never as the shield generators' strength (Ponytail #430).
     /// </summary>
     private int ShieldStrengthSeen(string system)
     {
         if (_view == null) return _h.Defenses.ShieldStrength(system);
-        var fac = _view.Picture(system)?.Facilities;
+        var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
         if (ShieldsFelt(system, fac?.Stamp) is int felt) return felt; // SimpleAiCollectivePlans.cs: an own shelling since the last look met them
         if (fac == null) return 0;
         int s = 0;
@@ -298,10 +307,13 @@ public sealed partial class SimpleAi
             lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays,
             character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
-            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0); // SimpleAiCollectivePlans.cs
-        _mem.Ingest(Events, IsArmedCapital);
+            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0, // SimpleAiCollectivePlans.cs
+            fighterGrounded: FighterWaitCap > 0 ? FighterWaitDays : 0,
+            wallsRefused: WallsForgetOn ? _p.WinWallsForgetDays : 0); // SimpleAiCollectivePlans.cs
+        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower, IsOwnFighter, AssaultAt);
+        _assaultAt.Clear(); // every refusal of the orders it holds is in the feed by now (orders are checked in step 1 of the day they go in)
         var mem = _mem;
-        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital); // a save between Steps (AiMemory.CatchUp)
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower, IsOwnFighter, AssaultAt); // a save between Steps (AiMemory.CatchUp)
     }
 
     // ================================================================== game plan (AI trainer 2026-11-19)
@@ -377,6 +389,7 @@ public sealed partial class SimpleAi
             if (notes[i].Kind == kind) yield return notes[i];
     }
 
+    private bool IsOwnFighter(int id) => _h.Economy.Find(id) is { } o && o.Category == ObjectCategory.Fighter && o.Side == _side; // FighterWaitMax
     private bool IsArmedCapital(int id) =>
         _h.Economy.Find(id) is { } o && o.Category == ObjectCategory.CapitalShip && _h.Fleets.ClassOf(o) is { } c && CombatStrength.IsArmed(c);
 

@@ -23,6 +23,9 @@ public class SimpleAiCollectivePlansTests
         Assert.False(p.RaidShieldsSeen);
         Assert.False(p.WreckShields);
         Assert.Equal(0, p.ShieldsFeltDays);
+        Assert.Equal(0, p.FighterWaitMax);
+        Assert.Equal(0, p.FighterWaitMaxHand);
+        Assert.Equal(0, p.WinWallsForgetDays);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -39,6 +42,9 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(on ? 120 : 0, p.ShieldsFeltDays); // Rooster 2026-11-27 evening: shields felt and seen, Wreckers aboard
         Assert.Equal(on, p.RaidShieldsSeen);
         Assert.Equal(on, p.WreckShields);
+        Assert.Equal(on ? 2 : 0, p.FighterWaitMax); // Rooster 2026-11-28: fighters wait aboard
+        Assert.Equal(0, p.FighterWaitMaxHand); // the Hand's is Maverick's to measure
+        Assert.Equal(on ? 365 : 0, p.WinWallsForgetDays); // Rooster 2026-11-28: Charter's old walls are forgotten
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
@@ -92,24 +98,29 @@ public class SimpleAiCollectivePlansTests
     }
 
     // m5-missions §Spying from orbit (#412): with WreckShields, Wreckers board armed Collective fleets and are launched from orbit on
-    // Sabotage over shielded Hand worlds (seed 1, walled Medium Hand, day 1200).
+    // Sabotage over shielded Hand worlds (seeds 1-4, walled Medium Hand, day 1200). One seed was too thin: since the AI's leader missions aim at
+    // the last sighting, seed 1 swung between 0 and 3 orbit launches, so Wreckers must board in at least 2 games and launch in at least 1 (Rooster 2026-11-28).
     [Fact]
     public void WreckersRideFleetsAndSabotageShieldsFromOrbit()
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
-        var m = new AiMatch(host, WalledHand(), ShieldWise(true));
-        int loads = 0, launches = 0;
-        while (host.Game.Day < 1200 && host.Victory.Winner == null)
+        var r = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
-            m.Step();
-            loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
-            launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
-        }
-        var orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
-            .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
-        _out.WriteLine($"Wrecker loads {loads}, orbit sabotage orders {launches}, started {orbit}");
-        Assert.True(loads > 0, "no Wrecker boarded a fleet");
-        Assert.True(launches > 0 && orbit > 0, "no Sabotage was launched from orbit");
+            var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, WalledHand(), ShieldWise(true));
+            int loads = 0, launches = 0;
+            while (host.Game.Day < 1200 && host.Victory.Winner == null)
+            {
+                m.Step();
+                loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+                launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+            }
+            var orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
+                .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
+            return (seed, loads, launches, orbit);
+        });
+        foreach (var g in r) _out.WriteLine($"seed {g.seed}: Wrecker loads {g.loads}, orbit sabotage orders {g.launches}, started {g.orbit}");
+        Assert.True(r.Count(g => g.loads > 0) >= 2, "Wreckers boarded a fleet in fewer than 2 of 4 games");
+        Assert.True(r.Any(g => g.launches > 0 && g.orbit > 0), "no Sabotage was launched from orbit in 4 games");
     }
 
     // m1-clock-and-orders K12 with the shields felt: the notes ride in the AI memory of the save, so a loaded game decides as the uninterrupted one.
@@ -127,5 +138,152 @@ public class SimpleAiCollectivePlansTests
             a.Step(); b.Step();
             Assert.True(host.StateHash() == loaded.StateHash(), $"diverged on day {host.Game.Day}");
         }
+    }
+
+    // AiMemory.Ingest, ShieldsFelt (m3-bombardment §2 and §Resolution 4, 5.1; Ponytail on #426): a shelling with hits notes the shields S; one
+    // with none notes what the shelling side knows, that fleets of their power do nothing there: their power now, at least the strike's P (the
+    // batteries ground ships before P is counted). Nothing is noted while the note is not kept (ShieldsFeltDays 0), nor for the enemy's shellings.
+    [Fact]
+    public void AiMemory_NotesTheShieldsAShellingFelt()
+    {
+        var fleets = new ValueList<int>(new[] { 7 });
+        GameEvent[] feed =
+        {
+            new Praedra.Core.Defenses.BombardmentStarted(0, 5, "Navalia", 7, Side.Collective, Praedra.Core.Defenses.BombardCategory.Civilian, 50, 40, 10, fleets),
+            new Praedra.Core.Defenses.BombardmentStarted(1, 6, "Midway", 7, Side.Collective, Praedra.Core.Defenses.BombardCategory.Civilian, 30, 80, 0, fleets),
+            new Praedra.Core.Defenses.BombardmentStarted(2, 6, "Charter", 9, Side.Hand, Praedra.Core.Defenses.BombardCategory.Civilian, 30, 80, 0, fleets),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, _ => 55);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.ShieldsFelt);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, shieldsFelt: 120);
+        on.Ingest(feed, _ => false, _ => 55);
+        Assert.Equal(new[] { ("Navalia", 40), ("Midway", 55) }, on.Notes.Where(n => n.Kind == AiNoteKind.ShieldsFelt).Select(n => (n.System!, n.Value)).ToArray());
+    }
+
+    // FighterWaitMax (m3-fleets: a squadron moves only aboard a carrier; m4-battle-classic §1.3: a based squadron with no ship there fights):
+    // with it the Collective orders no fighter while two of its squadrons set down within the last 120 days wait on the ground, so far fewer
+    // of them die at its yards for nothing; older strays no longer count (Ponytail #432). Seed 2, Medium mirror, to day 1500; counts printed.
+    [Fact]
+    public void NoNewFightersWhileTwoWaitOnTheGround()
+    {
+        (int orders, int lateOrders, int strayOrders) Run(int max)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium) with { FighterWaitMax = max });
+            var fighters = host.Economy.Costs.Rows.Where(r => r.Category == Praedra.Core.Economy.ObjectCategory.Fighter).Select(r => r.Name).ToHashSet(StringComparer.Ordinal);
+            var since = new Dictionary<int, int>(); // lookups only
+            int orders = 0, late = 0, stray = 0;
+            while (host.Game.Day < 1500 && host.Victory.Winner == null)
+            {
+                int day = host.Game.Day;
+                var ground = host.Economy.Objects.Where(o => o.Category == Praedra.Core.Economy.ObjectCategory.Fighter && o.Side == Side.Collective && o.AboardShip == 0 && o.System != null).Select(o => o.Id).ToHashSet();
+                foreach (int id in ground) since.TryAdd(id, day);
+                foreach (int id in since.Keys.Where(id => !ground.Contains(id)).ToList()) since.Remove(id);
+                int fresh = since.Values.Count(d0 => day - d0 < 119); // set down within the window (a day's margin: the note is the event's day)
+                m.Step();
+                int n = m.Collective.Submitted.Count(o => o.Kind == "Build" && fighters.Any(f => o.Detail.Contains(" x " + f + " at ", StringComparison.Ordinal)));
+                orders += n;
+                if (fresh >= 2) late += n;
+                else if (ground.Count >= 2) stray += n;
+            }
+            return (orders, late, stray);
+        }
+        var off = Run(0); var on = Run(2);
+        _out.WriteLine($"fighter orders off {off.orders} ({off.lateOrders} with 2+ fresh waiting), on {on.orders} ({on.lateOrders}; {on.strayOrders} with 2+ waiting, under 2 fresh)");
+        Assert.True(off.lateOrders > 0, "no fighter was ordered with squadrons waiting: the test no longer checks anything");
+        Assert.Equal(0, on.lateOrders);
+    }
+
+    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted) or unloaded (SquadronsUnloaded, one note per
+    // squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesTheSquadronsSetDown()
+    {
+        bool Fighter(int id) => id is 11 or 12 or 13;
+        GameEvent[] feed =
+        {
+            new Praedra.Core.Construction.UnitCompleted(0, 5, 11, "Sting", Side.Collective, "Navalia", "Navalia", 1),
+            new Praedra.Core.Construction.UnitCompleted(1, 5, 30, "Lancer", Side.Collective, "Navalia", "Navalia", 2),
+            new Praedra.Core.Fleets.SquadronsUnloaded(2, 7, new ValueList<int>(new[] { 12, 13 }), 4, new ValueList<int>(new[] { 30 }), "Midway"),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, null, Fighter);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
+        on.Ingest(feed, _ => false, null, Fighter);
+        var g = on.Notes.Where(n => n.Kind == AiNoteKind.FighterGrounded).Select(n => (n.Value, n.System, n.Day)).ToList();
+        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7) }, g);
+        var hand = new AiMemory { Side = Side.Hand, Fog = true };
+        hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
+        hand.Ingest(feed, _ => false, null, _ => false);
+        Assert.DoesNotContain(hand.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
+    }
+
+    // WinWallsForgetDays (m5-fog-and-hq §F2: only Espionage writes a system's facilities; as QA-5 forgets an old garrison): Hard mirror seed 24.
+    // Kept: the Collective holds 554 of 555 worlds by day 2750 and never strikes Charter, which has no shields and no regiments left, because
+    // its look from about day 775 still shows two shield generators. Forgotten after 365 days: it takes Charter and wins (day 2127).
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ForgottenWallsLetTheCollectiveStrikeAnEmptyCharter()
+    {
+        (Side? winner, int day) Play(int forget)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 24, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget });
+            while (host.Game.Day < 2400 && host.Victory.Winner == null) m.Step();
+            return (host.Victory.Winner, host.Game.Day);
+        }
+        var off = Play(0); var on = Play(365);
+        _out.WriteLine($"walls kept: winner {off.winner?.ToString() ?? "none"} by day {off.day}; forgotten: {on.winner?.ToString() ?? "none"} on day {on.day}");
+        Assert.Null(off.winner);
+        Assert.Equal(Side.Collective, on.winner);
+    }
+
+    // WinWallsForgetDays with WallsRefused (Ponytail #436; m3-assault check 4): a landing refused because the world is fully shielded teaches the
+    // AI the walls stand. Hard mirror seed 13: an old look at Charter is forgotten, a fleet lands on day 1754 and is refused; without the note it
+    // landed and was refused every day from about day 1820 to day 3000 (1180 refusals). With it: one refusal, then the fleet shells or leaves.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ARefusedLandingTeachesTheWallsStand()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 13, Preset = StartPreset.MedE });
+        var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard));
+        int run = 0, longest = 0, last = -10;
+        while (host.Game.Day < 2000 && host.Victory.Winner == null)
+        {
+            int before = m.Rejected.GetValueOrDefault("Collective Assault FullyShielded");
+            m.Step();
+            if (m.Rejected.GetValueOrDefault("Collective Assault FullyShielded") > before) { run = host.Game.Day - last <= 2 ? run + 1 : 1; last = host.Game.Day; longest = Math.Max(longest, run); }
+        }
+        int refused = m.Rejected.GetValueOrDefault("Collective Assault FullyShielded");
+        _out.WriteLine($"landings refused for the shields by day 2000: {refused}, longest run of days in a row {longest}");
+        Assert.True(refused > 0, "no landing was refused: the test no longer checks anything");
+        Assert.True(longest <= 1, $"the Collective landed into the same walls {longest} days in a row");
+        Assert.Contains(host.AiMemoryFor(Side.Collective, true).Notes, n => n.Kind == AiNoteKind.WallsRefused);
+    }
+
+    // AiMemory.Ingest, WallsRefused: an own assault refused as FullyShielded is noted at its system; other refusals, orders that are not own
+    // assaults, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesALandingRefusedForTheShields()
+    {
+        string? At(long seq) => seq is 5 or 6 ? "Charter" : null;
+        GameEvent[] feed =
+        {
+            new OrderRejected(0, 9, 5, Praedra.Core.Assault.AssaultReject.FullyShielded),
+            new OrderRejected(1, 9, 6, Praedra.Core.Assault.AssaultReject.NoTroops),
+            new OrderRejected(2, 9, 7, Praedra.Core.Assault.AssaultReject.FullyShielded),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, null, null, At);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.WallsRefused);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, wallsRefused: 365);
+        on.Ingest(feed, _ => false, null, null, At);
+        var w = on.Notes.Where(n => n.Kind == AiNoteKind.WallsRefused).Select(n => (n.System, n.Day)).ToList();
+        Assert.Equal(new[] { ((string?)"Charter", 9) }, w);
     }
 }

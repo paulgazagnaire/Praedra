@@ -88,6 +88,7 @@ public static class AiLevels
                 InvasionReadyAtRally = true, BooksTalentWindow = true, CellsHops = HardReach, GuerrillaHops = HardReach,
                 FoundYardsBelow = FoundBelow, CampaignsAtOnce = 2,
                 FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, // the adaptive commander, as Medium (2026-11-27)
+                CollectiveAbductionInfoDays = HardCollectiveAbductionInfoDays,
             },
             _ => p,
         };
@@ -105,6 +106,14 @@ public static class AiLevels
     /// With the plan on both sides the mirror was 17 / 130 / 45. Notes: specs/engine/ai-notes/2026-11-19-game-plan.md.
     /// </summary>
     private static SimpleAiParams GamePlan(SimpleAiParams p) => p with { PlanSectorSpreadPercent = PlanSectorSpread, PlanSystemSpreadPercent = PlanSystemSpread };
+
+    /// <summary>
+    /// The Hard Collective aims Abductions at sightings up to 5 days old; the Hard Hand keeps the DEFAULT 2 (AI trainer 2026-11-28, QA-135
+    /// follow-ups; Ponytail's #433 and #434 reviews: only the Collective must be hard to kill). Hard mirrors, 96 games (MedE 1-64, MedA 1-32),
+    /// Collective Abductions succeeded / Hand Abductions succeeded / Hand-Collective-open: both 2 days 186 / 60 / 13-53-30; both 5 days (#434)
+    /// 230 / 60 / 19-55-22; Collective 5 and Hand 2 (this) 246 / 62 / 15-59-22. Medium mirrors went the other way (#433), so Medium keeps 2.
+    /// </summary>
+    private const int HardCollectiveAbductionInfoDays = 5;
 
     /// <summary>The Medium Collective's military review interval in days (AI trainer 2026-11-20, against the big Hand start; the Hand keeps 3).</summary>
     private const int MediumCollectiveMilitaryEvery = 2;
@@ -166,12 +175,34 @@ public static class AiLevels
     /// no hits; Paul on #412: special forces aboard fleets, used hard): ShieldsFeltDays, RaidShieldsSeen and WreckShields with it. 96 seeds, MedE,
     /// main 94bf76b, Hand / Collective / open: Medium mirror 5 / 72 / 19 off, 7 / 80 / 9 shields felt and seen, 4 / 78 / 14 with the Wreckers
     /// too; walled Medium Hand (FortifyWorlds 4, FortifyBatteries 2) 3 / 76 / 17, 2 / 83 / 11, 4 / 87 / 5. Orbit sabotage vs the walled Hand:
-    /// about 10 launched a game, about 4 in 10 started succeed. Notes: specs/engine/ai-notes/rooster-log.md.</remarks>
+    /// about 10 launched a game, about 4 in 10 started succeed. After review (#426, a shelling with no hits must not show the exact shields):
+    /// noting the strike's P cost most of the walled gain (6 / 79 / 11 and 4 / 78 / 14), as the batteries ground ships before P is counted; noting
+    /// the shelling fleets' own power (#430) gives 4 / 79 / 13 and 4 / 83 / 9. Notes: specs/engine/ai-notes/rooster-log.md.</remarks>
     private static SimpleAiParams Neutralised(SimpleAiParams p) => p with
     {
         Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,
         ShieldsFeltDays = ShieldsFeltWindow, RaidShieldsSeen = true, WreckShields = true,
+        FighterWaitMax = FightersWaiting, WinWallsForgetDays = WallsForgetDays,
     };
+
+    /// <summary>
+    /// FighterWaitMax at Medium and Hard (Rooster 2026-11-28; the Collective only): no new fighter order while two squadrons wait on the ground.
+    /// 96 seeds, MedE, main 81990ff, Hand / Collective / open and Collective / Hand units lost in battle: Medium mirror 4 / 79 / 13, 5390 / 6492
+    /// off, 4 / 78 / 14, 4389 / 6729 on; walled Medium Hand 4 / 83 / 9, 4660 / 5960 and 5 / 81 / 10, 3208 / 4767; Hard mirror 10 / 65 / 21,
+    /// 4420 / 4057 and 6 / 72 / 18, 3205 / 4006. With the 120-day window (Ponytail #432; main a43252c, 96 seeds): Medium mirror 4 / 81 / 11 ->
+    /// 3 / 84 / 9, Hard mirror 8 / 71 / 17 -> 9 / 69 / 18; games where the cap held more than 200 days in a row: 82 -> 42 (Medium), 73 -> 27 (Hard).
+    /// </summary>
+    private const int FightersWaiting = 2;
+
+    /// <summary>
+    /// WinWallsForgetDays at Medium and Hard (Rooster 2026-11-28; the Collective only): a look at Charter's facilities older than a year reads
+    /// as unknown, as FogGroundForgetDays (365) forgets an old garrison; a landing refused for the shields there makes them count again
+    /// (WallsRefused, Ponytail #436). 288 seeds (1-288), MedE, main b3979ed, Hand / Collective / open, Collective win mean day, wins by day
+    /// 2000, off -> on: Hard mirror 24 / 211 / 53, 1950, 121 -> 27 / 211 / 50, 1910, 133; Medium mirror 10 / 248 / 30, 1951, 146 -> 9 / 250 / 29,
+    /// 1872, 167; Medium Collective vs Maverick's Grinder Hand 11 / 229 / 48, 1980, 124 -> 9 / 233 / 46, 1903, 144. Hard seed 24: the Collective
+    /// held 554 of 555 worlds and never struck Charter (0 regiments, 0 shields) behind a 1225-day-old look; on, it wins on day 2127.
+    /// </summary>
+    private const int WallsForgetDays = 365;
 
     /// <summary>ShieldsFeltDays at Medium and Hard: a shelling's lesson about the shields holds four months unless a look is newer.</summary>
     private const int ShieldsFeltWindow = 120;

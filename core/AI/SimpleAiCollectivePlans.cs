@@ -198,10 +198,14 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// ShieldsFeltDays (fog): the shields the side's own last shelling of <paramref name="system"/> met as its player would read them
-    /// (m3-bombardment §2, hits = max(0, P - S): with hits the shields were P - hits = S; with none they were at least P, so P is noted), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
+    /// (m3-bombardment §2, hits = max(0, P - S): with hits the shields were P - hits = S; with none, fleets of the shelling fleets' power do
+    /// nothing there, so that power is noted and only a stronger pile tries again), when that shelling is newer than the picture's facilities (<paramref name="pictureStamp"/>,
     /// m5-fog-and-hq §F2: a fleet in orbit sees no facilities) and within ShieldsFeltDays; 0 after an own Sabotage there succeeded since (a shield
     /// may have fallen: the next shelling tells). Null = the picture stands.
     /// </summary>
+    /// <summary>ShieldsFelt: the bombardment power of these own fleets now (gone fleets count 0), read when a strike with no hits is noted.</summary>
+    private int FleetsShellPower(IReadOnlyList<int> fleets) => fleets.Sum(id => S.Fleets.TryGetValue(id, out var f) && f.Side == _side ? _h.Bombardment.Power(f) : 0);
+
     private bool ShieldsFeltOn => _p.ShieldsFeltDays > 0 && _view != null && _side == Side.Collective;
 
     private int? ShieldsFelt(string system, int? pictureStamp)
@@ -215,4 +219,67 @@ public sealed partial class SimpleAi
         }
         return null;
     }
+
+    // ================================================================== Fighters wait aboard (no squadrons left on the ground at the yards)
+
+    /// <summary>
+    /// FighterWaitMax: a new fighter order only while fewer than FighterWaitMax of the side's squadrons wait on the ground, based on a world
+    /// and not aboard a ship (m3-fleets: a squadron moves only aboard a carrier, so one built for carriers that are out raiding waits at the
+    /// yard, and a based squadron with no ship there fights any enemy fleet that comes, m4-battle-classic §1.3). Only squadrons set down within
+    /// the last FighterWaitDays count (a FighterGrounded note): nothing fetches a squadron left at a yard the fleets never visit, so without the
+    /// window two strays would stop every fighter order for the rest of the game (Ponytail #432). The Hand reads FighterWaitMaxHand instead.
+    /// Off (0) = no cap.
+    /// </summary>
+    private bool FightersMayWait()
+    {
+        int max = FighterWaitCap;
+        if (max <= 0) return true;
+        var recent = new HashSet<int>(); // lookups only
+        foreach (var n in NotesSince(AiNoteKind.FighterGrounded, Today - FighterWaitDays)) if (n.Day >= Today - FighterWaitDays) recent.Add(n.Value);
+        if (recent.Count < max) return true;
+        int waiting = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Fighter && o.Side == _side && o.AboardShip == 0 && o.System != null && recent.Contains(o.Id));
+        return waiting < max;
+    }
+
+    private int FighterWaitCap => _side == Side.Collective ? _p.FighterWaitMax : _p.FighterWaitMaxHand;
+
+    /// <summary>
+    /// FighterWaitMax: days a squadron set down on the ground counts as waiting for a carrier (AI tuning, Rooster 2026-11-28, Ponytail #432:
+    /// Medium mirror, 96 seeds: 86% of the Collective's squadron waits on the ground ended (boarded or lost) within 120 days (6672 of 7716); one left longer is a
+    /// stray that no longer holds back new orders).
+    /// </summary>
+    private const int FighterWaitDays = 120;
+
+    // ================================================================== Forget Charter's walls
+
+    private bool WallsForgetOn => _p.WinWallsForgetDays > 0 && _side == Side.Collective && _view != null;
+
+    /// <summary>
+    /// The facilities picture (group C) the AI reads walls from: with WinWallsForgetDays (the Collective, fog), a look at the system that wins
+    /// the game older than that many days reads as none (unknown), unless an own landing there was refused for the shields since that look
+    /// (WallsRefused: the walls stand, Ponytail #436). Otherwise the picture as it is.
+    /// </summary>
+    private Praedra.Core.Fog.Seen<IReadOnlyDictionary<string, int>>? WallsSeen(string system)
+    {
+        var fac = _view!.Picture(system)?.Facilities;
+        if (fac != null && WallsForgetOn && system == WinTarget() && AgeOf(fac) > _p.WinWallsForgetDays && !WallsRefusedSince(system, fac.Stamp)) return null;
+        return fac;
+    }
+
+    /// <summary>
+    /// WinWallsForgetDays: an own assault at the system was refused because it is fully shielded (AiNoteKind.WallsRefused, m3-assault check 4)
+    /// after <paramref name="lookStamp"/> (the day of the side's last look at its facilities; null = never looked) and within WinWallsForgetDays.
+    /// A refused landing teaches the AI as a shelling does; without it a fleet would land, be refused and land again every day.
+    /// </summary>
+    private bool WallsRefusedSince(string system, int? lookStamp)
+    {
+        if (!WallsForgetOn) return false;
+        int since = Today - _p.WinWallsForgetDays;
+        foreach (var n in NotesSince(AiNoteKind.WallsRefused, since))
+            if (n.System == system && n.Day >= since && (lookStamp == null || n.Day > lookStamp)) return true;
+        return false;
+    }
+
+    private string? AssaultAt(long sequence) => _assaultAt.TryGetValue(sequence, out var s) ? s : null;
+    private readonly Dictionary<long, string> _assaultAt = new(); // WallsRefused: own assault orders not yet read back (lookup only, never iterated)
 }
