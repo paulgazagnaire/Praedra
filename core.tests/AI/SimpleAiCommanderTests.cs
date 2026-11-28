@@ -142,9 +142,13 @@ public class SimpleAiCommanderTests
             var off = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
             new AiMatch(on, AiLevels.For(AiLevel.Medium) with { GuardRaidedDays = 360 }, AiLevels.For(AiLevel.Medium)).RunTo(700);
             new AiMatch(off, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium)).RunTo(700);
-            return (on: Guarded(on), off: Guarded(off));
+            // the guard runs on its own too, without walled key worlds (FortifyWorlds 0; Ponytail's #431 review)
+            var alone = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            new AiMatch(alone, AiLevels.For(AiLevel.Medium) with { GuardRaidedDays = 360, FortifyWorlds = 0 }, AiLevels.For(AiLevel.Medium)).RunTo(700);
+            return (on: Guarded(on), off: Guarded(off), alone: Guarded(alone));
         });
-        foreach (var g in guarded) _out.WriteLine($"walled mine worlds: with the guard {g.on}, without {g.off}");
+        foreach (var g in guarded) _out.WriteLine($"walled mine worlds: with the guard {g.on}, without {g.off}, the guard without Fortify {g.alone}");
+        Assert.True(guarded.Sum(g => g.alone) > 0, "the guard walled no mine world without FortifyWorlds");
         Assert.All(guarded, g => Assert.True(g.on >= g.off, $"the guard walled {g.on} mine worlds, {g.off} without it"));
         Assert.True(guarded.Count(g => g.on > g.off) >= 2, "the guard walled more mine worlds in fewer than 2 of 4 games");
     }

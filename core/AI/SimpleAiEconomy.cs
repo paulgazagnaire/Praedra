@@ -175,7 +175,8 @@ public sealed partial class SimpleAi
     private (FacilityKind, string)? FortifyChoice(string from)
     {
         int worlds = _p.FortifyWorlds + ShellHolesOn; // ShellHoles: the bolt-holes come after the Hearth's world (FortifyTargets)
-        if (_advisor || worlds <= 0) return null;
+        if (_advisor) return null;
+        if (worlds <= 0) return GuardRaidedChoice(from); // the economy guard runs without walled worlds too
         var eco = _h.Economy;
         int n = 0;
         foreach (var w in FortifyTargets())
