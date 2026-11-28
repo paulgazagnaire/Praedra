@@ -686,6 +686,7 @@ public sealed partial class SimpleAi
         {
             long seq = _h.Assault.SubmitAssault(_side, f.Id, at);
             Note(seq, "Assault", $"fleet {f.Id} lands on {at}");
+            if (WallsForgetOn) _assaultAt[seq] = at; // WallsRefused: SimpleAiCollectivePlans.cs
             return;
         }
         Leave(f);

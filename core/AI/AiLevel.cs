@@ -182,7 +182,7 @@ public static class AiLevels
     {
         Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,
         ShieldsFeltDays = ShieldsFeltWindow, RaidShieldsSeen = true, WreckShields = true,
-        FighterWaitMax = FightersWaiting,
+        FighterWaitMax = FightersWaiting, WinWallsForgetDays = WallsForgetDays,
     };
 
     /// <summary>
@@ -193,6 +193,16 @@ public static class AiLevels
     /// 3 / 84 / 9, Hard mirror 8 / 71 / 17 -> 9 / 69 / 18; games where the cap held more than 200 days in a row: 82 -> 42 (Medium), 73 -> 27 (Hard).
     /// </summary>
     private const int FightersWaiting = 2;
+
+    /// <summary>
+    /// WinWallsForgetDays at Medium and Hard (Rooster 2026-11-28; the Collective only): a look at Charter's facilities older than a year reads
+    /// as unknown, as FogGroundForgetDays (365) forgets an old garrison; a landing refused for the shields there makes them count again
+    /// (WallsRefused, Ponytail #436). 288 seeds (1-288), MedE, main b3979ed, Hand / Collective / open, Collective win mean day, wins by day
+    /// 2000, off -> on: Hard mirror 24 / 211 / 53, 1950, 121 -> 27 / 211 / 50, 1910, 133; Medium mirror 10 / 248 / 30, 1951, 146 -> 9 / 250 / 29,
+    /// 1872, 167; Medium Collective vs Maverick's Grinder Hand 11 / 229 / 48, 1980, 124 -> 9 / 233 / 46, 1903, 144. Hard seed 24: the Collective
+    /// held 554 of 555 worlds and never struck Charter (0 regiments, 0 shields) behind a 1225-day-old look; on, it wins on day 2127.
+    /// </summary>
+    private const int WallsForgetDays = 365;
 
     /// <summary>ShieldsFeltDays at Medium and Hard: a shelling's lesson about the shields holds four months unless a look is newer.</summary>
     private const int ShieldsFeltWindow = 120;

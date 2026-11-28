@@ -44,7 +44,7 @@ public class AiLevelTests
     // AI trainer 2026-11-27: the adaptive commander's shipped plans at Medium and Hard (SimpleAiCommanderTests)
     private static readonly string[] Commander = { nameof(SimpleAiParams.FortifyWorlds), nameof(SimpleAiParams.SiegeShields), nameof(SimpleAiParams.FrontPlans), nameof(SimpleAiParams.FrontMemory),
         nameof(SimpleAiParams.Neutralise), nameof(SimpleAiParams.NeutraliseElsewherePercent), nameof(SimpleAiParams.RefitAway),
-        nameof(SimpleAiParams.ShieldsFeltDays), nameof(SimpleAiParams.RaidShieldsSeen), nameof(SimpleAiParams.WreckShields), nameof(SimpleAiParams.FighterWaitMax) }; // Rooster 2026-11-27, SimpleAiCollectivePlansTests
+        nameof(SimpleAiParams.ShieldsFeltDays), nameof(SimpleAiParams.RaidShieldsSeen), nameof(SimpleAiParams.WreckShields), nameof(SimpleAiParams.FighterWaitMax), nameof(SimpleAiParams.WinWallsForgetDays) }; // Rooster 2026-11-27, SimpleAiCollectivePlansTests
     private static readonly string[] GamePlan = { nameof(SimpleAiParams.PlanSectorSpreadPercent), nameof(SimpleAiParams.PlanSystemSpreadPercent) };
     private static readonly string[] PlayToWin = { nameof(SimpleAiParams.WinRushDefenders), nameof(SimpleAiParams.InvasionRegimentTarget), nameof(SimpleAiParams.TroopCapacityTarget), nameof(SimpleAiParams.AfterCharterDiplomats) };
 
@@ -123,7 +123,7 @@ public class AiLevelTests
             WorldsPerConstructionYard = 5, MaxConstructionYards = 30, YardsFromMargin = true, ShipyardsPerSystem = 5, AdvancedShipyards = true,
             RefitBelowPercent = 50, ShipResearchMissions = 3, ShipResearchValue = 600, DesiredShipyards = 15, HoldShipPercent = 10, GarrisonsFirstHoldsNavy = true, Campaign = true, StrandedAgentsHome = true,
             FortifyWorlds = 1, SiegeShields = true, FrontPlans = true, FrontMemory = true, Neutralise = true, NeutraliseElsewherePercent = 100, RefitAway = true,
-            ShieldsFeltDays = 120, RaidShieldsSeen = true, WreckShields = true, FighterWaitMax = 2 }, AiLevels.For(AiLevel.Medium, b));
+            ShieldsFeltDays = 120, RaidShieldsSeen = true, WreckShields = true, FighterWaitMax = 2, WinWallsForgetDays = 365 }, AiLevels.For(AiLevel.Medium, b));
     }
 
     [Theory]

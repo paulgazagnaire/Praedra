@@ -249,4 +249,37 @@ public sealed partial class SimpleAi
     /// stray that no longer holds back new orders).
     /// </summary>
     private const int FighterWaitDays = 120;
+
+    // ================================================================== Forget Charter's walls
+
+    private bool WallsForgetOn => _p.WinWallsForgetDays > 0 && _side == Side.Collective && _view != null;
+
+    /// <summary>
+    /// The facilities picture (group C) the AI reads walls from: with WinWallsForgetDays (the Collective, fog), a look at the system that wins
+    /// the game older than that many days reads as none (unknown), unless an own landing there was refused for the shields since that look
+    /// (WallsRefused: the walls stand, Ponytail #436). Otherwise the picture as it is.
+    /// </summary>
+    private Praedra.Core.Fog.Seen<IReadOnlyDictionary<string, int>>? WallsSeen(string system)
+    {
+        var fac = _view!.Picture(system)?.Facilities;
+        if (fac != null && WallsForgetOn && system == WinTarget() && AgeOf(fac) > _p.WinWallsForgetDays && !WallsRefusedSince(system, fac.Stamp)) return null;
+        return fac;
+    }
+
+    /// <summary>
+    /// WinWallsForgetDays: an own assault at the system was refused because it is fully shielded (AiNoteKind.WallsRefused, m3-assault check 4)
+    /// after <paramref name="lookStamp"/> (the day of the side's last look at its facilities; null = never looked) and within WinWallsForgetDays.
+    /// A refused landing teaches the AI as a shelling does; without it a fleet would land, be refused and land again every day.
+    /// </summary>
+    private bool WallsRefusedSince(string system, int? lookStamp)
+    {
+        if (!WallsForgetOn) return false;
+        int since = Today - _p.WinWallsForgetDays;
+        foreach (var n in NotesSince(AiNoteKind.WallsRefused, since))
+            if (n.System == system && n.Day >= since && (lookStamp == null || n.Day > lookStamp)) return true;
+        return false;
+    }
+
+    private string? AssaultAt(long sequence) => _assaultAt.TryGetValue(sequence, out var s) ? s : null;
+    private readonly Dictionary<long, string> _assaultAt = new(); // WallsRefused: own assault orders not yet read back (lookup only, never iterated)
 }

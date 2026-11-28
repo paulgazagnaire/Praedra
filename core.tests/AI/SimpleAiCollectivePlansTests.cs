@@ -25,6 +25,7 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, p.ShieldsFeltDays);
         Assert.Equal(0, p.FighterWaitMax);
         Assert.Equal(0, p.FighterWaitMaxHand);
+        Assert.Equal(0, p.WinWallsForgetDays);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -43,6 +44,7 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(on, p.WreckShields);
         Assert.Equal(on ? 2 : 0, p.FighterWaitMax); // Rooster 2026-11-28: fighters wait aboard
         Assert.Equal(0, p.FighterWaitMaxHand); // the Hand's is Maverick's to measure
+        Assert.Equal(on ? 365 : 0, p.WinWallsForgetDays); // Rooster 2026-11-28: Charter's old walls are forgotten
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
@@ -218,5 +220,70 @@ public class SimpleAiCollectivePlansTests
         hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
         hand.Ingest(feed, _ => false, null, _ => false);
         Assert.DoesNotContain(hand.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
+    }
+
+    // WinWallsForgetDays (m5-fog-and-hq §F2: only Espionage writes a system's facilities; as QA-5 forgets an old garrison): Hard mirror seed 24.
+    // Kept: the Collective holds 554 of 555 worlds by day 2750 and never strikes Charter, which has no shields and no regiments left, because
+    // its look from about day 775 still shows two shield generators. Forgotten after 365 days: it takes Charter and wins (day 2127).
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ForgottenWallsLetTheCollectiveStrikeAnEmptyCharter()
+    {
+        (Side? winner, int day) Play(int forget)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 24, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget });
+            while (host.Game.Day < 2400 && host.Victory.Winner == null) m.Step();
+            return (host.Victory.Winner, host.Game.Day);
+        }
+        var off = Play(0); var on = Play(365);
+        _out.WriteLine($"walls kept: winner {off.winner?.ToString() ?? "none"} by day {off.day}; forgotten: {on.winner?.ToString() ?? "none"} on day {on.day}");
+        Assert.Null(off.winner);
+        Assert.Equal(Side.Collective, on.winner);
+    }
+
+    // WinWallsForgetDays with WallsRefused (Ponytail #436; m3-assault check 4): a landing refused because the world is fully shielded teaches the
+    // AI the walls stand. Hard mirror seed 13: an old look at Charter is forgotten, a fleet lands on day 1754 and is refused; without the note it
+    // landed and was refused every day from about day 1820 to day 3000 (1180 refusals). With it: one refusal, then the fleet shells or leaves.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ARefusedLandingTeachesTheWallsStand()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 13, Preset = StartPreset.MedE });
+        var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard));
+        int run = 0, longest = 0, last = -10;
+        while (host.Game.Day < 2000 && host.Victory.Winner == null)
+        {
+            int before = m.Rejected.GetValueOrDefault("Collective Assault FullyShielded");
+            m.Step();
+            if (m.Rejected.GetValueOrDefault("Collective Assault FullyShielded") > before) { run = host.Game.Day - last <= 2 ? run + 1 : 1; last = host.Game.Day; longest = Math.Max(longest, run); }
+        }
+        int refused = m.Rejected.GetValueOrDefault("Collective Assault FullyShielded");
+        _out.WriteLine($"landings refused for the shields by day 2000: {refused}, longest run of days in a row {longest}");
+        Assert.True(refused > 0, "no landing was refused: the test no longer checks anything");
+        Assert.True(longest <= 1, $"the Collective landed into the same walls {longest} days in a row");
+        Assert.Contains(host.AiMemoryFor(Side.Collective, true).Notes, n => n.Kind == AiNoteKind.WallsRefused);
+    }
+
+    // AiMemory.Ingest, WallsRefused: an own assault refused as FullyShielded is noted at its system; other refusals, orders that are not own
+    // assaults, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesALandingRefusedForTheShields()
+    {
+        string? At(long seq) => seq is 5 or 6 ? "Charter" : null;
+        GameEvent[] feed =
+        {
+            new OrderRejected(0, 9, 5, Praedra.Core.Assault.AssaultReject.FullyShielded),
+            new OrderRejected(1, 9, 6, Praedra.Core.Assault.AssaultReject.NoTroops),
+            new OrderRejected(2, 9, 7, Praedra.Core.Assault.AssaultReject.FullyShielded),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, null, null, At);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.WallsRefused);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, wallsRefused: 365);
+        on.Ingest(feed, _ => false, null, null, At);
+        var w = on.Notes.Where(n => n.Kind == AiNoteKind.WallsRefused).Select(n => (n.System, n.Day)).ToList();
+        Assert.Equal(new[] { ((string?)"Charter", 9) }, w);
     }
 }

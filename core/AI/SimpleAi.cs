@@ -265,7 +265,8 @@ public sealed partial class SimpleAi
     private bool AssaultForbiddenSeen(string system)
     {
         if (_view == null) return _h.Defenses.AssaultForbidden(system);
-        var fac = _view.Picture(system)?.Facilities;
+        var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
+        if (WallsRefusedSince(system, fac?.Stamp)) return true; // an own landing there was refused for the shields since that look
         return fac != null && _h.Defenses.AssaultForbiddenBy(fac.Value);
     }
 
@@ -279,7 +280,7 @@ public sealed partial class SimpleAi
     private int ShieldStrengthSeen(string system)
     {
         if (_view == null) return _h.Defenses.ShieldStrength(system);
-        var fac = _view.Picture(system)?.Facilities;
+        var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
         if (ShieldsFelt(system, fac?.Stamp) is int felt) return felt; // SimpleAiCollectivePlans.cs: an own shelling since the last look met them
         if (fac == null) return 0;
         int s = 0;
@@ -307,10 +308,12 @@ public sealed partial class SimpleAi
             character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
             shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0, // SimpleAiCollectivePlans.cs
-            fighterGrounded: FighterWaitCap > 0 ? FighterWaitDays : 0);
-        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower, IsOwnFighter);
+            fighterGrounded: FighterWaitCap > 0 ? FighterWaitDays : 0,
+            wallsRefused: WallsForgetOn ? _p.WinWallsForgetDays : 0); // SimpleAiCollectivePlans.cs
+        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower, IsOwnFighter, AssaultAt);
+        _assaultAt.Clear(); // every refusal of the orders it holds is in the feed by now (orders are checked in step 1 of the day they go in)
         var mem = _mem;
-        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower, IsOwnFighter); // a save between Steps (AiMemory.CatchUp)
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower, IsOwnFighter, AssaultAt); // a save between Steps (AiMemory.CatchUp)
     }
 
     // ================================================================== game plan (AI trainer 2026-11-19)
