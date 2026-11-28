@@ -463,10 +463,11 @@ public partial class Main
             Expect(s.Messages.Skip(scrapMsgs).Any(m => m.Text.StartsWith("You scrapped a", StringComparison.Ordinal) && m.Text.Contains("refined back")), "the log says what was scrapped and the refund");
         }
 
-        // Sensor Stations (m5-fog-and-hq N4): finished stations on up to four frontier route systems of the player (setup, test only); over the run below
+        // Sensor Stations (m5-fog-and-hq N4): finished stations on up to eight frontier route systems of the player (setup, test only; four
+        // gave the Hand none in 400 days once #443's guards' draw moved the game); over the run below
         // the player must get a plain-words "Sensors:" message for every SensorReport its side was given.
         var frontier = gs.G.Systems.Where(x => s.OwnerOf(x.Name) == me && s.Host.Economy.FreeEnergy(x.Name) > 0 && gs.G.OnRoute(x.Index) && gs.G.NearOf(x.Index).Any(nb => s.OwnerOf(gs.G.Systems[nb].Name) != me))
-            .Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).Take(4).ToList();
+            .Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).Take(8).ToList();
         foreach (var f in frontier) s.Host.Economy.AddFacility(f, Praedra.Core.Economy.FacilityKind.SensorStation);
         Expect(frontier.Count > 0, $"{frontier.Count} frontier systems got a Sensor Station for the run");
 
