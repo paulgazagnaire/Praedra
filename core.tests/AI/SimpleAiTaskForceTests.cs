@@ -38,7 +38,13 @@ public class SimpleAiTaskForceTests
             // the old start pinned (AI trainer 2026-11-20, #344): the big Hand start's second construction yard makes the TaskForces-off Hand
             // faster too (2 of 12 seeds still going on day 1250, floor 4), so the floors no longer separate the switch; they were measured on the
             // old start, like the other AI behaviour tests (DealSettings.FileOldVictory); DefaultStartPlayTests watches the default start
-            BigHandStart = false, CollectiveBaseDraw = false } });
+            BigHandStart = false, CollectiveBaseDraw = false,
+            // fleets catching lone leaders pinned off (Dev lead 2026-11-28, m5-characters-and-talent §Caught on arrival, #440): the Hand's fleets
+            // take the passive Collective's travelling leaders, which ends the TaskForces-off games sooner (3 of 12 seeds still going on day
+            // 1250, floor 4; on 1240, 956, 1273, 1315, 1306, 978, 1135, 1177, 1234, 1219, 1330, 1174; off 1456, 1210, 1221, 1218, 1329, 1210,
+            // 1042, 1219, 1336, 1126, 1160, 920: sooner on 6 of 12, 9 days on average), so the floors no longer separate the switch; this test
+            // measures task forces
+            Characters = new Praedra.Core.Characters.CharacterParams { FleetsCatchLoneLeaders = false } } });
         // GarrisonsFirst pinned off (Dev lead 2026-10-19): the passive Collective makes the Hand "far ahead" from the start, and this test
         // measures task forces; SimpleAiGarrisonsFirstTests measures that switch.
         var m = new AiMatch(h, AiLevels.For(AiLevel.Medium) with { TaskForces = taskForces, GarrisonsFirst = false },
@@ -93,7 +99,7 @@ public class SimpleAiTaskForceTests
         Assert.True(res.Sum(r => r.On.Splits) > 0, "TaskForces on: no task-force split on any seed");
         Assert.All(res, r => Assert.Equal(0, r.Off.Splits));
         int going = res.Count(r => r.Off.End == 0 || r.Off.End > by);
-        Assert.True(going >= 4, $"TaskForces off: only {going} of {res.Length} seeds still going on day {by} (the test no longer measures the switch)");
+        Assert.True(going >= 4, $"TaskForces off: only {going} of {res.Length} seeds still going on day {by} (the test no longer measures the switch): {all}");
         int End(int e) => e == 0 ? limit : e;
         int sooner = res.Count(r => End(r.On.End) < End(r.Off.End));
         Assert.True(sooner >= 7, $"TaskForces on ends sooner on only {sooner} of 12 seeds: {all}");

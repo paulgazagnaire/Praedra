@@ -767,6 +767,29 @@ public sealed partial class CharacterModule
         }
     }
 
+    /// <summary>
+    /// A character travelling alone (or in a Move group, m5-missions) has just ended his trip at <paramref name="sys"/>: an armed fleet of the other side standing there (arrived,
+    /// not on a trip; armed by the forced-stop test) captures him, cause Intercept, held aboard the lowest-id such fleet, unless an armed fleet
+    /// of his own side stands there too. Whoever holds the system does not matter. rule: m5-characters-and-talent §Moving a character alone
+    /// (Caught on arrival, Paul 2026-11-28); §Capture 2 step 1 (the captor's place: its fleet).
+    /// </summary>
+    public void CatchOnArrival(StepContext ctx, CharacterRecord c, string sys)
+    {
+        if (!Params.FleetsCatchLoneLeaders) return;
+        if (c.Status is not (CharacterStatus.Free or CharacterStatus.Injured)) return;
+        bool Armed(Fleet f) => f.At == sys && f.Transit == null && Praedra.Core.Fleets.CombatStrength.IsArmed(_fleets.Classes(f));
+        Fleet? captor = null;
+        foreach (var f in _fleets.FleetsAt(sys).OrderBy(f => f.Id))
+        {
+            if (!Armed(f)) continue;
+            if (f.Side == c.Side) return; // his side's armed fleet there: he is safe
+            captor ??= f;
+        }
+        if (captor == null) return;
+        // the captor unit moves him to its place (aboard), as a mission-involved capture does (§Capture 2 step 2 reads "moved there")
+        Capture(ctx, c, captor.Side, null, CharacterCause.Intercept, unit: new CaptorUnit(captor.Id, sys, 0, MissionInvolved: true));
+    }
+
     // rule: §Where it runs (slot 3: arrivals, after the fleets, character id). A lone character is never stopped on the way
     // (CharactersStoppedInTransit off): at a passing system its next hop starts at once.
     private void Arrivals(StepContext ctx)
@@ -780,6 +803,7 @@ public sealed partial class CharacterModule
             {
                 c.Transit = null; c.System = sys;
                 ctx.Emit((i, _) => new CharacterArrived(i, day, c.Id, c.Side, sys));
+                CatchOnArrival(ctx, c, sys); // before the join: a caught leader joins nobody
                 // QA-9 (B2e §3 Autoroute step 4): he joins the fleet he set off for if it is still there (a rider, no post)
                 // rule: §Moving a character alone (Joining a fleet on arrival, Paul 2026-11-02): an ordered join takes the post asked for when
                 // it is free and the fleet stands still there; else he rides as a passenger; a fleet that left is not followed

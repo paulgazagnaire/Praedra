@@ -282,6 +282,11 @@ public sealed partial class GameSession
             case CharacterHealed c when Mine(c.Side):
                 yield return new Message(d, $"{CharName(c.Character)} has recovered from the injuries.", null, MsgKind.Good);
                 break;
+            case CharacterCaptured c when c.Cause == CharacterCause.Intercept: // rule: m5-characters-and-talent §Moving a character alone (Caught on arrival)
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} arrived alone at {c.System} and was caught by an enemy fleet."
+                    : c.Captor == Player ? $"Your fleet caught {CharName(c.Character)} of the {NameOf(c.Side)} arriving at {c.System}."
+                    : $"{CharName(c.Character)} was caught by a fleet at {c.System}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
+                break;
             case CharacterCaptured c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was captured by the {NameOf(c.Captor)}{At(c.System)}."
                     : c.Captor == Player ? $"You captured {CharName(c.Character)} of the {NameOf(c.Side)}{At(c.System)}."

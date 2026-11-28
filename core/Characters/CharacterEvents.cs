@@ -46,6 +46,8 @@ public static class CharacterCause
 {
     public const string Mission = "Mission", Battle = "Battle", Harvester = "Harvester", Uprising = "Uprising", Assault = "Assault",
         Blockade = "Blockade", Story = "Story", Debug = "Debug", Escape = "Escape";
+    /// <summary>Caught on arrival by an armed enemy fleet (Paul 2026-11-28). rule: m5-characters-and-talent §Moving a character alone (Caught on arrival).</summary>
+    public const string Intercept = "Intercept";
     /// <summary>B2e: a prisoner freed because his place changed side; the Talent encounter; a trainer's awakening.</summary>
     public const string Liberation = "Liberation", TalentEncounter = "TalentEncounter", Awakened = "Awakened";
     /// <summary>QA-7: the fleet holding a prisoner left the state (he is treated as a free character aboard it).</summary>
