@@ -779,7 +779,7 @@ public sealed partial class SimpleAi
             if (hops[sys.Index] <= reach || isWin || isSearch || isBlind)
             {
                 var slots = SlotsSeen(s);
-                bool ok = slots.Populated && !AssaultForbiddenSeen(s) && aboard >= 1;
+                bool ok = slots.Populated && (!AssaultForbiddenSeen(s) || (isWin && WinSiegeFits(s, shellPower))) && aboard >= 1; // WinSiege: SimpleAiCollectivePlans.cs
                 if (ok)
                 {
                     int d = DefendersAt(s);

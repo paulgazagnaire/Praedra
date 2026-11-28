@@ -266,6 +266,7 @@ public sealed partial class SimpleAi
     {
         if (_view == null) return _h.Defenses.AssaultForbidden(system);
         var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
+        if (WinWallsFeltDown(system, fac?.Stamp)) return false; // WinSiege (SimpleAiCollectivePlans.cs): an own shelling since met fewer shields
         if (WallsRefusedSince(system, fac?.Stamp)) return true; // an own landing there was refused for the shields since that look
         return fac != null && _h.Defenses.AssaultForbiddenBy(fac.Value);
     }

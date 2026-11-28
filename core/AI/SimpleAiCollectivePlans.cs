@@ -281,5 +281,42 @@ public sealed partial class SimpleAi
     }
 
     private string? AssaultAt(long sequence) => _assaultAt.TryGetValue(sequence, out var s) ? s : null;
+    // Not saved, and need not be (Ponytail #436): filled in PlanDay, read back by the next Remember or by CatchUp before a save; the game takes
+    // no save between PlanDay and its Step, so a loaded game never misses a refusal of an order it holds.
     private readonly Dictionary<long, string> _assaultAt = new(); // WallsRefused: own assault orders not yet read back (lookup only, never iterated)
+
+    // ================================================================== Siege Charter (the walled win target)
+
+    private bool WinSiegeOn => _p.WinSiege && _p.SiegeShields && _view != null && _side == Side.Collective;
+
+    /// <summary>WinSiege in PickTarget: the walled win target may be picked by a pile whose shelling beats the shields seen there by the margin.</summary>
+    private bool WinSiegeFits(string system, int shellPower) =>
+        WinSiegeOn && system == WinTarget() && shellPower > ShieldStrengthSeen(system) + _p.WinSiegeMarginPower;
+
+    /// <summary>
+    /// WinSiege: the walls of the win target are believed down. An own shelling there newer than the last look at its facilities (ShieldsFelt,
+    /// within ShieldsFeltDays) met shields below the least that the assault gate's generators give (m3-assault check 4, m3-bombardment §2:
+    /// S sums the completed generators), and no own landing there was refused for the shields since that shelling. A wrong guess costs one
+    /// refused landing (WallsRefused), which reads as walls up again.
+    /// </summary>
+    private bool WinWallsFeltDown(string system, int? lookStamp)
+    {
+        if (!WinSiegeOn || !ShieldsFeltOn || system != WinTarget()) return false;
+        AiNote? felt = null;
+        foreach (var n in NotesSince(AiNoteKind.ShieldsFelt, Today - _p.ShieldsFeltDays))
+            if (n.System == system && n.Day >= Today - _p.ShieldsFeltDays) { felt = n; break; }
+        if (felt == null || felt.Value < 0 || (lookStamp is int ls && felt.Day < ls) || felt.Value >= GateShieldsLeast()) return false;
+        foreach (var n in NotesSince(AiNoteKind.WallsRefused, felt.Day))
+            if (n.System == system && n.Day >= felt.Day) return false;
+        return true;
+    }
+
+    /// <summary>The least shields the assault gate's number of shield generators can give (the weakest generator class, that many times; rule: m3-assault check 4).</summary>
+    private int GateShieldsLeast()
+    {
+        int least = int.MaxValue;
+        foreach (var c in _h.Data.Defenses.Classes)
+            if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator && c.Shield > 0) least = Math.Min(least, c.Shield);
+        return least == int.MaxValue ? 0 : least * Math.Max(1, _h.Defenses.Params.AssaultGateShields);
+    }
 }
