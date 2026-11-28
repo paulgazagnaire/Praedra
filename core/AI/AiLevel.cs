@@ -173,7 +173,17 @@ public static class AiLevels
     {
         Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,
         ShieldsFeltDays = ShieldsFeltWindow, RaidShieldsSeen = true, WreckShields = true,
+        FighterWaitMax = FightersWaiting,
     };
+
+    /// <summary>
+    /// FighterWaitMax at Medium and Hard (Rooster 2026-11-28; the Collective only): no new fighter order while two squadrons wait on the ground.
+    /// 96 seeds, MedE, main 81990ff, Hand / Collective / open and Collective / Hand units lost in battle: Medium mirror 4 / 79 / 13, 5390 / 6492
+    /// off, 4 / 78 / 14, 4389 / 6729 on; walled Medium Hand 4 / 83 / 9, 4660 / 5960 and 5 / 81 / 10, 3208 / 4767; Hard mirror 10 / 65 / 21,
+    /// 4420 / 4057 and 6 / 72 / 18, 3205 / 4006. With the 120-day window (Ponytail #432; main a43252c, 96 seeds): Medium mirror 4 / 81 / 11 ->
+    /// 3 / 84 / 9, Hard mirror 8 / 71 / 17 -> 9 / 69 / 18; games where the cap held more than 200 days in a row: 82 -> 42 (Medium), 73 -> 27 (Hard).
+    /// </summary>
+    private const int FightersWaiting = 2;
 
     /// <summary>ShieldsFeltDays at Medium and Hard: a shelling's lesson about the shields holds four months unless a look is newer.</summary>
     private const int ShieldsFeltWindow = 120;

@@ -23,6 +23,8 @@ public class SimpleAiCollectivePlansTests
         Assert.False(p.RaidShieldsSeen);
         Assert.False(p.WreckShields);
         Assert.Equal(0, p.ShieldsFeltDays);
+        Assert.Equal(0, p.FighterWaitMax);
+        Assert.Equal(0, p.FighterWaitMaxHand);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -39,6 +41,8 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(on ? 120 : 0, p.ShieldsFeltDays); // Rooster 2026-11-27 evening: shields felt and seen, Wreckers aboard
         Assert.Equal(on, p.RaidShieldsSeen);
         Assert.Equal(on, p.WreckShields);
+        Assert.Equal(on ? 2 : 0, p.FighterWaitMax); // Rooster 2026-11-28: fighters wait aboard
+        Assert.Equal(0, p.FighterWaitMaxHand); // the Hand's is Maverick's to measure
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
@@ -154,5 +158,65 @@ public class SimpleAiCollectivePlansTests
         on.KeepAtLeast(0, 0, 0, 0, 0, 0, shieldsFelt: 120);
         on.Ingest(feed, _ => false, _ => 55);
         Assert.Equal(new[] { ("Navalia", 40), ("Midway", 55) }, on.Notes.Where(n => n.Kind == AiNoteKind.ShieldsFelt).Select(n => (n.System!, n.Value)).ToArray());
+    }
+
+    // FighterWaitMax (m3-fleets: a squadron moves only aboard a carrier; m4-battle-classic §1.3: a based squadron with no ship there fights):
+    // with it the Collective orders no fighter while two of its squadrons set down within the last 120 days wait on the ground, so far fewer
+    // of them die at its yards for nothing; older strays no longer count (Ponytail #432). Seed 2, Medium mirror, to day 1500; counts printed.
+    [Fact]
+    public void NoNewFightersWhileTwoWaitOnTheGround()
+    {
+        (int orders, int lateOrders, int strayOrders) Run(int max)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium) with { FighterWaitMax = max });
+            var fighters = host.Economy.Costs.Rows.Where(r => r.Category == Praedra.Core.Economy.ObjectCategory.Fighter).Select(r => r.Name).ToHashSet(StringComparer.Ordinal);
+            var since = new Dictionary<int, int>(); // lookups only
+            int orders = 0, late = 0, stray = 0;
+            while (host.Game.Day < 1500 && host.Victory.Winner == null)
+            {
+                int day = host.Game.Day;
+                var ground = host.Economy.Objects.Where(o => o.Category == Praedra.Core.Economy.ObjectCategory.Fighter && o.Side == Side.Collective && o.AboardShip == 0 && o.System != null).Select(o => o.Id).ToHashSet();
+                foreach (int id in ground) since.TryAdd(id, day);
+                foreach (int id in since.Keys.Where(id => !ground.Contains(id)).ToList()) since.Remove(id);
+                int fresh = since.Values.Count(d0 => day - d0 < 119); // set down within the window (a day's margin: the note is the event's day)
+                m.Step();
+                int n = m.Collective.Submitted.Count(o => o.Kind == "Build" && fighters.Any(f => o.Detail.Contains(" x " + f + " at ", StringComparison.Ordinal)));
+                orders += n;
+                if (fresh >= 2) late += n;
+                else if (ground.Count >= 2) stray += n;
+            }
+            return (orders, late, stray);
+        }
+        var off = Run(0); var on = Run(2);
+        _out.WriteLine($"fighter orders off {off.orders} ({off.lateOrders} with 2+ fresh waiting), on {on.orders} ({on.lateOrders}; {on.strayOrders} with 2+ waiting, under 2 fresh)");
+        Assert.True(off.lateOrders > 0, "no fighter was ordered with squadrons waiting: the test no longer checks anything");
+        Assert.Equal(0, on.lateOrders);
+    }
+
+    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted) or unloaded (SquadronsUnloaded, one note per
+    // squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesTheSquadronsSetDown()
+    {
+        bool Fighter(int id) => id is 11 or 12 or 13;
+        GameEvent[] feed =
+        {
+            new Praedra.Core.Construction.UnitCompleted(0, 5, 11, "Sting", Side.Collective, "Navalia", "Navalia", 1),
+            new Praedra.Core.Construction.UnitCompleted(1, 5, 30, "Lancer", Side.Collective, "Navalia", "Navalia", 2),
+            new Praedra.Core.Fleets.SquadronsUnloaded(2, 7, new ValueList<int>(new[] { 12, 13 }), 4, new ValueList<int>(new[] { 30 }), "Midway"),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, null, Fighter);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
+        on.Ingest(feed, _ => false, null, Fighter);
+        var g = on.Notes.Where(n => n.Kind == AiNoteKind.FighterGrounded).Select(n => (n.Value, n.System, n.Day)).ToList();
+        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7) }, g);
+        var hand = new AiMemory { Side = Side.Hand, Fog = true };
+        hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
+        hand.Ingest(feed, _ => false, null, _ => false);
+        Assert.DoesNotContain(hand.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
     }
 }

@@ -219,4 +219,34 @@ public sealed partial class SimpleAi
         }
         return null;
     }
+
+    // ================================================================== Fighters wait aboard (no squadrons left on the ground at the yards)
+
+    /// <summary>
+    /// FighterWaitMax: a new fighter order only while fewer than FighterWaitMax of the side's squadrons wait on the ground, based on a world
+    /// and not aboard a ship (m3-fleets: a squadron moves only aboard a carrier, so one built for carriers that are out raiding waits at the
+    /// yard, and a based squadron with no ship there fights any enemy fleet that comes, m4-battle-classic §1.3). Only squadrons set down within
+    /// the last FighterWaitDays count (a FighterGrounded note): nothing fetches a squadron left at a yard the fleets never visit, so without the
+    /// window two strays would stop every fighter order for the rest of the game (Ponytail #432). The Hand reads FighterWaitMaxHand instead.
+    /// Off (0) = no cap.
+    /// </summary>
+    private bool FightersMayWait()
+    {
+        int max = FighterWaitCap;
+        if (max <= 0) return true;
+        var recent = new HashSet<int>(); // lookups only
+        foreach (var n in NotesSince(AiNoteKind.FighterGrounded, Today - FighterWaitDays)) if (n.Day >= Today - FighterWaitDays) recent.Add(n.Value);
+        if (recent.Count < max) return true;
+        int waiting = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Fighter && o.Side == _side && o.AboardShip == 0 && o.System != null && recent.Contains(o.Id));
+        return waiting < max;
+    }
+
+    private int FighterWaitCap => _side == Side.Collective ? _p.FighterWaitMax : _p.FighterWaitMaxHand;
+
+    /// <summary>
+    /// FighterWaitMax: days a squadron set down on the ground counts as waiting for a carrier (AI tuning, Rooster 2026-11-28, Ponytail #432:
+    /// Medium mirror, 96 seeds: 86% of the Collective's squadron waits on the ground ended (boarded or lost) within 120 days (6672 of 7716); one left longer is a
+    /// stray that no longer holds back new orders).
+    /// </summary>
+    private const int FighterWaitDays = 120;
 }

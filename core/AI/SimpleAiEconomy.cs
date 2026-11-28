@@ -787,7 +787,7 @@ public sealed partial class SimpleAi
                 count = Math.Min(2, (_p.TroopCapacityTarget - troopCap + per - 1) / per);
                 transportOrdered = true;
             }
-            else if (fighter != null && fighters * 100 < berths * _p.FighterFillPercent && berths - fighters >= 1)
+            else if (fighter != null && fighters * 100 < berths * _p.FighterFillPercent && berths - fighters >= 1 && FightersMayWait()) // FighterWaitMax: SimpleAiCollectivePlans.cs
             {
                 cls = fighter;
                 count = Math.Clamp(berths * _p.FighterFillPercent / 100 - fighters, 1, Math.Min(berths - fighters, _p.FightersPerOrder));
