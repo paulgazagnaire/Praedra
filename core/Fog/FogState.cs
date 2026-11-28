@@ -41,6 +41,13 @@ public sealed class SideKnowledge
     /// </summary>
     [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public List<SensorWarning>? SensorWarnings { get; set; }
+    /// <summary>
+    /// Inbound sightings: leaders of the other side the side's spies saw travelling alone to a system, with the day each will stand there.
+    /// One per character (the newest replaces the older), sorted by character id. Null when empty, and then left out of the saved form, so
+    /// games without one save and hash exactly as before. rule: m5-fog-and-hq §N6d, §N9.
+    /// </summary>
+    [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<InboundLeader>? LeadersInbound { get; set; }
 
     internal SystemKnowledge Touch(string system)
     {
@@ -55,7 +62,21 @@ public sealed class SideKnowledge
         Clues = o.Clues.ToList();
         SensorWarnings = o.SensorWarnings is { Count: > 0 } sw
             ? sw.Select(w => new SensorWarning { FleetId = w.FleetId, System = w.System, ReachDay = w.ReachDay }).ToList() : null;
+        LeadersInbound = o.LeadersInbound is { Count: > 0 } li ? li.Select(x => x.Clone()).ToList() : null;
     }
+}
+
+/// <summary>
+/// An inbound sighting: a leader of the other side seen by the side's spies travelling alone to <see cref="System"/>, where he will stand on
+/// <see cref="ReachDay"/>; <see cref="Day"/> is the espionage mission's stamp. rule: m5-fog-and-hq §N6d.
+/// </summary>
+public sealed class InboundLeader
+{
+    public int Character { get; set; }
+    public string System { get; set; } = "";
+    public int ReachDay { get; set; }
+    public int Day { get; set; }
+    internal InboundLeader Clone() => new() { Character = Character, System = System, ReachDay = ReachDay, Day = Day };
 }
 
 /// <summary>A Sensor Station warning already given: the fleet, the station system and the day the fleet reaches it. rule: m5-fog-and-hq §N4.</summary>

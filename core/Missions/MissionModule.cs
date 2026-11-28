@@ -1045,7 +1045,7 @@ public sealed partial class MissionModule
     }
 
     // rule: §1 Step 3: the group lands, draws the first timer T = min + rand(0..spread) (no draw for a zero spread), due = A + T, MissionLanded.
-    // A character target that is no longer there ends the mission TargetInvalid (no draw). The arriving check (phase 7, orbit) runs before the
+    // A character target that is no longer there ends the mission TargetInvalid (no draw), unless the team lies in wait for him (§Targets). The arriving check (phase 7, orbit) runs before the
     // timer (phase 8). rule: §1 (Traced B2d §1).
     private void Land(StepContext ctx, MissionGroup m, int t)
     {
@@ -1054,10 +1054,18 @@ public sealed partial class MissionModule
         PlaceMembers(m, m.Target);
         if (m.Kind == MissionKind.Move) { Release(ctx, m, m.Target, t); return; }
         if (!m.HasTeam) { End(ctx, m, MissionOutcome.Cancelled, t); return; }
-        if (m.TargetCharacter != null && TargetReason(m) != null) { End(ctx, m, MissionOutcome.TargetInvalid, t); return; }
+        int start = t; // the day the first timer counts from
+        if (m.TargetCharacter != null && TargetReason(m) != null)
+        {
+            // rule: m5-missions §Targets (Lying in wait, Paul 2026-11-28): the side's own inbound sighting (m5-fog-and-hq §N6d) of the leader at
+            // this system, reach day R with A <= R <= A + AmbushWaitMaxDays: the team waits and the first timer counts from R
+            if (Params.AmbushWaitMaxDays > 0 && _fog.InboundReachDay(m.Side, m.TargetCharacter.Value, m.Target) is int r
+                && r >= t && r - t <= Params.AmbushWaitMaxDays) start = r;
+            else { End(ctx, m, MissionOutcome.TargetInvalid, t); return; }
+        }
         var rec = Data.Get(m.Kind);
         if (Params.MissionGuardChecks && RunCheck(ctx, m, t, CheckPoint.Arrive, rec)) return;
-        m.Due = t + Timer(ctx, rec);
+        m.Due = start + Timer(ctx, rec);
         m.Phase = MissionPhase.Working;
         int id = m.Id, due = m.Due; var side = m.Side; string target = m.Target;
         ctx.Emit((i, _) => new MissionLanded(i, t, id, side, target, due));
