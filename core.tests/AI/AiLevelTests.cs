@@ -96,7 +96,8 @@ public class AiLevelTests
                                             nameof(SimpleAiParams.CellsForcesWanted), nameof(SimpleAiParams.CellsSubversion),
                                             nameof(SimpleAiParams.WatchLooks), nameof(SimpleAiParams.RaidStrikes),
                                             nameof(SimpleAiParams.CellsHops), nameof(SimpleAiParams.GuerrillaHops), // reach 6, AI trainer 2026-11-20
-                                            nameof(SimpleAiParams.CampaignsAtOnce) }; // two campaigns at once, AI trainer 2026-11-26 (Paul: more simultaneous attacks with difficulty)
+                                            nameof(SimpleAiParams.CampaignsAtOnce), // two campaigns at once, AI trainer 2026-11-26 (Paul: more simultaneous attacks with difficulty)
+                                            nameof(SimpleAiParams.AbductionInfoDays) }; // Hard acts on sightings up to 5 days old, its own knowledge (AI trainer 2026-11-28, QA-135)
         foreach (var prop in typeof(SimpleAiParams).GetProperties().Where(p => !changed.Contains(p.Name) && (p.PropertyType.IsValueType || p.PropertyType == typeof(string))))
             Assert.True(Equals(prop.GetValue(m), prop.GetValue(h)), $"{prop.Name}: Medium {prop.GetValue(m)}, Hard {prop.GetValue(h)}");
     }
