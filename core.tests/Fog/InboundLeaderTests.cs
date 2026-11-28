@@ -27,9 +27,10 @@ public class InboundLeaderTests
 
     private const int L1 = 833, L2 = 834, L3 = 576, L4 = 577; // Collective: Forty-One, Foreman, Mae Abara, Ledger (data/classic/characters.csv)
 
-    private static GameHost Host(bool on, bool groups = true)
+    private static GameHost Host(bool on, bool groups = true, int groupPercent = 100)
     {
-        var h = GameHost.New(1, new GameSettings { Fog = new FogParams { EspionageSeesInbound = on, InboundSeesMissionGroups = groups } }, MapE.Value);
+        var h = GameHost.New(1, new GameSettings { Fog = new FogParams { EspionageSeesInbound = on, InboundSeesMissionGroups = groups,
+            InboundMissionGroupPercent = groupPercent } }, MapE.Value);
         h.Fleets.SetOwner("E0", Side.Hand);
         for (int i = 1; i <= 12; i++) h.Fleets.SetOwner($"A{i:00}", Side.Collective);
         h.Fog.PlaceHq("A01");
@@ -115,5 +116,24 @@ public class InboundLeaderTests
         Assert.Contains("LeadersInbound", saved);
         var back = GameHost.Load(saved, new GameSettings(), MapE.Value);
         Assert.Equal(on.Fog.LeadersInbound(Side.Hand).Select(i => i.ReachDay), back.Fog.LeadersInbound(Side.Hand).Select(i => i.ReachDay));
+    }
+
+    // m5-fog-and-hq FE11 (Paul 2026-11-28, "chances are pretty low"): a mission group is seen only on a draw, one per group; 0 = never (no
+    // draw, the leader alone still seen), 100 = always (no draw), between: exactly one extra draw for L4's group, the leader alone needs none
+    [Fact]
+    public void FE11_AMissionGroupIsSeenOnlyOnADraw()
+    {
+        Assert.Equal(15, new FogParams().InboundMissionGroupPercent);
+        var never = Host(true, groupPercent: 0);
+        var (d0, _) = Espionage(never, "A05");
+        Assert.Equal(L1, never.Fog.LeadersInbound(Side.Hand).Single().Character);
+        var always = Host(true, groupPercent: 100);
+        var (d100, _) = Espionage(always, "A05");
+        Assert.Equal(new[] { L4, L1 }, always.Fog.LeadersInbound(Side.Hand).Select(i => i.Character));
+        Assert.Equal(d0, d100);
+        var half = Host(true, groupPercent: 50);
+        var (d50, _) = Espionage(half, "A05");
+        Assert.Equal(d0 + 1, d50);
+        Assert.Contains(L1, half.Fog.LeadersInbound(Side.Hand).Select(i => i.Character));
     }
 }

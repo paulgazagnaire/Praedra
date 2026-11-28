@@ -210,6 +210,12 @@ public sealed record CharacterParams
     /// DEFAULT true; false = Classic. rule: m5-characters-and-talent §Moving a character alone (Caught on arrival).
     /// </summary>
     public bool FleetsCatchLoneLeaders { get; init; } = true;
+    /// <summary>
+    /// Autoroute step 3 first takes the nearest system his side holds, not blockaded, where an armed fleet of his side stands, then any such
+    /// system (Rule New, Decided Paul 2026-11-28, Maverick's card "Guarded world"). DEFAULT true; false = Classic (the nearest held one).
+    /// rule: m5-characters-and-talent §Capture, injury, death, freeing (Autoroute step 3).
+    /// </summary>
+    public bool AutorouteToGuarded { get; init; } = true;
     /// <summary>Personnel leaving a blockaded system risk capture (Classic text, no rule). DEFAULT false; on refused.</summary>
     public bool BlockadeEscapeRisk { get; init; }
     /// <summary>Assaults capture or kill officers (Missing). DEFAULT false; on refused.</summary>

@@ -464,6 +464,34 @@ public class CharacterTests
         Assert.Equal(CharacterStatus.Captured, w.C(FortyOne).Status);
     }
 
+    // m5-characters-and-talent CH50 (Autoroute step 3, guarded first; Paul 2026-11-28 "Guarded world"): on the line A-B-C-D, Forty-One stands
+    // on the Hand's B; the Collective holds A (one lane away) and D (two). An armed Collective fleet at D: he sets off for D. Without it, with
+    // with his fleet leaving D (on a trip), or the switch off: the nearest held world, A.
+    [Theory]
+    [InlineData("guarded", "D")]
+    [InlineData("none", "A")]
+    [InlineData("in transit", "A")]
+    [InlineData("off", "A")]
+    public void CH50_AutorouteTakesTheNearestGuardedWorldFirst(string kind, string expected)
+    {
+        var planets = "name,sector,group,map_x,map_y\nA,S,heartland,0,0\nB,S,heartland,300,0\nC,S,heartland,600,0\nD,S,heartland,900,0\n";
+        var lanes = "from,to,kind,routes\nA,B,generated,\nB,C,generated,\nC,D,generated,\n";
+        var g = GalaxyLoader.Load(planets, lanes, TestData.Tiers);
+        var slots = "name,sector,group,energy,raw,populated\n" + string.Join("\n", g.Systems.Select(x => $"{x.Name},{x.Sector},{x.Group},5,3,1"));
+        var w = new CharWorld(kind == "off" ? new CharacterParams { AutorouteToGuarded = false } : null, data: GameData.Default with { Galaxy = g, Slots = SlotValues.Parse(slots, g) });
+        w.Hold("A", Side.Collective); w.Hold("B", Side.Hand); w.Hold("D", Side.Collective);
+        if (kind is "guarded" or "off") w.Fleet(Side.Collective, "D", Corvette);
+        if (kind == "in transit")
+        {
+            int f = w.Fleet(Side.Collective, "D", Corvette);
+            Assert.Null(w.Try(seq => new MoveFleetOrder(seq, Side.Collective, f, "C")));
+            Assert.NotNull(w.Game.State.Fleets[f].Transit);
+        }
+        var c = w.Add(FortyOne, "B");
+        Assert.True(w.Ch.Autoroute(null, c));
+        Assert.Equal(expected, c.Transit!.Path[^1]);
+    }
+
     // m5-characters-and-talent CH14
     [Theory]
     [InlineData(true)]

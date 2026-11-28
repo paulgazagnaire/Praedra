@@ -76,9 +76,16 @@ public sealed record FogParams
     /// <summary>
     /// §N6d also sees the leaders travelling in a mission group (team members and decoys flying out to the group's target, a Move group, or a
     /// group flying home) whose trip ends at a copied system. Lead 2026-11-28 (sims: AI leaders travel almost only in groups, so without this
-    /// the rule never fires against the AI; card to Paul). DEFAULT on; off = leaders travelling alone only. rule: m5-fog-and-hq §N6d.
+    /// the rule never fires against the AI). Decided Paul 2026-11-28, seen only on a draw (InboundMissionGroupPercent). DEFAULT on; off = leaders
+    /// travelling alone only. rule: m5-fog-and-hq §N6d.
     /// </summary>
     public bool InboundSeesMissionGroups { get; init; } = true;
+    /// <summary>
+    /// §N6d: the chance, in percent, that an Espionage success sees a mission group on its way in (one draw per group; leaders travelling alone
+    /// are always seen). Paul 2026-11-28: "an espionage mission can reveal an enemy leader arriving on a mission. Chances are pretty low though".
+    /// DEFAULT 15 (Lead: Paul gave no number); 100 = always (no draw), 0 = never. rule: m5-fog-and-hq §N6d.
+    /// </summary>
+    public int InboundMissionGroupPercent { get; init; } = 15;
     /// <summary>Days a look stays "Observed", and the age at which a sighting is dropped. Proposal. rule: §N1, §N3.</summary>
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>
