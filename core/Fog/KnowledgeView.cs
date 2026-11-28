@@ -67,6 +67,8 @@ public sealed class KnowledgeView
     /// <summary>Every character the side's pictures show in group D (system ordinal, then id), with the stamp; stale entries included. rule: §F1 group D, §N8.</summary>
     public IReadOnlyList<(string System, CharacterPicture Character, int Stamp)> CharactersSeen() => _fog.CharactersSeen(Side);
     public IReadOnlyList<HqSectorClue> HqSectorClues => _fog.Clues(Side);
+    /// <summary>The side's inbound sightings: leaders its spies saw travelling alone to a system, with the reach day. rule: §N6d, §N8.</summary>
+    public IReadOnlyList<InboundLeader> LeadersInbound => _fog.LeadersInbound(Side);
     public IReadOnlyList<Sighting> Sightings(int sinceDay = 0) => _fog.Sightings(Side, sinceDay);
     /// <summary>The side's Sensor Station warnings from a day on (its own sighting-log entries of kind SensorArrival: system, side, size, ReachDay). rule: §N4, §N8.</summary>
     public IReadOnlyList<Sighting> SensorReports(int sinceDay = 0) => _fog.Sightings(Side, sinceDay).Where(s => s.Kind == SightingKind.SensorArrival).ToList();

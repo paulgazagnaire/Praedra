@@ -107,7 +107,7 @@ public partial class GameScreen
 
     static readonly HashSet<string> GoodNews = new(StringComparer.Ordinal)
     {
-        "ResearchLevelReached", "HearthTipGiven", "HqSectorClueGiven", "MissionSucceeded", "CharacterFreed", "CharacterEscaped", "TalentDiscovered", "DominanceChanged",
+        "ResearchLevelReached", "HearthTipGiven", "HqSectorClueGiven", "LeaderInboundSeen", "MissionSucceeded", "CharacterFreed", "CharacterEscaped", "TalentDiscovered", "DominanceChanged",
     };
 
     /// <summary>Which of the day's news pops up as a note: red news (a refused order, a loss, an uprising) and real good news (mostly the

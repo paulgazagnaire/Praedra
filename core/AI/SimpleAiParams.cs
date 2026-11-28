@@ -814,6 +814,12 @@ public sealed partial record SimpleAiParams
     /// Hand/Collective/open 9/69/18 -> 9/72/15; Hard mirrors, 32 games: TargetInvalid 653 -> 620, successes 85 -> 78, 3/20/9 both.
     /// </summary>
     public int AbductionInfoDays { get; init; } = 2;
+    /// <summary>
+    /// The side's own inbound sightings (m5-fog-and-hq §N6d: a leader its spies saw on his way to a system) are Abduction candidates at his
+    /// destination, counted from his reach day; a team that lands first lies in wait (m5-missions §Targets). Reads only the side's
+    /// KnowledgeView. DEFAULT off until the AI trainer's A/B (Maverick, 2026-11-28).
+    /// </summary>
+    public bool UseInboundSightings { get; init; }
     /// <summary>The Collective's own <see cref="AbductionInfoDays"/> when above 0 (the Hand keeps AbductionInfoDays). 0 = the same as the Hand. DEFAULT 0; Hard sets 5 (AiLevels).</summary>
     public int CollectiveAbductionInfoDays { get; init; }
     /// <summary>

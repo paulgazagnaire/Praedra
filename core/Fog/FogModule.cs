@@ -155,6 +155,7 @@ public sealed class FogModule
         bool capital = target == Params.CapitalSystem && holder == Side.Hand;
         var truth = new Truth(this);
         Write(ctx, truth, side, target, RevealKind.FullCopy, stamp); // 1.
+        var copied = new List<string> { target }; // the systems copied, for §N6d
 
         if (exploredBefore) // 2. no extras when the target was unexplored before the mission
         {
@@ -173,6 +174,7 @@ public sealed class FogModule
                 string extra = pool[i];
                 pool.RemoveAt(i);
                 Write(ctx, truth, side, extra, RevealKind.FullCopy, stamp);
+                copied.Add(extra);
             }
         }
 
@@ -184,6 +186,9 @@ public sealed class FogModule
                 string near = _galaxy.Systems[n].Name;
                 if (_fleets.OwnerOf(near) != side) Write(ctx, truth, side, near, RevealKind.NearbyFleets, stamp);
             }
+
+        // §N6d (New, Paul 2026-11-28): leaders of the other side travelling alone whose trip ends at a copied system; no draw
+        if (Params.EspionageSeesInbound) SeeInbound(ctx, side, copied, stamp);
 
         // §N6 sector suspicion (Proposal, off by default): an espionage success on a Collective system in the sector that holds the HQ.
         if (Params.SectorSuspicion == SectorSuspicion.OnEspionage && side != Side.Collective && holder == Side.Collective
@@ -205,6 +210,63 @@ public sealed class FogModule
             }
             else if (r < Params.HearthTipPermille + Params.HearthTipSectorPermille) GiveSectorClue(ctx, side, _galaxy.Get(hs).Sector, stamp);
         }
+    }
+
+    /// <summary>
+    /// §N6d: every character of the other side, in id order, on his way to one of <paramref name="systems"/> (the trip ENDS there), free or
+    /// injured, not riding a fleet: travelling alone (Transit set; reach day = the end of the current hop plus the days of the hops left, the
+    /// sums §N4 uses: m1-clock-and-orders §Order of work steps 3 and 4), or (InboundSeesMissionGroups) in a mission group that has left on its
+    /// trip, outbound, a Move group or returning (reach day = the group's arrival day; m5-missions §1). The side records (character,
+    /// destination, reach day, stamp), the newest replacing the older, and is told (LeaderInboundSeen). No draw. rule: m5-fog-and-hq §N6d.
+    /// </summary>
+    private void SeeInbound(StepContext ctx, Side side, List<string> systems, int stamp)
+    {
+        var group = new Dictionary<int, (string Dest, int Reach)>(); // lookup only: the trip of each character travelling in a mission group
+        var onMission = new HashSet<int>(); // membership test only, never iterated
+        foreach (var m in State.Missions.Missions.Values) // mission id order
+            foreach (var id in m.AllCharacters)
+            {
+                onMission.Add(id);
+                if (m.Departed && m.Path.Count > 1 && m.Phase is Praedra.Core.Missions.MissionPhase.Outbound or Praedra.Core.Missions.MissionPhase.Returning)
+                    group[id] = (m.Path[^1], m.ArrivalDay);
+            }
+        var know = F.Of(side); var enemy = Other(side);
+        foreach (var c in State.Characters.Characters.Values) // id order
+        {
+            if (c.Side != enemy || !c.Placed || c.AttachedFleet != 0
+                || c.Status is not (Praedra.Core.Characters.CharacterStatus.Free or Praedra.Core.Characters.CharacterStatus.Injured)) continue;
+            string dest; int reach; bool inGroup = false;
+            if (onMission.Contains(c.Id))
+            {
+                if (!Params.InboundSeesMissionGroups || !group.TryGetValue(c.Id, out var g)) continue;
+                (dest, reach) = g; inGroup = true;
+            }
+            else if (c.Transit is { } t)
+            {
+                dest = t.Path[^1]; reach = t.DueDay;
+                for (int j = t.HopIndex + 1; j < t.HopTicks.Count; j++) reach += t.HopTicks[j];
+            }
+            else continue;
+            if (!systems.Contains(dest) || reach < stamp) continue; // a reach day in the past cannot happen (he would stand there already)
+            var list = know.LeadersInbound ?? new List<InboundLeader>();
+            list.RemoveAll(x => x.Character == c.Id);
+            list.Add(new InboundLeader { Character = c.Id, System = dest, ReachDay = reach, Day = stamp, InGroup = inGroup });
+            list.Sort((a, b) => a.Character.CompareTo(b.Character)); // rule: §N9 canonical order
+            know.LeadersInbound = list;
+            int cid = c.Id, rd = reach; string ds = dest;
+            ctx.Emit((i, _) => new LeaderInboundSeen(i, stamp, side, cid, ds, rd));
+        }
+    }
+
+    /// <summary>The side's inbound sightings (§N6d), by character id. rule: m5-fog-and-hq §N6d, §N8.</summary>
+    public IReadOnlyList<InboundLeader> LeadersInbound(Side side) => (IReadOnlyList<InboundLeader>?)F.Of(side).LeadersInbound ?? Array.Empty<InboundLeader>();
+
+    /// <summary>The reach day of the side's inbound sighting of <paramref name="character"/> at <paramref name="system"/>, or null. rule: §N6d.</summary>
+    public int? InboundReachDay(Side side, int character, string system)
+    {
+        if (F.Of(side).LeadersInbound is not { } l) return null;
+        foreach (var x in l) if (x.Character == character && x.System == system) return x.ReachDay;
+        return null;
     }
 
     // §N6 "the HQ is in this sector" clue, from SectorSuspicion or the §N6a tip's sector band
@@ -774,6 +836,7 @@ public sealed class FogModule
             case SensorReport x: return Bit(x.Viewer); // rule: §N4 S2 (for the station's owner only)
             case HqSectorClueGiven x: return Bit(x.Viewer);
             case HearthTipGiven x: return Bit(x.Viewer);
+            case LeaderInboundSeen x: return Bit(x.Viewer);
             case HarvesterQueuedSeen x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;

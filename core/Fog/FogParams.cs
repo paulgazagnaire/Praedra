@@ -66,6 +66,19 @@ public sealed record FogParams
     /// DEFAULT on; off = Classic (the target and the extras only). No draw. rule: m5-fog-and-hq §N6c.
     /// </summary>
     public bool EspionageSeesNearbyFleets { get; init; } = true;
+    /// <summary>
+    /// An espionage success also records every leader of the other side travelling alone whose trip ends at the target or at a system the
+    /// extras copied, with the exact day he will stand there (an inbound sighting). New, Decided (Paul 2026-11-28: spies "got intel on a hero
+    /// arriving to a destination (with the ETA)"); Lead (unverified vs Classic). DEFAULT on; off = Classic as traced. No draw.
+    /// rule: m5-fog-and-hq §N6d.
+    /// </summary>
+    public bool EspionageSeesInbound { get; init; } = true;
+    /// <summary>
+    /// §N6d also sees the leaders travelling in a mission group (team members and decoys flying out to the group's target, a Move group, or a
+    /// group flying home) whose trip ends at a copied system. Lead 2026-11-28 (sims: AI leaders travel almost only in groups, so without this
+    /// the rule never fires against the AI; card to Paul). DEFAULT on; off = leaders travelling alone only. rule: m5-fog-and-hq §N6d.
+    /// </summary>
+    public bool InboundSeesMissionGroups { get; init; } = true;
     /// <summary>Days a look stays "Observed", and the age at which a sighting is dropped. Proposal. rule: §N1, §N3.</summary>
     public int ObservedWindowDays { get; init; } = 30;
     /// <summary>One HQ: a reveal that finds it clears the side's other HqHere flags. rule: §N5.</summary>
