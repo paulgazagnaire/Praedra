@@ -136,14 +136,16 @@ public class SimpleAiCommanderTests
                     bySystem[o.System!] = bySystem.GetValueOrDefault(o.System!) + 1;
             return bySystem.Count(kv => kv.Value >= 2 && eco.Objects.Any(o => o.System == kv.Key && o.Class == "Mine" && eco.OwnerOf(o) == Side.Hand));
         }
+        // m5-fog-and-hq §N6e pinned off (MultiSeed.GuardsSeeInboundOff): with the guards' draw the guard walled more mine worlds in 1 game of 4
+        // (seed 3: 2 vs 0; seeds 1, 2, 4: 0 vs 0), and alone 4 worlds in seeds 1 and 3.
         var guarded = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
-            var on = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
-            var off = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var on = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE, Settings = MultiSeed.GuardsSeeInboundOff });
+            var off = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE, Settings = MultiSeed.GuardsSeeInboundOff });
             new AiMatch(on, AiLevels.For(AiLevel.Medium) with { GuardRaidedDays = 360 }, AiLevels.For(AiLevel.Medium)).RunTo(700);
             new AiMatch(off, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium)).RunTo(700);
             // the guard runs on its own too, without walled key worlds (FortifyWorlds 0; Ponytail's #431 review)
-            var alone = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var alone = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE, Settings = MultiSeed.GuardsSeeInboundOff });
             new AiMatch(alone, AiLevels.For(AiLevel.Medium) with { GuardRaidedDays = 360, FortifyWorlds = 0 }, AiLevels.For(AiLevel.Medium)).RunTo(700);
             return (on: Guarded(on), off: Guarded(off), alone: Guarded(alone));
         });

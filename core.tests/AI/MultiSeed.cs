@@ -23,6 +23,12 @@ internal static class MultiSeed
     /// §N6d, InboundMissionGroupPercent 100). For single-seed play tests that measure an AI switch: the new rules move those games, not the
     /// switch. With them the games are exactly those of main before #442.
     /// </summary>
+    /// <summary>
+    /// Settings with m5-fog-and-hq §N6e (guards see an enemy team leave for their world, GuardsSeeInbound) off, for the single-seed AI play tests
+    /// whose numbers were measured before it: the guards' draw moves the game's random stream.
+    /// </summary>
+    public static Praedra.Core.Setup.GameSettings GuardsSeeInboundOff => new() { Fog = new Praedra.Core.Fog.FogParams { GuardsSeeInbound = false } };
+
     public static Praedra.Core.Setup.GameSettings LeaderRulesBefore442 => new()
     {
         Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false },
