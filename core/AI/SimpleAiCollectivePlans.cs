@@ -164,26 +164,13 @@ public sealed partial class SimpleAi
     private void PlanWreckers()
     {
         var mi = _h.Missions;
-        // WreckNearShieldsOnly (QA-134): Wreckers with no shielded target within reach get off at a held world, back to the ground missions
-        // (and board no fleet there)
-        if (_p.WreckNearShieldsOnly)
-        foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Ships.Count > 0 && f.Transit == null && f.At != null && Held(f.At)).OrderBy(f => f.Id))
-        {
-            if (ShieldedTargetNear(f.At!)) continue;
-            var off = WreckersAboard(new[] { f }).Where(o => !mi.IsSpecialForceBusy(o.Id)).Select(o => o.Id).ToList();
-            if (off.Count == 0) continue;
-            var un = new Praedra.Core.Missions.UnloadSpecialForcesOrder(0, _side, f.Id, off);
-            if (mi.CheckUnloadSpecialForces(un) != null) continue;
-            long us = _h.Game.Submit(sq => un with { Sequence = sq });
-            Note(us, "UnloadSpecialForces", $"{off.Count} Wreckers leave fleet {f.Id} at {f.At}: no shielded target near (wreck the shields)");
-        }
         var free = FreeAgentForces().Where(t => IsWrecker(t.O)).Select(t => t.O).ToList();
         if (free.Count == 0) return;
         var taken = new HashSet<int>(); // lookup only, never iterated
         int cap = Math.Min(_p.WreckShieldsForces, mi.Params.FleetSpecialForcesMax);
         foreach (var f in S.Fleets.Values.Where(f => f.Side == _side && f.Ships.Count > 0 && f.Transit == null && f.At != null && Held(f.At)).OrderBy(f => f.Id))
         {
-            if (Str(f) <= 0 || _h.Bombardment.Power(f) <= 0 || _p.WreckNearShieldsOnly && !ShieldedTargetNear(f.At!)) continue;
+            if (Str(f) <= 0 || _h.Bombardment.Power(f) <= 0) continue;
             int room = Math.Min(cap - WreckersAboard(new[] { f }).Count, mi.Params.FleetSpecialForcesMax - mi.SpecialForcesAboard(f).Count);
             if (room <= 0) continue;
             var load = free.Where(o => o.System == f.At && !taken.Contains(o.Id)).Take(room).Select(o => o.Id).ToList();
@@ -203,33 +190,6 @@ public sealed partial class SimpleAi
         long ws = _h.Game.Submit(sq => walk with { Sequence = sq });
         Note(ws, "MoveGroup", $"{send.Count} Wreckers walk to the rally {rally} (wreck the shields)");
     }
-
-    /// <summary>
-    /// WreckNearShieldsOnly (QA-134): a world the side sees enemy-held with shields seen (ShieldStrengthSeen above 0) within the reach a pile picks raid
-    /// targets in (GuerrillaHops, FogEnemyTargetHops) of <paramref name="from"/>, by lanes. Cached per system for the day.
-    /// </summary>
-    private bool ShieldedTargetNear(string from)
-    {
-        if (_shieldNearDay != Today) { _shieldNearDay = Today; _shieldNear.Clear(); }
-        if (_shieldNear.TryGetValue(from, out bool b)) return b;
-        var g = _h.Data.Galaxy;
-        if (!g.TryFindSystem(from, out int start)) return _shieldNear[from] = false;
-        int reach = Math.Max(_p.TargetHops, Math.Max(_p.FogEnemyTargetHops, _p.GuerrillaHops));
-        var dist = new int[g.Systems.Count]; Array.Fill(dist, -1); dist[start] = 0;
-        var q = new Queue<int>(); q.Enqueue(start);
-        bool found = false;
-        while (q.Count > 0 && !found)
-        {
-            int c = q.Dequeue();
-            string s = g.Systems[c].Name;
-            if (c != start && IsEnemyHeld(s) && ShieldStrengthSeen(s) > 0) { found = true; break; }
-            if (dist[c] >= reach) continue;
-            foreach (var n in g.NearOf(c)) if (dist[n] < 0) { dist[n] = dist[c] + 1; q.Enqueue(n); }
-        }
-        return _shieldNear[from] = found;
-    }
-    private int _shieldNearDay = int.MinValue;
-    private readonly Dictionary<string, bool> _shieldNear = new(StringComparer.Ordinal); // lookup only, never iterated
 
     /// <summary>Days between two Wrecker walks to the rally (AI tuning; keeps no memory, so a loaded game walks as the uninterrupted one).</summary>
     private const int WreckGatherEveryDays = 10;
@@ -265,14 +225,27 @@ public sealed partial class SimpleAi
     /// <summary>
     /// FighterWaitMax: a new fighter order only while fewer than FighterWaitMax of the side's squadrons wait on the ground, based on a world
     /// and not aboard a ship (m3-fleets: a squadron moves only aboard a carrier, so one built for carriers that are out raiding waits at the
-    /// yard, and a based squadron with no ship there fights any enemy fleet that comes, m4-battle-classic §1.3). The Hand reads
-    /// FighterWaitMaxHand instead. Off (0) = no cap.
+    /// yard, and a based squadron with no ship there fights any enemy fleet that comes, m4-battle-classic §1.3). Only squadrons set down within
+    /// the last FighterWaitDays count (a FighterGrounded note): nothing fetches a squadron left at a yard the fleets never visit, so without the
+    /// window two strays would stop every fighter order for the rest of the game (Ponytail #432). The Hand reads FighterWaitMaxHand instead.
+    /// Off (0) = no cap.
     /// </summary>
     private bool FightersMayWait()
     {
-        int max = _side == Side.Collective ? _p.FighterWaitMax : _p.FighterWaitMaxHand;
+        int max = FighterWaitCap;
         if (max <= 0) return true;
-        int waiting = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Fighter && o.Side == _side && o.AboardShip == 0 && o.System != null);
+        var recent = new HashSet<int>(); // lookups only
+        foreach (var n in NotesSince(AiNoteKind.FighterGrounded, Today - FighterWaitDays)) if (n.Day >= Today - FighterWaitDays) recent.Add(n.Value);
+        if (recent.Count < max) return true;
+        int waiting = _h.Economy.Objects.Count(o => o.Category == ObjectCategory.Fighter && o.Side == _side && o.AboardShip == 0 && o.System != null && recent.Contains(o.Id));
         return waiting < max;
     }
+
+    private int FighterWaitCap => _side == Side.Collective ? _p.FighterWaitMax : _p.FighterWaitMaxHand;
+
+    /// <summary>
+    /// FighterWaitMax: days a squadron set down on the ground counts as waiting for a carrier (AI tuning, Rooster 2026-11-28, Ponytail #432:
+    /// the Collective's carriers pick up most new squadrons within this time; one left longer is a stray that no longer holds back new orders).
+    /// </summary>
+    private const int FighterWaitDays = 120;
 }

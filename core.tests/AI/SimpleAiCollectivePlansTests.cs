@@ -22,7 +22,6 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, p.NeutraliseElsewherePercent);
         Assert.False(p.RaidShieldsSeen);
         Assert.False(p.WreckShields);
-        Assert.False(p.WreckNearShieldsOnly);
         Assert.Equal(0, p.ShieldsFeltDays);
         Assert.Equal(0, p.FighterWaitMax);
         Assert.Equal(0, p.FighterWaitMaxHand);
@@ -42,7 +41,6 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(on ? 120 : 0, p.ShieldsFeltDays); // Rooster 2026-11-27 evening: shields felt and seen, Wreckers aboard
         Assert.Equal(on, p.RaidShieldsSeen);
         Assert.Equal(on, p.WreckShields);
-        Assert.False(p.WreckNearShieldsOnly); // QA-134 measured a loss, off at every level
         Assert.Equal(on ? 2 : 0, p.FighterWaitMax); // Rooster 2026-11-28: fighters wait aboard
         Assert.Equal(0, p.FighterWaitMaxHand); // the Hand's is Maverick's to measure
     }
@@ -103,52 +101,24 @@ public class SimpleAiCollectivePlansTests
     [Fact]
     public void WreckersRideFleetsAndSabotageShieldsFromOrbit()
     {
-        var r = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed => PlayWreckers(seed, nearShieldsOnly: false));
-        foreach (var x in r) _out.WriteLine($"Wrecker loads {x.loads}, orbit sabotage orders {x.launches}, started {x.orbit}, got off {x.offs}, longest aboard {x.longest} days");
-        Assert.True(r.Count(x => x.loads > 0) >= 2, "Wreckers boarded fleets in fewer than 2 of 4 games");
-        Assert.True(r.Any(x => x.launches > 0 && x.orbit > 0), "no Sabotage was launched from orbit in 4 games"); // early: about 10 a game come over 3000 days
-        Assert.All(r, x => Assert.Equal(0, x.offs)); // WreckNearShieldsOnly off: nobody gets off for want of a target
-    }
-
-    // QA-134 with WreckNearShieldsOnly: Wreckers board only while a shielded Hand world is seen within raid reach, and get off at a held world
-    // where none is (seed 2, walled Medium Hand, day 1200, main a43252c: 5 boardings, 7 launches from orbit, 3 get-offs).
-    [Fact]
-    public void WreckersGetOffWhereNoShieldedTargetIsNear()
-    {
-        var x = PlayWreckers(2, nearShieldsOnly: true);
-        _out.WriteLine($"Wrecker loads {x.loads}, orbit sabotage orders {x.launches}, started {x.orbit}, got off {x.offs}, longest aboard {x.longest} days");
-        Assert.True(x.loads > 0, "no Wrecker boarded");
-        Assert.True(x.launches > 0 && x.orbit > 0, "no Sabotage was launched from orbit");
-        Assert.True(x.offs > 0, "no Wrecker got off a fleet with no shielded target near");
-    }
-
-    private static (int loads, int launches, int orbit, int offs, int longest) PlayWreckers(int seed, bool nearShieldsOnly)
-    {
-        var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
-        var m = new AiMatch(host, WalledHand(), ShieldWise(true) with { WreckNearShieldsOnly = nearShieldsOnly });
-        int loads = 0, launches = 0, offs = 0, longest = 0;
-        int mask = host.Missions.Data.Get(Praedra.Core.Missions.MissionKind.Sabotage).SpecialForceMask;
-        var since = new Dictionary<int, int>(); // lookup only, never iterated for state
-        while (host.Game.Day < 1200 && host.Victory.Winner == null)
+        var r = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
-            m.Step();
-            loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
-            launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
-            offs += m.Collective.Submitted.Count(o => o.Kind == "UnloadSpecialForces" && o.Detail.Contains("no shielded target near", StringComparison.Ordinal));
-            var aboard = new HashSet<int>(); // how long a Wrecker stays aboard in one go
-            foreach (var f in host.Game.State.Fleets.Values.Where(f => f.Side == Side.Collective).OrderBy(f => f.Id))
-                foreach (var o in host.Missions.SpecialForcesAboard(f))
-                    if (host.Troops.Data.SpecialForce(o.Class) is { } k && (k.MissionBit & mask) != 0)
-                    {
-                        aboard.Add(o.Id);
-                        if (!since.ContainsKey(o.Id)) since[o.Id] = host.Game.Day;
-                        longest = Math.Max(longest, host.Game.Day - since[o.Id]);
-                    }
-            foreach (var id in since.Keys.Where(id => !aboard.Contains(id)).ToList()) since.Remove(id);
-        }
-        int orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
-            .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
-        return (loads, launches, orbit, offs, longest);
+            var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, WalledHand(), ShieldWise(true));
+            int loads = 0, launches = 0;
+            while (host.Game.Day < 1200 && host.Victory.Winner == null)
+            {
+                m.Step();
+                loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+                launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+            }
+            var orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
+                .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
+            return (seed, loads, launches, orbit);
+        });
+        foreach (var g in r) _out.WriteLine($"seed {g.seed}: Wrecker loads {g.loads}, orbit sabotage orders {g.launches}, started {g.orbit}");
+        Assert.True(r.Count(g => g.loads > 0) >= 2, "Wreckers boarded a fleet in fewer than 2 of 4 games");
+        Assert.True(r.Any(g => g.launches > 0 && g.orbit > 0), "no Sabotage was launched from orbit in 4 games");
     }
 
     // m1-clock-and-orders K12 with the shields felt: the notes ride in the AI memory of the save, so a loaded game decides as the uninterrupted one.
@@ -191,30 +161,62 @@ public class SimpleAiCollectivePlansTests
     }
 
     // FighterWaitMax (m3-fleets: a squadron moves only aboard a carrier; m4-battle-classic §1.3: a based squadron with no ship there fights):
-    // with it the Collective orders no fighter while two of its squadrons wait on the ground, so far fewer of them die at its yards for nothing
-    // (seed 2, Medium mirror, to day 1500; the counts are printed).
+    // with it the Collective orders no fighter while two of its squadrons set down within the last 120 days wait on the ground, so far fewer
+    // of them die at its yards for nothing; older strays no longer count (Ponytail #432). Seed 2, Medium mirror, to day 1500; counts printed.
     [Fact]
     public void NoNewFightersWhileTwoWaitOnTheGround()
     {
-        (int orders, int lateOrders) Run(int max)
+        (int orders, int lateOrders, int strayOrders) Run(int max)
         {
             var host = NewGame.Create(new NewGameOptions { Seed = 2, Preset = StartPreset.MedE });
             var m = new AiMatch(host, AiLevels.For(AiLevel.Medium), AiLevels.For(AiLevel.Medium) with { FighterWaitMax = max });
             var fighters = host.Economy.Costs.Rows.Where(r => r.Category == Praedra.Core.Economy.ObjectCategory.Fighter).Select(r => r.Name).ToHashSet(StringComparer.Ordinal);
-            int orders = 0, late = 0;
+            var since = new Dictionary<int, int>(); // lookups only
+            int orders = 0, late = 0, stray = 0;
             while (host.Game.Day < 1500 && host.Victory.Winner == null)
             {
-                int waiting = host.Economy.Objects.Count(o => o.Category == Praedra.Core.Economy.ObjectCategory.Fighter && o.Side == Side.Collective && o.AboardShip == 0 && o.System != null);
+                int day = host.Game.Day;
+                var ground = host.Economy.Objects.Where(o => o.Category == Praedra.Core.Economy.ObjectCategory.Fighter && o.Side == Side.Collective && o.AboardShip == 0 && o.System != null).Select(o => o.Id).ToHashSet();
+                foreach (int id in ground) since.TryAdd(id, day);
+                foreach (int id in since.Keys.Where(id => !ground.Contains(id)).ToList()) since.Remove(id);
+                int fresh = since.Values.Count(d0 => day - d0 < 119); // set down within the window (a day's margin: the note is the event's day)
                 m.Step();
                 int n = m.Collective.Submitted.Count(o => o.Kind == "Build" && fighters.Any(f => o.Detail.Contains(" x " + f + " at ", StringComparison.Ordinal)));
                 orders += n;
-                if (waiting >= 2) late += n;
+                if (fresh >= 2) late += n;
+                else if (ground.Count >= 2) stray += n;
             }
-            return (orders, late);
+            return (orders, late, stray);
         }
         var off = Run(0); var on = Run(2);
-        _out.WriteLine($"fighter orders off {off.orders} ({off.lateOrders} with 2+ waiting), on {on.orders} ({on.lateOrders})");
+        _out.WriteLine($"fighter orders off {off.orders} ({off.lateOrders} with 2+ fresh waiting), on {on.orders} ({on.lateOrders}; {on.strayOrders} with 2+ waiting, under 2 fresh)");
         Assert.True(off.lateOrders > 0, "no fighter was ordered with squadrons waiting: the test no longer checks anything");
         Assert.Equal(0, on.lateOrders);
+    }
+
+    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted) or unloaded (SquadronsUnloaded, one note per
+    // squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesTheSquadronsSetDown()
+    {
+        bool Fighter(int id) => id is 11 or 12 or 13;
+        GameEvent[] feed =
+        {
+            new Praedra.Core.Construction.UnitCompleted(0, 5, 11, "Sting", Side.Collective, "Navalia", "Navalia", 1),
+            new Praedra.Core.Construction.UnitCompleted(1, 5, 30, "Lancer", Side.Collective, "Navalia", "Navalia", 2),
+            new Praedra.Core.Fleets.SquadronsUnloaded(2, 7, new ValueList<int>(new[] { 12, 13 }), 4, new ValueList<int>(new[] { 30 }), "Midway"),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, null, Fighter);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
+        on.Ingest(feed, _ => false, null, Fighter);
+        var g = on.Notes.Where(n => n.Kind == AiNoteKind.FighterGrounded).Select(n => (n.Value, n.System, n.Day)).ToList();
+        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7) }, g);
+        var hand = new AiMemory { Side = Side.Hand, Fog = true };
+        hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
+        hand.Ingest(feed, _ => false, null, _ => false);
+        Assert.DoesNotContain(hand.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
     }
 }
