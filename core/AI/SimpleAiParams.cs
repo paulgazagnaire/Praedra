@@ -810,11 +810,6 @@ public sealed partial record SimpleAiParams
     /// <summary>An enemy character is an Abduction target only when the side's own feed placed it at a system it sees, or its picture's group D showed it, within this many days. DEFAULT.</summary>
     public int AbductionInfoDays { get; init; } = 5;
     /// <summary>
-    /// QA-135 (AI trainer 2026-11-28): after an own Abduction ended TargetInvalid (the leader had left), the AI does not aim at that leader on
-    /// that world again for this many days unless a newer sighting places him there. 0 = off. DEFAULT 0 until measured.
-    /// </summary>
-    public int LeaderMissDays { get; init; }
-    /// <summary>
     /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
     /// key-target file: The Chair 2, Ravilla 4, Nobody 4, Mae Abara 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)
     /// applies. false = the AI before (the table alone: 95% believed where 2% is real). DEFAULT true (Dev lead, 2026-10-19).

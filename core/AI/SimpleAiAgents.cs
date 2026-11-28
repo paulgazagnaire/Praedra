@@ -595,8 +595,8 @@ public sealed partial class SimpleAi
                 jobs.Add(new Job(MissionKind.Rescue, held, c.Id, _p.RescueValue * (IsKey(c) ? 2 : 1), "char " + c.Id));
         // 5. Abduction of enemy characters the side has seen
         if (KindUsable(MissionKind.Abduction))
-            foreach (var (id, s, seen) in EnemyCharactersSeen())
-                if (!takenChar.Contains(id) && !MissedSince(id, s, seen))
+            foreach (var (id, s) in EnemyCharactersSeen())
+                if (!takenChar.Contains(id))
                     jobs.Add(new Job(MissionKind.Abduction, s, id, AbductionJobValue(id), "char " + id));
         // 5b. Key hunt (KeyHunt): ahead, spies look for the enemy keys the side must still capture; a look that finds one makes him a target of 5
         if (KeyHuntOn() && KindUsable(MissionKind.Espionage))
@@ -886,15 +886,6 @@ public sealed partial class SimpleAi
     };
 
     /// <summary>The planner's expected value of sending the character on the job (null = not allowed or too poor a chance).</summary>
-    /// <summary>
-    /// LeaderMissDays (AI trainer 2026-11-28, QA-135): an own Abduction of leader <paramref name="id"/> at <paramref name="system"/> ended
-    /// TargetInvalid within LeaderMissDays, on or after the sighting day <paramref name="seen"/>: that sighting is spent, so the AI waits for a
-    /// newer one instead of sending another team to the same empty world.
-    /// </summary>
-    private bool MissedSince(int id, string system, int seen) =>
-        _p.LeaderMissDays > 0 && NotesSince(AiNoteKind.LeaderMissed, Today - _p.LeaderMissDays)
-            .Any(n => n.Value == id && n.Day >= seen && string.Equals(n.System, system, StringComparison.Ordinal));
-
     private long? Expected(CharacterRecord c, Job j)
     {
         var mi = _h.Missions;

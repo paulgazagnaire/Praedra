@@ -573,7 +573,7 @@ public sealed partial class SimpleAi
     /// the side sees the system today) and the group D characters of its pictures (free ones, stamp in the window; m5-fog-and-hq §F1 group D).
     /// The newest word on each character wins; on the same day the feed wins.
     /// </summary>
-    private List<(int Character, string System, int Day)> FogEnemyCharacters()
+    private List<(int Character, string System)> FogEnemyCharacters()
     {
         var last = new Dictionary<int, (string? System, int Day)>(); // lookup only: the latest word on each character
         var notes = _mem.Notes; int since = Today - _p.AbductionInfoDays;
@@ -583,8 +583,8 @@ public sealed partial class SimpleAi
                 case AiNoteKind.EnemyCharacterAt: last.TryAdd(notes[i].Value, (notes[i].System, notes[i].Day)); break; // arrived, detached, made General or freed there
                 case AiNoteKind.EnemyCharacterGone: last.TryAdd(notes[i].Value, (null, notes[i].Day)); break;           // departed, captured, injured or killed
             }
-        var result = new SortedDictionary<int, (string System, int Day)>();
-        foreach (var (id, w) in last) if (w.System != null && _view!.Sees(w.System)) result[id] = (w.System, Today); // seen there today; keyed by id: order cannot matter
+        var result = new SortedDictionary<int, string>();
+        foreach (var (id, w) in last) if (w.System != null && _view!.Sees(w.System)) result[id] = w.System; // keyed by id: order cannot matter
         // rule: m5-fog-and-hq §F1 group D (characters present): the side's own pictures, systems in ordinal order; the newest stamp per character
         var fromPicture = new SortedDictionary<int, (string System, int Stamp)>();
         foreach (var (sys, c, stamp) in _view!.CharactersSeen())
@@ -594,9 +594,9 @@ public sealed partial class SimpleAi
         foreach (var (id, p) in fromPicture)
         {
             if (last.TryGetValue(id, out var w) && w.Day >= p.Stamp) continue; // the feed's word is as new or newer
-            result[id] = (p.System, p.Stamp);
+            result[id] = p.System;
         }
-        return result.Select(kv => (kv.Key, kv.Value.System, kv.Value.Day)).ToList();
+        return result.Select(kv => (kv.Key, kv.Value)).ToList();
     }
 
     // ================================================================== the key hunt (KeyHunt)

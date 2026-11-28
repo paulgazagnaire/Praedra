@@ -41,11 +41,6 @@ public enum AiNoteKind
     /// Not saved before 2026-11-27: an older save loads with none.
     /// </summary>
     ShieldsFelt,
-    /// <summary>
-    /// LeaderMissDays (SimpleAiParams, AI trainer 2026-11-28, QA-135): an own Abduction aimed at enemy leader Value at System ended TargetInvalid
-    /// (MissionEnded): the leader had left. Noted only while kept (off: none). Not saved before 2026-11-28: an older save loads with none.
-    /// </summary>
-    LeaderMissed,
 }
 
 /// <summary>
@@ -78,12 +73,11 @@ public sealed class AiKeepDays
     public int HarvesterYardGone { get; set; }
     public int BooksFailed { get; set; }
     public int ShieldsFelt { get; set; }
-    public int LeaderMissed { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, AiNoteKind.LeaderMissed => LeaderMissed, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, _ => Character,
     };
 }
 
@@ -135,9 +129,8 @@ public sealed class AiMemory
     private readonly Dictionary<string, BattleStarted> _runStarts = new(StringComparer.Ordinal); // lookup only
 
     /// <summary>Copy the feed's new events into notes. <paramref name="armedCapital"/>: is this unit an armed capital ship now.
-    /// <paramref name="shellPower"/>: the bombardment power of these own fleets now (ShieldsFelt; null = the strike's own P).
-    /// <paramref name="missionLeader"/>: the enemy leader an own mission aims at, by mission id (LeaderMissed; null = unknown).</summary>
-    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital, Func<IReadOnlyList<int>, int>? shellPower = null, Func<int, int?>? missionLeader = null)
+    /// <paramref name="shellPower"/>: the bombardment power of these own fleets now (ShieldsFelt; null = the strike's own P).</summary>
+    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital, Func<IReadOnlyList<int>, int>? shellPower = null)
     {
         if (_feedSeen >= feed.Count) return;
         Side enemy = Side == Side.Hand ? Side.Collective : Side.Hand;
@@ -163,9 +156,6 @@ public sealed class AiMemory
                 // there (the batteries ground ships before the power is counted, m3-bombardment §Resolution 4 and 5.1, so P alone reads too low)
                 BombardmentStarted bs when bs.Side == Side && Keep.ShieldsFelt > 0
                     => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = bs.System, Value = bs.Hits > 0 ? bs.S : Math.Max(bs.P, shellPower?.Invoke(bs.Fleets.Items) ?? 0) },
-                MissionEnded me when me.Side == Side && me.MissionKind == MissionKind.Abduction && me.Outcome == MissionOutcome.TargetInvalid && Keep.LeaderMissed > 0
-                    && missionLeader?.Invoke(me.Mission) is int leader
-                    => new AiNote { Kind = AiNoteKind.LeaderMissed, System = me.Target, Value = leader },
                 MissionSucceeded ms when ms.Side == Side && ms.MissionKind == MissionKind.Sabotage && Keep.ShieldsFelt > 0
                     => new AiNote { Kind = AiNoteKind.ShieldsFelt, System = ms.Target, Value = -1 },
                 HqArrived or HqDeparted => new AiNote { Kind = AiNoteKind.HqMoved },
@@ -216,9 +206,8 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0, int leaderMissed = 0)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0)
     {
-        Keep.LeaderMissed = Math.Max(Keep.LeaderMissed, leaderMissed);
         Keep.ShieldsFelt = Math.Max(Keep.ShieldsFelt, shieldsFelt);
         Keep.HarvesterYardGone = Math.Max(Keep.HarvesterYardGone, harvesterYardGone);
         Keep.BooksFailed = Math.Max(Keep.BooksFailed, booksFailed);
