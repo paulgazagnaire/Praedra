@@ -40,7 +40,7 @@ public sealed partial class SimpleAi
 {
     private static readonly MissionKind[] NoKeyKinds = { MissionKind.Rescue, MissionKind.Abduction, MissionKind.Sabotage, MissionKind.InciteUprising };
 
-    private sealed record Job(MissionKind Kind, string System, int? TargetCharacter, int Value, string Group);
+    private sealed record Job(MissionKind Kind, string System, int? TargetCharacter, int Value, string Group, int? Since = null); // Since: StayedPutPercent
     private const string HarvesterYardGroup = "harvester yard ";
     private const string HarvesterLookGroup = "yard look "; // a re-look at a harvester build already seen (HarvesterYardMinOddsPercent)
 
@@ -597,7 +597,7 @@ public sealed partial class SimpleAi
         if (KindUsable(MissionKind.Abduction))
             foreach (var (id, s) in EnemyCharactersSeen())
                 if (!takenChar.Contains(id))
-                    jobs.Add(new Job(MissionKind.Abduction, s, id, AbductionJobValue(id), "char " + id));
+                    jobs.Add(new Job(MissionKind.Abduction, s, id, AbductionJobValue(id), "char " + id, _p.StayedPutPercent > 0 ? StayedSince(id, s) : null));
         // 5b. Key hunt (KeyHunt): ahead, spies look for the enemy keys the side must still capture; a look that finds one makes him a target of 5
         if (KeyHuntOn() && KindUsable(MissionKind.Espionage))
         {
@@ -886,6 +886,23 @@ public sealed partial class SimpleAi
     };
 
     /// <summary>The planner's expected value of sending the character on the job (null = not allowed or too poor a chance).</summary>
+    /// <summary>
+    /// StayedPutPercent: the day since which the side has known enemy leader <paramref name="id"/> to stand at <paramref name="system"/> (its
+    /// newest feed note on him within StayedPutLookDays places him there: arrived, detached, made General or freed), or null (none, or a later
+    /// word moves him away). The side's own notes only.
+    /// </summary>
+    private int? StayedSince(int id, string system)
+    {
+        var notes = _mem.Notes; int from = Today - _p.StayedPutLookDays;
+        for (int i = notes.Count - 1; i >= 0 && notes[i].Floor >= from; i--)
+        {
+            var n = notes[i];
+            if (n.Value != id || n.Kind is not (AiNoteKind.EnemyCharacterAt or AiNoteKind.EnemyCharacterGone)) continue;
+            return n.Kind == AiNoteKind.EnemyCharacterAt && string.Equals(n.System, system, StringComparison.Ordinal) ? n.Day : null;
+        }
+        return null;
+    }
+
     private long? Expected(CharacterRecord c, Job j)
     {
         var mi = _h.Missions;
@@ -935,6 +952,9 @@ public sealed partial class SimpleAi
         if (!key && (chance < floor || chance <= 0)) return null;
         int ticks = TicksCached(at, j.System, speed);
         if (ticks == int.MaxValue) return null;
+        // StayedPutPercent (QA-135): the leader must have stood there, as far as the side knows, for that share of the trip
+        if (_p.StayedPutPercent > 0 && j.Kind == MissionKind.Abduction && j.TargetCharacter != null
+            && (long)(j.Since is int since ? Today - since : 0) * 100 < (long)ticks * _p.StayedPutPercent) return null;
         long value = j.Value * valuePercent / 100;
         if (key) { long bp = (long)unseen * pct / 100; return bp > 0 ? value * bp / (ticks + _p.MissionTravelBias) : null; }
         return value * chance * 100 / (ticks + _p.MissionTravelBias);
