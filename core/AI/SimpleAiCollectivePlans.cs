@@ -245,7 +245,8 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// FighterWaitMax: days a squadron set down on the ground counts as waiting for a carrier (AI tuning, Rooster 2026-11-28, Ponytail #432:
-    /// the Collective's carriers pick up most new squadrons within this time; one left longer is a stray that no longer holds back new orders).
+    /// Medium mirror, 96 seeds: 86% of the Collective's squadron waits on the ground ended (boarded or lost) within 120 days (6672 of 7716); one left longer is a
+    /// stray that no longer holds back new orders).
     /// </summary>
     private const int FighterWaitDays = 120;
 }
