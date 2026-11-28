@@ -4,6 +4,7 @@ using Praedra.Core.Clock;
 using Praedra.Core.Construction;
 using Praedra.Core.Control;
 using Praedra.Core.Defenses;
+using Praedra.Core.Fleets;
 using Praedra.Core.Fog;
 using Praedra.Core.Harvester;
 using Praedra.Core.Missions;
@@ -41,6 +42,11 @@ public enum AiNoteKind
     /// Not saved before 2026-11-27: an older save loads with none.
     /// </summary>
     ShieldsFelt,
+    /// <summary>
+    /// FighterGrounded (SimpleAiParams.FighterWaitMax): own squadron Value was set on the ground at System, built there (UnitCompleted) or
+    /// unloaded (SquadronsUnloaded). Noted only while kept (off: none). Not saved before 2026-11-28: an older save loads with none.
+    /// </summary>
+    FighterGrounded,
 }
 
 /// <summary>
@@ -73,11 +79,12 @@ public sealed class AiKeepDays
     public int HarvesterYardGone { get; set; }
     public int BooksFailed { get; set; }
     public int ShieldsFelt { get; set; }
+    public int FighterGrounded { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, AiNoteKind.FighterGrounded => FighterGrounded, _ => Character,
     };
 }
 
@@ -129,8 +136,9 @@ public sealed class AiMemory
     private readonly Dictionary<string, BattleStarted> _runStarts = new(StringComparer.Ordinal); // lookup only
 
     /// <summary>Copy the feed's new events into notes. <paramref name="armedCapital"/>: is this unit an armed capital ship now.
-    /// <paramref name="shellPower"/>: the bombardment power of these own fleets now (ShieldsFelt; null = the strike's own P).</summary>
-    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital, Func<IReadOnlyList<int>, int>? shellPower = null)
+    /// <paramref name="shellPower"/>: the bombardment power of these own fleets now (ShieldsFelt; null = the strike's own P).
+    /// <paramref name="ownFighter"/>: is this object one of the side's squadrons (FighterGrounded; null = none noted).</summary>
+    public void Ingest(IReadOnlyList<GameEvent> feed, Func<int, bool> armedCapital, Func<IReadOnlyList<int>, int>? shellPower = null, Func<int, bool>? ownFighter = null)
     {
         if (_feedSeen >= feed.Count) return;
         Side enemy = Side == Side.Hand ? Side.Collective : Side.Hand;
@@ -172,6 +180,19 @@ public sealed class AiMemory
                     => new AiNote { Kind = AiNoteKind.HarvesterYardGone, System = hd.System },
                 _ => null,
             };
+            if (n == null && Keep.FighterGrounded > 0 && ownFighter != null)
+            {
+                // FighterGrounded: one note per squadron set down (an unload can set down several; they share the event's day and feed index)
+                if (e is UnitCompleted uc && uc.Side == Side && ownFighter(uc.Object))
+                    n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = uc.Destination, Value = uc.Object };
+                else if (e is SquadronsUnloaded su)
+                    foreach (int q in su.Squadrons.Items)
+                    {
+                        if (!ownFighter(q)) continue;
+                        if (n != null) { n.Day = n.Floor = e.Day; Notes.Add(n); sources.Add(i); }
+                        n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = su.System, Value = q };
+                    }
+            }
             if (n == null) continue;
             n.Day = n.Floor = e.Day;
             Notes.Add(n); sources.Add(i);
@@ -181,7 +202,7 @@ public sealed class AiMemory
         int after = int.MaxValue, next = sources.Count - 1;
         for (int i = feed.Count - 1; i >= _feedSeen && next >= 0; i--)
         {
-            if (sources[next] == i) { var n = Notes[first + next]; n.Floor = Math.Min(n.Day, after); next--; }
+            while (next >= 0 && sources[next] == i) { var n = Notes[first + next]; n.Floor = Math.Min(n.Day, after); next--; } // FighterGrounded: several notes may share an event
             after = Math.Min(after, feed[i].Day);
         }
         _feedSeen = feed.Count;
@@ -206,8 +227,9 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0, int fighterGrounded = 0)
     {
+        Keep.FighterGrounded = Math.Max(Keep.FighterGrounded, fighterGrounded);
         Keep.ShieldsFelt = Math.Max(Keep.ShieldsFelt, shieldsFelt);
         Keep.HarvesterYardGone = Math.Max(Keep.HarvesterYardGone, harvesterYardGone);
         Keep.BooksFailed = Math.Max(Keep.BooksFailed, booksFailed);

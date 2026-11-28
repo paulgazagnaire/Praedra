@@ -267,6 +267,9 @@ public sealed partial class SimpleAi
     /// <summary>
     /// The shields' absorption at the system as the side sees it (no fog: the truth, DefenseModule.ShieldStrength; fog: the completed shield
     /// generators of its picture). rule: m3-bombardment §2 Shields (hits = max(0, P - S)).
+    /// With ShieldsFeltDays (fog, the Collective) an own shelling newer than the picture overrides it: after hits, the true S; after none, the
+    /// power of the fleets that did nothing there, so the value then means "a power that failed here" (the batteries' return fire is in it,
+    /// not only the shields): read it only as the power a pile must beat, never as the shield generators' strength (Ponytail #430).
     /// </summary>
     private int ShieldStrengthSeen(string system)
     {
@@ -298,10 +301,11 @@ public sealed partial class SimpleAi
             lookFoiled: Math.Max(_p.SpyFoilMemoryDays, _p.HqRecheckFoilDays), hqMoved: _p.HqMoveCooldownDays,
             character: _p.BooksTalentWindow && _side == Side.Collective ? Math.Max(_p.AbductionInfoDays, _p.BooksSenserInfoDays) : _p.AbductionInfoDays,
             harvesterYardGone: _p.HarvesterYardValue > 0 ? _p.HarvesterBuildSeenDays : 0, booksFailed: _p.BurnTheBooks ? _p.BooksRetryDays : 0,
-            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0); // SimpleAiCollectivePlans.cs
-        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower);
+            shieldsFelt: _p.UseFog && _side == Side.Collective ? _p.ShieldsFeltDays : 0, // SimpleAiCollectivePlans.cs
+            fighterGrounded: FighterWaitCap > 0 ? FighterWaitDays : 0);
+        _mem.Ingest(Events, IsArmedCapital, FleetsShellPower, IsOwnFighter);
         var mem = _mem;
-        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower); // a save between Steps (AiMemory.CatchUp)
+        mem.CatchUp = () => mem.Ingest(_p.UseFog ? _h.Fog.ViewFor(_side).Events : _h.Game.Events, IsArmedCapital, FleetsShellPower, IsOwnFighter); // a save between Steps (AiMemory.CatchUp)
     }
 
     // ================================================================== game plan (AI trainer 2026-11-19)
@@ -377,6 +381,7 @@ public sealed partial class SimpleAi
             if (notes[i].Kind == kind) yield return notes[i];
     }
 
+    private bool IsOwnFighter(int id) => _h.Economy.Find(id) is { } o && o.Category == ObjectCategory.Fighter && o.Side == _side; // FighterWaitMax
     private bool IsArmedCapital(int id) =>
         _h.Economy.Find(id) is { } o && o.Category == ObjectCategory.CapitalShip && _h.Fleets.ClassOf(o) is { } c && CombatStrength.IsArmed(c);
 
