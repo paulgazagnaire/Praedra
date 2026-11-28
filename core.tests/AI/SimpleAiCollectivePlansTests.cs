@@ -25,6 +25,7 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, p.ShieldsFeltDays);
         Assert.Equal(0, p.FighterWaitMax);
         Assert.Equal(0, p.FighterWaitMaxHand);
+        Assert.Equal(0, p.WinWallsForgetDays);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -43,6 +44,7 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(on, p.WreckShields);
         Assert.Equal(on ? 2 : 0, p.FighterWaitMax); // Rooster 2026-11-28: fighters wait aboard
         Assert.Equal(0, p.FighterWaitMaxHand); // the Hand's is Maverick's to measure
+        Assert.Equal(on ? 365 : 0, p.WinWallsForgetDays); // Rooster 2026-11-28: Charter's old walls are forgotten
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
@@ -218,5 +220,25 @@ public class SimpleAiCollectivePlansTests
         hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
         hand.Ingest(feed, _ => false, null, _ => false);
         Assert.DoesNotContain(hand.Notes, n => n.Kind == AiNoteKind.FighterGrounded);
+    }
+
+    // WinWallsForgetDays (m5-fog-and-hq §F2: only Espionage writes a system's facilities; as QA-5 forgets an old garrison): Hard mirror seed 24.
+    // Kept: the Collective holds 554 of 555 worlds by day 2750 and never strikes Charter, which has no shields and no regiments left, because
+    // its look from about day 775 still shows two shield generators. Forgotten after 365 days: it takes Charter and wins (day 2127).
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ForgottenWallsLetTheCollectiveStrikeAnEmptyCharter()
+    {
+        (Side? winner, int day) Play(int forget)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 24, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget });
+            while (host.Game.Day < 2400 && host.Victory.Winner == null) m.Step();
+            return (host.Victory.Winner, host.Game.Day);
+        }
+        var off = Play(0); var on = Play(365);
+        _out.WriteLine($"walls kept: winner {off.winner?.ToString() ?? "none"} by day {off.day}; forgotten: {on.winner?.ToString() ?? "none"} on day {on.day}");
+        Assert.Null(off.winner);
+        Assert.Equal(Side.Collective, on.winner);
     }
 }

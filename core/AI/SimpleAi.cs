@@ -260,7 +260,7 @@ public sealed partial class SimpleAi
     private bool AssaultForbiddenSeen(string system)
     {
         if (_view == null) return _h.Defenses.AssaultForbidden(system);
-        var fac = _view.Picture(system)?.Facilities;
+        var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
         return fac != null && _h.Defenses.AssaultForbiddenBy(fac.Value);
     }
 
@@ -274,7 +274,7 @@ public sealed partial class SimpleAi
     private int ShieldStrengthSeen(string system)
     {
         if (_view == null) return _h.Defenses.ShieldStrength(system);
-        var fac = _view.Picture(system)?.Facilities;
+        var fac = WallsSeen(system); // WinWallsForgetDays: SimpleAiCollectivePlans.cs
         if (ShieldsFelt(system, fac?.Stamp) is int felt) return felt; // SimpleAiCollectivePlans.cs: an own shelling since the last look met them
         if (fac == null) return 0;
         int s = 0;

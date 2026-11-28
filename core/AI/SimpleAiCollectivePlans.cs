@@ -249,4 +249,17 @@ public sealed partial class SimpleAi
     /// stray that no longer holds back new orders).
     /// </summary>
     private const int FighterWaitDays = 120;
+
+    // ================================================================== Forget Charter's walls
+
+    /// <summary>
+    /// The facilities picture (group C) the AI reads walls from: with WinWallsForgetDays (the Collective, fog), a look at the system that wins
+    /// the game older than that many days reads as none (unknown); otherwise the picture as it is.
+    /// </summary>
+    private Praedra.Core.Fog.Seen<IReadOnlyDictionary<string, int>>? WallsSeen(string system)
+    {
+        var fac = _view!.Picture(system)?.Facilities;
+        if (fac != null && _p.WinWallsForgetDays > 0 && _side == Side.Collective && system == WinTarget() && AgeOf(fac) > _p.WinWallsForgetDays) return null;
+        return fac;
+    }
 }
