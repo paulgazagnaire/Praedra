@@ -241,4 +241,49 @@ public class SimpleAiCollectivePlansTests
         Assert.Null(off.winner);
         Assert.Equal(Side.Collective, on.winner);
     }
+
+    // WinWallsForgetDays with WallsRefused (Ponytail #436; m3-assault check 4): a landing refused because the world is fully shielded teaches the
+    // AI the walls stand. Hard mirror seed 13: an old look at Charter is forgotten, a fleet lands on day 1754 and is refused; without the note it
+    // landed and was refused every day from about day 1820 to day 3000 (1180 refusals). With it: one refusal, then the fleet shells or leaves.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void ARefusedLandingTeachesTheWallsStand()
+    {
+        var host = NewGame.Create(new NewGameOptions { Seed = 13, Preset = StartPreset.MedE });
+        var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard));
+        int run = 0, longest = 0, last = -10;
+        while (host.Game.Day < 2000 && host.Victory.Winner == null)
+        {
+            int before = m.Rejected.GetValueOrDefault("Collective Assault FullyShielded");
+            m.Step();
+            if (m.Rejected.GetValueOrDefault("Collective Assault FullyShielded") > before) { run = host.Game.Day - last <= 2 ? run + 1 : 1; last = host.Game.Day; longest = Math.Max(longest, run); }
+        }
+        int refused = m.Rejected.GetValueOrDefault("Collective Assault FullyShielded");
+        _out.WriteLine($"landings refused for the shields by day 2000: {refused}, longest run of days in a row {longest}");
+        Assert.True(refused > 0, "no landing was refused: the test no longer checks anything");
+        Assert.True(longest <= 1, $"the Collective landed into the same walls {longest} days in a row");
+        Assert.Contains(host.AiMemoryFor(Side.Collective, true).Notes, n => n.Kind == AiNoteKind.WallsRefused);
+    }
+
+    // AiMemory.Ingest, WallsRefused: an own assault refused as FullyShielded is noted at its system; other refusals, orders that are not own
+    // assaults, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesALandingRefusedForTheShields()
+    {
+        string? At(long seq) => seq is 5 or 6 ? "Charter" : null;
+        GameEvent[] feed =
+        {
+            new OrderRejected(0, 9, 5, Praedra.Core.Assault.AssaultReject.FullyShielded),
+            new OrderRejected(1, 9, 6, Praedra.Core.Assault.AssaultReject.NoTroops),
+            new OrderRejected(2, 9, 7, Praedra.Core.Assault.AssaultReject.FullyShielded),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.Ingest(feed, _ => false, null, null, At);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.WallsRefused);
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, wallsRefused: 365);
+        on.Ingest(feed, _ => false, null, null, At);
+        var w = on.Notes.Where(n => n.Kind == AiNoteKind.WallsRefused).Select(n => (n.System, n.Day)).ToList();
+        Assert.Equal(new[] { ((string?)"Charter", 9) }, w);
+    }
 }

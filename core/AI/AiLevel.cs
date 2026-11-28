@@ -195,10 +195,11 @@ public static class AiLevels
 
     /// <summary>
     /// WinWallsForgetDays at Medium and Hard (Rooster 2026-11-28; the Collective only): a look at Charter's facilities older than a year reads
-    /// as unknown, as FogGroundForgetDays (365) forgets an old garrison. 288 seeds (1-288), MedE, Hand / Collective / open, Collective win mean
-    /// day, wins by day 2000: Hard mirror 24 / 211 / 53, 1950, 121 off; 26 / 212 / 50, 1906, 131 on; Medium mirror 10 / 250 / 28, 1929, 151
-    /// off; 8 / 254 / 26, 1848, 172 on. Hard seed 24: the Collective held 554 of 555 worlds and never struck Charter (0 regiments, 0 shields)
-    /// behind a 1225-day-old look showing two shield generators; on, it wins on day 2127.
+    /// as unknown, as FogGroundForgetDays (365) forgets an old garrison; a landing refused for the shields there makes them count again
+    /// (WallsRefused, Ponytail #436). 288 seeds (1-288), MedE, main b3979ed, Hand / Collective / open, Collective win mean day, wins by day
+    /// 2000, off -> on: Hard mirror 24 / 211 / 53, 1950, 121 -> 27 / 211 / 50, 1910, 133; Medium mirror 10 / 248 / 30, 1951, 146 -> 9 / 250 / 29,
+    /// 1872, 167; Medium Collective vs Maverick's Grinder Hand 11 / 229 / 48, 1980, 124 -> 9 / 233 / 46, 1903, 144. Hard seed 24: the Collective
+    /// held 554 of 555 worlds and never struck Charter (0 regiments, 0 shields) behind a 1225-day-old look; on, it wins on day 2127.
     /// </summary>
     private const int WallsForgetDays = 365;
 
