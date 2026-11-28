@@ -682,6 +682,7 @@ public sealed partial class GameSession
         CharacterCause.Uprising => " in an uprising",
         CharacterCause.Assault => " in an invasion",
         CharacterCause.Mission => " on a mission",
+        CharacterCause.Intercept => " (caught by an enemy fleet)",
         CharacterCause.FleetDissolved => " (the fleet is gone)",
         CharacterCause.FleetMoved => " (the fleet moved off)",
         CharacterCause.Merged => " (the fleets merged)",

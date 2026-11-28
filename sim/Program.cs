@@ -353,7 +353,7 @@ internal static class SimCli
             }).ToList();
             Console.WriteLine($"Missions {side}: {(parts.Count == 0 ? "none" : string.Join("; ", parts))}.");
             Console.WriteLine($"Posts {side}: fleet posts given {ev.OfType<CharacterAttached>().Count(e => e.Side == side && e.Post != CharacterPost.None && e.Cause == CharacterCause.Order)}, " +
-                              $"system Generals given {ev.OfType<SystemGeneralAssigned>().Count(e => e.Side == side)}; own characters captured {ev.OfType<CharacterCaptured>().Count(e => e.Side == side)}; " +
+                              $"system Generals given {ev.OfType<SystemGeneralAssigned>().Count(e => e.Side == side)}; own characters captured {ev.OfType<CharacterCaptured>().Count(e => e.Side == side)} (caught arriving alone {ev.OfType<CharacterCaptured>().Count(e => e.Side == side && e.Cause == CharacterCause.Intercept)}); " +
                               $"at the end on fleet posts {host.Characters.InPlay.Count(c => c.Side == side && c.Post != CharacterPost.None)}, " +
                               $"system Generals {host.Game.State.Characters.SystemGenerals.Values.Count(id => host.Characters.Get(id)?.Side == side)}, " +
                               $"on missions {host.Characters.InPlay.Count(c => c.Side == side && host.Missions.IsOnMission(c.Id))}.");

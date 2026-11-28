@@ -413,6 +413,41 @@ public class CharacterTests
         Assert.Equal(CharacterStatus.Free, w.C(FortyOne).Status);
     }
 
+    // m5-characters-and-talent CH49 (Caught on arrival, Paul 2026-11-28): Forty-One travels alone from A to C; the fleets are placed at C the
+    // day before he arrives (so no battle has run there yet). An armed Hand fleet catches him (held aboard the lowest-id armed one); an armed
+    // Collective fleet there too, an unarmed Hand fleet only, or the switch off: he arrives free. Passing an armed fleet is CH13.
+    [Theory]
+    [InlineData("caught")]
+    [InlineData("own fleet")]
+    [InlineData("unarmed")]
+    [InlineData("off")]
+    public void CH49_AnArmedEnemyFleetCatchesALeaderArrivingAlone(string kind)
+    {
+        var w = new CharWorld(kind == "off" ? new CharacterParams { FleetsCatchLoneLeaders = false } : null, data: LineGalaxy("generated"));
+        w.Add(FortyOne, "A");
+        Assert.Null(w.Try(seq => new MoveCharacterOrder(seq, Side.Collective, FortyOne, "C")));
+        while (w.C(FortyOne).Transit is { } t && (t.HopIndex + 1 < t.Path.Count - 1 || t.DueDay > w.Game.Day + 1)) w.Game.Step();
+        int unarmed = w.Fleet(Side.Hand, "C", "Bond");
+        int first = kind == "unarmed" ? 0 : w.Fleet(Side.Hand, "C", Mandate);
+        if (kind != "unarmed") w.Fleet(Side.Hand, "C", Mandate);
+        if (kind == "own fleet") w.Fleet(Side.Collective, "C", Corvette);
+        w.Game.Step();
+        Assert.Single(w.Events<CharacterArrived>());
+        var c = w.C(FortyOne);
+        if (kind == "caught")
+        {
+            var e = Assert.Single(w.Events<CharacterCaptured>());
+            Assert.Equal((CharacterCause.Intercept, Side.Hand, first), (e.Cause, e.Captor, e.HeldAboard));
+            Assert.Equal((CharacterStatus.Captured, first), (c.Status, c.HeldAboard));
+            Assert.NotEqual(unarmed, c.HeldAboard);
+        }
+        else
+        {
+            Assert.Empty(w.Events<CharacterCaptured>());
+            Assert.Equal((CharacterStatus.Free, "C"), (c.Status, w.Ch.LocationOf(c)));
+        }
+    }
+
     // m5-characters-and-talent CH14
     [Theory]
     [InlineData(true)]

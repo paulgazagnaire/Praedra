@@ -204,6 +204,12 @@ public sealed record CharacterParams
     public bool CharactersLostWithFleet { get; init; }
     /// <summary>An enemy fleet stops or captures a lone character in transit. DEFAULT false; on has no rule: refused.</summary>
     public bool CharactersStoppedInTransit { get; init; }
+    /// <summary>
+    /// New (Decided Paul 2026-11-28, "Yes, fleets catch lone leaders"): a character travelling alone who ends his trip at a system where an armed
+    /// fleet of the other side stands is captured (cause Intercept) and held aboard it, unless an armed fleet of his own side stands there too.
+    /// DEFAULT true; false = Classic. rule: m5-characters-and-talent §Moving a character alone (Caught on arrival).
+    /// </summary>
+    public bool FleetsCatchLoneLeaders { get; init; } = true;
     /// <summary>Personnel leaving a blockaded system risk capture (Classic text, no rule). DEFAULT false; on refused.</summary>
     public bool BlockadeEscapeRisk { get; init; }
     /// <summary>Assaults capture or kill officers (Missing). DEFAULT false; on refused.</summary>
