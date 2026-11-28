@@ -33,6 +33,9 @@ public static class AiLevels
                 MilitaryEvery = 6, ProductionEvery = 8, EconomyEvery = 10, AgentsEvery = 4,
                 PickNoisePercent = 30, MaxOffensives = 1, ScoutCount = 2, HqSpies = 2, SafeHearth = true,
                 FoundYardsBelow = FoundBelow,
+                // AI trainer 2026-11-28 (#445, Ponytail): Easy keeps ignoring inbound sightings (m5-fog-and-hq §N6d), as before the switch went on;
+                // pouncing on an arrival-day tip is sharp play, and Easy is meant to be beaten. Measured at Medium only.
+                UseInboundSightings = false,
             },
             // AI trainer 2026-10-26 (Paul: Easy about today's AI, Medium balanced, Hard really hard; the Collective plays guerrilla). The guerrilla
             // switches are Collective-only (both sides play to win, PlayToWin below). Medium Hand against the Collective, 96 seeds (1-96), day 3000, fog, Hand / Collective / no winner,
