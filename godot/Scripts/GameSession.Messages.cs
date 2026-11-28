@@ -62,7 +62,7 @@ public sealed partial class GameSession
             case OrderRejected or OrderAccepted: return MsgCat.Orders;
             case FleetArrived or FleetJoined or FleetJoinFailed or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
                 or SquadronsLoaded or SquadronsUnloaded or HqArrived: return MsgCat.Fleets;
-            case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven: return MsgCat.Intel;
+            case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven or LeaderInboundSeen: return MsgCat.Intel;
             case Praedra.Core.Research.ResearchLevelReached or AutoscrapWarning or ObjectScrapped or ProjectStarted or ProjectCancelled or UnitCompleted
                 or DeliveryArrived or DeliveryRefused: return MsgCat.Build;
         }
@@ -131,6 +131,9 @@ public sealed partial class GameSession
                 break;
             case HearthTipGiven x: // the core sends it to the spy's side only (rule: m5-fog-and-hq §N6a)
                 yield return new Message(d, $"A spy heard where the Collective headquarters is: {x.System}.", x.System, MsgKind.Good);
+                break;
+            case LeaderInboundSeen x: // the spy's side only (rule: m5-fog-and-hq §N6d)
+                yield return new Message(d, $"Spies report {CharName(x.Character)} travelling to {x.System}, arriving day {x.ReachDay}.", x.System, MsgKind.Good);
                 break;
             case HarvesterQueuedSeen x: // the seeing side only (rule: m5-fog-and-hq §N6b)
                 yield return new Message(d, $"Intelligence reports a harvester under construction at {x.System}.", x.System, MsgKind.Bad);
@@ -278,6 +281,11 @@ public sealed partial class GameSession
                 break;
             case CharacterHealed c when Mine(c.Side):
                 yield return new Message(d, $"{CharName(c.Character)} has recovered from the injuries.", null, MsgKind.Good);
+                break;
+            case CharacterCaptured c when c.Cause == CharacterCause.Intercept: // rule: m5-characters-and-talent §Moving a character alone (Caught on arrival)
+                yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} arrived alone at {c.System} and was caught by an enemy fleet."
+                    : c.Captor == Player ? $"Your fleet caught {CharName(c.Character)} of the {NameOf(c.Side)} arriving at {c.System}."
+                    : $"{CharName(c.Character)} was caught by a fleet at {c.System}.", c.System, Mine(c.Side) ? MsgKind.Bad : MsgKind.Good);
                 break;
             case CharacterCaptured c:
                 yield return new Message(d, Mine(c.Side) ? $"{CharName(c.Character)} was captured by the {NameOf(c.Captor)}{At(c.System)}."

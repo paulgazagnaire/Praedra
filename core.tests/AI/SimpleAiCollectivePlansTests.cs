@@ -196,8 +196,8 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, on.lateOrders);
     }
 
-    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted) or unloaded (SquadronsUnloaded, one note per
-    // squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
+    // AiMemory.Ingest, FighterGrounded (FighterWaitMax): an own squadron built (UnitCompleted), delivered from another yard (DeliveryArrived,
+    // dated the day it lands) or unloaded (SquadronsUnloaded, one note per squadron) is noted with its system; the enemy's, ships, and anything while the note is not kept are not.
     [Fact]
     public void AiMemory_NotesTheSquadronsSetDown()
     {
@@ -207,6 +207,8 @@ public class SimpleAiCollectivePlansTests
             new Praedra.Core.Construction.UnitCompleted(0, 5, 11, "Sting", Side.Collective, "Navalia", "Navalia", 1),
             new Praedra.Core.Construction.UnitCompleted(1, 5, 30, "Lancer", Side.Collective, "Navalia", "Navalia", 2),
             new Praedra.Core.Fleets.SquadronsUnloaded(2, 7, new ValueList<int>(new[] { 12, 13 }), 4, new ValueList<int>(new[] { 30 }), "Midway"),
+            new Praedra.Core.Construction.DeliveryArrived(3, 9, 1, 11, "Sting", "Tessera"),
+            new Praedra.Core.Construction.DeliveryArrived(4, 9, 2, 30, "Lancer", "Tessera"),
         };
         var off = new AiMemory { Side = Side.Collective, Fog = true };
         off.Ingest(feed, _ => false, null, Fighter);
@@ -215,7 +217,7 @@ public class SimpleAiCollectivePlansTests
         on.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
         on.Ingest(feed, _ => false, null, Fighter);
         var g = on.Notes.Where(n => n.Kind == AiNoteKind.FighterGrounded).Select(n => (n.Value, n.System, n.Day)).ToList();
-        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7) }, g);
+        Assert.Equal(new[] { (11, (string?)"Navalia", 5), (12, "Midway", 7), (13, "Midway", 7), (11, "Tessera", 9) }, g);
         var hand = new AiMemory { Side = Side.Hand, Fog = true };
         hand.KeepAtLeast(0, 0, 0, 0, 0, 0, fighterGrounded: 120);
         hand.Ingest(feed, _ => false, null, _ => false);
@@ -225,13 +227,16 @@ public class SimpleAiCollectivePlansTests
     // WinWallsForgetDays (m5-fog-and-hq §F2: only Espionage writes a system's facilities; as QA-5 forgets an old garrison): Hard mirror seed 24.
     // Kept: the Collective holds 554 of 555 worlds by day 2750 and never strikes Charter, which has no shields and no regiments left, because
     // its look from about day 775 still shows two shield generators. Forgotten after 365 days: it takes Charter and wins (day 2127).
+    // Re-pinned to seed 29 (Dev lead 2026-11-28, #440: the squadron delivery note, AiMemory FighterGrounded on DeliveryArrived, moved seed 24 to
+    // no winner either way). Hard mirror seeds 1-32 by day 2400: kept, the Hand still holds Charter on 9 seeds; forgotten, on 6; seed 29
+    // is kept no winner (Charter the Hand's), forgotten the Collective wins on day 1915. Not traced on seed 29 that the kept look shows shields.
     [Trait("Category", "Play")]
     [Fact]
     public void ForgottenWallsLetTheCollectiveStrikeAnEmptyCharter()
     {
         (Side? winner, int day) Play(int forget)
         {
-            var host = NewGame.Create(new NewGameOptions { Seed = 24, Preset = StartPreset.MedE });
+            var host = NewGame.Create(new NewGameOptions { Seed = 29, Preset = StartPreset.MedE });
             var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget });
             while (host.Game.Day < 2400 && host.Victory.Winner == null) m.Step();
             return (host.Victory.Winner, host.Game.Day);

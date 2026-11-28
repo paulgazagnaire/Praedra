@@ -172,11 +172,16 @@ public sealed record MissionParams
     /// <summary>
     /// Where a team sent after an enemy leader flies (Abduction, Assassination). On: an order that names a system with the leader goes to that
     /// system (where the side last saw the leader), and the order checks only what the side knows; if the leader is not there on landing the
-    /// mission ends TargetInvalid. Off, or an order without a system (the AI's): the team flies to the leader's position at order time.
-    /// DEFAULT on (Lead, the recommended option of Paul's card of 2026-11-27, open call 3 of the Mission window; pending his answer).
-    /// rule: m5-missions §Targets (Where a leader target is sought).
+    /// mission ends TargetInvalid. Off, or an order without a system: the team flies to the leader's position at order time.
+    /// DEFAULT on (Decided Paul 2026-11-28, "Where seen"). rule: m5-missions §Targets (Where a leader target is sought).
     /// </summary>
     public bool CharacterTargetWhereSeen { get; init; } = true;
+    /// <summary>
+    /// Lying in wait: a team that lands where its side's spies saw the target leader heading (an inbound sighting, m5-fog-and-hq §N6d) before he
+    /// arrives waits for him when his reach day is at most this many days after the landing; the first timer then counts from the reach day.
+    /// 0 = off. DEFAULT 30 (Lead, Paul 2026-11-28). rule: m5-missions §Targets (Lying in wait).
+    /// </summary>
+    public int AmbushWaitMaxDays { get; init; } = 30;
 
     /// <summary>Key targets of Assassination (the exposure gate, one capped roll, kidnap or kill). DEFAULT true (Decided Paul 2026-10-16). rule: m5-missions §6a.</summary>
     public bool KeyTargetRules { get; init; } = true;

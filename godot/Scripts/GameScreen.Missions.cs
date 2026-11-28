@@ -343,7 +343,9 @@ public partial class GameScreen
             {
                 Line(chk.Ticks == 0 ? $"Target: {chk.Target}. The team is already there and starts at once."
                     : $"Target: {chk.Target}. {chk.Ticks} days on the way, arrives day {chk.ArrivalDay}.", Good);
-                Line($"First result between day {chk.ArrivalDay + rec.TimerMin} and day {chk.ArrivalDay + rec.TimerMin + rec.TimerSpread}{(rec.Repeats ? "; then it keeps working until you cancel it" : "")}." +
+                // rule: m5-missions §Targets (Lying in wait): a team that lands before the leader it waits for counts from his arrival day
+                int from = Wait(sel, p, chk.ArrivalDay) is int r ? r : chk.ArrivalDay;
+                Line($"First result between day {from + rec.TimerMin} and day {from + rec.TimerMin + rec.TimerSpread}{(rec.Repeats ? "; then it keeps working until you cancel it" : "")}." +
                      (rec.Foilable ? " Enemy units at the target may catch the team." : ""), Dim, 13);
                 // a team of special forces aboard one fleet (m5-missions §Spying from orbit 2, 3; Paul 2026-11-27, "Half chance")
                 if (OrbitFleet(p) is { } of)
@@ -351,7 +353,15 @@ public partial class GameScreen
                         : $"The team sets out from {S.NameOf(of)} and comes back to it, or to your nearest system if {S.NameOf(of)} is gone or full.", Good, 13);
             }
             if (chk.Reason == null && sel == MissionKind.Abduction && p.TargetChar is int tc)
-                Line($"You last saw {S.CharName(tc)} there. If they have left by the time the team lands, it comes home empty-handed.", Dim, 13);
+            {
+                int max = Mm.Params.AmbushWaitMaxDays;
+                if (S.InboundReachDay(tc, chk.Target) is int reach && reach > chk.ArrivalDay)
+                    Line(Wait(sel, p, chk.ArrivalDay) != null
+                        ? $"Spies saw {S.CharName(tc)} heading here, arriving day {reach}. The team lands day {chk.ArrivalDay} and lies in wait for them."
+                        : $"Spies saw {S.CharName(tc)} heading here, arriving day {reach}. The team would land day {chk.ArrivalDay}, more than {max} days before them, and come home empty-handed.",
+                        Wait(sel, p, chk.ArrivalDay) != null ? Good : Bad, 13);
+                else Line($"You last saw {S.CharName(tc)} there. If they have left by the time the team lands, it comes home empty-handed.", Dim, 13);
+            }
             Add(new Control { CustomMinimumSize = new Vector2(0, 4) });
             Act($"Send: {GameSession.KindWords(sel, Me)} on {p.Target}", ConfirmMission, "Starts as soon as the clock moves. The core judges the order then; a refusal comes back in Logs (E).", chk.Reason != null);
         }
@@ -370,7 +380,8 @@ public partial class GameScreen
         {
             int cid = id; string at = sys;
             string cap = S.AbductionCap(id) is int c ? $" - at most {c}% a try" : "";
-            var b = Act($"{(p.TargetChar == id ? "> " : "")}Abduct {S.CharName(id)} (seen at {sys}, day {day}){cap}",
+            string when = S.InboundReachDay(id, sys) == day ? $"heading to {sys}, arrives day {day}" : $"seen at {sys}, day {day}"; // §N6d
+            var b = Act($"{(p.TargetChar == id ? "> " : "")}Abduct {S.CharName(id)} ({when}){cap}",
                 () => { p.TargetChar = cid; p.Target = at; _panelDirty = true; _panelTimer = 0; },
                 S.AbductionCap(id) is int c2
                     ? $"A key leader: each try succeeds at most {c2}% of the time, and never while they ride a fleet, or stand at their capital while it holds as many regiments as it needs to stay calm."
@@ -378,6 +389,11 @@ public partial class GameScreen
             if (p.TargetChar == id) b.AddThemeColorOverride("font_color", Pending);
         }
     }
+
+    /// <summary>The arrival day of the leader the team would lie in wait for, when it lands before him within AmbushWaitMaxDays; else null. rule: m5-missions §Targets (Lying in wait).</summary>
+    int? Wait(MissionKind k, MissionPlan p, int landing) =>
+        k is MissionKind.Abduction && p.TargetChar is int tc && p.Target is string t && S.InboundReachDay(tc, t) is int r
+            && Mm.Params.AmbushWaitMaxDays > 0 && r > landing && r - landing <= Mm.Params.AmbushWaitMaxDays ? r : null;
 
     void CloseRow()
     {

@@ -152,19 +152,24 @@ public sealed partial class GameSession
     };
 
     /// <summary>
-    /// The enemy leaders an Abduction can go after: each one's newest sighting in the player's pictures (group D), free or injured there, not the
-    /// player's own prisoner; by name. Only what the pictures show (rule: m5-fog-and-hq §F1 group D, §N8; m5-missions §Targets, Where a leader
-    /// target is sought).
+    /// The enemy leaders an Abduction can go after: each one's newest word, from the player's pictures (group D: free or injured there) or from
+    /// an inbound sighting (spies saw them heading to a system: the day is their arrival day there), not the player's own prisoner; by name.
+    /// Only what the player's side knows (rule: m5-fog-and-hq §F1 group D, §N6d, §N8; m5-missions §Targets, Where a leader target is sought).
     /// </summary>
     public IReadOnlyList<(int Id, string System, int Day)> SeenEnemyLeaders() =>
-        Fog.CharactersSeen(Player).Where(x => x.Character.Side != Player)
-            .GroupBy(x => x.Character.Id)
-            .Select(g => g.OrderByDescending(x => x.Stamp).ThenBy(x => x.System, StringComparer.Ordinal).First())
+        Fog.CharactersSeen(Player).Where(x => x.Character.Side != Player && x.Character.Status != CharacterStatus.Captured)
+            .Select(x => (x.Character.Id, x.System, Day: x.Stamp, Learned: x.Stamp, Inbound: false))
+            .Concat(Fog.LeadersInbound(Player).Select(x => (Id: x.Character, x.System, Day: x.ReachDay, Learned: x.Day, Inbound: true)))
+            .GroupBy(x => x.Id)
+            // the newest word by when it was learned (a picture taken on or after the spy's stamp wins: Ponytail on #439)
+            .Select(g => g.OrderByDescending(x => x.Learned).ThenBy(x => x.Inbound).ThenBy(x => x.System, StringComparer.Ordinal).First())
             // a death is told to both sides (the Goal window reads it the same way), so a dead leader leaves the list (Ponytail on #420)
-            .Where(x => x.Character.Status != CharacterStatus.Captured && Chars.Get(x.Character.Id) is not { Status: CharacterStatus.Dead }
-                && !(Chars.Get(x.Character.Id) is { Status: CharacterStatus.Captured } c && c.Captor == Player))
-            .Select(x => (x.Character.Id, x.System, x.Stamp))
+            .Where(x => Chars.Get(x.Id) is not { Status: CharacterStatus.Dead } && !(Chars.Get(x.Id) is { Status: CharacterStatus.Captured } c && c.Captor == Player))
+            .Select(x => (x.Id, x.System, x.Day))
             .OrderBy(x => CharName(x.Id), StringComparer.Ordinal).ThenBy(x => x.Id).ToList();
+
+    /// <summary>The day the player's spies said this enemy leader will stand at the system (an inbound sighting), or null. rule: m5-fog-and-hq §N6d.</summary>
+    public int? InboundReachDay(int id, string system) => Fog.InboundReachDay(Player, id, system);
 
     /// <summary>The per-try cap of a key leader of the Abduction rules, or null (rule: m5-missions §6a, KeyTargetRules).</summary>
     public int? AbductionCap(int id) => Missions.IsKeyTarget(MissionKind.Abduction, id, out int cap) ? cap : null;
