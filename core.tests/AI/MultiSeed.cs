@@ -18,12 +18,6 @@ internal static class MultiSeed
     }
 
     /// <summary>
-    /// Settings with PR #442's two leader rules pinned to before (Dev lead 2026-11-28): Autoroute without the guarded-first pass
-    /// (m5-characters-and-talent §Autoroute step 3, AutorouteToGuarded) and every mission group on its way in seen with no draw (m5-fog-and-hq
-    /// §N6d, InboundMissionGroupPercent 100). For single-seed play tests that measure an AI switch: the new rules move those games, not the
-    /// switch. With them the games are exactly those of main before #442.
-    /// </summary>
-    /// <summary>
     /// Settings with m5-fog-and-hq §N6e (guards see an enemy team leave for their world, GuardsSeeInbound) off, for the single-seed AI play tests
     /// whose numbers were measured before it: the guards' draw moves the game's random stream.
     /// </summary>
@@ -36,6 +30,12 @@ internal static class MultiSeed
         Fog = new Praedra.Core.Fog.FogParams { InboundMissionGroupPercent = 100, GuardsSeeInbound = false },
     };
 
+    /// <summary>
+    /// Settings with PR #442's two leader rules pinned to before (Dev lead 2026-11-28): Autoroute without the guarded-first pass
+    /// (m5-characters-and-talent §Autoroute step 3, AutorouteToGuarded) and every mission group on its way in seen with no draw (m5-fog-and-hq
+    /// §N6d, InboundMissionGroupPercent 100). For single-seed play tests that measure an AI switch: the new rules move those games, not the
+    /// switch. With them the games are exactly those of main before #442.
+    /// </summary>
     public static Praedra.Core.Setup.GameSettings LeaderRulesBefore442 => new()
     {
         Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false },
