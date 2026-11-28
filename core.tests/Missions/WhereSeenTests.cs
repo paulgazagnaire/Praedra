@@ -94,4 +94,53 @@ public class WhereSeenTests
         p.Game.Step();
         Assert.Equal(MissionReject.BadTarget, p.Reason(s));
     }
+
+    // Lying in wait (m5-missions §Targets, Paul 2026-11-28): Forty-One leaves X for T (7 ticks); a Hand espionage success on T the next day
+    // records the inbound sighting (m5-fog-and-hq §N6d); then Ravilla's Abduction names T and lands before him. Returns the world, the reach day.
+    private static (MissionWorld W, int Reach) Ambush(MissionParams? p = null, bool spy = true)
+    {
+        var w = World(FortyOne, X, p);
+        w.Submit(s => new MoveCharacterOrder(s, Side.Collective, FortyOne, T));
+        w.Game.Step();
+        bool done = !spy;
+        w.Game.RegisterHook("6.8", ctx => { if (done) return; done = true; w.Host.Fog.EspionageSuccess(ctx, Side.Hand, T); });
+        w.Game.Step();
+        int reach = spy ? w.Host.Fog.InboundReachDay(Side.Hand, FortyOne, T)!.Value : 0;
+        w.Start(Side.Hand, MissionKind.Abduction, new[] { Ravilla }, T, targetChar: FortyOne);
+        w.Game.Step();
+        return (w, reach);
+    }
+
+    // m5-missions MI78: the team lands before the leader: no TargetInvalid, the first timer counts from his reach day (one timer draw), and the
+    // first iteration runs with him there
+    [Fact]
+    public void MI78_TeamLiesInWaitForTheLeaderOnHisWayIn()
+    {
+        var (w, reach) = Ambush();
+        int mission = w.LastMission;
+        w.RunUntilWorking(mission);
+        var landed = w.Events<MissionLanded>().Single();
+        Assert.True(landed.Day < reach, $"landed {landed.Day}, reach {reach}");
+        Assert.Equal(reach + w.M.Data.Get(MissionKind.Abduction).TimerMin, landed.Due); // the stub answers 0 for the spread
+        Assert.Empty(w.Events<MissionEnded>());
+        w.RunIteration(mission);
+        Assert.NotEmpty(w.Events<MissionMemberRoll>());
+        Assert.DoesNotContain(w.Events<MissionEnded>(), e => e.Outcome == MissionOutcome.TargetInvalid);
+    }
+
+    // m5-missions MI79: the reach day too far after the landing, no inbound sighting, or AmbushWaitMaxDays 0: TargetInvalid on landing, no roll
+    [Fact]
+    public void MI79_NoWaitWithoutASightingOrBeyondTheMax()
+    {
+        var cases = new[] { Ambush(new MissionParams { AmbushWaitMaxDays = 1 }), Ambush(spy: false), Ambush(new MissionParams { AmbushWaitMaxDays = 0 }) };
+        foreach (var (w, reach) in cases)
+        {
+            w.Run(10);
+            var end = w.Events<MissionEnded>().Single();
+            Assert.Equal((T, MissionOutcome.TargetInvalid), (end.Target, end.Outcome));
+            Assert.Empty(w.Events<MissionLanded>());
+            Assert.Empty(w.Events<MissionMemberRoll>());
+            if (reach > 0) Assert.True(reach - end.Day > 1, $"ended {end.Day}, reach {reach}"); // the first case is beyond its max of 1
+        }
+    }
 }

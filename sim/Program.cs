@@ -341,6 +341,15 @@ internal static class SimCli
         Console.WriteLine($"Hearth: {host.HqSystem ?? "none"}; Hand's picture of it: {(known == null ? "unknown" : $"{known.System} (seen day {known.Stamp})")}. " +
                           $"Explored systems: Hand {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Hand, s.Name))}, Collective {host.Data.Galaxy.Systems.Count(s => host.Fog.IsExplored(Side.Collective, s.Name))}.");
         Console.WriteLine($"Hand learned the HQ: {(hqFinds.Count == 0 ? "never" : string.Join("; ", hqFinds))}.");
+        {
+            // m5-fog-and-hq §N6d, m5-missions §Targets (Lying in wait): leaders seen on their way in, and Abduction teams that landed before them
+            var abd = host.Missions.Data.Get(MissionKind.Abduction);
+            var abductions = ev.OfType<MissionStarted>().Where(e => e.MissionKind == MissionKind.Abduction).Select(e => e.Mission).ToHashSet();
+            string Of(Side side) =>
+                $"{side} {ev.OfType<Praedra.Core.Fog.LeaderInboundSeen>().Count(e => e.Viewer == side)} seen, " +
+                $"{ev.OfType<MissionLanded>().Count(e => e.Side == side && abductions.Contains(e.Mission) && e.Due > e.Day + abd.TimerMin + abd.TimerSpread)} teams waited";
+            Console.WriteLine($"Leaders seen on their way in: {Of(Side.Hand)}; {Of(Side.Collective)}.");
+        }
         foreach (var side in new[] { Side.Hand, Side.Collective })
         {
             var parts = ev.OfType<MissionStarted>().Where(e => e.Side == side && e.MissionKind != MissionKind.Move).GroupBy(e => e.MissionKind).OrderBy(g => g.Key).Select(g =>

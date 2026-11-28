@@ -43,8 +43,8 @@ public enum AiNoteKind
     /// </summary>
     ShieldsFelt,
     /// <summary>
-    /// FighterGrounded (SimpleAiParams.FighterWaitMax): own squadron Value was set on the ground at System, built there (UnitCompleted) or
-    /// unloaded (SquadronsUnloaded). Noted only while kept (off: none). Not saved before 2026-11-28: an older save loads with none.
+    /// FighterGrounded (SimpleAiParams.FighterWaitMax): own squadron Value was set on the ground at System, built there (UnitCompleted), delivered
+    /// there from another yard (DeliveryArrived: the note is dated the day it lands) or unloaded (SquadronsUnloaded). Noted only while kept (off: none). Not saved before 2026-11-28: an older save loads with none.
     /// </summary>
     FighterGrounded,
     /// <summary>
@@ -196,6 +196,8 @@ public sealed class AiMemory
                 // FighterGrounded: one note per squadron set down (an unload can set down several; they share the event's day and feed index)
                 if (e is UnitCompleted uc && uc.Side == Side && ownFighter(uc.Object))
                     n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = uc.Destination, Value = uc.Object };
+                else if (e is DeliveryArrived da && ownFighter(da.Object)) // a squadron sent to another yard is set down there on arrival
+                    n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = da.System, Value = da.Object };
                 else if (e is SquadronsUnloaded su)
                     foreach (int q in su.Squadrons.Items)
                     {
