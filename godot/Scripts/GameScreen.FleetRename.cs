@@ -68,7 +68,7 @@ public partial class GameScreen
         };
         e.SetMeta(UiTest.FullName, $"Fleet rename {f.Id}");
         foreach (var st in new[] { "normal", "focus", "read_only" }) e.AddThemeStyleboxOverride(st, Look.Box(Look.Bg, Look.Accent, bottom: 1));
-        e.AddThemeFontOverride("font", Ui.NameFont(size, e.Text));
+        e.AddThemeFontOverride("font", Ui.TitleFont);
         e.AddThemeFontSizeOverride("font_size", size);
         e.AddThemeColorOverride("font_color", Look.Text);
         e.AddThemeColorOverride("caret_color", Look.Text);
@@ -83,7 +83,7 @@ public partial class GameScreen
                 e.CaretColumn = caret;
             }
             _renameText = safe;
-            e.AddThemeFontOverride("font", Ui.NameFont(size, safe));
+            e.AddThemeFontOverride("font", Ui.TitleFont);
         };
         e.TextSubmitted += _ => FinishRename(true);
         e.FocusExited += () => { if (_renameEdit == e) FinishRename(true); };   // the keyboard went elsewhere (Tab, another box): that is elsewhere too

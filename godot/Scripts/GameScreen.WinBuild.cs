@@ -92,26 +92,25 @@ public partial class GameScreen
         var eco = S.Host.Economy;
         var head = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
-        var top = Pad(24, 24, 32, w.Min ? 24 : 40);
+        var top = Pad(24, 24, 24, w.Min ? 24 : 40);   // the frames: 24 px above and on the sides, 40 below
         head.AddChild(top);
         var parts = Boxed(new VBoxContainer(), 32);
         top.AddChild(parts);
 
-        // the name, "CHARTER: INFRASTRUCTURE", BitPotion 48 px (32 px when too long), and the window buttons
+        // the name, "CHARTER: INFRASTRUCTURE", Pixel Operator 32 px (24 px when too long), and the window buttons
         var row = Boxed(new HBoxContainer(), NameGap);
         string upper = $"{n}: Infrastructure".ToUpperInvariant();
         float room = WidthOf(w) - 2 - 48 - NameGap - 3 * WinButton - 2 * 4;
-        int size = Ui.NameSize(upper, room);
+        int size = Ui.TitleSize(upper, room);
         var name = Look.Words(upper, size, Look.Text);
-        name.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        name.AddThemeFontOverride("font", Ui.TitleFont);
         name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         name.ClipText = true;
         name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         row.AddChild(name);
         var grip = MoveGrip();
-        grip.AddThemeColorOverride("font_color", Look.Text);
-        row.AddChild(WinButtons(w, grip, grey: true));
+        row.AddChild(WinButtons(w, grip));
         parts.AddChild(row);
         if (!w.Min)
         {
@@ -159,13 +158,15 @@ public partial class GameScreen
     /// <summary>The two slot gauges, a line between them, and on the right the way to the planet's Ground window and its fleet.</summary>
     Control InfraGauges(string n, Praedra.Core.Fog.SystemPicture pic = null)
     {
+        // the gauges take the room the links leave (no spacer: a spacer adds the row's gap twice, and the 698 px window has no 48 px to
+        // spare at Charter's 15 slots, review 39)
         var row = Boxed(new HBoxContainer(), 24);
         var gauges = Boxed(new HBoxContainer(), 24);
         gauges.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        gauges.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         if (S.OwnerOf(n) != Me) SeenGauges(gauges, pic);
         else LiveGauges(n, gauges);
         row.AddChild(gauges);
-        row.AddChild(Ui.Grow());
         row.AddChild(InfraLinks(n));
         return row;
     }
@@ -211,7 +212,7 @@ public partial class GameScreen
     /// <summary>The way to the planet's Ground window and to your fleets in orbit (the frame's "Ground and military" and "Fleets").</summary>
     Control InfraLinks(string n)
     {
-        var links = Boxed(new HBoxContainer(), 16);
+        var links = Boxed(new HBoxContainer(), 8);
         links.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         links.AddChild(OutlinedButton(PixelIconData.Tile["troops"], "Ground and military", $"Ground and military at {n}", () => OpenMgmt(MgKind.Ground, n),
             $"The Ground window of {n}: leaders, troops and fighters on the planet, and the fleets in orbit."));
@@ -240,12 +241,12 @@ public partial class GameScreen
         return v;
     }
 
-    /// <summary>A button outlined in the design's line colour: a 16 px icon and its words, 8 px inside.</summary>
+    /// <summary>A button outlined in the design's line colour: a 16 px icon and its words, 16 px in from the sides, 10 from the top.</summary>
     static Button OutlinedButton(string[] icon, string words, string key, Action act, string tip, bool disabled = false)
     {
         var b = new Button { FocusMode = FocusModeEnum.None, Disabled = disabled, TooltipText = Ui.Wrap(tip),
             MouseDefaultCursorShape = disabled ? CursorShape.Arrow : CursorShape.PointingHand };
-        // the new colors frames (2026-11-24): the buttons' outline, 4 px corners, 40 px high (Paul: "follow the frames")
+        // the frames (2026-11-28): the buttons' outline, square, 40 px high (Paul: "follow the frames")
         foreach (var (state, line) in new[] { ("normal", Look.Outline), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text), ("disabled", Look.Line) })
             b.AddThemeStyleboxOverride(state, ButtonBox(line));
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
@@ -257,7 +258,7 @@ public partial class GameScreen
         var l = Look.Words(words, 12, ink, true);
         l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(l);
-        Fill(b, h, 8, 8, new Vector2(0, ButtonH));
+        Fill(b, h, 16, 10, new Vector2(0, ButtonH));
         b.Pressed += act;
         b.SetMeta(UiTest.FullName, key);
         return b;
@@ -338,7 +339,7 @@ public partial class GameScreen
 
         // what they are doing
         string left = "No infrastructure", right = "-", hover = null, tip;
-        Color ink = Look.Dim;
+        Color ink = Look.Soft;
         float share = 0;
         bool track = false;   // the bar's blue track (something under way) or the grey one
         var menu = new List<(string, Action)>();
@@ -369,7 +370,7 @@ public partial class GameScreen
             }
             else if (count > 0)
             {
-                (left, ink) = ("Idle", Look.Dim);
+                (left, ink) = ("Idle", Look.Text);   // the frame's left line is the words' colour; idle yards are what a player looks for (review 39)
                 tip = $"The {fname} builds nothing. Pick what it should build under Build.";
             }
             else tip = $"No {fname} here. " + (fam == YardFamily.Construction ? "Build one from a planet that already has a construction yard." : "Build one with this planet's construction yards.");
@@ -412,8 +413,9 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A cell of the strip, as the frame draws it: the kind's 16 px icon, its name and how many stand here (#454545, #676767 when none);
-    /// under it the left and right words and a 2 px bar. The open cell is the page's surface, joined to it. A click opens it.
+    /// A cell of the strip, as the frame draws it: the kind's 16 px icon, its name and how many stand here (#B8C2E0, #54638A when none);
+    /// under it the left and right words (what it does in the words' colour, the countdown in the status blue-grey; #54638A when there is none)
+    /// and a 2 px bar in your blue on the #182139 line. The open cell is the page's surface, joined to it. A click opens it.
     /// </summary>
     HoverWordsButton CellFrame(MgWin w, string n, InfraTab t, int count, string left, string right, Color ink, float share, bool track, string tip, out Label leftWords)
     {
@@ -435,7 +437,7 @@ public partial class GameScreen
         var name = Look.Words(CellName(t), 16, Look.Text, true);
         name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         top.AddChild(name);
-        if (count >= 0) top.AddChild(Look.Words(count.ToString(), 16, count == 0 ? Look.Soft : Look.Dim));   // -1: never seen, no made-up 0 (review 33)
+        if (count >= 0) top.AddChild(Look.Words(count.ToString(), 16, count == 0 ? Look.Soft : Look.Text));   // -1: never seen, no made-up 0 (review 33)
         v.AddChild(top);
 
         cell.TooltipText = Ui.Wrap(tip);
@@ -445,9 +447,9 @@ public partial class GameScreen
         l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         l.ClipText = true; l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         line.AddChild(l);
-        line.AddChild(Look.Words(right, 12, ink));
+        line.AddChild(Look.Words(right, 12, right == "-" ? Look.Soft : ink == Look.Text ? Look.Quiet : ink));   // a dash stays quiet
         st.AddChild(line);
-        st.AddChild(new ThinBar { Share = share, Fill = Look.Accent, Track = track ? new Color(Look.AccentDeep, 0.5f) : new Color(Look.Dim, 0.4f), CustomMinimumSize = new Vector2(0, 2) });
+        st.AddChild(new ThinBar { Share = share, Fill = Ui.You, Track = Look.Line, CustomMinimumSize = new Vector2(0, 2) });
         v.AddChild(st);
         Fill(cell, v, 16, 16);
         cell.Pressed += () =>
@@ -468,7 +470,7 @@ public partial class GameScreen
         string left = fac == null ? "Unknown" : count == 0 ? "None seen" : $"Seen day {fac.Stamp}";
         string tip = fac == null ? $"The buildings of {n} have never been seen."
             : $"{CellName(t)}: {count} seen here on day {fac.Stamp}. It may have changed since.\nClick: what was seen.";
-        return CellFrame(w, n, t, fac == null ? -1 : count, left, "-", fac == null ? Look.Soft : count > 0 ? Look.Text : Look.Dim, 0, false, tip, out _);
+        return CellFrame(w, n, t, fac == null ? -1 : count, left, "-", fac == null ? Look.Soft : count > 0 ? Look.Text : Look.Soft, 0, false, tip, out _);
     }
 
     // ================================================================== under the strip: the buildings and what to build
@@ -482,7 +484,7 @@ public partial class GameScreen
         var coming = here.Where(o => !o.Completed).OrderBy(o => o.Class, StringComparer.Ordinal).ThenBy(o => o.Id).ToList();
         var sec = Boxed(new VBoxContainer(), 16);
         sec.AddChild(Heading2("Buildings", done.Count.ToString()));
-        if (here.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} here.", 12, Look.Dim));
+        if (here.Count == 0) sec.AddChild(Look.Words($"No {CellName(tab).ToLowerInvariant()} here.", 12, Look.Soft));
         else
         {
             var flow = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -534,18 +536,18 @@ public partial class GameScreen
         return p;
     }
 
-    /// <summary>A section's title (the new colors frames, 2026-11-24): the word in BitPotion 24 px capitals, 1 px apart, and a count in the dim
-    /// grey 16 px to its right.</summary>
+    /// <summary>A section's title (the frames of 2026-11-28, "BUILDINGS 3"): the word in Pixel Operator 16 capitals and its count 8 px to its
+    /// right, both in the words' colour (#54638A for a zero).</summary>
     static Control Heading2(string word, string count = null)
     {
-        var h = Boxed(new HBoxContainer(), 16);
+        var h = Boxed(new HBoxContainer(), 8);
         var t = Look.Words(word.ToUpperInvariant(), Ui.SectionSize, Look.Text);
         t.AddThemeFontOverride("font", Ui.SectionFont);
         t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(t);
         if (count != null)
         {
-            var c = Look.Words(count, 16, count == "0" ? Look.Soft : Look.Dim);
+            var c = Look.Words(count, 16, count == "0" ? Look.Soft : Look.Text);
             c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             h.AddChild(c);
         }
@@ -559,10 +561,10 @@ public partial class GameScreen
         var b = new Button { FocusMode = FocusModeEnum.None, CustomMinimumSize = BuildingTileSize };
         // the tile is the dark tile behind its picture, as the build cards and the Fleet window's cards (Paul 2026-11-24, "I need the dark
         // tile behind pictures everywhere for now"), with its outline
-        b.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg, Look.Edge, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("hover", Look.Box(Look.Bg, Look.Dim, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("pressed", Look.Box(Look.Bg, Look.Dim, 1, 1, 1, 1));
-        b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Bg, Look.Dim, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("normal", Look.Box(Look.PicTile, Look.Edge, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("hover", Look.Box(Look.PicTile, Look.Soft, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("pressed", Look.Box(Look.PicTile, Look.Soft, 1, 1, 1, 1));
+        b.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.PicTile, Look.Soft, 1, 1, 1, 1));
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         b.SetMeta(UiTest.FullName, $"Building {o.Class} {o.Id}");
         var grid = PixelIcons.Building(UnitIcon.ForFacility(o.Class)) ?? PixelIcons.Building(UnitIcon.Kind.Building);
@@ -592,7 +594,7 @@ public partial class GameScreen
         var title = Heading2("Build");
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(title);
-        var hm = Look.Words("How many", 12, Look.Soft);
+        var hm = Look.Words("How many", 12, Look.Muted);   // a label that is read: the status blue-grey, 6:1 (review 39)
         hm.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         head.AddChild(hm);
         head.AddChild(StepButton("−", "One fewer", () => { _buildQty = Math.Max(1, _buildQty - 1); MgRefreshSoon(); }));
@@ -657,8 +659,8 @@ public partial class GameScreen
             var research = ResearchLine(tab switch { InfraTab.Shipyard => ResearchKind.Ship, InfraTab.Training => ResearchKind.Troop, _ => ResearchKind.Facility },
                 HasYard(n, fam) && rows.Any(b => b.Why == NotResearched));
             research.AddThemeColorOverride("font_color", Look.Soft);
-            research.AddThemeFontSizeOverride("font_size", 12);
-            research.AddThemeFontOverride("font", Ui.Grotesk);
+            research.AddThemeFontSizeOverride("font_size", 16);
+            research.AddThemeFontOverride("font", Ui.WinFace);
         }
         finally { _into = prev; }
         Add(sec);
@@ -686,12 +688,12 @@ public partial class GameScreen
                 TooltipText = Ui.Wrap($"Build here from the construction yards at {x.Yard}: {x.Trip} days on the way" + (x.Busy > 0 ? $", after about {x.Busy} days of work they already have." : ", and they are free now.")) };
             var clear = new Color(0, 0, 0, 0);
             b.AddThemeStyleboxOverride("normal", Look.Box(clear, on ? Look.Accent : Look.Line, 1, 1, 1, 1));
-            b.AddThemeStyleboxOverride("hover", Look.Box(clear, Look.Dim, 1, 1, 1, 1));
+            b.AddThemeStyleboxOverride("hover", Look.Box(clear, Look.Soft, 1, 1, 1, 1));
             b.AddThemeStyleboxOverride("pressed", Look.Box(clear, Look.Accent, 1, 1, 1, 1));
             b.AddThemeStyleboxOverride("hover_pressed", Look.Box(clear, Look.Accent, 1, 1, 1, 1));
             b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-            b.AddThemeFontOverride("font", Ui.Grotesk);
-            b.AddThemeFontSizeOverride("font_size", 12);
+            b.AddThemeFontOverride("font", Ui.WinFace);
+            b.AddThemeFontSizeOverride("font_size", 16);
             foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color" }) b.AddThemeColorOverride(c, on ? Look.Text : Look.Soft);
             b.SetMeta(UiTest.FullName, $"Built at {x.Yard} for {n}");
             string yard = x.Yard;
@@ -706,12 +708,12 @@ public partial class GameScreen
     {
         var b = new Button { Text = glyph, FocusMode = FocusModeEnum.None, TooltipText = tip, CustomMinimumSize = new Vector2(24, 24),
             MouseDefaultCursorShape = CursorShape.PointingHand };
-        // the frames' buttons: the outline, 4 px corners (Paul 2026-11-24)
+        // the frames' buttons: the outline, square (the frames of 2026-11-28)
         foreach (var (state, line) in new[] { ("normal", Look.Outline), ("hover", Look.Soft), ("pressed", Look.Text), ("hover_pressed", Look.Text) })
             b.AddThemeStyleboxOverride(state, ButtonBox(line));
         b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-        b.AddThemeFontOverride("font", Ui.Grotesk);
-        b.AddThemeFontSizeOverride("font_size", 14);
+        b.AddThemeFontOverride("font", Ui.Operator);
+        b.AddThemeFontSizeOverride("font_size", 16);
         foreach (var c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color" }) b.AddThemeColorOverride(c, Look.Text);
         b.Pressed += act;
         return b;
@@ -741,11 +743,11 @@ public partial class GameScreen
         btn.MouseDefaultCursorShape = b.Usable ? CursorShape.PointingHand : CursorShape.Arrow;
         btn.TooltipText = Ui.Wrap(tip);
         btn.SetMeta(UiTest.FullName, $"Build {r.Name}");
-        btn.AddThemeStyleboxOverride("normal", Look.Box(Look.Bg));
+        btn.AddThemeStyleboxOverride("normal", Look.Box(Look.PicTile));
         btn.AddThemeStyleboxOverride("hover", Look.Box(Look.Line));
         btn.AddThemeStyleboxOverride("pressed", Look.Box(Look.Empty));
         btn.AddThemeStyleboxOverride("hover_pressed", Look.Box(Look.Empty));
-        btn.AddThemeStyleboxOverride("disabled", Look.Box(Look.Bg));
+        btn.AddThemeStyleboxOverride("disabled", Look.Box(Look.PicTile));
         btn.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         var ink = b.Usable ? Look.Text : Look.Dim;
 

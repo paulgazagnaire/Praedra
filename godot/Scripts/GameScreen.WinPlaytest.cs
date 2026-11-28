@@ -124,7 +124,7 @@ public partial class GameScreen
     internal bool EdgeShows(string key)
     {
         MarkOverlaps();
-        return _mgWins.FirstOrDefault(w => w.Key == key) is { } w && w.Panel.GetThemeStylebox("panel") is StyleBoxFlat b && b.BorderColor == Look.Outline;
+        return _mgWins.FirstOrDefault(w => w.Key == key) is { } w && w.Panel.GetThemeStylebox("panel") is StyleBoxFlat b && b.BorderColor == Look.OverEdge;
     }
     /// <summary>A pause that came with a report, as RunDay makes it: the pill's words while the report is open, then once it is closed.</summary>
     internal (string Open, string Closed) PlayReportPause(string note)
@@ -207,6 +207,23 @@ public partial class GameScreen
         if (_mgWins.FirstOrDefault(w => w.Key == key) is not { } w) return (0, 0);
         RebuildMg(w);
         return (Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, WidthOf(w));
+    }
+
+    /// <summary>
+    /// The open windows that are not one or two columns wide (344 or 698, rule W4), or whose head, page or panel asks for more than that, as
+    /// "key: wanted in width". A font or padding change widens a window and nothing else fails (review 39: Infrastructure at 708).
+    /// </summary>
+    internal List<string> WidthProblems()
+    {
+        var bad = new List<string>();
+        foreach (var w in _mgWins.ToList())
+        {
+            RebuildMg(w);
+            float width = WidthOf(w);
+            float want = Math.Max(Math.Max(w.Head.GetCombinedMinimumSize().X, w.Body.GetCombinedMinimumSize().X + 2 * WinPad) + 2, w.Panel.GetCombinedMinimumSize().X);
+            if (width is not (MgWidth or WideWidth) || want > width + 0.5f) bad.Add($"{w.Key}{(w.Kind == MgKind.Infra ? $" page {w.Page}" : "")}: {want:0} in {width:0}");
+        }
+        return bad;
     }
 
     /// <summary>

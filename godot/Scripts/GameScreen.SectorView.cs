@@ -80,8 +80,8 @@ public partial class GameScreen
         titleRow.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         titleRow.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         titleRow.AddChild(SecArrow("‹", -1, "The sector before (Left arrow)"));
-        _secTitle = Ui.Label("", null, Ui.Text2, Ui.NameBig, wrap: false);
-        _secTitle.AddThemeFontOverride("font", Ui.NameFont(Ui.NameBig));
+        _secTitle = Ui.Label("", null, Ui.Text2, Ui.TitleBig, wrap: false);
+        _secTitle.AddThemeFontOverride("font", Ui.TitleFont);
         _secTitle.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         titleRow.AddChild(_secTitle);
         titleRow.AddChild(SecArrow("›", 1, "The sector after (Right arrow)"));
@@ -126,7 +126,7 @@ public partial class GameScreen
             it.MouseFilter = MouseFilterEnum.Ignore;
             mark.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             it.AddChild(mark);
-            var l = Ui.Label(word, null, Ui.Text3, Ui.Tiny, wrap: false);   // a small label: Space Grotesk 12, #BABABA
+            var l = Ui.Label(word, null, Ui.Text3, Ui.Tiny, wrap: false);   // a small label: Pixel Operator 16, #B8C2E0
             l.AddThemeFontOverride("font", Ui.Caps);
             l.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             it.AddChild(l);
@@ -301,12 +301,12 @@ public partial class GameScreen
             .OrderBy(n => n == S.MyHqSystem ? 0 : S.OwnerOf(n) == Me ? 1 : S.KnownOwnerOf(n).Owner is Side ? 2 : S.Picture(n) != null ? 3 : 4)
             .ThenBy(n => n, StringComparer.Ordinal).ToList();
 
-        // ---- head: 48 px capitals, 32 px when the name is too long for the head
+        // ---- head: 32 px Pixel Operator capitals, 24 px when the name is too long for the head
         string upper = _secName.ToUpperInvariant();
         float width = _secWin.Size.X > 0 ? _secWin.Size.X : TwoColumns;
-        int size = Ui.NameSize(upper, width - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 8);
+        int size = Ui.TitleSize(upper, width - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 8);
         _secTitle.Text = upper;
-        _secTitle.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        _secTitle.AddThemeFontOverride("font", Ui.TitleFont);
         _secTitle.AddThemeFontSizeOverride("font_size", size);
 
         // ---- tiles

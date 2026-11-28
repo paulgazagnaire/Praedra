@@ -56,9 +56,9 @@ public partial class GameScreen
     {
         var head = new PanelContainer { MouseFilter = MouseFilterEnum.Pass };
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
-        var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
+        var pad = Pad(FleetHeadPad, FleetHeadPad, HeadTop, FleetHeadPad);
         head.AddChild(pad);
-        var parts = Boxed(new VBoxContainer(), 24);
+        var parts = Boxed(new VBoxContainer(), HeadGap);
         pad.AddChild(parts);
         parts.AddChild(WinNameRow(w, n.ToUpperInvariant(), Ui.Danger));
         if (!w.Min)

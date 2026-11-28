@@ -62,16 +62,16 @@ public static class Ui
 
     // ---------------------------------------------------------------- the window look
     // Paul's Paper frame "styles" (2026-11-11) and his answers of 2026-11-14 ("All A", "Apply the KISS principle. Make the ui as simple and
-    // as clean/clear as possible"): inside a window, one text face (Space Grotesk), a few greys and the meaning colours above. No fills, no
-    // rounded corners, no divider lines. The greys are those of his Infrastructure design (Paper, 2026-11-18; see Look), which Paul gave
+    // as clean/clear as possible"): inside a window, one text face (Space Grotesk then; Pixel Operator since Paul's frames of 2026-11-28),
+    // a few greys (blue-greys since then) and the meaning colours above. No fills, no rounded corners, no divider lines. The greys are those of his Infrastructure design (Paper, 2026-11-18; see Look), which Paul gave
     // to every window (2026-11-19, answer 10): one grey for the words you read, as the design has, and the bluish #909EBD only for the
     // window buttons.
-    public static readonly Color WinActive = Look.Text;     // #DFDFDF names, values, the chosen tab, links, the window's name
-    public static readonly Color WinText = Look.Text;       // #DFDFDF every other line you read, small labels, the other tabs
-    public static readonly Color WinHover = Look.Soft;      // #676767 the outline under the mouse (a button: #2D2E32, hover, then #BABABA pressed)
-    public static readonly Color WinButtonInk = Look.Text;   // #DFDFDF the window buttons ⋮⋮ – × ‹ › (new colors frames, 2026-11-24)
-    public static readonly Color WinDim = Look.Dim;         // #454545 greyed out: unexplored, not researched, placeholders like "Empty"
-    public static readonly Color WinLine = Look.Edge;       // #2D2E32 the outline of tiles, bar tracks, empty slots
+    public static readonly Color WinActive = Look.Text;     // #B8C2E0 names, values, the chosen tab, links, the window's name
+    public static readonly Color WinText = Look.Text;       // #B8C2E0 every other line you read, small labels
+    public static readonly Color WinHover = Look.Soft;      // #54638A the outline under the mouse (a button: #182139, hover, then #B8C2E0 pressed)
+    public static readonly Color WinButtonInk = Look.Soft;   // #54638A the window buttons ⋮⋮ – × (the frames of 2026-11-28)
+    public static readonly Color WinDim = Look.Dim;         // #3A4562 greyed out: unexplored, not researched, placeholders like "Empty"
+    public static readonly Color WinLine = Look.Edge;       // #182139 the outline of tiles, bar tracks, empty slots
     /// <summary>The edge of a window and of the pieces on the map: lighter than the lines inside, so a window stands off the map
     /// (Paul 2026-11-14 chose a lighter edge; #606060 is 2.9:1 on the window's #141416).</summary>
     public static readonly Color WinEdge = new("606060");
@@ -91,9 +91,9 @@ public static class Ui
     /// <summary>Space Grotesk (Florian Karsten, SIL OFL): the text of the windows (Paul's "styles" frame). Two weights only.</summary>
     public static Font Grotesk => _grotesk ??= LoadFont("res://fonts/SpaceGrotesk-Regular.ttf");
     public static Font GroteskMedium => _groteskMedium ??= LoadFont("res://fonts/SpaceGrotesk-Medium.ttf");
-    public static Font Regular => InWindow ? Grotesk : InterRegular;
-    public static Font Medium => InWindow ? GroteskMedium : InterMedium;
-    public static Font SemiBold => InWindow ? GroteskMedium : InterSemiBold;
+    public static Font Regular => InWindow ? WinFace : InterRegular;
+    public static Font Medium => InWindow ? WinFace : InterMedium;
+    public static Font SemiBold => InWindow ? WinFace : InterSemiBold;
     /// <summary>Titles: Inter SemiBold (the mockup's names are a plain sans).</summary>
     public static Font Display => SemiBold;
 
@@ -107,6 +107,25 @@ public static class Ui
     public static Font Operator => _operator ??= LoadFont("res://fonts/PixelOperator.ttf");
     /// <summary>Pixel Operator Bold: the advisor's name in the top bar ("Sibyl").</summary>
     public static Font OperatorBold => _operatorBold ??= LoadFont("res://fonts/PixelOperator-Bold.ttf");
+
+    static Font _winFace;
+    /// <summary>The windows' words since Paul's frames of 2026-11-28 (Fleet, Ground, Infrastructure; the face of Sibyl's panel before them):
+    /// Pixel Operator 16 with 2 px above and below each line, the frames' 16/20. No second face behind it: a fallback face makes every line
+    /// as tall as its own, so the few signs it lacks (⋮, ▾, −, →) come from the system's fonts.</summary>
+    public static Font WinFace => _winFace ??= Operator == null ? ThemeDB.FallbackFont : new FontVariation { BaseFont = Operator, SpacingTop = 2, SpacingBottom = 2 };
+
+    /// <summary>Pixel Operator's sizes in a window: 16 is its own grid, so the old body sizes (10 to 19) become 16, the section sizes 24, the
+    /// names 32; a size of 40 or more (the victory's 96) stays.</summary>
+    public static int WinSize(int size) => size <= 0 ? 0 : size < 20 ? 16 : size < 28 ? 24 : size < 40 ? 32 : size;
+
+    /// <summary>A window's name (the frames of 2026-11-28): Pixel Operator 32 in capitals, 24 when the name is too long for that.</summary>
+    public const int TitleBig = 32, TitleSmall = 24;
+    static Font _title;
+    /// <summary>The name's face: Pixel Operator with 4 px above and below, the frames' 40 px line at 32 px.</summary>
+    public static Font TitleFont => _title ??= Operator == null ? ThemeDB.FallbackFont : new FontVariation { BaseFont = Operator, SpacingTop = 4, SpacingBottom = 4 };
+    /// <summary>The name size that fits: <paramref name="room"/> px wide at 32 px, else 24 px.</summary>
+    public static int TitleSize(string upper, float room) =>
+        TitleFont.GetStringSize(upper, HorizontalAlignment.Left, -1, TitleBig).X <= room ? TitleBig : TitleSmall;
 
     /// <summary>A window's name size: 48 (three screen pixels to a font pixel, so it stays crisp), 32 when the name is too long for that.</summary>
     public const int NameBig = 48, NameSmall = 32;
@@ -131,20 +150,10 @@ public static class Ui
     public static int NameSize(string upper, float room) =>
         NameFont(NameBig, upper).GetStringSize(upper, HorizontalAlignment.Left, -1, NameBig).X <= room ? NameBig : NameSmall;
 
-    static Font _section;
-    /// <summary>A section's title in a window (the new colors frames, 2026-11-24): BitPotion 24 px in capitals, 0.05 em apart (1 px).</summary>
-    public static Font SectionFont
-    {
-        get
-        {
-            if (_section != null) return _section;
-            if (PixelFace == null) return ThemeDB.FallbackFont;
-            var v = new FontVariation { BaseFont = PixelFace, SpacingGlyph = 1 };
-            if (GroteskMedium != null) v.Fallbacks = new Godot.Collections.Array<Font> { GroteskMedium };   // a letter BitPotion lacks
-            return _section = v;
-        }
-    }
-    public const int SectionSize = 24;
+    /// <summary>A section's title in a window (the frames of 2026-11-28: FLEET ACTIONS, BUILDINGS, BUILD): the words' face and size in
+    /// capitals, as light as the words.</summary>
+    public static Font SectionFont => WinFace;
+    public const int SectionSize = 16;
 
     static Font _glyphs;
     /// <summary>The window buttons' face (⋮⋮ – × ‹ ›): JetBrains Mono 24 px, its line trimmed to the frame's 24 px box.</summary>
@@ -172,15 +181,15 @@ public static class Ui
         return v;
     }
 
-    static Font _num, _numBold, _caps, _tableFont, _gNum, _gNumBold;
+    static Font _num, _numBold, _caps, _tableFont;
     /// <summary>Inter with tabular figures: tables keep a proportional face (the mono one is too wide for eight columns).</summary>
     public static Font TableFont => _tableFont ??= Tabular(InterMedium);
-    /// <summary>Numbers: JetBrains Mono; in a window Space Grotesk with tabular figures ("numbers included", Paul 2026-11-14).</summary>
-    public static Font Num => InWindow ? _gNum ??= Tabular(Grotesk) : _num ??= Mono ?? Tabular(InterMedium);
-    public static Font NumBold => InWindow ? _gNumBold ??= Tabular(GroteskMedium) : _numBold ??= MonoMedium ?? Tabular(InterSemiBold);
+    /// <summary>Numbers: JetBrains Mono; in a window the words' face (Pixel Operator's figures are all one width).</summary>
+    public static Font Num => InWindow ? WinFace : _num ??= Mono ?? Tabular(InterMedium);
+    public static Font NumBold => InWindow ? WinFace : _numBold ??= MonoMedium ?? Tabular(InterSemiBold);
     /// <summary>Small capitals for captions and section heads: the mono face with a little letter spacing; in a window plain Space Grotesk
-    /// capitals with no extra spacing, like the frame's tabs.</summary>
-    public static Font Caps => InWindow ? Grotesk : _caps ??= new FontVariation { BaseFont = Mono ?? ThemeDB.FallbackFont, SpacingGlyph = 1 };
+    /// capitals with no extra spacing, like the frame's tabs (Pixel Operator since 2026-11-28).</summary>
+    public static Font Caps => InWindow ? WinFace : _caps ??= new FontVariation { BaseFont = Mono ?? ThemeDB.FallbackFont, SpacingGlyph = 1 };
 
     // ---------------------------------------------------------------- sizes (at 100 % UI size; the Settings slider scales the whole window)
     public const int Body = 15;
@@ -443,8 +452,8 @@ public static class Ui
 
     /// <summary>
     /// The theme a window sets on itself (the management windows, the sector window): it wins over the screens' theme for everything in the
-    /// window. Paul's "styles" frame with the greys of his Infrastructure design: Space Grotesk, #BABABA for what you read, #454545 greyed
-    /// out, thin #2D2E32 lines, #909EBD window buttons, no fills. Godot takes an item from the nearest theme that has it for the type or any type it is based on, so every button and
+    /// window. Paul's "styles" frame, in the face and blue-greys of his frames of 2026-11-28: Pixel Operator, #B8C2E0 for what you read, #3A4562 greyed
+    /// out, thin #182139 lines, #54638A window buttons, no fills. Godot takes an item from the nearest theme that has it for the type or any type it is based on, so every button and
     /// label type the screens' theme styles is styled here too, or it would keep the plain look.
     /// </summary>
     public static Theme WindowTheme
@@ -461,17 +470,21 @@ public static class Ui
     static Theme BuildWindowTheme()
     {
         var clear = new Color(0, 0, 0, 0);
-        var t = new Theme { DefaultFont = Grotesk, DefaultFontSize = Body };
+        var t = new Theme { DefaultFont = WinFace, DefaultFontSize = 16 };
 
-        // text: #BABABA unless a line says otherwise; the label types of the screens' theme, in the window's face and greys
+        // text: #B8C2E0 unless a line says otherwise; the label types of the screens' theme, in the window's face and blue-greys, lines
+        // 20 px apart as the frames' 16/20 (the 20 px are in the face, WinFace)
         t.SetColor("font_color", "Label", WinActive);
+        t.SetFont("font", "Label", WinFace);
+        t.SetFontSize("font_size", "Label", 16);
+        t.SetConstant("line_spacing", "Label", 0);
         t.SetColor("font_outline_color", "Label", new Color(0, 0, 0, 0.9f));
         foreach (var (type, font, size, color) in new (string, Font, int, Color)[]
         {
-            // today's sizes (the screens' theme), only the face and the greys change
-            ("Title", GroteskMedium, 22, WinActive), ("Subtitle", GroteskMedium, 18, WinActive), ("Section", Grotesk, Tiny, WinText),
-            ("Dim", Grotesk, 0, WinText), ("Hint", Grotesk, Small, WinText), ("Strong", GroteskMedium, 0, WinActive),
-            ("Number", Num, 16, WinActive), ("StatLabel", Grotesk, 11, WinText),
+            // Pixel Operator's sizes (WinSize): 24 for a title, 16 for the rest
+            ("Title", Operator, 24, WinActive), ("Subtitle", WinFace, 16, WinActive), ("Section", WinFace, 16, WinText),
+            ("Dim", WinFace, 0, WinText), ("Hint", WinFace, 16, WinText), ("Strong", WinFace, 0, WinActive),
+            ("Number", WinFace, 16, WinActive), ("StatLabel", WinFace, 16, WinText),
         })
         {
             t.SetTypeVariation(type, "Label");
@@ -480,9 +493,9 @@ public static class Ui
             t.SetColor("font_color", type, color);
         }
 
-        // buttons: a thin outline with 4 px corners (W2, the new colors frames 2026-11-24; rows stay square), no fill; a brighter edge under
-        // the mouse (the text keeps its grey: four greys only); greyed out when they can't be used
-        void Outlined(string type, Color edge, Color ink, int size, int padX = 8, int padY = 3, int radius = 4)
+        // buttons: a thin #182139 outline, square (the frames of 2026-11-28), 16 px in from the sides and 10 from the top, no fill; a
+        // brighter edge under the mouse (the words keep their colour); greyed out when they can't be used
+        void Outlined(string type, Color edge, Color ink, int size, int padX = 16, int padY = 10, int radius = 0)
         {
             StyleBoxFlat Round(StyleBoxFlat b) { b.SetCornerRadiusAll(radius); b.AntiAliasing = radius > 0; return b; }
             t.SetStylebox("normal", type, Round(Box(clear, 0, edge, 1, padX, padY)));
@@ -491,7 +504,7 @@ public static class Ui
             t.SetStylebox("hover_pressed", type, Round(Box(clear, 0, WinActive, 1, padX, padY)));
             t.SetStylebox("disabled", type, Round(Box(clear, 0, WinLine, 1, padX, padY)));
             t.SetStylebox("focus", type, new StyleBoxEmpty());
-            Inks(type, ink, size, Grotesk);
+            Inks(type, ink, size, WinFace);
         }
         void Inks(string type, Color ink, int size, Font font)
         {
@@ -511,31 +524,30 @@ public static class Ui
             Inks(type, ink, size, font);
         }
 
-        Outlined("Button", WinLine, WinActive, 14);
+        Outlined("Button", WinLine, WinActive, 16);
         t.SetConstant("h_separation", "Button", 6);
         // the build stepper's − and +: one 24 x 24 square each, the glyph centred
-        t.SetTypeVariation("Step", "Button"); Outlined("Step", WinLine, WinActive, 13, 0, 0);
-        foreach (var v in new[] { "Chip", "Row", "Primary" }) { t.SetTypeVariation(v, "Button"); Outlined(v, v == "Primary" ? WinText : WinLine, WinActive, v == "Row" ? Body : v == "Chip" ? 13 : 14, radius: v == "Row" ? 0 : 4); }
-        t.SetTypeVariation("DangerButton", "Button"); Outlined("DangerButton", new Color(Danger, 0.8f), Danger, 14);
-        t.SetTypeVariation("WarnButton", "Button"); Outlined("WarnButton", new Color(Warn, 0.7f), Warn, 14);
+        t.SetTypeVariation("Step", "Button"); Outlined("Step", WinLine, WinActive, 16, 0, 0);
+        foreach (var v in new[] { "Chip", "Row", "Primary" }) { t.SetTypeVariation(v, "Button"); Outlined(v, v == "Primary" ? WinText : WinLine, WinActive, 16, v == "Row" ? 12 : 16, v == "Chip" ? 6 : 10); }
+        t.SetTypeVariation("DangerButton", "Button"); Outlined("DangerButton", new Color(Danger, 0.8f), Danger, 16);
+        t.SetTypeVariation("WarnButton", "Button"); Outlined("WarnButton", new Color(Warn, 0.7f), Warn, 16);
         // a row in a list: no line until the mouse is on it
         t.SetTypeVariation("Flat", "Button");
-        Outlined("Flat", clear, WinActive, 13, radius: 0);
+        Outlined("Flat", clear, WinActive, 16, 10, 6);
         // a link: just the words (the windows' own links are LinkButtons, underlined)
         t.SetTypeVariation("Link", "Button");
-        Plain("Link", WinActive, Small, Grotesk, 2, 1);
-        t.SetFont("font", "LinkButton", Grotesk); t.SetFontSize("font_size", "LinkButton", Small);
+        Plain("Link", WinActive, 16, WinFace, 2, 1);
+        t.SetFont("font", "LinkButton", WinFace); t.SetFontSize("font_size", "LinkButton", 16);
         t.SetColor("font_color", "LinkButton", WinActive); t.SetColor("font_hover_color", "LinkButton", WinActive);
         t.SetColor("font_pressed_color", "LinkButton", WinActive); t.SetColor("font_hover_pressed_color", "LinkButton", WinActive);
         t.SetColor("font_focus_color", "LinkButton", WinActive);
         t.SetConstant("underline_spacing", "LinkButton", 1);
-        // the window buttons (⋮⋮ – × ‹ ›): glyphs only, 24 x 24, #909EBD
+        // the window buttons (⋮⋮ – × ‹ ›): glyphs only, 24 x 24, #54638A
         t.SetTypeVariation("Clock", "Button");
-        Plain("Clock", WinButtonInk, 24, GlyphFont);
+        Plain("Clock", WinButtonInk, 24, Operator ?? GlyphFont);   // – × + in Pixel Operator, as the frames
         t.SetStylebox("hover", "Clock", Box(clear, 0, WinHover, 1, 0, 0));   // under the mouse: a thin #676767 square round the glyph, as on every button
         t.SetStylebox("hover_pressed", "Clock", Box(clear, 0, WinHover, 1, 0, 0));
-        // a tab (the frame's tab row): words only, a 3 px #BABABA line under the chosen one, a #676767 one under the mouse; every tab's
-        // words #BABABA (Paul chose them readable; his Infrastructure design has one grey for words)
+        // a tab (the frame's tab row): words only, a 3 px #B8C2E0 line under the chosen one, a #54638A one under the mouse
         t.SetTypeVariation("TabChip", "Button");
         StyleBoxFlat Under(Color c) { var s = new StyleBoxFlat { BgColor = clear, BorderColor = c, BorderWidthBottom = 3 }; s.ContentMarginLeft = s.ContentMarginRight = 0; s.ContentMarginTop = 0; s.ContentMarginBottom = 8; return s; }
         t.SetStylebox("normal", "TabChip", Under(clear));
@@ -544,12 +556,12 @@ public static class Ui
         t.SetStylebox("hover_pressed", "TabChip", Under(WinActive));
         t.SetStylebox("disabled", "TabChip", Under(clear));
         t.SetStylebox("focus", "TabChip", new StyleBoxEmpty());
-        Inks("TabChip", WinText, 13, Grotesk);
+        Inks("TabChip", WinText, 16, WinFace);
         t.SetColor("font_hover_color", "TabChip", WinActive);
         t.SetColor("font_pressed_color", "TabChip", WinActive);
         t.SetColor("font_hover_pressed_color", "TabChip", WinActive);
 
-        // bars: square, on a #2D2E32 track
+        // bars: square, on a #182139 track
         t.SetStylebox("background", "ProgressBar", Box(WinLine, 0, null, 0, 0, 0));
         t.SetStylebox("fill", "ProgressBar", Box(You, 0, null, 0, 0, 0));
         t.SetColor("font_color", "ProgressBar", clear);
@@ -558,7 +570,7 @@ public static class Ui
         t.SetStylebox("separator", "VSeparator", new StyleBoxEmpty());
         foreach (var sb in new[] { "VScrollBar", "HScrollBar" })
         {
-            // a 4 px #2D2E32 grabber on the window's right edge, shown only when the page is longer than the window
+            // a 4 px #182139 grabber on the window's right edge, shown only when the page is longer than the window
             var track = new StyleBoxEmpty { ContentMarginLeft = 2, ContentMarginRight = 2, ContentMarginTop = 2, ContentMarginBottom = 2 };
             t.SetStylebox("scroll", sb, track);
             t.SetStylebox("grabber", sb, Box(WinLine, 0, null, 0, 3, 3));
@@ -571,14 +583,14 @@ public static class Ui
             t.SetStylebox("normal", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("pressed", cb, Box(clear, 0, null, 0, 6, 4));
             t.SetStylebox("hover", cb, Box(clear, 0, WinHover, 1, 6, 4)); t.SetStylebox("hover_pressed", cb, Box(clear, 0, WinHover, 1, 6, 4));
             t.SetStylebox("disabled", cb, Box(clear, 0, null, 0, 6, 4)); t.SetStylebox("focus", cb, new StyleBoxEmpty());
-            t.SetFont("font", cb, Grotesk);
+            t.SetFont("font", cb, WinFace); t.SetFontSize("font_size", cb, 16);
             t.SetColor("font_color", cb, WinActive); t.SetColor("font_hover_color", cb, WinActive); t.SetColor("font_pressed_color", cb, WinActive);
             t.SetColor("font_hover_pressed_color", cb, WinActive); t.SetColor("font_focus_color", cb, WinActive);
         }
         // tooltips of what is in a window: the window's own look, so a tooltip is never half one look and half the other
         t.SetStylebox("panel", "TooltipPanel", WindowBox(10, 8));
-        t.SetFont("font", "TooltipLabel", Grotesk);
-        t.SetFontSize("font_size", "TooltipLabel", 14);
+        t.SetFont("font", "TooltipLabel", WinFace);
+        t.SetFontSize("font_size", "TooltipLabel", 16);
         t.SetColor("font_color", "TooltipLabel", WinActive);
         // the short lists a window's buttons and cards open (Merge ▾, Bombardment ▾, a post, a right-click): the window's own look too,
         // since they are now the main way to give those orders (UI review 1, 2026-11-22). The face and grey of the window, its edge, no
@@ -588,19 +600,19 @@ public static class Ui
         t.SetConstant("v_separation", "PopupMenu", 10);
         t.SetConstant("item_start_padding", "PopupMenu", 10);
         t.SetConstant("item_end_padding", "PopupMenu", 14);
-        t.SetFont("font", "PopupMenu", Grotesk);
-        t.SetFontSize("font_size", "PopupMenu", 14);
+        t.SetFont("font", "PopupMenu", WinFace);
+        t.SetFontSize("font_size", "PopupMenu", 16);
         t.SetColor("font_color", "PopupMenu", WinActive);
         t.SetColor("font_hover_color", "PopupMenu", WinActive);
         t.SetColor("font_disabled_color", "PopupMenu", Look.Soft);
         return t;
     }
 
-    /// <summary>The look of a window, a dialog and a tooltip: #141416 (Paul's Infrastructure design, 2026-11-18), a thin lighter edge,
-    /// square, no shadow.</summary>
+    /// <summary>The look of a window, a dialog and a tooltip: the head's #10141E (the frames of 2026-11-28), a thin lighter edge, square,
+    /// no shadow.</summary>
     public static StyleBoxFlat WindowBox(int padX = 1, int padY = 1) => Box(Look.Bg, 0, WinEdge, 1, padX, padY);
 
-    /// <summary>The frame of a slot nobody fills yet: a dashed #2D2E32 line (Paul's "styles" answers, 2026-11-14).</summary>
+    /// <summary>The frame of a slot nobody fills yet: a dashed #182139 line (Paul's "styles" answers, 2026-11-14; the frames' colour).</summary>
     public static StyleBox Dashed(int padX = 8, int padY = 6)
     {
         var s = new DashedBox();
@@ -644,14 +656,15 @@ public static class Ui
     }
 
     /// <summary>
-    /// The tick box (review 21, W2 and C5: square corners, no fill, selection is an outline): a square 1 px line, #36363C at rest, #676767
-    /// under the mouse (<see cref="HoverTick"/>), and a #BABABA line with a #BABABA pixel tick when ticked. Drawn with hard edges at
+    /// The tick box (review 21, W2 and C5: square corners, no fill, selection is an outline): a square 1 px line, #54638A at rest, #7893C5
+    /// under the mouse (<see cref="HoverTick"/>), and a #B8C2E0 line with a #B8C2E0 pixel tick when ticked (the frames' blue-greys: their
+    /// #182139 line would be lost on the page). Drawn with hard edges at
     /// four texels a pixel and shown at 16 px, so its pixels stay square at any UI size.
     /// </summary>
     static ImageTexture TickIcon(bool on, bool disabled, bool hover = false)
     {
         const int n = 16, k = 4;
-        var ink = on ? Look.Text : hover ? Look.Soft : Look.Outline;
+        var ink = on ? Look.Text : hover ? Look.Muted : Look.Soft;
         if (disabled) ink = new Color(ink, 0.4f);
         var none = new Color(0, 0, 0, 0);
         var img = Image.CreateEmpty(n * k, n * k, false, Image.Format.Rgba8);
@@ -675,7 +688,7 @@ public static class Ui
 
     static ImageTexture _tickHover;
 
-    /// <summary>A tick box's line turns #676767 under the mouse while it is unticked. Godot's CheckBox has no icon for the hover, so this
+    /// <summary>A tick box's line turns #7893C5 under the mouse while it is unticked. Godot's CheckBox has no icon for the hover, so this
     /// swaps the unticked one on the box itself.</summary>
     public static CheckBox HoverTick(CheckBox cb)
     {
@@ -692,7 +705,7 @@ public static class Ui
         if (wrap) { l.AutowrapMode = TextServer.AutowrapMode.WordSmart; l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; }
         if (variation != null) l.ThemeTypeVariation = variation;
         if (color is Color c) l.AddThemeColorOverride("font_color", c);
-        if (size > 0) l.AddThemeFontSizeOverride("font_size", size);
+        if (size > 0) l.AddThemeFontSizeOverride("font_size", InWindow ? WinSize(size) : size);
         return l;
     }
 
@@ -799,7 +812,7 @@ public static class Ui
         var bg = InWindow ? new Color(0, 0, 0, 0) : filled ? color : new Color(color, 0.14f);
         p.AddThemeStyleboxOverride("panel", Box(bg, 4, InWindow ? color : new Color(color, 0.75f), 1, 6, 1));
         var l = Label(text, null, filled ? MapBg : color, Tiny, wrap: false);
-        l.AddThemeFontOverride("font", SemiBold);
+        l.AddThemeFontOverride("font", SemiBold);   // in a window: the words' face
         p.AddChild(l);
         return p;
     }

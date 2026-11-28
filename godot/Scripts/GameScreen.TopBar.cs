@@ -497,7 +497,7 @@ public partial class GameScreen
 
     static ImageTexture PixelTexture(string[] rows, Color color)
     {
-        // made in code from the tone grid, never loaded from a file (Paul 2026-11-18); tone 2 is the colour itself
+        // made in code from the tone grid, never loaded from a file (Paul 2026-11-18); the tones are calmed (PixelIcons.GreyRamp, 2026-11-28)
         var ramp = PixelIcons.GreyRamp(color);
         var img = Image.CreateEmpty(16, 16, false, Image.Format.Rgba8);
         for (int y = 0; y < 16; y++)
