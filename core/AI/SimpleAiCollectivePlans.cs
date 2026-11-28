@@ -281,5 +281,66 @@ public sealed partial class SimpleAi
     }
 
     private string? AssaultAt(long sequence) => _assaultAt.TryGetValue(sequence, out var s) ? s : null;
+    // Not saved, and need not be (Ponytail #436): filled in PlanDay, read back by the next Remember or by CatchUp before a save; the game takes
+    // no save between PlanDay and its Step, so a loaded game never misses a refusal of an order it holds.
     private readonly Dictionary<long, string> _assaultAt = new(); // WallsRefused: own assault orders not yet read back (lookup only, never iterated)
+
+    // ================================================================== Siege Charter (the walled win target)
+
+    private bool WinSiegeOn => _p.WinSiege && _p.SiegeShields && _view != null && _side == Side.Collective;
+
+    /// <summary>WinSiege in PickTarget: the walled win target may be picked by a pile whose shelling beats the shields seen there by the margin.</summary>
+    private bool WinSiegeFits(string system, int shellPower) =>
+        WinSiegeOn && system == WinTarget() && shellPower > ShieldStrengthSeen(system) + _p.WinSiegeMarginPower;
+
+    /// <summary>
+    /// WinSiege: the walls of the win target are believed down. An own shelling there that got hits (ShieldsHit, within ShieldsFeltDays) and
+    /// is newer than the last look at its facilities met shields below the least that the assault gate's generators give (m3-assault check 4,
+    /// m3-bombardment §2: S sums the completed generators), and no own landing there was refused for the shields since that shelling
+    /// (WallsRefused, so WinWallsForgetDays must be on). Only a shelling with hits tells the true S; one with none tells only the power that
+    /// failed (ShieldsFelt), which is no proof the walls fell.
+    /// </summary>
+    private bool WinWallsFeltDown(string system, int? lookStamp)
+    {
+        if (!WinSiegeOn || !WallsForgetOn || system != WinTarget()) return false;
+        int since = Today - _p.ShieldsFeltDays;
+        AiNote? hit = null;
+        foreach (var n in NotesSince(AiNoteKind.ShieldsHit, since))
+            if (n.System == system && n.Day >= since) { hit = n; break; }
+        if (hit == null || (lookStamp is int ls && hit.Day < ls) || hit.Value >= GateShieldsLeast()) return false;
+        foreach (var n in NotesSince(AiNoteKind.WallsRefused, hit.Day))
+            if (n.System == system && n.Day >= hit.Day) return false;
+        return true;
+    }
+
+    /// <summary>The least shields the assault gate's number of shield generators can give (the weakest generator class, that many times; rule: m3-assault check 4).</summary>
+    private int GateShieldsLeast()
+    {
+        int least = int.MaxValue;
+        foreach (var c in _h.Data.Defenses.Classes)
+            if (c.Job == Praedra.Core.Defenses.DefenseJob.ShieldGenerator && c.Shield > 0) least = Math.Min(least, c.Shield);
+        return least == int.MaxValue ? 0 : least * Math.Max(1, _h.Defenses.Params.AssaultGateShields);
+    }
+
+    // ================================================================== Guarded origin (QA-136: no team leaves past enemy ships)
+
+    private bool GuardedOriginOn => _p.GuardedOriginWait && _side == Side.Collective;
+
+    /// <summary>
+    /// GuardedOriginWait: the side sees an enemy fleet at the system (its picture's fleets; a held world's orbit is in view) and owns no completed
+    /// Lien-150 there, so a team setting out from it to another system meets the orbit leaving check (m5-missions §Guards: enemyFleets and not
+    /// ownIon). Cached per day.
+    /// </summary>
+    private bool OriginGuarded(string system)
+    {
+        if (!GuardedOriginOn) return false;
+        if (_guardedDay != Today) { _guarded.Clear(); _guardedDay = Today; }
+        if (_guarded.TryGetValue(system, out bool g)) return g;
+        var fam = _h.Missions.FacilityFamily;
+        bool ion = fam != null && _h.Economy.Objects.Any(o => o.Category == ObjectCategory.Facility && o.Completed && o.Side == _side && o.System == system
+            && fam(o.Class) == Praedra.Core.Missions.MissionModule.IonCannonFamily);
+        return _guarded[system] = !ion && EnemyFleetsAt(system).Count > 0;
+    }
+    private readonly Dictionary<string, bool> _guarded = new(StringComparer.Ordinal); // lookup only, cleared each day
+    private int _guardedDay = int.MinValue;
 }
