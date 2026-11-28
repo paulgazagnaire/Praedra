@@ -361,7 +361,7 @@ public class SimpleAiCollectivePlansTests
             {
                 Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.New },
                 Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false, FleetsCatchLoneLeaders = false },
-                Fog = new Praedra.Core.Fog.FogParams { EspionageSeesInbound = false },
+                Fog = new Praedra.Core.Fog.FogParams { EspionageSeesInbound = false, GuardsSeeInbound = false }, // and no §N6e guards' sightings (#443)
             } });
             var b = new SimpleAiParams { UseFog = true, LeaderMarks = false, SpecialForceAgents = false, TaskForces = true };
             var m = new AiMatch(host, AiLevels.For(AiLevel.Hard, b), AiLevels.For(AiLevel.Hard, b) with { GuardedOriginWait = wait });
