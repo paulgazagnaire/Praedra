@@ -107,6 +107,14 @@ public partial class Main
         gs.PlayDay();
         var f = s.Game.State.Fleets.GetValueOrDefault(mover.Id);
         Expect(f?.Transit != null && planned != null && f.Transit.Path.SequenceEqual(plannedPath), $"the fleet flies the previewed path: {string.Join(", ", f?.Transit?.Path ?? new List<string>())}");
+        if (f?.Transit != null)
+        {
+            // rule W4: a moving fleet's head ("Moving", its ETA) is the longest a Fleet window gets, and it stays one column (review 40)
+            gs.OpenMgmt(GameScreen.MgKind.Fleet, fleet: f.Id); gs.PlayRefresh();
+            var wide = gs.WidthProblems();
+            Expect(wide.Count == 0, $"the moving {f.Name}'s window is 344 wide and nothing in it asks for more: {string.Join("; ", wide.DefaultIfEmpty("all fit"))}");
+            while (gs.MgmtCount > 0) gs.PressKey(Key.Escape);
+        }
 
         // several fleets sent together (picked on the map, sent by a right-click): each flies its own path, so each is checked; one on a
         // red path keeps the click from sending, and the bar can send only the ones with no trap (test only: two fleets of the mover's
