@@ -1,6 +1,7 @@
 using Praedra.Core.AI;
 using Praedra.Core.Clock;
 using Praedra.Core.Control;
+using Praedra.Core.Defenses;
 using Praedra.Core.Setup;
 using Xunit.Abstractions;
 
@@ -26,6 +27,9 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(0, p.FighterWaitMax);
         Assert.Equal(0, p.FighterWaitMaxHand);
         Assert.Equal(0, p.WinWallsForgetDays);
+        Assert.False(p.WinSiege);
+        Assert.Equal(40, p.WinSiegeMarginPower);
+        Assert.False(p.GuardedOriginWait);
     }
 
     // Rooster 2026-11-27 (specs/engine/ai-notes/rooster-log.md): Neutralise anywhere at Medium and Hard, not at Easy.
@@ -45,6 +49,7 @@ public class SimpleAiCollectivePlansTests
         Assert.Equal(on ? 2 : 0, p.FighterWaitMax); // Rooster 2026-11-28: fighters wait aboard
         Assert.Equal(0, p.FighterWaitMaxHand); // the Hand's is Maverick's to measure
         Assert.Equal(on ? 365 : 0, p.WinWallsForgetDays); // Rooster 2026-11-28: Charter's old walls are forgotten
+        Assert.Equal(on, p.WinSiege); // Rooster 2026-11-28: a pile that out-shells Charter's walls may siege it
     }
 
     // Plan 11, Neutralise. m2-control-and-capture §Control: a world with no regiments is held by the side with 60 support, neutral at 41 to 59.
@@ -238,12 +243,34 @@ public class SimpleAiCollectivePlansTests
         {
             // #442's leader rules pinned to before (MultiSeed.LeaderRulesBefore442): with them seed 29 is won both ways (kept day 1992, forgotten 2336)
             var host = NewGame.Create(new NewGameOptions { Seed = 29, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBefore442 });
-            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget });
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget, WinSiege = false }); // WinSiege apart: SiegesTheWalledCharter
             while (host.Game.Day < 2400 && host.Victory.Winner == null) m.Step();
             return (host.Victory.Winner, host.Game.Day);
         }
         var off = Play(0); var on = Play(365);
         _out.WriteLine($"walls kept: winner {off.winner?.ToString() ?? "none"} by day {off.day}; forgotten: {on.winner?.ToString() ?? "none"} on day {on.day}");
+        Assert.Null(off.winner);
+        Assert.Equal(Side.Collective, on.winner);
+    }
+
+    // WinSiege (m3-assault check 4: two shield generators forbid a landing; m3-bombardment §2 hits = max(0, P - S), shields are Military
+    // targets): the strike picker never chose a win target whose walls it believed up, though SiegeShields shells them down once a pile stands
+    // there. Medium Collective vs Maverick's Grinder Hand (SparringBots), seed 11, main 2c98fbc, by day 2000 (Grinder seeds 1-24 scanned):
+    // off, no winner (Charter still the Hand's); on, a pile that out-shells the walls sieges Charter and the Collective wins on day 1910.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void SiegesTheWalledCharter()
+    {
+        (Side? winner, int day) Play(bool siege)
+        {
+            // #442's leader rules pinned to before (MultiSeed.LeaderRulesBefore442), as the seed was scanned on main 2c98fbc
+            var host = NewGame.Create(new NewGameOptions { Seed = 11, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBefore442 });
+            var m = new AiMatch(host, SparringBots.For("Grinder")!, AiLevels.For(AiLevel.Medium) with { WinSiege = siege });
+            while (host.Game.Day < 2000 && host.Victory.Winner == null) m.Step();
+            return (host.Victory.Winner, host.Game.Day);
+        }
+        var off = Play(false); var on = Play(true);
+        _out.WriteLine($"no siege: winner {off.winner?.ToString() ?? "none"} by day {off.day}; siege: {on.winner?.ToString() ?? "none"} on day {on.day}");
         Assert.Null(off.winner);
         Assert.Equal(Side.Collective, on.winner);
     }
@@ -292,5 +319,56 @@ public class SimpleAiCollectivePlansTests
         on.Ingest(feed, _ => false, null, null, At);
         var w = on.Notes.Where(n => n.Kind == AiNoteKind.WallsRefused).Select(n => (n.System, n.Day)).ToList();
         Assert.Equal(new[] { ((string?)"Charter", 9) }, w);
+    }
+
+    // AiMemory.Ingest, ShieldsHit (WinSiege; m3-bombardment §2 hits = max(0, P - S)): an own shelling that got hits notes the shields it met,
+    // beside its ShieldsFelt note; one with no hits, the other side's, and anything while the note is not kept are not.
+    [Fact]
+    public void AiMemory_NotesTheShieldsAShellingGotThrough()
+    {
+        var fleets = new ValueList<int>(new List<int> { 7 });
+        GameEvent[] feed =
+        {
+            new BombardmentStarted(0, 9, "Charter", 7, Side.Collective, BombardCategory.Military, 200, 80, 120, fleets),
+            new BombardmentStarted(1, 10, "Charter", 7, Side.Collective, BombardCategory.Military, 60, 160, 0, fleets),
+            new BombardmentStarted(2, 11, "Charter", 7, Side.Hand, BombardCategory.Military, 200, 0, 200, fleets),
+        };
+        var off = new AiMemory { Side = Side.Collective, Fog = true };
+        off.KeepAtLeast(0, 0, 0, 0, 0, 0, shieldsFelt: 120);
+        off.Ingest(feed, _ => false);
+        Assert.DoesNotContain(off.Notes, n => n.Kind == AiNoteKind.ShieldsHit);
+        Assert.Equal(2, off.Notes.Count(n => n.Kind == AiNoteKind.ShieldsFelt));
+        var on = new AiMemory { Side = Side.Collective, Fog = true };
+        on.KeepAtLeast(0, 0, 0, 0, 0, 0, shieldsFelt: 120, shieldsHit: 120);
+        on.Ingest(feed, _ => false);
+        Assert.Equal(new[] { ((string?)"Charter", 9, 80) }, on.Notes.Where(n => n.Kind == AiNoteKind.ShieldsHit).Select(n => (n.System, n.Day, n.Value)).ToList());
+        Assert.Equal(2, on.Notes.Count(n => n.Kind == AiNoteKind.ShieldsFelt));
+    }
+
+    // GuardedOriginWait (QA-136; m5-missions §Guards, orbit leaving check: a team setting out to another system from a world with enemy fleets
+    // and no own Lien-150 is checked by every ship there). QA's game: seed 8383, MedA, Hard mirror, New battle, QA's base parameters, to day
+    // 1000, with the leader rules of main ba6a7f7 (no fleet catch, no inbound sightings, plain Autoroute): Hand ships over Natalis foiled every
+    // departure and 15 Collective leaders were taken in the mission duels, 14 at Natalis. With the switch none.
+    [Trait("Category", "Play")]
+    [Fact]
+    public void NoMissionSetsOutPastEnemyShips()
+    {
+        int Duels(bool wait)
+        {
+            var host = NewGame.Create(new NewGameOptions { Seed = 8383, Preset = StartPreset.MedA, Settings = new GameSettings
+            {
+                Battle = new Praedra.Core.Battle.BattleParams { Ruleset = Praedra.Core.Battle.BattleRuleset.New },
+                Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false, FleetsCatchLoneLeaders = false },
+                Fog = new Praedra.Core.Fog.FogParams { EspionageSeesInbound = false },
+            } });
+            var b = new SimpleAiParams { UseFog = true, LeaderMarks = false, SpecialForceAgents = false, TaskForces = true };
+            var m = new AiMatch(host, AiLevels.For(AiLevel.Hard, b), AiLevels.For(AiLevel.Hard, b) with { GuardedOriginWait = wait });
+            while (host.Game.Day < 1000 && host.Victory.Winner == null) m.Step();
+            return host.Game.Events.OfType<Praedra.Core.Characters.CharacterCaptured>().Count(c => c.Side == Side.Collective && c.Cause == "MissionDuel");
+        }
+        int off = Duels(false), on = Duels(true);
+        _out.WriteLine($"Collective leaders taken in mission duels by day 1000: {off} without, {on} with GuardedOriginWait");
+        Assert.True(off >= 10, $"only {off} duel captures: the test no longer shows QA-136");
+        Assert.True(on <= 2, $"{on} duel captures with GuardedOriginWait");
     }
 }

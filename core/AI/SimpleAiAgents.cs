@@ -288,9 +288,11 @@ public sealed partial class SimpleAi
         var held = HeldSystems().ToList();
         foreach (var c in mine)
         {
-            if (!Standing(c) || busy.Contains(c.Id) || c.AttachedFleet != 0 || _h.Fleets.OwnerOf(c.System!) is not { } o || o == _side) continue;
+            if (!Standing(c) || busy.Contains(c.Id) || c.AttachedFleet != 0) continue;
+            bool guarded = OriginGuarded(c.System!); // GuardedOriginWait (QA-136): leaders also leave a held world with enemy ships over it
+            if (!guarded && (_h.Fleets.OwnerOf(c.System!) is not { } o || o == _side)) continue;
             string? best = null; int bestT = int.MaxValue;
-            foreach (var s in held) { int t = CharTicks(c.System!, s); if (t < bestT) { bestT = t; best = s; } }
+            foreach (var s in held) { if (guarded && (s == c.System || OriginGuarded(s))) continue; int t = CharTicks(c.System!, s); if (t < bestT) { bestT = t; best = s; } }
             if (best != null && MoveCharacter(c, best)) busy.Add(c.Id);
         }
     }
@@ -890,6 +892,7 @@ public sealed partial class SimpleAi
     {
         var mi = _h.Missions;
         if (!mi.CanDo(c, j.Kind)) return null;
+        if (c.System != j.System && OriginGuarded(c.System!)) return null; // GuardedOriginWait (QA-136): SimpleAiCollectivePlans.cs
         Func<Skill, int> sk = s => Skill(c, s);
         var (floor, skill) = FloorAndSkill(sk, j.Kind);
         if (skill < floor) return null;
@@ -911,6 +914,7 @@ public sealed partial class SimpleAi
     {
         var mi = _h.Missions;
         if ((k.MissionBit & mi.Data.Get(j.Kind).SpecialForceMask) == 0) return null;
+        if (o.System != j.System && OriginGuarded(o.System!)) return null; // GuardedOriginWait (QA-136): SimpleAiCollectivePlans.cs
         Func<Skill, int> sk = s => s switch
         {
             Characters.Skill.Espionage => k.Espionage, Characters.Skill.Combat => k.Combat, Characters.Skill.Leadership => k.Leadership, _ => 0,

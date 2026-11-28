@@ -53,6 +53,12 @@ public enum AiNoteKind
     /// Not saved before 2026-11-28: an older save loads with none.
     /// </summary>
     WallsRefused,
+    /// <summary>
+    /// ShieldsHit (SimpleAiParams.WinSiege): an own shelling at System got hits through shields of Value (BombardmentStarted S with Hits above
+    /// 0: m3-bombardment §2, S sums the completed shield generators), noted beside its ShieldsFelt note. Noted only while kept (off: none).
+    /// Not saved before 2026-11-28: an older save loads with none.
+    /// </summary>
+    ShieldsHit,
 }
 
 /// <summary>
@@ -87,11 +93,12 @@ public sealed class AiKeepDays
     public int ShieldsFelt { get; set; }
     public int FighterGrounded { get; set; }
     public int WallsRefused { get; set; }
+    public int ShieldsHit { get; set; }
 
     public int For(AiNoteKind k) => k switch
     {
         AiNoteKind.Battle => Battle, AiNoteKind.SystemLost => SystemLost, AiNoteKind.Bombardment => Bombardment,
-        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, AiNoteKind.FighterGrounded => FighterGrounded, AiNoteKind.WallsRefused => WallsRefused, _ => Character,
+        AiNoteKind.LookFoiled => LookFoiled, AiNoteKind.HqMoved => HqMoved, AiNoteKind.HarvesterYardGone => HarvesterYardGone, AiNoteKind.BooksFailed => BooksFailed, AiNoteKind.ShieldsFelt => ShieldsFelt, AiNoteKind.FighterGrounded => FighterGrounded, AiNoteKind.WallsRefused => WallsRefused, AiNoteKind.ShieldsHit => ShieldsHit, _ => Character,
     };
 }
 
@@ -206,6 +213,12 @@ public sealed class AiMemory
                         n = new AiNote { Kind = AiNoteKind.FighterGrounded, System = su.System, Value = q };
                     }
             }
+            if (Keep.ShieldsHit > 0 && e is BombardmentStarted hit && hit.Side == Side && hit.Hits > 0)
+            {
+                // ShieldsHit: beside the ShieldsFelt note of the same event (they share its day and feed index)
+                if (n != null) { n.Day = n.Floor = e.Day; Notes.Add(n); sources.Add(i); }
+                n = new AiNote { Kind = AiNoteKind.ShieldsHit, System = hit.System, Value = hit.S };
+            }
             if (n == null) continue;
             n.Day = n.Floor = e.Day;
             Notes.Add(n); sources.Add(i);
@@ -240,8 +253,9 @@ public sealed class AiMemory
     private static AiNote Gone(int character) => new() { Kind = AiNoteKind.EnemyCharacterGone, Value = character };
 
     /// <summary>Keep each kind of note in a save for at least these days.</summary>
-    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0, int fighterGrounded = 0, int wallsRefused = 0)
+    public void KeepAtLeast(int battle, int systemLost, int bombardment, int lookFoiled, int hqMoved, int character, int harvesterYardGone = 0, int booksFailed = 0, int shieldsFelt = 0, int fighterGrounded = 0, int wallsRefused = 0, int shieldsHit = 0)
     {
+        Keep.ShieldsHit = Math.Max(Keep.ShieldsHit, shieldsHit);
         Keep.WallsRefused = Math.Max(Keep.WallsRefused, wallsRefused);
         Keep.FighterGrounded = Math.Max(Keep.FighterGrounded, fighterGrounded);
         Keep.ShieldsFelt = Math.Max(Keep.ShieldsFelt, shieldsFelt);

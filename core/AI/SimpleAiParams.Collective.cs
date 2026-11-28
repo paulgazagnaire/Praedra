@@ -74,4 +74,25 @@ public sealed partial record SimpleAiParams
     /// shelling there tells the truth again (ShieldsFelt). 0 = keep the old look (DEFAULT).
     /// </summary>
     public int WinWallsForgetDays { get; init; }
+    /// <summary>
+    /// Siege Charter (adaptive commander §3 plan 15; Rooster 2026-11-28): with fog the Collective's strike picker never chose a win target whose
+    /// walls it believes stand (m3-assault check 4: two shield generators forbid a landing), though SiegeShields loads the troops for a pile
+    /// that beats those shields and shells them down once there. Grinder seeds 192 and 227: a Collective holding 325 and 371 worlds sat 1000
+    /// days outside Charter's two shield generators (120 to 160 shields). On: a pile whose bombardment power beats the shields seen there by
+    /// WinSiegeMarginPower may pick the walled win target (shelling it with Military, m3-bombardment §2 hits = max(0, P - S), shields are
+    /// Military targets); and an own shelling there since the last look that met shields below what the assault gate's generators give (with
+    /// no refused landing since) reads as walls down, so the pile lands. Off = walled win targets are never picked (DEFAULT).
+    /// </summary>
+    public bool WinSiege { get; init; }
+    /// <summary>WinSiege: the bombardment power a pile must have above the shields seen at the win target to pick it (the hits that do the work; ai tuning).</summary>
+    public int WinSiegeMarginPower { get; init; } = 40;
+    /// <summary>
+    /// Guarded origin (QA-136, Rooster 2026-11-28): no mission team of the side sets out to another system from a world where it sees enemy
+    /// fleets in orbit and owns no completed Lien-150, since the orbit leaving check puts every member through those ships (m5-missions
+    /// §Guards, orbit check: members on the planet count when the mission travels); and its free leaders standing there walk to the nearest
+    /// held world with no enemy fleet seen. QA seed 8383 (Hard mirror, MedA, New battle): Hand Tranches over Natalis foiled every departure and
+    /// 15 Collective characters were captured in the duels, days 556 to 782. The Collective only for now. Off = missions leave from anywhere
+    /// (DEFAULT).
+    /// </summary>
+    public bool GuardedOriginWait { get; init; }
 }

@@ -182,7 +182,7 @@ public static class AiLevels
     {
         Neutralise = true, NeutraliseElsewherePercent = NeutraliseAnywhere, RefitAway = true,
         ShieldsFeltDays = ShieldsFeltWindow, RaidShieldsSeen = true, WreckShields = true,
-        FighterWaitMax = FightersWaiting, WinWallsForgetDays = WallsForgetDays,
+        FighterWaitMax = FightersWaiting, WinWallsForgetDays = WallsForgetDays, WinSiege = true,
     };
 
     /// <summary>
@@ -203,6 +203,13 @@ public static class AiLevels
     /// held 554 of 555 worlds and never struck Charter (0 regiments, 0 shields) behind a 1225-day-old look; on, it wins on day 2127.
     /// </summary>
     private const int WallsForgetDays = 365;
+
+    // WinSiege at Medium and Hard (Rooster 2026-11-28; the Collective only, with SiegeShields): a pile that out-shells Charter's shields seen by
+    // WinSiegeMarginPower (40) may pick the walled win target, and a shelling there that met fewer shields than two generators give reads as
+    // walls down. 288 seeds (1-288), MedE, main ba6a7f7, Hand / Collective / open, Collective win mean day, wins by day 2000, off -> on:
+    // Medium Collective vs Maverick's Grinder Hand 9 / 233 / 46, 1903, 144 -> 9 / 238 / 41, 1883, 157; Hard mirror 26 / 209 / 53, 1905, 133
+    // -> 24 / 215 / 49, 1891, 138; Medium mirror 9 / 250 / 29, 1872, 167 -> 9 / 254 / 25, 1851, 176. Grinder seeds 18, 119, 192 and 227
+    // (Collective 264 to 538 worlds, open at day 3000 behind Charter's two generators): all four Collective wins, days 2006 to 2890.
 
     /// <summary>ShieldsFeltDays at Medium and Hard: a shelling's lesson about the shields holds four months unless a look is newer.</summary>
     private const int ShieldsFeltWindow = 120;
