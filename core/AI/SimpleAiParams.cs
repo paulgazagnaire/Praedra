@@ -814,6 +814,8 @@ public sealed partial record SimpleAiParams
     /// Hand/Collective/open 9/69/18 -> 9/72/15; Hard mirrors, 32 games: TargetInvalid 653 -> 620, successes 85 -> 78, 3/20/9 both.
     /// </summary>
     public int AbductionInfoDays { get; init; } = 2;
+    /// <summary>The Collective's own <see cref="AbductionInfoDays"/> when above 0 (the Hand keeps AbductionInfoDays). 0 = the same as the Hand. DEFAULT 0; Hard sets 5 (AiLevels).</summary>
+    public int CollectiveAbductionInfoDays { get; init; }
     /// <summary>
     /// The planner reads a key target's Abduction chance as the core rolls it, min(table, cap_percent) (m5-missions §6a.3; the caps are the
     /// key-target file: The Chair 2, Ravilla 4, Nobody 4, Mae Abara 2), so it values those jobs honestly and the odds floor (MissionMinOddsPercent)

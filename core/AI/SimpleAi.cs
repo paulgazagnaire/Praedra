@@ -50,11 +50,16 @@ public sealed partial class SimpleAi
 
     /// <summary>
     /// The side's own parameters: the Collective reviews its military every <see cref="SimpleAiParams.CollectiveMilitaryEvery"/> days when that
-    /// is set. rule: ai tuning, SimpleAiParams.CollectiveMilitaryEvery (AI trainer 2026-11-20).
+    /// is set, and aims Abductions at sightings up to <see cref="SimpleAiParams.CollectiveAbductionInfoDays"/> old when that is set. rule: ai
+    /// tuning, SimpleAiParams.CollectiveMilitaryEvery (AI trainer 2026-11-20), SimpleAiParams.CollectiveAbductionInfoDays (2026-11-28).
     /// </summary>
-    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side) => side == Side.Collective && p.CollectiveMilitaryEvery > 0
-        ? p with { MilitaryEvery = p.CollectiveMilitaryEvery }
-        : p;
+    private static SimpleAiParams Doctrine(SimpleAiParams p, Side side)
+    {
+        if (side != Side.Collective) return p;
+        if (p.CollectiveMilitaryEvery > 0) p = p with { MilitaryEvery = p.CollectiveMilitaryEvery };
+        if (p.CollectiveAbductionInfoDays > 0) p = p with { AbductionInfoDays = p.CollectiveAbductionInfoDays };
+        return p;
+    }
 
     public Side Side => _side;
     public SimpleAiParams Params => _p;
