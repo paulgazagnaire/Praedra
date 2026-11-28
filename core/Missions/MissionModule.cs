@@ -930,6 +930,7 @@ public sealed partial class MissionModule
                 m.Departed = true;
                 if (m.TotalTicks > 0) PlaceMembers(m, null);
                 Departed(ctx, m, false);
+                GuardsWatch(ctx, m);
             }
             else if (m.Phase == MissionPhase.ReturnPending)
             {
@@ -955,6 +956,32 @@ public sealed partial class MissionModule
                 Departed(ctx, m, true);
             }
         }
+    }
+
+    /// <summary>
+    /// m5-fog-and-hq §N6e: a group that just left on its way out (any kind but Move, a trip of a day or more) for a system the other side holds
+    /// may be seen by that side's guards: p = min(cap, per-regiment × its regiments standing there) + the General bonus when the system's
+    /// General post holds a free character; one draw when p &gt; 0. rule: m5-fog-and-hq §N6e.
+    /// </summary>
+    public int GuardsSeeChance(Side defender, string system)
+    {
+        var fp = _fog.Params;
+        int regiments = _troops.RegimentsOnSystem(system).Count(o => o.Side == defender);
+        int p = Math.Min(fp.GuardRegimentCapPercent, fp.GuardRegimentPercent * regiments);
+        if (_ch.SystemGeneralOf(system) is { Status: Praedra.Core.Characters.CharacterStatus.Free } g && g.Side == defender) p += fp.GuardGeneralPercent;
+        return p;
+    }
+
+    private void GuardsWatch(StepContext ctx, MissionGroup m)
+    {
+        if (!_fog.Params.GuardsSeeInbound || m.Kind == MissionKind.Move || m.TotalTicks <= 0) return;
+        string target = m.Path[^1];
+        var defender = Other(m.Side);
+        if (_fleets.OwnerOf(target) != defender) return;
+        int p = GuardsSeeChance(defender, target);
+        if (p <= 0) return;
+        if (p < 100 && ctx.Rng.NextInt(0, 99) >= p) return;
+        _fog.GuardsSawTeam(ctx, defender, target, m.ArrivalDay, m.AllCharacters);
     }
 
     private void Departed(StepContext ctx, MissionGroup m, bool returning)

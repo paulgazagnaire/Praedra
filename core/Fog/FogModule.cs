@@ -268,6 +268,28 @@ public sealed class FogModule
         }
     }
 
+    /// <summary>
+    /// §N6e: the defender's guards saw a team of the other side leave for <paramref name="system"/>, which the defender holds: every member and
+    /// decoy gets an inbound sighting as §N6d writes it (InGroup set), and the defender is told once (TeamInboundSpotted). The caller (m5-missions
+    /// step 2) made the draw. rule: m5-fog-and-hq §N6e.
+    /// </summary>
+    public void GuardsSawTeam(StepContext ctx, Side defender, string system, int reachDay, IEnumerable<int> characters)
+    {
+        int stamp = ctx.Day + 1;
+        var ids = characters.OrderBy(x => x).ToList();
+        var know = F.Of(defender);
+        var list = know.LeadersInbound ?? new List<InboundLeader>();
+        foreach (var id in ids)
+        {
+            list.RemoveAll(x => x.Character == id);
+            list.Add(new InboundLeader { Character = id, System = system, ReachDay = reachDay, Day = stamp, InGroup = true });
+        }
+        list.Sort((a, b) => a.Character.CompareTo(b.Character)); // rule: §N9 canonical order
+        know.LeadersInbound = list;
+        var chars = new ValueList<int>(ids);
+        ctx.Emit((i, _) => new TeamInboundSpotted(i, stamp, defender, system, reachDay, chars));
+    }
+
     /// <summary>The side's inbound sightings (§N6d), by character id. rule: m5-fog-and-hq §N6d, §N8.</summary>
     public IReadOnlyList<InboundLeader> LeadersInbound(Side side) => (IReadOnlyList<InboundLeader>?)F.Of(side).LeadersInbound ?? Array.Empty<InboundLeader>();
 
@@ -847,6 +869,7 @@ public sealed class FogModule
             case HqSectorClueGiven x: return Bit(x.Viewer);
             case HearthTipGiven x: return Bit(x.Viewer);
             case LeaderInboundSeen x: return Bit(x.Viewer);
+            case TeamInboundSpotted x: return Bit(x.Viewer);
             case HarvesterQueuedSeen x: return Bit(x.Viewer);
             case AgentDetected x: return Bit(x.Viewer);
             case OrderAccepted or OrderRejected: return order != null ? Bit(order.Side) : Both;

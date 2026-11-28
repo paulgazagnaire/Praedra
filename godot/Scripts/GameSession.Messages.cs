@@ -62,7 +62,7 @@ public sealed partial class GameSession
             case OrderRejected or OrderAccepted: return MsgCat.Orders;
             case FleetArrived or FleetJoined or FleetJoinFailed or ForcedStop or FleetRetreated or BlockadeStarted or BlockadeLifted or Contact or RegimentsLoaded or RegimentsUnloaded
                 or SquadronsLoaded or SquadronsUnloaded or HqArrived: return MsgCat.Fleets;
-            case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven or LeaderInboundSeen: return MsgCat.Intel;
+            case FleetSighted or SensorReport or OwnerChangeSeen or HearthTipGiven or HarvesterQueuedSeen or HqSectorClueGiven or LeaderInboundSeen or TeamInboundSpotted: return MsgCat.Intel;
             case Praedra.Core.Research.ResearchLevelReached or AutoscrapWarning or ObjectScrapped or ProjectStarted or ProjectCancelled or UnitCompleted
                 or DeliveryArrived or DeliveryRefused: return MsgCat.Build;
         }
@@ -134,6 +134,11 @@ public sealed partial class GameSession
                 break;
             case LeaderInboundSeen x: // the spy's side only (rule: m5-fog-and-hq §N6d)
                 yield return new Message(d, $"Spies report {CharName(x.Character)} travelling to {x.System}, arriving day {x.ReachDay}.", x.System, MsgKind.Good);
+                break;
+            case TeamInboundSpotted x: // the guards' side only (rule: m5-fog-and-hq §N6e)
+                yield return new Message(d, x.Characters.Items.Count == 0
+                    ? $"Guards at {x.System} see an enemy team on its way, arriving day {x.ReachDay}."
+                    : $"Guards at {x.System} see an enemy team on its way: {string.Join(", ", x.Characters.Items.Select(CharName))}, arriving day {x.ReachDay}.", x.System, MsgKind.Good);
                 break;
             case HarvesterQueuedSeen x: // the seeing side only (rule: m5-fog-and-hq §N6b)
                 yield return new Message(d, $"Intelligence reports a harvester under construction at {x.System}.", x.System, MsgKind.Bad);

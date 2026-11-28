@@ -349,6 +349,9 @@ internal static class SimCli
                 $"{side} {ev.OfType<Praedra.Core.Fog.LeaderInboundSeen>().Count(e => e.Viewer == side)} seen, " +
                 $"{ev.OfType<MissionLanded>().Count(e => e.Side == side && abductions.Contains(e.Mission) && e.Due > e.Day + abd.TimerMin + abd.TimerSpread)} teams waited";
             Console.WriteLine($"Leaders seen on their way in: {Of(Side.Hand)}; {Of(Side.Collective)}.");
+            // m5-fog-and-hq §N6e: teams the guards saw leave for a world their side holds (by viewer), and how many of those teams' leaders
+            string Guards(Side side) { var g = ev.OfType<Praedra.Core.Fog.TeamInboundSpotted>().Where(e => e.Viewer == side).ToList(); return $"{side} {g.Count} teams ({g.Sum(e => e.Characters.Items.Count)} leaders)"; }
+            Console.WriteLine($"Teams the guards saw coming: {Guards(Side.Hand)}; {Guards(Side.Collective)}.");
         }
         foreach (var side in new[] { Side.Hand, Side.Collective })
         {
