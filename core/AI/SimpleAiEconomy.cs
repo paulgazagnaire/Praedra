@@ -175,7 +175,8 @@ public sealed partial class SimpleAi
     private (FacilityKind, string)? FortifyChoice(string from)
     {
         int worlds = _p.FortifyWorlds + ShellHolesOn; // ShellHoles: the bolt-holes come after the Hearth's world (FortifyTargets)
-        if (_advisor || worlds <= 0) return null;
+        if (_advisor) return null;
+        if (worlds <= 0) return GuardRaidedChoice(from); // the economy guard runs without walled worlds too
         var eco = _h.Economy;
         int n = 0;
         foreach (var w in FortifyTargets())
@@ -190,7 +191,45 @@ public sealed partial class SimpleAi
             _fortifyOrdered[(w, k == FacilityKind.Lien150)] = _fortifyOrdered.GetValueOrDefault((w, k == FacilityKind.Lien150)) + 1;
             return (k, w);
         }
+        return GuardRaidedChoice(from);
+    }
+
+    /// <summary>
+    /// GuardRaidedDays (the economy guard, AI trainer 2026-11-27): the first shield one of the side's raided economy worlds still lacks, from refined
+    /// that floats (ExtraYardRefinedReserve); null when none. rule: m3-bombardment §2 (a shield absorbs its strength from the fleets' combined power).
+    /// </summary>
+    private (FacilityKind, string)? GuardRaidedChoice(string from)
+    {
+        if (_advisor || _p.GuardRaidedDays <= 0 || _h.Economy.Refined(_side) < _p.ExtraYardRefinedReserve) return null;
+        foreach (var w in RaidedWorlds())
+        {
+            if (_h.Support.IsUprising(w) || _h.Economy.FreeEnergy(w) - _reservedEnergy.GetValueOrDefault(w) < 1) continue;
+            if (Ticks(from, w, UnratedSpeed) == int.MaxValue) continue;
+            if (OwnDefencesAt(w).Shields >= _p.GuardRaidedShields) continue;
+            var k = ShieldKind();
+            // the guard keeps the economy alive, so like a construction yard (YardsFromMargin) it may use the upkeep margin
+            if (!Available(FacilityKinds.ClassName(k)) || !(Affordable(k) || (!LowRoom && Budget + _p.MaintenanceMargin >= Maint(FacilityKinds.ClassName(k))))) continue;
+            _fortifyOrdered[(w, false)] = _fortifyOrdered.GetValueOrDefault((w, false)) + 1;
+            return (k, w);
+        }
         return null;
+    }
+
+    /// <summary>
+    /// GuardRaidedDays: held populated worlds with the side's mines or refineries that were shelled in the last GuardRaidedDays (the side's feed of
+    /// bombardments, AiNoteKind.Bombardment: its own worlds are always in its picture), the most strikes first (ties: ordinal name), at most
+    /// GuardRaidedWorlds. The key worlds (FortifyTargets) are left out: Fortify walls them.
+    /// </summary>
+    private List<string> RaidedWorlds()
+    {
+        var eco = _h.Economy;
+        var key = _p.FortifyWorlds > 0 ? FortifyTargets().Take(_p.FortifyWorlds).ToHashSet(StringComparer.Ordinal) : new HashSet<string>(StringComparer.Ordinal);
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var b in NotesSince(AiNoteKind.Bombardment, Today - _p.GuardRaidedDays))
+            if (b.System != null && Held(b.System)) counts[b.System] = counts.GetValueOrDefault(b.System) + 1;
+        return counts.Where(kv => !key.Contains(kv.Key) && eco.SlotsOf(kv.Key).Populated
+                && eco.Objects.Any(o => o.System == kv.Key && (o.Class == "Mine" || o.Class == "Refinery") && eco.OwnerOf(o) == _side))
+            .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(_p.GuardRaidedWorlds).Select(kv => kv.Key).ToList();
     }
 
     /// <summary>Fortify orders given today, by (system, battery): so two yards do not both fill the same gap. Lookup only.</summary>
@@ -583,6 +622,20 @@ public sealed partial class SimpleAi
     /// 2026-10-17). rule: ai tuning, B6b §3 and §11 (Dev lead 2026-10-18).
     /// </summary>
     internal int GarrisonTarget(string system)
+    {
+        if (_advisor) return BaseGarrisonTarget(system);
+        int t = BaseGarrisonTarget(system);
+        // rule: ai tuning, SimpleAiParams.CapitalAlarmDays: the capital in danger keeps CapitalAlarmGarrison regiments
+        if (system == CriticalSystem() && CapitalAlarm()) t = Math.Max(t, _p.CapitalAlarmGarrison);
+        // rule: ai tuning, SimpleAiParams.ShelledGarrison: a held world shelled lately keeps ShelledGarrison regiments (a counter to Neutralise)
+        if (_p.ShelledGarrison > 0 && ShelledLately(system)) t = Math.Max(t, _p.ShelledGarrison);
+        return t;
+    }
+
+    /// <summary>ShelledGarrison: a bombardment at the system in the side's notes of the last ShelledGarrisonDays (its own worlds are in its picture).</summary>
+    private bool ShelledLately(string system) => NotesSince(AiNoteKind.Bombardment, Today - _p.ShelledGarrisonDays).Any(n => n.System == system);
+
+    private int BaseGarrisonTarget(string system)
     {
         int need = _h.Support.RequiredGarrison(system);
         if (_advisor) // rule: m6-advisor-sibyl §Manage Garrisons 2: the rule's need, and a calm world near a step keeps one more (the buffer)

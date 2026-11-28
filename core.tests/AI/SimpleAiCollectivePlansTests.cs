@@ -92,24 +92,29 @@ public class SimpleAiCollectivePlansTests
     }
 
     // m5-missions §Spying from orbit (#412): with WreckShields, Wreckers board armed Collective fleets and are launched from orbit on
-    // Sabotage over shielded Hand worlds (seed 1, walled Medium Hand, day 1200).
+    // Sabotage over shielded Hand worlds (seeds 1-4, walled Medium Hand, day 1200). One seed was too thin: since the AI's leader missions aim at
+    // the last sighting, seed 1 swung between 0 and 3 orbit launches, so Wreckers must board in at least 2 games and launch in at least 1 (Rooster 2026-11-28).
     [Fact]
     public void WreckersRideFleetsAndSabotageShieldsFromOrbit()
     {
-        var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
-        var m = new AiMatch(host, WalledHand(), ShieldWise(true));
-        int loads = 0, launches = 0;
-        while (host.Game.Day < 1200 && host.Victory.Winner == null)
+        var r = MultiSeed.Play(new[] { 1, 2, 3, 4 }, seed =>
         {
-            m.Step();
-            loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
-            launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
-        }
-        var orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
-            .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
-        _out.WriteLine($"Wrecker loads {loads}, orbit sabotage orders {launches}, started {orbit}");
-        Assert.True(loads > 0, "no Wrecker boarded a fleet");
-        Assert.True(launches > 0 && orbit > 0, "no Sabotage was launched from orbit");
+            var host = NewGame.Create(new NewGameOptions { Seed = seed, Preset = StartPreset.MedE });
+            var m = new AiMatch(host, WalledHand(), ShieldWise(true));
+            int loads = 0, launches = 0;
+            while (host.Game.Day < 1200 && host.Victory.Winner == null)
+            {
+                m.Step();
+                loads += m.Collective.Submitted.Count(o => o.Kind == "LoadSpecialForces" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+                launches += m.Collective.Submitted.Count(o => o.Kind == "MissionSabotage" && o.Detail.Contains("(wreck the shields)", StringComparison.Ordinal));
+            }
+            var orbit = host.Game.Events.OfType<Praedra.Core.Missions.MissionStarted>()
+                .Count(x => x.Side == Side.Collective && x.MissionKind == Praedra.Core.Missions.MissionKind.Sabotage && x.Home == x.Target);
+            return (seed, loads, launches, orbit);
+        });
+        foreach (var g in r) _out.WriteLine($"seed {g.seed}: Wrecker loads {g.loads}, orbit sabotage orders {g.launches}, started {g.orbit}");
+        Assert.True(r.Count(g => g.loads > 0) >= 2, "Wreckers boarded a fleet in fewer than 2 of 4 games");
+        Assert.True(r.Any(g => g.launches > 0 && g.orbit > 0), "no Sabotage was launched from orbit in 4 games");
     }
 
     // m1-clock-and-orders K12 with the shields felt: the notes ride in the AI memory of the save, so a loaded game decides as the uninterrupted one.

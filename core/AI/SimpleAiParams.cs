@@ -321,6 +321,33 @@ public sealed partial record SimpleAiParams
     public int FortifyShields { get; init; } = 2;
     /// <summary>Batteries (Lien-150) wanted on each Fortify world (<see cref="FortifyWorlds"/>).</summary>
     public int FortifyBatteries { get; init; } = 1;
+    /// <summary>
+    /// Guard raided worlds (AI trainer 2026-11-27, the economy guard under every plan; Paul 2026-11-27: "a management layer under each of them,
+    /// ensuring the basic requirements for managing resources"): a held world with the side's mines or refineries that was shelled in the last
+    /// GuardRaidedDays gets GuardRaidedShields shield generators, up to GuardRaidedWorlds worlds, the most shelled first, right after the key worlds
+    /// (Fortify). Measured 2026-11-27 (seeds 1-8, day 1000): the Medium Hand lost 41 mines and refineries per game to Collective shelling, and 59%
+    /// of those strikes had power under 40 (one Escrow I absorbs 40, m3-bombardment §2). 0 = off (DEFAULT).
+    /// </summary>
+    public int GuardRaidedDays { get; init; }
+    public int GuardRaidedShields { get; init; } = 2;
+    public int GuardRaidedWorlds { get; init; } = 6;
+    /// <summary>
+    /// Capital alarm (AI trainer 2026-11-27, the sparring Hand; a human keeps its fleet home when its capital is in danger, not all the time):
+    /// for CapitalAlarmDays after an enemy fleet stood on the critical world (Charter for the Hand, the Hearth's world for the Collective) or a
+    /// world one lane from it, or fought or shelled there, the home guard wants the task-force strength (the strongest enemy fleet known, with
+    /// TaskForceMarginPercent) instead of HomeDefenceStrength, strike piles go home while it is short, and the world keeps CapitalAlarmGarrison
+    /// regiments. Measured 2026-11-27: every Charter fall in seeds 1-8 was a landing with no Hand ship at Charter and 0-3 regiments on it, while
+    /// a home guard of 200 at all times starved the Hand (0 wins of 32). 0 = off (DEFAULT).
+    /// </summary>
+    public int CapitalAlarmDays { get; init; }
+    public int CapitalAlarmGarrison { get; init; } = 16;
+    /// <summary>
+    /// Shelled garrison (AI trainer 2026-11-27, the sparring Hand's answer to the Collective's Neutralise plan: a human reinforces a world being
+    /// shelled): a held world with a bombardment in the side's notes of the last ShelledGarrisonDays keeps at least ShelledGarrison regiments
+    /// (the garrison builder sends them; they are never loaded off it). 0 = off (DEFAULT).
+    /// </summary>
+    public int ShelledGarrison { get; init; }
+    public int ShelledGarrisonDays { get; init; } = 120;
     public int CampaignPrepareDays { get; init; } = 120;
     public int CampaignMaxDays { get; init; } = 420;
     public int CampaignHoldPercent { get; init; } = 70;
@@ -371,6 +398,12 @@ public sealed partial record SimpleAiParams
     /// (<see cref="Campaign"/>) as well. Off = the Collective only (DEFAULT; the Collective's campaign made the Hand lose 31 of 32 mirrors).
     /// </summary>
     public bool HandFronts { get; init; }
+    /// <summary>
+    /// Hand raids (AI trainer 2026-11-27, sparring bots): the Hand uses the Guerrilla odds, reach and raids (<see cref="Guerrilla"/>) as the
+    /// Collective does, so a Hand sparring bot can play the raider a human plays: shell the Collective's mines, refineries and yards rather than
+    /// take worlds. Off = Guerrilla is the Collective's only (DEFAULT).
+    /// </summary>
+    public bool HandRaids { get; init; }
     /// <summary>
     /// Siege (AI trainer 2026-11-26; the adaptive commander's Siege plan): a fleet carrying troops at a world whose seen shields forbid an
     /// assault (m3-assault check 4) shells it with the Military target (m3-bombardment: shields are Military targets, no support cost), up to

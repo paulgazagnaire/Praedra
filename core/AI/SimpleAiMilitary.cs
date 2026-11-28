@@ -150,6 +150,30 @@ public sealed partial class SimpleAi
     /// when it has a shipyard (so the guard can be topped up); otherwise the guard is whatever fleet already stands there.
     /// </summary>
     private string? GuardSystem() { var c = CriticalSystem(); return c != null && Held(c) ? c : null; }
+
+    private bool? _alarm;
+    /// <summary>
+    /// CapitalAlarmDays: an enemy fleet stood on the side's guard world or a world one lane from it (the side's picture: Threats, or a picture of
+    /// that world up to CapitalAlarmDays old), or a battle or bombardment there is in the side's notes of the last CapitalAlarmDays (cached per day).
+    /// </summary>
+    private bool CapitalAlarm()
+    {
+        if (_alarm is { } a) return a;
+        if (_p.CapitalAlarmDays <= 0 || GuardSystem() is not { } cap || !_h.Data.Galaxy.TryFindSystem(cap, out int ci)) return (_alarm = false).Value;
+        var near = new HashSet<string>(StringComparer.Ordinal) { cap };
+        foreach (var nb in _h.Data.Galaxy.NeighboursOf(ci)) near.Add(_h.Data.Galaxy.Systems[nb.System].Name);
+        bool on = near.Any(s => Threats().ContainsKey(s))
+            || NotesSince(AiNoteKind.Battle, Today - _p.CapitalAlarmDays).Any(n => n.System != null && near.Contains(n.System))
+            || NotesSince(AiNoteKind.Bombardment, Today - _p.CapitalAlarmDays).Any(n => n.System != null && near.Contains(n.System))
+            || (_view != null && near.Any(s => _view.Picture(s)?.Fleets is { } e && AgeOf(e) <= _p.CapitalAlarmDays && e.Value.Any(fp => fp.Side != _side && Armed(fp))));
+        return (_alarm = on).Value;
+    }
+
+    /// <summary>The home guard's strength wanted: HomeDefenceStrength, or with the CapitalAlarm on at least the task-force strength.</summary>
+    private double HomeWanted() => CapitalAlarm() ? Math.Max(_p.HomeDefenceStrength, TaskForceStrength()) : _p.HomeDefenceStrength;
+
+    /// <summary>CapitalAlarm: own armed strength standing at the guard world.</summary>
+    private double GuardStrengthNow(string cap) => _h.Fleets.FleetsAt(cap).Where(x => x.Side == _side).Sum(Str);
     // The Hand only strikes an HQ it has been told about (KnownEnemyHq); no peeking at the true HQ (economy-ai D4: the AI plays fair with fog of war).
     private string? WinTarget() => _side == Side.Hand ? KnownEnemyHq : Praedra.Core.Control.ControlModule.CapitalSystem;
 
@@ -288,8 +312,8 @@ public sealed partial class SimpleAi
         public double Strength; public int Aboard, FreeSlots, Berths; public double HullPct = 100;
     }
 
-    /// <summary>Guerrilla: the Collective's elusive fleets and raids (SimpleAiParams.Guerrilla). The Hand AI never uses it.</summary>
-    private bool GuerrillaOn => _p.Guerrilla && _side == Side.Collective;
+    /// <summary>Guerrilla: the Collective's elusive fleets and raids (SimpleAiParams.Guerrilla). The Hand AI uses it only with HandRaids.</summary>
+    private bool GuerrillaOn => _p.Guerrilla && (_side == Side.Collective || _p.HandRaids); // rule: ai tuning, SimpleAiParams.HandRaids
     private int AttackOdds => GuerrillaOn ? _p.GuerrillaAttackOddsPercent : _p.AttackOddsPercent;
     private int RetreatOdds => GuerrillaOn ? _p.GuerrillaRetreatOddsPercent : _p.RetreatOddsPercent;
 
@@ -324,7 +348,7 @@ public sealed partial class SimpleAi
                 double acc = 0; var home = new List<Fleet>(); strike = new List<Fleet>();
                 foreach (var f in list)
                 {
-                    if (acc < _p.HomeDefenceStrength && Str(f) > 0) { home.Add(f); acc += Str(f); } else strike.Add(f);
+                    if (acc < HomeWanted() && Str(f) > 0) { home.Add(f); acc += Str(f); } else strike.Add(f); // rule: ai tuning, SimpleAiParams.CapitalAlarmDays
                 }
                 for (int i = 1; i < home.Count; i++) Merge(home[i], home[0]);
                 if (home.Count == 1 && _p.SplitHomeSurplus) SplitHomeSurplus(home[0], acc);
@@ -424,7 +448,8 @@ public sealed partial class SimpleAi
     /// </summary>
     private void SplitHomeSurplus(Fleet guard, double strength)
     {
-        if (strength - _p.HomeDefenceStrength < _p.LaunchStrength || guard.Ships.Count < 2) return;
+        double homeWant = HomeWanted();
+        if (strength - homeWant < _p.LaunchStrength || guard.Ships.Count < 2) return;
         var cls = guard.Ships.Select(id => (Id: id, S: ClassStrength(_h.Economy.Find(id)!.Class))).ToList();
         double total = cls.Sum(c => c.S);
         if (total <= 0) return;
@@ -432,7 +457,7 @@ public sealed partial class SimpleAi
         foreach (var (id, cs) in cls.Where(c => c.S > 0).OrderByDescending(c => c.Id))
         {
             double share = strength * cs / total;
-            if (left - share < _p.HomeDefenceStrength) continue;
+            if (left - share < homeWant) continue;
             off.Add(id); left -= share;
         }
         if (off.Count == 0 || off.Count == guard.Ships.Count || strength - left < _p.LaunchStrength) return;
@@ -517,6 +542,8 @@ public sealed partial class SimpleAi
         }
 
         bool damaged = p.HullPct < _p.RepairBelowPercent;
+        // rule: ai tuning, SimpleAiParams.CapitalAlarmDays: the capital in danger and its guard short, so the pile goes home (its yards repair it there too)
+        if (CapitalAlarm() && GuardSystem() is { } home && home != at && Str(f) > 0 && GuardStrengthNow(home) < HomeWanted() && Move(f, home)) return;
         // defence first: a threatened system we can relieve beats repairs
         var relief = PickRelief(p, at);
         if (relief != null && Move(f, relief)) return;
