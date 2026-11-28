@@ -266,7 +266,8 @@ public class SimpleAiCollectivePlansTests
         {
             // #442's leader rules pinned to before (MultiSeed.LeaderRulesBefore442), as the seed was scanned on main 2c98fbc
             var host = NewGame.Create(new NewGameOptions { Seed = 11, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBefore442 });
-            var m = new AiMatch(host, SparringBots.For("Grinder")!, AiLevels.For(AiLevel.Medium) with { WinSiege = siege });
+            // UseInboundSightings pinned off on both sides (AI trainer #445): the seed was scanned with it off; on, seed 11 has no winner by day 2000 either way
+            var m = new AiMatch(host, SparringBots.For("Grinder")! with { UseInboundSightings = false }, AiLevels.For(AiLevel.Medium) with { WinSiege = siege, UseInboundSightings = false });
             while (host.Game.Day < 2000 && host.Victory.Winner == null) m.Step();
             return (host.Victory.Winner, host.Game.Day);
         }
