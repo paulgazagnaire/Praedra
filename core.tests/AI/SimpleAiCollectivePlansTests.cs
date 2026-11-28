@@ -237,7 +237,8 @@ public class SimpleAiCollectivePlansTests
         (Side? winner, int day) Play(int forget)
         {
             // #442's leader rules pinned to before (MultiSeed.LeaderRulesBefore442): with them seed 29 is won both ways (kept day 1992, forgotten 2336)
-            var host = NewGame.Create(new NewGameOptions { Seed = 29, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBefore442 });
+            // §N6e's guards pinned off too (MultiSeed.LeaderRulesBeforeGuards): with them on as well, both ways the Collective wins on day 2021
+            var host = NewGame.Create(new NewGameOptions { Seed = 29, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBeforeGuards });
             var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard) with { WinWallsForgetDays = forget });
             while (host.Game.Day < 2400 && host.Victory.Winner == null) m.Step();
             return (host.Victory.Winner, host.Game.Day);
@@ -256,7 +257,8 @@ public class SimpleAiCollectivePlansTests
     public void ARefusedLandingTeachesTheWallsStand()
     {
         // #442's leader rules pinned to before (MultiSeed.LeaderRulesBefore442): with them no landing is refused on seed 13 by day 2000
-        var host = NewGame.Create(new NewGameOptions { Seed = 13, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBefore442 });
+        // §N6e's guards pinned off too (MultiSeed.LeaderRulesBeforeGuards): with them on as well, still no landing refused by day 2000
+        var host = NewGame.Create(new NewGameOptions { Seed = 13, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBeforeGuards });
         var m = new AiMatch(host, AiLevels.For(AiLevel.Hard), AiLevels.For(AiLevel.Hard));
         int run = 0, longest = 0, last = -10;
         while (host.Game.Day < 2000 && host.Victory.Winner == null)

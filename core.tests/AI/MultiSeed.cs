@@ -29,6 +29,13 @@ internal static class MultiSeed
     /// </summary>
     public static Praedra.Core.Setup.GameSettings GuardsSeeInboundOff => new() { Fog = new Praedra.Core.Fog.FogParams { GuardsSeeInbound = false } };
 
+    /// <summary>LeaderRulesBefore442 and m5-fog-and-hq §N6e (GuardsSeeInbound) off: the single-seed Hard mirror tests measured before both.</summary>
+    public static Praedra.Core.Setup.GameSettings LeaderRulesBeforeGuards => new()
+    {
+        Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false },
+        Fog = new Praedra.Core.Fog.FogParams { InboundMissionGroupPercent = 100, GuardsSeeInbound = false },
+    };
+
     public static Praedra.Core.Setup.GameSettings LeaderRulesBefore442 => new()
     {
         Characters = new Praedra.Core.Characters.CharacterParams { AutorouteToGuarded = false },
