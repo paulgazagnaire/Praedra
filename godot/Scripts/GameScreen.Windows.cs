@@ -235,7 +235,7 @@ public partial class GameScreen
 
     /// <summary>Every window has Paul's Paper design (the Infrastructure window 2026-11-18, the Fleet window 2026-11-21, the Ground window
     /// and the new colors 2026-11-24): its head and its strip run to the window's edges on the darker surface, the page under them on the
-    /// lighter one with 16 px all round and 24 px between its parts, a 1 px #181B21 edge.</summary>
+    /// lighter one with 16 px all round and 24 px between its parts, a 1 px #182139 edge (the frames of 2026-11-28).</summary>
     void ApplyLook(MgWin w)
     {
         bool look = w.Kind is MgKind.Infra or MgKind.Fleet or MgKind.Ground;
@@ -369,7 +369,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A window over another shows its edge in the card outline's grey: the usual #181B21 edge vanishes on the page under it, and two
+    /// A window over another shows its edge in the window buttons' blue-grey (#54638A): the usual #182139 edge vanishes on the page under it, and two
     /// windows read as one broken one (review 32). Checked every frame: a few windows, and only a changed edge touches its style; a
     /// rebuilt window brings a new style, which keeps its own edge colour to go back to.
     /// </summary>
@@ -382,7 +382,7 @@ public partial class GameScreen
             if (wins[i].Panel.GetThemeStylebox("panel") is not StyleBoxFlat box) continue;
             if (!box.HasMeta("edge")) box.SetMeta("edge", box.BorderColor);
             var r = wins[i].Panel.GetRect();
-            var want = wins.Take(i).Any(b => b.Panel.GetRect().Intersects(r)) ? Look.Outline : box.GetMeta("edge").AsColor();
+            var want = wins.Take(i).Any(b => b.Panel.GetRect().Intersects(r)) ? Look.OverEdge : box.GetMeta("edge").AsColor();
             if (box.BorderColor != want) box.BorderColor = want;
         }
     }
@@ -623,12 +623,12 @@ public partial class GameScreen
         row.MouseFilter = MouseFilterEnum.Ignore;
         var buttons = WinButtons(w, grip);
 
-        // the name: BitPotion 48 px, or 32 px when it does not fit beside the buttons (Paul 2026-11-14)
+        // the name: Pixel Operator 32 px, or 24 px when it does not fit beside the buttons (the frames of 2026-11-28)
         string upper = title.ToUpperInvariant();
         float room = WidthOf(w) - 2 - 2 * WinPad - NameGap - 3 * WinButton - 2 * 4;
-        int size = Ui.NameSize(upper, room);
+        int size = Ui.TitleSize(upper, room);
         var t = Ui.Label(upper, null, titleColor, size, wrap: false);
-        t.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        t.AddThemeFontOverride("font", Ui.TitleFont);
         t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         t.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         t.ClipText = true;
@@ -643,9 +643,9 @@ public partial class GameScreen
         w.Head.AddChild(block);
     }
 
-    /// <summary>The window buttons ⋮⋮ – ×, 24 px each and 4 px apart, pinned to the right of the head. <paramref name="grey"/>: in Space
-    /// Grotesk and the words' grey, as Paul's fleet window design has them (2026-11-21).</summary>
-    HBoxContainer WinButtons(MgWin w, Control grip = null, bool grey = false)
+    /// <summary>The window buttons ⋮⋮ – ×, 24 px each and 4 px apart, pinned to the right of the head: – and × in Pixel Operator 24, all three
+    /// #54638A (the frames of 2026-11-28; the theme's "Clock" buttons).</summary>
+    HBoxContainer WinButtons(MgWin w, Control grip = null)
     {
         var buttons = Ui.HBox(4);
         buttons.MouseFilter = MouseFilterEnum.Ignore;
@@ -660,12 +660,6 @@ public partial class GameScreen
         close.SetMeta(UiTest.FullName, "Close " + w.Key);
         close.CustomMinimumSize = new Vector2(WinButton, WinButton);
         buttons.AddChild(close);
-        if (grey)
-            foreach (var b in new[] { fold, close })
-            {
-                b.AddThemeFontOverride("font", Ui.Grotesk);
-                foreach (var k in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" }) b.AddThemeColorOverride(k, Look.Text);
-            }
         return buttons;
     }
 
@@ -680,7 +674,7 @@ public partial class GameScreen
         return g;
     }
 
-    /// <summary>A window button's glyph as a plain label (the grips): 24 x 24, JetBrains Mono 24 px, #909EBD.</summary>
+    /// <summary>A window button's glyph as a plain label (the grips): 24 x 24, JetBrains Mono 24 px (Pixel Operator has no ⋮), #54638A.</summary>
     static Label WindowGlyph(string glyph)
     {
         var g = Ui.Label(glyph, null, Ui.WinButtonInk, 24, wrap: false);

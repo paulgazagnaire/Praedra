@@ -41,8 +41,8 @@ public partial class GameScreen
     // Across, the design's page is 312 px (12 px between cards); here the scroll grabber keeps 4 px of it, so 9 px between cards
     const int CardW = 96, CardPicH = 48;
     const int CardGapX = (FleetBodyW - 3 * CardW) / 2, CardGapY = 16;
-    const int LeaderCardH = CardPicH + 4 + 32;   // a leader's card: two lines of name (first name over last name), the empty post's size
-    const int WideEmptyH = 80;   // the design's full-width "Drop regiments here to load them"
+    const int LeaderCardH = CardPicH + 4 + 2 * 20 + 8;   // a leader's card: two 20 px lines of name (first name over last name) and 8 px under them, the empty post's size (the frames' 100 px)
+    const int WideEmptyH = 100;   // the design's full-width "Drop regiments here to load them" (the frames of 2026-11-28: 100 px)
 
     static readonly string[] HitNames = { "shield generator", "weapons", "hold beam", "sub-light engines", "jump drive", "damage control" };
 
@@ -189,8 +189,8 @@ public partial class GameScreen
     // ================================================================== the head
 
     /// <summary>
-    /// The head, on the darker surface with 24 px all round: the name in BitPotion 48 px with ⋮⋮ – × in the design's grey, then the status
-    /// line and its bar. The ⋮⋮ moves the window, as on every other window. A right-click anywhere on the head is a shortcut to Merge (also
+    /// The head, on the darker surface, 16 px above and 24 px on the other sides (the frames of 2026-11-28): the name in Pixel Operator 32
+    /// capitals with ⋮⋮ – × in #54638A, then 16 px under it the status line and its bar. The ⋮⋮ moves the window, as on every other window. A right-click anywhere on the head is a shortcut to Merge (also
     /// in Command) and to scrapping the fleet (also on Ships).
     /// </summary>
     void FleetHead(MgWin w, Fleet f, bool still)
@@ -199,23 +199,23 @@ public partial class GameScreen
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
         head.SetMeta(UiTest.FullName, $"Fleet head {f.Id}");
         RightClickMenu(head, () => HeadMenu(f).ToArray());
-        var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
+        var pad = Pad(FleetHeadPad, FleetHeadPad, HeadTop, FleetHeadPad);
         head.AddChild(pad);
-        var parts = Boxed(new VBoxContainer(), 24);
+        var parts = Boxed(new VBoxContainer(), HeadGap);
         pad.AddChild(parts);
 
-        // ⋮⋮ moves the window, as on every other window (it no longer drags to merge: Merge is a button in Command, 2026-11-22)
+        // ⋮⋮ moves the window, as on every other window (it no longer drags to merge: Merge is a button in Command, 2026-11-22); its dots
+        // stay the mono ⋮⋮, Pixel Operator has no such glyph
         var grip = MoveGrip();
-        grip.AddThemeColorOverride("font_color", Look.Text);   // the design's grey (its dots stay the mono ⋮⋮: Space Grotesk has no such glyph)
 
         var row = Boxed(new HBoxContainer(), NameGap);
         string upper = S.NameOf(f).ToUpperInvariant();
         float room = WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad - NameGap - 3 * WinButton - 2 * 4;
-        int size = Ui.NameSize(upper, room);
+        int size = Ui.TitleSize(upper, room);
         if (Renaming(w)) row.AddChild(RenameBox(f, size));   // its name is being typed (GameScreen.FleetRename)
         else
         {
-            var font = Ui.NameFont(size, upper);
+            var font = Ui.TitleFont;
             var name = Look.Words(upper, size, Look.Text);
             name.AddThemeFontOverride("font", font);
             name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -227,7 +227,7 @@ public partial class GameScreen
             RenameOnDoubleClick(name, w, f, wordsW, cut: wordsW > room);
             row.AddChild(name);
         }
-        row.AddChild(WinButtons(w, grip, grey: true));
+        row.AddChild(WinButtons(w, grip));
         parts.AddChild(row);
         if (!w.Min) parts.AddChild(FleetStatus(f, still, WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad));
         w.Head.AddChild(head);
@@ -240,13 +240,14 @@ public partial class GameScreen
     /// order it has, with Cancel. Its strength, slowest ship and anything else that holds are in the hover. Design:
     /// praedra/specs/ui/fleet-status-2026-11-22/status-design.md (UI review 6).
     /// </summary>
-    /// <summary>The fleet head's padding all round (the design's 24 px), the window's edge (1 px each side) and the gap between the status words.</summary>
-    const int FleetHeadPad = 24, EdgeW = 1, StatusGap = 8;
+    /// <summary>A head's padding on the sides and below (the frames' 24 px) and above (16 px), the gap between the name and the status
+    /// (16 px), the window's edge (1 px each side) and the gap between the status words.</summary>
+    const int FleetHeadPad = 24, HeadTop = 16, HeadGap = 16, EdgeW = 1, StatusGap = 8;
 
     Control FleetStatus(Fleet f, bool still, float lineW)
     {
         var st = StatusOf(f, still);
-        var v = Boxed(new VBoxContainer(), 4);
+        var v = Boxed(new VBoxContainer(), 8);   // the words, then 8 px down the bar (the frames of 2026-11-28)
         v.MouseFilter = MouseFilterEnum.Pass;
         v.TooltipText = Ui.Wrap(st.Tip);
         v.SetMeta(UiTest.FullName, $"Fleet status {f.Id}");
@@ -254,8 +255,8 @@ public partial class GameScreen
         line.AddChild(Look.Words("Status:", 12, Look.Text, true));
         // what and where, then the countdown on the same line when both fit ("Repairing at Charter / 12 days left"); when they don't
         // ("Blockading Brushfield / Repair: 240 days"), the countdown drops to a line of its own, so the place is never cut for it
-        float Wide(string t, bool medium = false) => (medium ? Ui.GroteskMedium : Ui.Grotesk).GetStringSize(t, HorizontalAlignment.Left, -1, 12).X;
-        float need = Wide("Status:", true) + st.Words.Select((t, i) => StatusGap + Wide(t) + (i > 0 ? Wide("/") + StatusGap : 0)).Sum();
+        float Wide(string t) => Look.Width(t, 12);
+        float need = Wide("Status:") + st.Words.Select((t, i) => StatusGap + Wide(t) + (i > 0 ? Wide("/") + StatusGap : 0)).Sum();
         bool split = st.Words.Count > 1 && need > lineW;
         Label Part(int i)
         {
@@ -481,15 +482,19 @@ public partial class GameScreen
     // ================================================================== the strip of tabs
 
     /// <summary>
-    /// A strip cell's name: light on the open cell and under the mouse, the muted grey on the others (R16, Paul 18:57: "the open tab is
-    /// barely lighter than the rest"). The new colors frames draw every name light, but their cells differ by 1.06:1 (#131313 on #0B0B0D),
-    /// so the name is what tells the open tab (review 23; Paul's A/B pending). Its count keeps its own colour. Returns the repaint, for a
-    /// cell pressed with no signal.
+    /// A strip cell's name and count: light (#B8C2E0) on the open cell and under the mouse, #54638A on the others, as the frames of
+    /// 2026-11-28 draw them (R16, Paul: "the open tab is barely lighter than the rest"). A count in a meaning colour (a hull's amber) keeps
+    /// it. Returns the repaint, for a cell pressed with no signal.
     /// </summary>
-    static Action CellWords(Button cell, Label words)
+    static Action CellWords(Button cell, Label words, Label count = null)
     {
         bool over = false;
-        void Paint() => words.AddThemeColorOverride("font_color", cell.ButtonPressed || over ? Look.Text : Look.Muted);
+        void Paint()
+        {
+            var ink = cell.ButtonPressed || over ? Look.Text : Look.Soft;
+            words.AddThemeColorOverride("font_color", ink);
+            if (count != null) count.AddThemeColorOverride("font_color", ink);
+        }
         cell.Toggled += _ => Paint();
         cell.MouseEntered += () => { over = true; Paint(); };
         cell.MouseExited += () => { over = false; Paint(); };
@@ -528,15 +533,17 @@ public partial class GameScreen
             var l = Look.Words(name, 12, Look.Text);
             l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             row.AddChild(l);
-            CellWords(b, l);
+            Label c = null;
             if (count != null)
             {
-                var c = Look.Words(count, 12, ink ?? Look.Quiet);   // the status grey (Paul 2026-11-25: #7D8699)
+                c = Look.Words(count, 12, ink ?? Look.Soft);
                 c.SetMeta(UiTest.FullName, $"Tab {w.Key} {name} count");
                 row.AddChild(c);
             }
-            // as the design: Command and Ships fit their words (Ships at least 72 px), the others share the rest (Fighters, Troops, Fleets)
-            Fill(b, row, 8, 8, name == "Ships" ? new Vector2(72, 0) : null);
+            CellWords(b, l, ink == null ? c : null);
+            // as the design: Command and Ships fit their words, the others share the rest (Fighters, Troops, Fleets); 8 px in from the
+            // sides, 10 from the top (the frames of 2026-11-28)
+            Fill(b, row, 8, 10);
             b.SizeFlagsHorizontal = name is "Fighters" or "Troops" or "Fleets" ? SizeFlags.ExpandFill : SizeFlags.Fill;
             b.Pressed += () => { w.Tab = tabName; Fit(w); };
             // spring-loaded: hovering a dragged unit over a cell opens it
@@ -729,15 +736,15 @@ public partial class GameScreen
         return bar;
     }
 
-    /// <summary>This fleet's choice when an enemy fleet arrives, Defensive (fight) or Elusive (pull back), as the frames' switch (2026-11-24):
-    /// one outline, 4 px corners, the chosen half filled #36363C. rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive
+    /// <summary>This fleet's choice when an enemy fleet arrives, Defensive (fight) or Elusive (pull back), as the frames' switch (2026-11-28):
+    /// a #05060A well in a #182139 outline, 2 px in, the chosen half filled #182139. rule: m4-battle-classic §1.3 (per fleet; in a battle with both, the Elusive
     /// fleets leave in their first step and the rest fight).</summary>
     Control BehaviorRow(Fleet f)
     {
         bool Elusive() => IsElusive(f);
         bool retreat = Elusive();
         var sw = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, CustomMinimumSize = new Vector2(0, ButtonH) };
-        var frame = ButtonBox(Look.Outline);
+        var frame = ButtonBox(Look.Outline, Look.ButtonFill);
         frame.ContentMarginLeft = frame.ContentMarginRight = frame.ContentMarginTop = frame.ContentMarginBottom = 2;
         sw.AddThemeStyleboxOverride("panel", frame);
         var row = Boxed(new HBoxContainer(), 2);
@@ -752,10 +759,10 @@ public partial class GameScreen
             var b = new Button { FocusMode = FocusModeEnum.None, TooltipText = Ui.Wrap(tip + (chosen ? " Chosen." : "")),
                 MouseDefaultCursorShape = chosen ? CursorShape.Arrow : CursorShape.PointingHand, SizeFlagsVertical = SizeFlags.ExpandFill };
             var clear = new Color(0, 0, 0, 0);
-            StyleBoxFlat Seg(Color fill) { var x = Look.Box(fill); x.SetCornerRadiusAll(SegmentRadius); x.AntiAliasing = true; return x; }
+            StyleBoxFlat Seg(Color fill) { var x = Look.Box(fill); x.SetCornerRadiusAll(SegmentRadius); x.AntiAliasing = SegmentRadius > 0; return x; }
             var rest = chosen ? Look.Outline : clear;
             b.AddThemeStyleboxOverride("normal", Seg(rest));
-            b.AddThemeStyleboxOverride("hover", Seg(chosen ? Look.Outline : Look.Line));
+            b.AddThemeStyleboxOverride("hover", Seg(chosen ? Look.Outline : Look.Bg));
             b.AddThemeStyleboxOverride("pressed", Seg(Look.Outline));
             b.AddThemeStyleboxOverride("hover_pressed", Seg(Look.Outline));
             b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
@@ -822,7 +829,8 @@ public partial class GameScreen
 
     // ================================================================== buttons and cards in the design's look
 
-    /// <summary>The design's button: a 1 px #36363C outline, 8 px inside, 12 px words. Brighter outline under the mouse, the words greyed
+    /// <summary>The design's button: a 1 px #182139 outline, square, 16 px in from the sides and 10 from the top, 16 px words (the frames of
+    /// 2026-11-28). Brighter outline under the mouse, the words greyed
     /// with the reason in the hover when it can't act; <paramref name="ink"/> for a meaning colour (the harvester's red).</summary>
     static Button FleetAction(string words, string key, Action act, string tip, bool disabled = false, Color? ink = null, bool menu = false, Color? hoverInk = null, string[] icon = null)
     {
@@ -840,7 +848,7 @@ public partial class GameScreen
             pic.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             h.AddChild(pic);
         }
-        var text = Look.Words(words, 12, c, true);   // the frames' buttons say it in Medium
+        var text = Look.Words(words, 12, c, true);
         text.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         h.AddChild(text);
         if (menu) { var arrow = Look.Words("▾", 12, c, true); arrow.SizeFlagsVertical = SizeFlags.ShrinkCenter; h.AddChild(arrow); }
@@ -850,23 +858,24 @@ public partial class GameScreen
             b.MouseEntered += () => text.AddThemeColorOverride("font_color", hi);
             b.MouseExited += () => text.AddThemeColorOverride("font_color", c);
         }
-        Fill(b, h, 8, 8, new Vector2(0, ButtonH));
+        Fill(b, h, 16, 10, new Vector2(0, ButtonH));
         b.Pressed += act;
         b.SetMeta(UiTest.FullName, key);
         return b;
     }
 
-    /// <summary>A button's outline: 1 px, 4 px corners (the new colors frames; Paul 2026-11-24, "follow the frames").</summary>
+    /// <summary>A button's outline: 1 px, square (the frames of 2026-11-28, square as Sibyl's panel; the 4 px corners came from the frames of
+    /// 2026-11-24).</summary>
     static StyleBoxFlat ButtonBox(Color line, Color? fill = null, int radius = ButtonRadius)
     {
         var b = Look.Box(fill ?? new Color(0, 0, 0, 0), line, 1, 1, 1, 1);
         b.SetCornerRadiusAll(radius);
-        b.AntiAliasing = true;   // a rounded corner needs it; the straight edges stay on whole pixels
+        b.AntiAliasing = radius > 0;   // a rounded corner needs it; square edges stay on whole pixels
         return b;
     }
 
-    /// <summary>The frames' button: 40 px high, 4 px corners; inside a switch, 2 px corners.</summary>
-    const int ButtonH = 40, ButtonRadius = 4, SegmentRadius = 2;
+    /// <summary>The frames' button: 40 px high, square, and square inside a switch.</summary>
+    const int ButtonH = 40, ButtonRadius = 0, SegmentRadius = 0;
 
     /// <summary>An order button that opens a short list of choices under it (the bombard targets).</summary>
     Button MenuAction(string words, string key, (string Text, Action Do)[] lines, string tip)
@@ -915,19 +924,19 @@ public partial class GameScreen
         // the dark tile behind the picture (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now"); the sprite itself
         // stays transparent
         var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(CardW, CardPicH) };
-        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
+        tile.AddThemeStyleboxOverride("panel", Look.Box(Look.PicTile));
         var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         center.AddChild(pic);
         tile.AddChild(center);
         v.AddChild(tile);
         v.AddChild(CardLine(KeepNumeral(name), Look.Text, nameLines));
-        if (sub != null) v.AddChild(CardLine(sub, ghost ? Pending : Look.Dim, 1));
+        if (sub != null) v.AddChild(CardLine(sub, ghost ? Pending : Look.Soft, 1));
         foreach (var m in more) v.AddChild(m);
         if (ghost) p.Modulate = new Color(1, 1, 1, 0.62f);
         return p;
     }
 
-    /// <summary>A line of a card: 12 px, centred on the card's width, cut with "…" past <paramref name="lines"/> lines.</summary>
+    /// <summary>A line of a card: 16 px, centred on the card's width, cut with "…" past <paramref name="lines"/> lines.</summary>
     static Label CardLine(string words, Color ink, int lines)
     {
         var t = Look.Words(words, 12, ink);
@@ -939,7 +948,7 @@ public partial class GameScreen
         return t;
     }
 
-    /// <summary>An empty place: dashed #36363C, its words centred. A card's size by default (the design's "Drop a leader here", 96 x 84);
+    /// <summary>An empty place: dashed #182139, its words centred. A card's size by default (the design's "Drop a leader here", 96 x 84);
     /// the Fighters and Troops tabs pass the page's width (the design's "Drop regiments here to load them", 80 px high). A label, so a drop
     /// shown before the day applies it takes its place.</summary>
     static Label EmptyCard(string words, float width = CardW, float height = LeaderCardH)
@@ -1086,7 +1095,7 @@ public partial class GameScreen
         cap.Alignment = BoxContainer.AlignmentMode.Center;
         cap.CustomMinimumSize = new Vector2(CardW, 16);
         string side = Me == Side.Hand ? "hand" : "collective";
-        var ink = Look.Dim;   // the frame's #454545 (Paul 2026-11-25 chose "B", over #7D8699 that he had picked on 2026-11-23, backlog R9)
+        var ink = Look.Soft;   // the frame's colour (Paul 2026-11-25 chose "B", the frame's, over the lighter one he had picked on 2026-11-23, backlog R9): #54638A since 2026-11-28
         void Cargo(string icon, int have, int room)
         {
             if (room <= 0) return;
@@ -1171,7 +1180,7 @@ public partial class GameScreen
             bar.AddChild(FleetAction($"Scrap {n}...", "Fleet Scrap ships", () => AskScrap(picked, PickedWords(picked), f.At),
                 still ? "Asks first. Half the refined cost comes back and their upkeep is freed." : travelling, !still, hoverInk: Ui.Danger));
         }
-        Add(bar);
+        FleetSection("Actions", 8).AddChild(bar);   // the tab's buttons under ACTIONS, as the frames of 2026-11-28 put them
     }
 
     // ================================================================== Fighters and Troops: what it carries
@@ -1269,7 +1278,7 @@ public partial class GameScreen
                     : $"Regiments land only on a planet you hold. To take {at}, use Invasion in Command.", !mine));
         }
         if (GroundButton(f, fighters ? "Fighters" : "Troops") is { } ground) bar.AddChild(ground);
-        if (bar.GetChildCount() > 0) Add(bar);
+        if (bar.GetChildCount() > 0) FleetSection("Actions", 8).AddChild(bar);   // under ACTIONS (the frames of 2026-11-28)
     }
 
     string Arrives(FleetTransit t, string what)

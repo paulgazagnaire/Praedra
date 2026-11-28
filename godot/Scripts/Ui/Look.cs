@@ -4,46 +4,57 @@ using Godot;
 namespace PraedraViewer;
 
 /// <summary>
-/// The colours of Paul's Paper design for the windows: first the Infrastructure window (2026-11-18, "CHARTER: INFRASTRUCTURE", frame
-/// WYD-0), then his "new colors" frames (2026-11-24: fleet-new-frame-1..4-new-colors, ground-new-frame-1/2-new-colors,
-/// infrastructure-new-frame-1-new-colors; export praedra/specs/ui/paper/new-colors-2026-11-24/): a darker head (#0B0B0D), a lighter page
-/// (#131313), lighter words (#DFDFDF) and a darker status grey (#525252). Paul 2026-11-19: every window takes them; the window tokens in
-/// <see cref="Ui"/> (WinActive, WinText, WinDim, WinLine, WindowBox) point here. Screens only.
+/// The colours of Paul's Paper design for the windows. First his Infrastructure window (2026-11-18, frame WYD-0), then the "new colors"
+/// frames (2026-11-24, greys), and now the frames as updated 2026-11-28 (fleet-new-frame-1..4-new-colors, ground-new-frame-1/2-new-colors,
+/// infrastructure-new-frame-1/2-new-colors; export praedra/specs/ui/paper/game-restyle-2026-11-28/): the blue-greys of Sibyl's panel
+/// (ui-update-nov-26) and Pixel Operator in every window. The head and the shut tabs #10141E, the page and the open tab #090B11, every
+/// line and outline #182139, the words #B8C2E0, the window buttons and quiet words #54638A. The window tokens in <see cref="Ui"/>
+/// (WinActive, WinText, WinDim, WinLine, WindowBox) point here. Screens only.
 /// </summary>
 public static class Look
 {
-    public static readonly Color Bg = new("0b0b0d");        // the head, a picture's tile, a build card, a tab or yard not picked (new colors)
-    public static readonly Color Band = new("131313");      // the tab or yard picked, and the page under it (new colors)
-    public static readonly Color Line = new("1e1e21");      // the lines between cells, a button's outline, a card under the mouse
-    public static readonly Color Edge = new("2d2e32");      // a building tile's outline
-    public static readonly Color Text = new("dfdfdf");      // words, numbers, icons, every tab's name (new colors)
-    public static readonly Color Soft = new("676767");      // a zero count, a note
-    public static readonly Color Dim = new("454545");       // counts, "Idle", what can't be used
-    public static readonly Color Accent = new("909ebd");    // the window buttons, a bar's fill, energy built
+    public static readonly Color Bg = new("10141e");        // the head, a tab or yard not picked, a window or a dialog
+    public static readonly Color Band = new("090b11");      // the tab or yard picked, and the page under it
+    public static readonly Color Line = new("182139");      // the lines between cells, a card under the mouse
+    public static readonly Color Edge = new("182139");      // a building tile's outline, a dashed drop place
+    public static readonly Color Text = new("b8c2e0");      // words, numbers, the open tab's name (11:1 on the page)
+    public static readonly Color Soft = new("54638a");      // the window buttons, a shut tab's name and count, a zero count, a note (3.3:1)
+    public static readonly Color Dim = new("3a4562");       // what can't be used (Sibyl's panel's dim)
+    public static readonly Color Accent = new("909ebd");    // a bar's fill, energy built
     public static readonly Color AccentDeep = new("4a5878"); // energy ordered, a bar's track
-    public static readonly Color Empty = new("252525");     // a free slot
+    public static readonly Color Empty = new("182139");     // a free slot
     public static readonly Color Raw = new("c8c8c8");       // raw slots with a mine
     public static readonly Color RawDeep = new("6a6a6a");   // raw slots with a mine ordered
-    public static readonly Color Divider = new(0x61 / 255f, 0x61 / 255f, 0x61 / 255f, 0.4f); // between the two gauges; a bar's track
-    public static readonly Color Outline = new("36363c");   // a button's and a card's outline (Paul's fleet window design, 2026-11-21)
-    public static readonly Color Muted = new("7d8699");     // the drawer's status words (Paul's fleet design, 2026-11-21; 4.8:1)
-    // the status grey: what a fleet is doing, a tab's count, a gauge's count, a planet's loyalty %. The new colors frames drew it #525252
-    // (2.4:1 on the page, hard to read); Paul 2026-11-25 chose "B": lift it to the drawer's #7D8699 (4.8:1)
+    public static readonly Color Divider = Line;            // between the two gauges; a bar's track
+    public static readonly Color Outline = Line;            // a button's and a card's outline
+    public static readonly Color ButtonFill = new("05060a"); // inside the Defensive / Elusive switch and a filled post
+    // the status words: what a fleet is doing, a gauge's count, a planet's loyalty %. The frames draw them #54638A (3.3:1 on the page);
+    // Paul 2026-11-25 had chosen "B", lift the status grey (then #525252) to a readable one: here Sibyl's hover blue-grey (5.8:1)
+    public static readonly Color Muted = new("7893c5");
     public static readonly Color Quiet = Muted;
-    // the dark tile behind a picture (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now"): the head's colour, on the
-    // lighter page, as the new colors frames draw a card's picture
-    public static readonly Color PicTile = Bg;
-    public static readonly Color CellHover = new("0f0f11"); // a strip cell not open, under the mouse: between Bg and Band
-    public static readonly Color Frame = new("181b21");     // the window's 1 px edge (fleet-new-frame-1-new-colors) and the top bar's line
+    // the dark tile behind a picture (Paul 2026-11-24, "I need the dark tile behind pictures everywhere for now"), as the frames draw it
+    public static readonly Color PicTile = new("0c0f17");
+    public static readonly Color CellHover = new("0d1019"); // a strip cell not open, under the mouse: between Bg and Band
+    public static readonly Color Frame = Line;              // the window's 1 px edge
+    public static readonly Color OverEdge = Soft;           // a window's edge where it lies over another (review 32: the usual one vanishes)
 
-    /// <summary>A label in the design's face: Space Grotesk, Medium for names and headings, Regular for numbers and states.</summary>
+    /// <summary>A label in the windows' face: Pixel Operator on its 20 px line at 16 px (12, 13, 14 and 16 all become 16), 24 or 32.
+    /// <paramref name="medium"/> is kept for the callers: the frames set every word in the one weight.</summary>
     public static Label Words(string text, int size, Color color, bool medium = false)
     {
+        int s = Ui.WinSize(size);
         var l = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
-        l.AddThemeFontOverride("font", medium ? Ui.GroteskMedium : Ui.Grotesk);
-        l.AddThemeFontSizeOverride("font_size", size);
+        l.AddThemeFontOverride("font", s < 20 ? Ui.WinFace : Ui.Operator);
+        l.AddThemeFontSizeOverride("font_size", s);
         l.AddThemeColorOverride("font_color", color);
         return l;
+    }
+
+    /// <summary>How wide <paramref name="text"/> is in <see cref="Words"/> at <paramref name="size"/>.</summary>
+    public static float Width(string text, int size)
+    {
+        int s = Ui.WinSize(size);
+        return (s < 20 ? Ui.WinFace : Ui.Operator).GetStringSize(text, HorizontalAlignment.Left, -1, s).X;
     }
 
     /// <summary>A flat box: a fill, and a line on the given sides only.</summary>

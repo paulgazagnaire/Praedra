@@ -73,7 +73,7 @@ public partial class GameScreen
     // ================================================================== the head
 
     /// <summary>
-    /// The head, as the Fleet window's: the name in BitPotion 48 px with ⋮⋮ – ×, then "Loyalty" and its share with a 2 px bar. Under it, one
+    /// The head, as the Fleet window's: the name in Pixel Operator 32 capitals with ⋮⋮ – ×, then "Loyalty" and its share with a 2 px bar. Under it, one
     /// line only when it applies: an uprising, too few regiments, a blockade; on a planet you don't hold, who holds it and when you last saw it.
     /// </summary>
     void GroundHead(MgWin w, string n, bool mine, SystemPicture pic)
@@ -81,9 +81,9 @@ public partial class GameScreen
         var head = new PanelContainer { MouseFilter = MouseFilterEnum.Pass };   // a left drag still moves the window (the head under it)
         head.AddThemeStyleboxOverride("panel", Look.Box(Look.Bg));
         head.SetMeta(UiTest.FullName, $"Ground head {n}");
-        var pad = Pad(FleetHeadPad, FleetHeadPad, FleetHeadPad, FleetHeadPad);
+        var pad = Pad(FleetHeadPad, FleetHeadPad, HeadTop, FleetHeadPad);
         head.AddChild(pad);
-        var parts = Boxed(new VBoxContainer(), 24);
+        var parts = Boxed(new VBoxContainer(), HeadGap);
         pad.AddChild(parts);
         parts.AddChild(WinNameRow(w, n.ToUpperInvariant(), !mine && !Scouted(n) ? Ui.Dimmed : Look.Text));
         if (!w.Min)
@@ -94,30 +94,29 @@ public partial class GameScreen
         w.Head.AddChild(head);
     }
 
-    /// <summary>A window's name and its buttons (the Fleet window's head row): BitPotion 48 px, 32 px when it does not fit beside them.</summary>
+    /// <summary>A window's name and its buttons (the Fleet window's head row): Pixel Operator 32 px, 24 px when it does not fit beside them.</summary>
     HBoxContainer WinNameRow(MgWin w, string upper, Color ink)
     {
         var grip = MoveGrip();
-        grip.AddThemeColorOverride("font_color", Look.Text);
         var row = Boxed(new HBoxContainer(), NameGap);
         float room = WidthOf(w) - 2 * EdgeW - 2 * FleetHeadPad - NameGap - 3 * WinButton - 2 * 4;
-        int size = Ui.NameSize(upper, room);
+        int size = Ui.TitleSize(upper, room);
         var name = Look.Words(upper, size, ink);
-        name.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        name.AddThemeFontOverride("font", Ui.TitleFont);
         name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         name.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         name.ClipText = true;
         name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         name.SetMeta(UiTest.FullName, $"Name {w.Key}");
         row.AddChild(name);
-        row.AddChild(WinButtons(w, grip, grey: true));
+        row.AddChild(WinButtons(w, grip));
         return row;
     }
 
     /// <summary>"Loyalty" and the share of the people for you, with its bar; then the one line that matters most today.</summary>
     Control GroundStatus(string n, bool mine, SystemPicture pic, float lineW)
     {
-        var v = Boxed(new VBoxContainer(), 4);
+        var v = Boxed(new VBoxContainer(), 8);   // the words, then 8 px down the bar (the frames of 2026-11-28)
         v.MouseFilter = MouseFilterEnum.Pass;
         v.SetMeta(UiTest.FullName, $"Ground status {n}");
         int? loyal = mine ? S.Host.Economy.SupportOf(n, Me)

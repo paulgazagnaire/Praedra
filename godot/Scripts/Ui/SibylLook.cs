@@ -6,7 +6,7 @@ namespace PraedraViewer;
 /// <summary>
 /// Sibyl's panel as Paul drew it in the frame "ui-update-nov-26" (Paper, 2026-11-26): blue-greys, Pixel Operator, the head in the colour of
 /// the bar's Sibyl cell so the two read as one tab, and the Needs you cards in red and yellow. The other tabs have no frame yet: they take
-/// the same font and the colours of <see cref="Map"/>, which swaps each grey of the windows' look for its blue-grey here.
+/// the same font and the colours of <see cref="Map"/>, which swaps each grey of the windows' old look for its blue-grey here.
 /// </summary>
 public static class SibylLook
 {
@@ -31,23 +31,25 @@ public static class SibylLook
     // the tick box: a 1 px line with its corners cut, filled and ticked when on
     public static readonly Color TickLine = new("dfdfdf"), TickFill = new("7893c5"), TickShade = new("314d7d");
 
-    /// <summary>The windows' greys (<see cref="Look"/>, <see cref="Ui"/>) and the blue-grey each becomes in Sibyl's panel.</summary>
+    /// <summary>The windows' greys before Paul's frames of 2026-11-28 (<see cref="Look"/> then, <see cref="Ui"/>) and the blue-grey each
+    /// becomes in Sibyl's panel. The windows now draw in blue-greys of their own, close to these; a grey still set somewhere takes its
+    /// blue-grey here. Keyed by the old values (the tokens now share colours, and a key can only be there once).</summary>
     public static readonly Dictionary<Color, Color> Map = new()
     {
-        [Look.Text] = Light,                 // #DFDFDF words
-        [Look.Muted] = Hover,                // #7D8699 status words
-        [Look.Soft] = Grey,                  // #676767 a zero count, a note
-        [Look.Dim] = new("3a4562"),          // #454545 what can't be used
-        [Look.Bg] = new("00040f"),           // #0B0B0D a picture's tile (the fleet draft's)
-        [Look.Band] = Page,                  // #131313 the page
-        [Look.Line] = Strip,                 // #1E1E21 lines
-        [Look.Edge] = Head,                  // #2D2E32 a tile's outline
-        [Look.Outline] = ButtonLine,         // #36363C a button's and a card's outline
-        [Look.Accent] = Hover,               // #909EBD a bar's fill
-        [Look.AccentDeep] = TickShade,       // #4A5878 a bar's track
-        [Look.Empty] = Strip,                // #252525 a free slot
-        [Look.CellHover] = TabHover,         // #0F0F11
-        [Look.Frame] = Strip,                // #181B21
+        [new Color("dfdfdf")] = Light,       // words
+        [new Color("7d8699")] = Hover,       // status words
+        [new Color("676767")] = Grey,        // a zero count, a note
+        [new Color("454545")] = new("3a4562"), // what can't be used
+        [new Color("0b0b0d")] = new("00040f"), // a picture's tile (the fleet draft's)
+        [new Color("131313")] = Page,        // the page
+        [new Color("1e1e21")] = Strip,       // lines
+        [new Color("2d2e32")] = Head,        // a tile's outline
+        [new Color("36363c")] = ButtonLine,  // a button's and a card's outline
+        [new Color("909ebd")] = Hover,       // a bar's fill
+        [new Color("4a5878")] = TickShade,   // a bar's track
+        [new Color("252525")] = Strip,       // a free slot
+        [new Color("0f0f11")] = TabHover,
+        [new Color("181b21")] = Strip,
         [Ui.Danger] = Urgent,                // the panel's red and yellow
         [Ui.Warn] = Watch,
     };

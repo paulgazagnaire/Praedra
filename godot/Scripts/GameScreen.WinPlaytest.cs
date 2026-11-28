@@ -124,7 +124,7 @@ public partial class GameScreen
     internal bool EdgeShows(string key)
     {
         MarkOverlaps();
-        return _mgWins.FirstOrDefault(w => w.Key == key) is { } w && w.Panel.GetThemeStylebox("panel") is StyleBoxFlat b && b.BorderColor == Look.Outline;
+        return _mgWins.FirstOrDefault(w => w.Key == key) is { } w && w.Panel.GetThemeStylebox("panel") is StyleBoxFlat b && b.BorderColor == Look.OverEdge;
     }
     /// <summary>A pause that came with a report, as RunDay makes it: the pill's words while the report is open, then once it is closed.</summary>
     internal (string Open, string Closed) PlayReportPause(string note)

@@ -192,7 +192,7 @@ public partial class GameScreen
     }
 
     /// <summary>
-    /// A dialog's head, like a window's: the name in BitPotion capitals (48 px, 32 when long), #BABABA, an optional piece beside it, and ×
+    /// A dialog's head, like a window's: the name in Pixel Operator capitals (32 px, 24 when long), #B8C2E0, an optional piece beside it, and ×
     /// pinned right when the dialog can be closed (it does what Esc does). Returns the name, for dialogs that change it each time.
     /// </summary>
     Label DialogHead(VBoxContainer v, string name, int width, Action close, Control beside = null)
@@ -224,10 +224,10 @@ public partial class GameScreen
     static void SetDialogName(Label t, string name)
     {
         string upper = (name ?? "").ToUpperInvariant();
-        int size = Ui.NameSize(upper, (float)t.GetMeta("room", 400f));
+        int size = Ui.TitleSize(upper, (float)t.GetMeta("room", 400f));
         t.Text = name ?? "";
         t.Uppercase = true;   // drawn in capitals; the text keeps its case (what the playtest and a screen reader read)
-        t.AddThemeFontOverride("font", Ui.NameFont(size, upper));
+        t.AddThemeFontOverride("font", Ui.TitleFont);
         t.AddThemeFontSizeOverride("font_size", size);
         t.TooltipText = name ?? "";
         t.MouseFilter = MouseFilterEnum.Pass;   // the full name on hover, when a long one is cut
