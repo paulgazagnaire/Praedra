@@ -122,7 +122,11 @@ public class SimpleAiAgentsTests
         // the Hand"; m5-characters-and-talent Rule New 4b, TrainerPick DEFAULT Pair): Nobody and Ledger start aware at Talent 150 and 120 and the
         // talented draw leaves the four trainers out, a core rule this old AI cannot switch off. With TrainerPick = Random the hash is exactly the
         // previous pin af96c35e...c734 (checked when re-pinned).
-        Assert.Equal("762dab27b687fdf98e660542fd4b51fd2ee0c0e81d9e106e2178b9641f744879", h.StateHash()); // old-tongue names 2026-11-16 reordered the systems (was f892e352...) // old-tongue names 2026-11-16 reordered the systems (was f892e352...)
+        // Guarded-world re-pin 2026-11-28 (Dev lead; Paul's "Guarded world" on Maverick's card, m5-characters-and-talent §Autoroute step 3,
+        // AutorouteToGuarded DEFAULT on): a leader whose world falls now walks to the nearest held world with an armed fleet of his side, a core
+        // rule this old AI cannot switch off. With AutorouteToGuarded = false the hash is exactly the previous pin 762dab27...4879 (checked when
+        // re-pinned).
+        Assert.Equal("0d9652b397ffc8bec9aba9e364cad81ee165d12703cdefd87adbf5519d58a42b", h.StateHash());
     }
 
     // m5-fog-and-hq §N8, FN3 in spirit: the agents code names no truth getter (all reads of the other side go through the "what the AI may see"

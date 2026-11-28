@@ -217,29 +217,32 @@ public sealed class FogModule
     /// injured, not riding a fleet: travelling alone (Transit set; reach day = the end of the current hop plus the days of the hops left, the
     /// sums §N4 uses: m1-clock-and-orders §Order of work steps 3 and 4), or (InboundSeesMissionGroups) in a mission group that has left on its
     /// trip, outbound, a Move group or returning (reach day = the group's arrival day; m5-missions §1). The side records (character,
-    /// destination, reach day, stamp), the newest replacing the older, and is told (LeaderInboundSeen). No draw. rule: m5-fog-and-hq §N6d.
+    /// destination, reach day, stamp), the newest replacing the older, and is told (LeaderInboundSeen). A mission group is seen only on a draw
+    /// (InboundMissionGroupPercent; Paul 2026-11-28 "chances are pretty low"): one draw per group, all its members or none, made when its
+    /// lowest-id member that would be seen is reached; leaders travelling alone take no draw. rule: m5-fog-and-hq §N6d.
     /// </summary>
     private void SeeInbound(StepContext ctx, Side side, List<string> systems, int stamp)
     {
-        var group = new Dictionary<int, (string Dest, int Reach)>(); // lookup only: the trip of each character travelling in a mission group
+        var group = new Dictionary<int, (string Dest, int Reach, int Mission)>(); // lookup only: the trip of each character travelling in a mission group
+        var groupSeen = new Dictionary<int, bool>(); // lookup only: the draw already made for a mission group (by mission id)
         var onMission = new HashSet<int>(); // membership test only, never iterated
         foreach (var m in State.Missions.Missions.Values) // mission id order
             foreach (var id in m.AllCharacters)
             {
                 onMission.Add(id);
                 if (m.Departed && m.Path.Count > 1 && m.Phase is Praedra.Core.Missions.MissionPhase.Outbound or Praedra.Core.Missions.MissionPhase.Returning)
-                    group[id] = (m.Path[^1], m.ArrivalDay);
+                    group[id] = (m.Path[^1], m.ArrivalDay, m.Id);
             }
         var know = F.Of(side); var enemy = Other(side);
         foreach (var c in State.Characters.Characters.Values) // id order
         {
             if (c.Side != enemy || !c.Placed || c.AttachedFleet != 0
                 || c.Status is not (Praedra.Core.Characters.CharacterStatus.Free or Praedra.Core.Characters.CharacterStatus.Injured)) continue;
-            string dest; int reach; bool inGroup = false;
+            string dest; int reach; bool inGroup = false; int mission = 0;
             if (onMission.Contains(c.Id))
             {
                 if (!Params.InboundSeesMissionGroups || !group.TryGetValue(c.Id, out var g)) continue;
-                (dest, reach) = g; inGroup = true;
+                (dest, reach, mission) = g; inGroup = true;
             }
             else if (c.Transit is { } t)
             {
@@ -248,6 +251,13 @@ public sealed class FogModule
             }
             else continue;
             if (!systems.Contains(dest) || reach < stamp) continue; // a reach day in the past cannot happen (he would stand there already)
+            if (inGroup)
+            {
+                if (!groupSeen.TryGetValue(mission, out bool seen))
+                    groupSeen[mission] = seen = Params.InboundMissionGroupPercent >= 100
+                        || (Params.InboundMissionGroupPercent > 0 && ctx.Rng.NextInt(0, 99) < Params.InboundMissionGroupPercent);
+                if (!seen) continue;
+            }
             var list = know.LeadersInbound ?? new List<InboundLeader>();
             list.RemoveAll(x => x.Character == c.Id);
             list.Add(new InboundLeader { Character = c.Id, System = dest, ReachDay = reach, Day = stamp, InGroup = inGroup });

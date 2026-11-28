@@ -80,7 +80,8 @@ public class SimpleAiGamePlanTests
     {
         static string[] FirstAssaults(SimpleAiParams p) => MultiSeed.Play(Enumerable.Range(1, 8).ToArray(), plan =>
         {
-            var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE });
+            // #442's leader rules pinned to before (MultiSeed.LeaderRulesBefore442): with them seed 1 gave 4 campaigns of 8, floor 5
+            var host = NewGame.Create(new NewGameOptions { Seed = 1, Preset = StartPreset.MedE, Settings = MultiSeed.LeaderRulesBefore442 });
             host.AiMemoryFor(Side.Collective, true).Plan = (ulong)plan;
             var m = new AiMatch(host, Medium(), p);
             int seen = host.Game.Events.Count;
