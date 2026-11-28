@@ -412,11 +412,14 @@ public sealed partial class SimpleAi
             var job = j;
             var chars = c != null ? new List<int> { c.Id } : new List<int>();
             var sfs = f != null ? new List<int> { f.Id } : new List<int>();
-            // A key target behind the exposure gate (m5-missions §6a.1, TargetProtected) is skipped today instead of ordered again every day.
+            // A key target behind the exposure gate (m5-missions §6a.1, TargetProtected) is skipped today instead of ordered again every day. The dry
+            // run names the last sighting too, so with CharacterTargetWhereSeen it checks only what the side knows, never the leader's live position.
             if (job.TargetCharacter != null && _h.Missions.CheckStart(new StartMissionOrder(0, _side, job.Kind, chars, sfs, new List<int>(),
-                    null, job.TargetCharacter)).Reason == MissionReject.TargetProtected) continue;
+                    job.System, job.TargetCharacter)).Reason == MissionReject.TargetProtected) continue;
+            // a character target names the system the side last saw him at (EnemyCharactersSeen), so with CharacterTargetWhereSeen the team flies
+            // there, not to his live position (no cheats, Paul 2026-10-12; Dev lead 2026-11-27, PR 420)
             long seq = _h.Game.Submit(sq => new StartMissionOrder(sq, _side, job.Kind, chars, sfs, new List<int>(),
-                job.TargetCharacter == null ? job.System : null, job.TargetCharacter));
+                job.System, job.TargetCharacter));
             string who = c != null ? $"{_h.Characters.ClassOf(c).Name} from {c.System}" : $"{f!.Class} {f.Id} from {f.System}";
             Note(seq, "Mission" + j.Kind, $"{who} to {j.System}{(j.TargetCharacter is int t ? $" (character {t})" : "")} ev {ev}");
             if (c != null) usedChar.Add(c.Id); else usedSf.Add(f!.Id);

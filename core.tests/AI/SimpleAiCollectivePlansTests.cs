@@ -98,7 +98,8 @@ public class SimpleAiCollectivePlansTests
     }
 
     // m5-missions §Spying from orbit (#412): with WreckShields, Wreckers board armed Collective fleets and are launched from orbit on
-    // Sabotage over shielded Hand worlds (seeds 1-4, walled Medium Hand, day 1200: they board in most games; the launches come later, about 10 a game by day 3000).
+    // Sabotage over shielded Hand worlds (seeds 1-4, walled Medium Hand, day 1200). One seed was too thin: since the AI's leader missions aim at
+    // the last sighting, seed 1 swung between 0 and 3 orbit launches, so Wreckers must board in at least 2 games and launch in at least 1 (Rooster 2026-11-28).
     [Fact]
     public void WreckersRideFleetsAndSabotageShieldsFromOrbit()
     {
